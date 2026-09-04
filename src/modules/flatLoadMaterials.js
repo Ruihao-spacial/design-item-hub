@@ -241,14 +241,12 @@ const WALL_MEP_ALLOWANCES = [
 // ── Roof / Ceiling / Floor / Deck — ported from dead_load_generator.html ──
 
 const ROOF = {
-  label: 'Roof', short: 'R', defaultName: 'Roof',
-  hasLiveLoad: true, defaultLL: 20,
+  label: 'Roof', short: 'R', defaultName: 'Roof', llLabel: 'Roof Live Load',
+  hasLiveLoad: true, defaultLL: 20, hasSlopeReduction: true,
   llPresets: [
-    { label: 'Ordinary roof, flat/low slope (Lr)', psf: 20 },
-    { label: 'Sloped 4:12 to 12:12 (Lr reduced)', psf: 16 },
-    { label: 'Steep slope >12:12 (Lr reduced)', psf: 12 },
+    { label: 'Ordinary roof, flat/low slope (Lr = 20 psf)', psf: 20 },
   ],
-  llRef: 'IBC/CBC Table 1607.1 · roof live load Lr (further reductions per ASCE 4.8). Use snow load Sg/Pf if it controls.',
+  llRef: 'IBC/CBC Table 1607.1 · roof live load Lr, reduced per ASCE 7 §4.8 based on roof slope. Use snow load Sg/Pf if it controls.',
   layers: [
     { key: 'finish', label: 'Roof Finish', loadCategory: 'superimposed', materials: [
       NONE,
@@ -339,7 +337,7 @@ const ROOF = {
 };
 
 const CEILING = {
-  label: 'Ceiling', short: 'C', defaultName: 'Ceiling',
+  label: 'Ceiling', short: 'C', defaultName: 'Ceiling', llLabel: 'Attic Live Load',
   hasLiveLoad: true, defaultLL: 10,
   llPresets: [
     { label: 'Attic — no storage', psf: 10 },
@@ -383,7 +381,7 @@ const CEILING = {
 };
 
 const FLOOR = {
-  label: 'Floor', short: 'F', defaultName: 'Floor',
+  label: 'Floor', short: 'F', defaultName: 'Floor', llLabel: 'Floor Live Load',
   hasLiveLoad: true, defaultLL: 40,
   llPresets: [
     { label: 'Residential — general (40 psf)', psf: 40 },
@@ -450,7 +448,7 @@ const FLOOR = {
 };
 
 const DECK = {
-  label: 'Deck/Balcony', short: 'D', defaultName: 'Deck',
+  label: 'Deck/Balcony', short: 'D', defaultName: 'Deck', llLabel: 'Deck/Balcony Live Load',
   hasLiveLoad: true, defaultLL: 60,
   llPresets: [
     { label: 'Balcony — general (60 psf)', psf: 60 },

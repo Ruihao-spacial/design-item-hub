@@ -23,15 +23,17 @@ export async function renderItemForm(container, state, { moduleId, itemId, onBac
     if (mod.migrate) item = mod.migrate(item);
   }
 
+  const newTitle = mod.noNewPrefix ? mod.label : 'New ' + mod.label;
+
   container.appendChild(el('div', { className: 'breadcrumb' },
     el('a', { href: '#', onClick(e) { e.preventDefault(); onBack(true); } }, 'Projects'),
     el('span', { className: 'sep' }, '/'),
     el('a', { href: '#', onClick(e) { e.preventDefault(); onBack(); } }, p.displayNumber || p.projectNumber),
     el('span', { className: 'sep' }, '/'),
-    el('span', null, isNew ? 'New ' + mod.label : (item.label || mod.label)),
+    el('span', null, isNew ? newTitle : (item.label || mod.label)),
   ));
 
-  container.appendChild(el('h2', { style: { marginBottom: '1rem' } }, isNew ? 'New ' + mod.label : mod.label));
+  container.appendChild(el('h2', { style: { marginBottom: '1rem' } }, isNew ? newTitle : mod.label));
 
   const formBody = el('div', { className: 'panel-body' });
   container.appendChild(el('div', { className: 'panel' }, formBody));

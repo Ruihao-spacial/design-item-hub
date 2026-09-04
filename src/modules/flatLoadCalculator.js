@@ -2,7 +2,7 @@ import { el, clearEl, numOrBlank } from '../utils.js';
 import { ASSEMBLY_TYPES, computeMaterialPsf } from './flatLoadMaterials.js';
 
 let nextTabId = 1;
-let nextCustomId = 1;
+let nextItemId = 1;
 
 function newTab(type) {
   const def = ASSEMBLY_TYPES[type];
@@ -10,15 +10,44 @@ function newTab(type) {
     id: 'tab' + (nextTabId++),
     type,
     name: def.defaultName,
+    description: '',
     layers: {},
-    allowances: {},
-    custom: [],
+    items: [],
     liveLoad: def.hasLiveLoad ? def.defaultLL : null,
     includeLLinSeismic: false,
     seismicLLPercent: 25,
+    roofSlope: '',
   };
   for (const layer of def.layers) tab.layers[layer.key] = { selectedIdx: 0, thickness: null, quantity: 1 };
   return tab;
+}
+
+// Migrate a saved item from schemaVersion 1 (separate `allowances` map +
+// `custom` array) to schemaVersion 2 (a single unified `items` array).
+function migrateTab(tab, def) {
+  if (tab.items) return tab;
+  const items = [];
+  if (tab.allowances && def.allowances) {
+    Object.keys(tab.allowances).forEach((idxStr) => {
+      const idx = parseInt(idxStr, 10);
+      const st = tab.allowances[idx];
+      const preset = def.allowances.items[idx];
+      if (!st || !st.checked || !preset) return;
+      items.push({
+        id: 'item' + (nextItemId++), kind: 'preset', presetIndex: idx, name: preset.name, psf: preset.psf,
+        category: 'superimposed', coverageEligible: !!preset.coverageEligible, coveragePercent: st.coveragePercent,
+      });
+    });
+  }
+  if (Array.isArray(tab.custom)) {
+    tab.custom.forEach((c) => {
+      items.push({
+        id: 'item' + (nextItemId++), kind: 'custom', name: c.name || '', psf: c.psf, perInch: c.perInch, thickness: c.thickness,
+        category: c.category || 'superimposed', coverageEligible: !!c.coverageEligible, coveragePercent: c.coveragePercent,
+      });
+    });
+  }
+  return { ...tab, items, description: tab.description || '', roofSlope: tab.roofSlope || '' };
 }
 
 function buildSelectOptions(select, materials, selectedIdx) {
@@ -51,6 +80,22 @@ function buildSelectOptions(select, materials, selectedIdx) {
   });
 }
 
+// ASCE 7 §4.8.2 slope reduction factor R2, applied to the base (unreduced)
+// roof live load Lo. Returns null when slope is empty/zero (no reduction).
+function computeSlopeReducedLr(Lo, slopeRisePerFt) {
+  const F = parseFloat(slopeRisePerFt);
+  if (!F || F <= 0) return null;
+  let R2;
+  let r2Formula;
+  if (F <= 4) { R2 = 1.0; r2Formula = 'F = ' + F + ' ≤ 4  →  R2 = 1.00'; }
+  else if (F < 12) { R2 = 1.2 - 0.05 * F; r2Formula = 'R2 = 1.2 − 0.05×' + F + ' = ' + R2.toFixed(2); }
+  else { R2 = 0.6; r2Formula = 'F = ' + F + ' ≥ 12  →  R2 = 0.60'; }
+  const raw = Lo * R2;
+  const Lr = Math.round(Math.max(12, Math.min(20, raw)) * 10) / 10;
+  const equation = r2Formula + ';  Lr = ' + Lo + ' × ' + R2.toFixed(2) + ' = ' + raw.toFixed(1) + ' psf (12–20 psf range)  →  ' + Lr.toFixed(1) + ' psf';
+  return { R2, Lr, equation };
+}
+
 function computeTabTotals(tab) {
   const def = ASSEMBLY_TYPES[tab.type];
   let dl = 0;
@@ -66,26 +111,12 @@ function computeTabTotals(tab) {
     else { sdlGravity += psf; sdlLateral += psf; }
   }
 
-  if (def.allowances) {
-    def.allowances.items.forEach((item, i) => {
-      const st = tab.allowances[i];
-      if (!st || !st.checked) return;
-      sdlGravity += item.psf;
-      if (item.coverageEligible) {
-        const coverage = st.coveragePercent != null ? st.coveragePercent : 100;
-        sdlLateral += item.psf * (coverage / 100);
-      } else {
-        sdlLateral += item.psf;
-      }
-    });
-  }
-
-  for (const c of tab.custom) {
-    const psf = c.perInch ? (parseFloat(c.psf) || 0) * (parseFloat(c.thickness) || 0) : (parseFloat(c.psf) || 0);
-    if (c.category === 'framing') { dl += psf; continue; }
+  for (const it of (tab.items || [])) {
+    const psf = it.perInch ? (parseFloat(it.psf) || 0) * (parseFloat(it.thickness) || 0) : (parseFloat(it.psf) || 0);
+    if (it.category === 'framing') { dl += psf; continue; }
     sdlGravity += psf;
-    if (c.coverageEligible) {
-      const coverage = c.coveragePercent != null ? c.coveragePercent : 100;
+    if (it.coverageEligible) {
+      const coverage = it.coveragePercent != null && it.coveragePercent !== '' ? parseFloat(it.coveragePercent) : 100;
       sdlLateral += psf * (coverage / 100);
     } else {
       sdlLateral += psf;
@@ -101,17 +132,16 @@ function computeTabTotals(tab) {
   dl = round1(dl); sdlGravity = round1(sdlGravity); sdlLateral = round1(sdlLateral);
   const gravityTotal = round1(dl + sdlGravity + llGravity);
   const lateralTotal = round1(dl + sdlLateral + llSeismic);
-  const asdCombo = def.hasLiveLoad ? round1(dl + sdlGravity + llGravity) : null;
-  const lrfdCombo = def.hasLiveLoad ? round1(1.2 * (dl + sdlGravity) + 1.6 * llGravity) : null;
 
-  return { dl, sdlGravity, sdlLateral, llGravity: round1(llGravity), llSeismic: round1(llSeismic), gravityTotal, lateralTotal, asdCombo, lrfdCombo };
+  return { dl, sdlGravity, sdlLateral, llGravity: round1(llGravity), llSeismic: round1(llSeismic), gravityTotal, lateralTotal };
 }
 
 export const flatLoadCalculator = {
   id: 'flat_load_calculator',
   label: 'Flat Load Calculator',
-  schemaVersion: 1,
+  schemaVersion: 2,
   calcVersion: 'v1',
+  noNewPrefix: true,
   refs: [],
   fields: [
     { key: 'tabs', label: 'Assemblies', type: 'text' },
@@ -119,6 +149,7 @@ export const flatLoadCalculator = {
   outputFields: [
     { key: 'perTab', label: 'Per-Assembly Loads', type: 'table', columns: [
       { key: 'name', label: 'Assembly', unit: '' },
+      { key: 'description', label: 'Description', unit: '' },
       { key: 'dl', label: 'DL', unit: 'psf', precision: 1 },
       { key: 'sdlGravity', label: 'SDL (gravity)', unit: 'psf', precision: 1 },
       { key: 'sdlLateral', label: 'SDL (lateral)', unit: 'psf', precision: 1 },
@@ -127,7 +158,11 @@ export const flatLoadCalculator = {
     ] },
   ],
 
-  migrate(item) { return item; },
+  migrate(item) {
+    if (!item.inputs || !item.inputs.tabs) return item;
+    const tabs = item.inputs.tabs.map((tab) => migrateTab(tab, ASSEMBLY_TYPES[tab.type]));
+    return { ...item, inputs: { ...item.inputs, tabs }, schemaVersion: 2 };
+  },
 
   summaryLabel(inputs) {
     const n = inputs.tabs ? inputs.tabs.length : 0;
@@ -139,7 +174,10 @@ export const flatLoadCalculator = {
     const perTab = tabs.map((tab) => {
       const def = ASSEMBLY_TYPES[tab.type];
       const totals = computeTabTotals(tab);
-      return { id: tab.id, name: tab.name, type: tab.type, hasLiveLoad: def.hasLiveLoad, ...totals };
+      return {
+        id: tab.id, name: tab.name, description: tab.description || '', type: tab.type,
+        hasLiveLoad: def.hasLiveLoad, llLabel: def.llLabel || 'Live Load', ...totals,
+      };
     });
     return { perTab, calcVersion: 'v1' };
   },
@@ -182,6 +220,10 @@ export const flatLoadCalculator = {
       });
     }
 
+    function recalcAndRerenderOutputs() {
+      renderTabBody();
+    }
+
     function renderTabBody() {
       clearEl(bodyContainer);
       const tab = inputs.tabs.find((t) => t.id === activeTabId);
@@ -191,7 +233,7 @@ export const flatLoadCalculator = {
       }
       const def = ASSEMBLY_TYPES[tab.type];
 
-      const headerRow = el('div', { style: { display: 'flex', gap: '0.5rem', alignItems: 'center', marginBottom: '0.75rem', flexWrap: 'wrap' } },
+      const headerRow = el('div', { style: { display: 'flex', gap: '0.5rem', alignItems: 'center', marginBottom: '0.5rem', flexWrap: 'wrap' } },
         el('input', { className: 'form-input', style: { maxWidth: '220px' }, type: 'text', value: tab.name,
           onInput(e) { tab.name = e.target.value; renderTabBar(); } }),
         el('button', { className: 'btn btn-danger btn-sm', type: 'button',
@@ -202,6 +244,10 @@ export const flatLoadCalculator = {
           } }, 'Remove Assembly'),
       );
       bodyContainer.appendChild(headerRow);
+      bodyContainer.appendChild(el('div', { className: 'form-group' },
+        el('input', { className: 'form-input', type: 'text', placeholder: 'Description (optional — shown in the summary table)', value: tab.description || '',
+          onInput(e) { tab.description = e.target.value; } }),
+      ));
 
       if (def.note) {
         bodyContainer.appendChild(el('div', { className: 'offline-banner', style: { color: 'var(--ink-secondary)', background: 'var(--surface)', borderColor: 'var(--border)' } }, def.note));
@@ -209,42 +255,68 @@ export const flatLoadCalculator = {
 
       // Live load row
       if (def.hasLiveLoad) {
-        const llInput = el('input', { className: 'form-input mono', style: { maxWidth: '100px' }, type: 'number', value: numOrBlank(tab.liveLoad),
-          onChange(e) { tab.liveLoad = e.target.value; renderTabBar(); recalcAndRerenderOutputs(); } });
-        const llPreset = el('select', { className: 'form-select', style: { maxWidth: '260px' } },
-          el('option', { value: '' }, '— Preset —'),
-          ...def.llPresets.map((p, i) => el('option', { value: String(i) }, p.label)),
+        const slopeActive = def.hasSlopeReduction && parseFloat(tab.roofSlope) > 0;
+        const slopeResult = slopeActive ? computeSlopeReducedLr(def.defaultLL, tab.roofSlope) : null;
+        if (slopeActive && slopeResult) tab.liveLoad = slopeResult.Lr;
+
+        const matchingPresetIdx = def.llPresets.findIndex((p) => p.psf === tab.liveLoad);
+        const llPreset = el('select', { className: 'form-select', style: { maxWidth: '260px' }, disabled: slopeActive },
+          el('option', { value: '', selected: matchingPresetIdx === -1 }, '— Preset —'),
+          ...def.llPresets.map((p, i) => el('option', { value: String(i), selected: i === matchingPresetIdx }, p.label)),
         );
         llPreset.addEventListener('change', () => {
           if (llPreset.value === '') return;
           tab.liveLoad = def.llPresets[parseInt(llPreset.value, 10)].psf;
-          llPreset.value = '';
           renderTabBody();
           renderTabBar();
         });
+        const llInput = el('input', { className: 'form-input mono', style: { maxWidth: '100px' }, type: 'number', value: numOrBlank(tab.liveLoad), disabled: slopeActive,
+          onChange(e) { tab.liveLoad = e.target.value; renderTabBar(); recalcAndRerenderOutputs(); } });
         const seismicToggle = el('input', { type: 'checkbox', checked: tab.includeLLinSeismic,
           onInput(e) { tab.includeLLinSeismic = e.target.checked; renderTabBody(); } });
         const seismicPercentInput = el('input', { className: 'form-input mono', style: { maxWidth: '80px' }, type: 'number', value: tab.seismicLLPercent, disabled: !tab.includeLLinSeismic,
-          onInput(e) { tab.seismicLLPercent = e.target.value; } });
+          onChange(e) { tab.seismicLLPercent = e.target.value; recalcAndRerenderOutputs(); } });
 
         const llWarn = (parseFloat(tab.liveLoad) || 0) >= 100
           ? el('span', { className: 'badge badge-stale' }, 'LL ≥ 100 psf — consider including in seismic weight')
           : null;
 
-        bodyContainer.appendChild(el('div', { className: 'form-group panel', style: { padding: '0.75rem' } },
+        const llGroup = el('div', { className: 'form-group panel', style: { padding: '0.75rem' } },
           el('label', { className: 'form-label' }, 'Design Live Load'),
           el('div', { style: { display: 'flex', gap: '0.5rem', alignItems: 'center', flexWrap: 'wrap' } },
             llPreset, llInput, el('span', { className: 'mono' }, 'psf'), llWarn,
           ),
-          el('div', { className: 'll-ref', style: { fontSize: '0.75rem', color: 'var(--ink-tertiary)', marginTop: '0.4rem' } }, def.llRef),
-          el('label', { style: { display: 'flex', alignItems: 'center', gap: '0.4rem', marginTop: '0.6rem', fontSize: '0.85rem' } },
-            seismicToggle, 'Include in seismic weight at', seismicPercentInput, '%  (ASCE 7 §12.7.2 — storage/heavy occupancy)',
-          ),
+          el('div', { style: { fontSize: '0.75rem', color: 'var(--ink-tertiary)', marginTop: '0.4rem' } }, def.llRef),
+        );
+
+        if (def.hasSlopeReduction) {
+          llGroup.appendChild(el('div', { style: { display: 'flex', gap: '0.5rem', alignItems: 'center', marginTop: '0.6rem', flexWrap: 'wrap' } },
+            el('span', { style: { fontSize: '0.85rem', fontWeight: '500' } }, 'Roof Slope'),
+            el('input', { className: 'mono', style: { width: '60px', border: '1px solid var(--border)', borderRadius: '3px', padding: '0.3rem' }, type: 'number', min: '0', placeholder: '0', value: tab.roofSlope,
+              onChange(e) { tab.roofSlope = e.target.value; renderTabBody(); renderTabBar(); } }),
+            el('span', { className: 'mono', style: { fontSize: '0.8rem', color: 'var(--ink-secondary)' } }, ': 12  (rise:run — leave blank/0 for flat/manual entry)'),
+          ));
+          if (slopeResult) {
+            llGroup.appendChild(el('div', { className: 'mono', style: { fontSize: '0.78rem', color: 'var(--accent)', marginTop: '0.4rem', background: 'var(--accent-bg)', padding: '0.4rem 0.6rem', borderRadius: '3px' } },
+              slopeResult.equation));
+          }
+        }
+
+        llGroup.appendChild(el('label', { style: { display: 'flex', alignItems: 'center', gap: '0.4rem', marginTop: '0.6rem', fontSize: '0.85rem' } },
+          seismicToggle, 'Include in seismic weight at', seismicPercentInput, '%  (ASCE 7 §12.7.2 — storage/heavy occupancy)',
         ));
+        bodyContainer.appendChild(llGroup);
       }
 
       // Layers
       const layersPanel = el('div', { className: 'panel', style: { padding: '0.75rem', marginBottom: '0.75rem' } });
+      layersPanel.appendChild(el('div', { style: { display: 'grid', gridTemplateColumns: '1fr 2fr 70px 70px 90px', gap: '0.75rem', marginBottom: '0.4rem', paddingBottom: '0.4rem', borderBottom: '1px solid var(--border)' } },
+        el('span', { className: 'form-label', style: { margin: 0 } }, 'Layer'),
+        el('span', { className: 'form-label', style: { margin: 0 } }, 'Material'),
+        el('span', { className: 'form-label', style: { margin: 0 } }, 'Thick (in)'),
+        el('span', { className: 'form-label', style: { margin: 0 } }, 'Qty'),
+        el('span', { className: 'form-label', style: { margin: 0, textAlign: 'right' } }, 'Load'),
+      ));
       def.layers.forEach((layer) => {
         const ls = tab.layers[layer.key];
         const mat = layer.materials[ls.selectedIdx];
@@ -272,70 +344,71 @@ export const flatLoadCalculator = {
       });
       bodyContainer.appendChild(layersPanel);
 
-      // Allowances
-      if (def.allowances) {
-        const allowPanel = el('div', { className: 'panel', style: { padding: '0.75rem', marginBottom: '0.75rem' } },
-          el('div', { className: 'form-label' }, def.allowances.label));
-        def.allowances.items.forEach((item, i) => {
-          if (!tab.allowances[i]) tab.allowances[i] = { checked: false, coveragePercent: 100 };
-          const st = tab.allowances[i];
-          const checkbox = el('input', { type: 'checkbox', checked: st.checked,
-            onInput(e) { st.checked = e.target.checked; renderTabBody(); renderTabBar(); } });
-          const row = el('label', { style: { display: 'flex', alignItems: 'center', gap: '0.5rem', padding: '0.3rem 0', fontSize: '0.85rem' } },
-            checkbox, el('span', { style: { flex: '1' } }, item.name), el('span', { className: 'mono' }, item.psf.toFixed(1) + ' psf'),
-          );
-          if (item.coverageEligible) {
-            const covInput = el('input', { className: 'mono', style: { width: '60px', border: '1px solid var(--border)', borderRadius: '3px', padding: '0.2rem' }, type: 'number', min: '0', max: '100', value: st.coveragePercent, disabled: !st.checked,
-              onChange(e) { st.coveragePercent = e.target.value; recalcAndRerenderOutputs(); } });
-            row.appendChild(el('span', { style: { fontSize: '0.72rem', color: 'var(--ink-tertiary)' } }, '% roof coverage:'));
-            row.appendChild(covInput);
-          }
-          allowPanel.appendChild(row);
-        });
-        bodyContainer.appendChild(allowPanel);
-      }
+      // Additional items (merged misc presets + custom lines)
+      const itemsPanel = el('div', { className: 'panel', style: { padding: '0.75rem', marginBottom: '0.75rem' } },
+        el('div', { className: 'form-label' }, 'Additional Items'));
 
-      // Custom lines
-      const customPanel = el('div', { className: 'panel', style: { padding: '0.75rem', marginBottom: '0.75rem' } },
-        el('div', { className: 'form-label' }, 'Custom / Additional Items'));
-      tab.custom.forEach((c) => {
-        const row = el('div', { style: { display: 'flex', gap: '0.4rem', alignItems: 'center', marginBottom: '0.4rem', flexWrap: 'wrap' } },
-          el('input', { className: 'form-input', style: { maxWidth: '180px' }, type: 'text', placeholder: 'Description', value: c.name || '',
-            onInput(e) { c.name = e.target.value; } }),
-          el('input', { className: 'mono', style: { width: '70px', border: '1px solid var(--border)', borderRadius: '3px', padding: '0.3rem' }, type: 'number', placeholder: 'psf', value: numOrBlank(c.psf),
-            onChange(e) { c.psf = e.target.value; renderTabBar(); recalcAndRerenderOutputs(); } }),
-          el('select', { className: 'form-select', style: { width: 'auto' },
-            onChange(e) { c.category = e.target.value; renderTabBar(); recalcAndRerenderOutputs(); } },
-            el('option', { value: 'superimposed', selected: c.category !== 'framing' }, 'Superimposed'),
-            el('option', { value: 'framing', selected: c.category === 'framing' }, 'Framing'),
-          ),
-          el('label', { style: { display: 'flex', alignItems: 'center', gap: '0.3rem', fontSize: '0.8rem' } },
-            el('input', { type: 'checkbox', checked: !!c.coverageEligible, onInput(e) { c.coverageEligible = e.target.checked; renderTabBody(); } }),
+      tab.items.forEach((it) => {
+        const isCustom = it.kind === 'custom';
+        const row = el('div', { style: { display: 'flex', gap: '0.5rem', alignItems: 'center', marginBottom: '0.4rem', flexWrap: 'wrap', paddingBottom: '0.4rem', borderBottom: '1px dotted var(--border-light)' } });
+        row.appendChild(isCustom
+          ? el('input', { className: 'form-input', style: { maxWidth: '180px' }, type: 'text', placeholder: 'Description', value: it.name || '',
+              onInput(e) { it.name = e.target.value; } })
+          : el('span', { style: { flex: '1', fontSize: '0.85rem' } }, it.name));
+        row.appendChild(el('input', { className: 'mono', style: { width: '65px', border: '1px solid var(--border)', borderRadius: '3px', padding: '0.3rem' }, type: 'number', value: numOrBlank(it.psf),
+          onChange(e) { it.psf = e.target.value; renderTabBar(); recalcAndRerenderOutputs(); } }));
+        row.appendChild(el('span', { className: 'mono', style: { fontSize: '0.72rem', color: 'var(--ink-tertiary)' } }, 'psf'));
+        if (isCustom) {
+          row.appendChild(el('select', { className: 'form-select', style: { width: 'auto' },
+            onChange(e) { it.category = e.target.value; renderTabBar(); recalcAndRerenderOutputs(); } },
+            el('option', { value: 'superimposed', selected: it.category !== 'framing' }, 'Superimposed'),
+            el('option', { value: 'framing', selected: it.category === 'framing' }, 'Framing'),
+          ));
+          row.appendChild(el('label', { style: { display: 'flex', alignItems: 'center', gap: '0.3rem', fontSize: '0.78rem' } },
+            el('input', { type: 'checkbox', checked: !!it.coverageEligible, onInput(e) { it.coverageEligible = e.target.checked; renderTabBody(); } }),
             'Coverage-reduced (lateral)',
-          ),
-          c.coverageEligible ? el('input', { className: 'mono', style: { width: '55px', border: '1px solid var(--border)', borderRadius: '3px', padding: '0.3rem' }, type: 'number', min: '0', max: '100', value: c.coveragePercent != null ? c.coveragePercent : 100,
-            onChange(e) { c.coveragePercent = e.target.value; recalcAndRerenderOutputs(); } }) : null,
-          el('button', { className: 'btn btn-ghost btn-sm', type: 'button', onClick() { tab.custom = tab.custom.filter((x) => x.id !== c.id); renderTabBody(); renderTabBar(); } }, '×'),
-        );
-        customPanel.appendChild(row);
+          ));
+        }
+        if (it.coverageEligible) {
+          row.appendChild(el('span', { style: { fontSize: '0.72rem', color: 'var(--ink-tertiary)' } }, '% coverage:'));
+          row.appendChild(el('input', { className: 'mono', style: { width: '55px', border: '1px solid var(--border)', borderRadius: '3px', padding: '0.3rem' }, type: 'number', min: '0', max: '100', value: it.coveragePercent != null ? it.coveragePercent : 100,
+            onChange(e) { it.coveragePercent = e.target.value; recalcAndRerenderOutputs(); } }));
+        }
+        row.appendChild(el('button', { className: 'btn btn-ghost btn-sm', type: 'button',
+          onClick() { tab.items = tab.items.filter((x) => x.id !== it.id); renderTabBody(); renderTabBar(); } }, '×'));
+        itemsPanel.appendChild(row);
       });
-      customPanel.appendChild(el('button', { className: 'btn btn-sm', type: 'button',
-        onClick() { tab.custom.push({ id: 'custom' + (nextCustomId++), name: '', psf: 0, perInch: false, thickness: 1, category: 'superimposed' }); renderTabBody(); } }, '+ Add Custom Item'));
-      bodyContainer.appendChild(customPanel);
 
-      // Totals display
+      const availablePresets = (def.allowances ? def.allowances.items : []).map((p, i) => ({ p, i }))
+        .filter(({ i }) => !tab.items.some((x) => x.kind === 'preset' && x.presetIndex === i));
+      const addItemSelect = el('select', { className: 'form-select', style: { width: 'auto', marginTop: '0.4rem' } },
+        el('option', { value: '' }, '+ Add item…'),
+        ...availablePresets.map(({ p, i }) => el('option', { value: 'preset:' + i }, p.name + ' (' + p.psf.toFixed(1) + ' psf)')),
+        el('option', { value: 'custom' }, '+ Custom Item…'),
+      );
+      addItemSelect.addEventListener('change', () => {
+        if (!addItemSelect.value) return;
+        if (addItemSelect.value === 'custom') {
+          tab.items.push({ id: 'item' + (nextItemId++), kind: 'custom', name: '', psf: 0, category: 'superimposed', perInch: false, thickness: 1, coverageEligible: false, coveragePercent: 100 });
+        } else {
+          const idx = parseInt(addItemSelect.value.split(':')[1], 10);
+          const preset = def.allowances.items[idx];
+          tab.items.push({ id: 'item' + (nextItemId++), kind: 'preset', presetIndex: idx, name: preset.name, psf: preset.psf, category: 'superimposed', coverageEligible: !!preset.coverageEligible, coveragePercent: 100 });
+        }
+        renderTabBody(); renderTabBar();
+      });
+      itemsPanel.appendChild(addItemSelect);
+      bodyContainer.appendChild(itemsPanel);
+
+      // Totals display — 2-column Gravity / Lateral
       const totals = computeTabTotals(tab);
       const totalsPanel = el('div', { className: 'output-section' },
         el('div', { className: 'output-header' }, el('span', null, 'Assembly Totals')),
         el('div', { className: 'output-body' },
-          buildTotalsTable(totals, def.hasLiveLoad),
+          buildTotalsTable(totals, def),
         ),
       );
       bodyContainer.appendChild(totalsPanel);
-    }
-
-    function recalcAndRerenderOutputs() {
-      renderTabBody();
     }
 
     function renderAll() {
@@ -358,18 +431,24 @@ export const flatLoadCalculator = {
     const tbl = el('table', { className: 'data-table' });
     tbl.appendChild(el('tr', null,
       el('th', null, 'Assembly'),
+      el('th', null, 'Description'),
       el('th', { className: 'num' }, 'DL'),
       el('th', { className: 'num' }, 'SDL (grav.)'),
       el('th', { className: 'num' }, 'SDL (lat.)'),
+      el('th', { className: 'num' }, 'LL (grav.)'),
+      el('th', { className: 'num' }, 'LL (seismic)'),
       el('th', { className: 'num' }, 'Gravity Total'),
       el('th', { className: 'num' }, 'Lateral Total'),
     ));
     outputs.perTab.forEach((t) => {
       tbl.appendChild(el('tr', null,
         el('td', null, t.name),
+        el('td', { style: { color: 'var(--ink-secondary)', fontSize: '0.85rem' } }, t.description || '—'),
         el('td', { className: 'num mono' }, t.dl.toFixed(1)),
         el('td', { className: 'num mono' }, t.sdlGravity.toFixed(1)),
         el('td', { className: 'num mono' }, t.sdlLateral.toFixed(1)),
+        el('td', { className: 'num mono' }, t.hasLiveLoad ? t.llGravity.toFixed(1) : '—'),
+        el('td', { className: 'num mono' }, t.hasLiveLoad ? t.llSeismic.toFixed(1) : '—'),
         el('td', { className: 'num mono', style: { fontWeight: '600' } }, t.gravityTotal.toFixed(1)),
         el('td', { className: 'num mono', style: { fontWeight: '600' } }, t.lateralTotal.toFixed(1)),
       ));
@@ -379,42 +458,45 @@ export const flatLoadCalculator = {
 
   pdfSections(inputs, outputs) {
     const sections = [];
-    (outputs && outputs.perTab ? outputs.perTab : []).forEach((t) => {
+    const perTab = outputs && outputs.perTab ? outputs.perTab : [];
+
+    if (perTab.length > 1) {
+      sections.push({
+        title: 'Summary — All Assemblies',
+        table: {
+          headers: ['Assembly', 'Description', 'Gravity Total (psf)', 'Lateral Total (psf)'],
+          rows: perTab.map((t) => [t.name, t.description || '', t.gravityTotal.toFixed(1), t.lateralTotal.toFixed(1)]),
+        },
+      });
+    }
+
+    perTab.forEach((t) => {
+      if (t.description) sections.push({ title: t.name, text: t.description });
       const rows = [
         ['Dead Load (D)', t.dl.toFixed(1) + ' psf'],
-        ['Superimposed DL — gravity', t.sdlGravity.toFixed(1) + ' psf'],
-        ['Superimposed DL — lateral', t.sdlLateral.toFixed(1) + ' psf'],
+        ['Superimposed Dead Load — gravity', t.sdlGravity.toFixed(1) + ' psf'],
+        ['Superimposed Dead Load — lateral', t.sdlLateral.toFixed(1) + ' psf'],
       ];
       if (t.hasLiveLoad) {
-        rows.push(['Live Load (L)', t.llGravity.toFixed(1) + ' psf']);
-        rows.push(['Live Load — seismic portion', t.llSeismic.toFixed(1) + ' psf']);
+        rows.push([(t.llLabel || 'Live Load') + ' — gravity', t.llGravity.toFixed(1) + ' psf']);
+        rows.push([(t.llLabel || 'Live Load') + ' — seismic portion', t.llSeismic.toFixed(1) + ' psf']);
       }
       rows.push(['Gravity Total', t.gravityTotal.toFixed(1) + ' psf']);
       rows.push(['Lateral (Seismic) Total', t.lateralTotal.toFixed(1) + ' psf']);
-      if (t.asdCombo != null) {
-        rows.push(['ASD Combo (D+L)', t.asdCombo.toFixed(1) + ' psf']);
-        rows.push(['LRFD Combo (1.2D+1.6L)', t.lrfdCombo.toFixed(1) + ' psf']);
-      }
-      sections.push({ title: t.name, rows });
+      sections.push({ title: t.description ? t.name + ' — Loads' : t.name, rows });
     });
     return sections;
   },
 };
 
-function buildTotalsTable(totals, hasLiveLoad) {
+function buildTotalsTable(totals, def) {
   const tbl = el('table', { className: 'data-table' });
-  tbl.appendChild(el('tr', null, el('td', null, 'Dead Load (D)'), el('td', { className: 'num mono' }, totals.dl.toFixed(1) + ' psf')));
-  tbl.appendChild(el('tr', null, el('td', null, 'Superimposed DL — gravity'), el('td', { className: 'num mono' }, totals.sdlGravity.toFixed(1) + ' psf')));
-  tbl.appendChild(el('tr', null, el('td', null, 'Superimposed DL — lateral'), el('td', { className: 'num mono' }, totals.sdlLateral.toFixed(1) + ' psf')));
-  if (hasLiveLoad) {
-    tbl.appendChild(el('tr', null, el('td', null, 'Live Load (L)'), el('td', { className: 'num mono' }, totals.llGravity.toFixed(1) + ' psf')));
-    tbl.appendChild(el('tr', null, el('td', null, 'Live Load — seismic portion'), el('td', { className: 'num mono' }, totals.llSeismic.toFixed(1) + ' psf')));
+  tbl.appendChild(el('tr', null, el('th', null, 'Load Type'), el('th', { className: 'num' }, 'Gravity'), el('th', { className: 'num' }, 'Lateral')));
+  tbl.appendChild(el('tr', null, el('td', null, 'Dead Load (D)'), el('td', { className: 'num mono' }, totals.dl.toFixed(1)), el('td', { className: 'num mono' }, totals.dl.toFixed(1))));
+  tbl.appendChild(el('tr', null, el('td', null, 'Superimposed Dead Load (SD)'), el('td', { className: 'num mono' }, totals.sdlGravity.toFixed(1)), el('td', { className: 'num mono' }, totals.sdlLateral.toFixed(1))));
+  if (def.hasLiveLoad) {
+    tbl.appendChild(el('tr', null, el('td', null, (def.llLabel || 'Live Load') + ' (L)'), el('td', { className: 'num mono' }, totals.llGravity.toFixed(1)), el('td', { className: 'num mono' }, totals.llSeismic.toFixed(1))));
   }
-  tbl.appendChild(el('tr', { style: { fontWeight: '600' } }, el('td', null, 'Gravity Total'), el('td', { className: 'num mono' }, totals.gravityTotal.toFixed(1) + ' psf')));
-  tbl.appendChild(el('tr', { style: { fontWeight: '600' } }, el('td', null, 'Lateral (Seismic) Total'), el('td', { className: 'num mono' }, totals.lateralTotal.toFixed(1) + ' psf')));
-  if (totals.asdCombo != null) {
-    tbl.appendChild(el('tr', null, el('td', null, 'ASD Combo (D+L)'), el('td', { className: 'num mono' }, totals.asdCombo.toFixed(1) + ' psf')));
-    tbl.appendChild(el('tr', null, el('td', null, 'LRFD Combo (1.2D+1.6L)'), el('td', { className: 'num mono' }, totals.lrfdCombo.toFixed(1) + ' psf')));
-  }
+  tbl.appendChild(el('tr', { style: { fontWeight: '600' } }, el('td', null, 'Total'), el('td', { className: 'num mono' }, totals.gravityTotal.toFixed(1)), el('td', { className: 'num mono' }, totals.lateralTotal.toFixed(1))));
   return tbl;
 }
