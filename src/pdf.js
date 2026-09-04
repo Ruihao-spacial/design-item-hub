@@ -56,6 +56,13 @@ export async function exportItemPdf(project, item, mod, { saveToStorage = true }
 
   const sections = mod.pdfSections ? mod.pdfSections(item.inputs || {}, item.outputs || {}) : [];
   for (const section of sections) {
+    if (section.pageBreakBefore && y > margin) {
+      renderFooter();
+      doc.addPage();
+      pageNum++;
+      y = margin;
+      renderHeader();
+    }
     checkPage(60);
     doc.setFontSize(9);
     doc.setTextColor(29, 78, 216);

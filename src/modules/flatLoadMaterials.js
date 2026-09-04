@@ -241,7 +241,7 @@ const WALL_MEP_ALLOWANCES = [
 // ── Roof / Ceiling / Floor / Deck — ported from dead_load_generator.html ──
 
 const ROOF = {
-  label: 'Roof', short: 'R', defaultName: 'Roof', llLabel: 'Roof Live Load',
+  label: 'Roof', short: 'R', defaultName: 'Roof', llLabel: 'Roof Live Load', llSymbol: 'Lr',
   hasLiveLoad: true, defaultLL: 20, hasSlopeReduction: true,
   llPresets: [
     { label: 'Ordinary roof, flat/low slope (Lr = 20 psf)', psf: 20 },

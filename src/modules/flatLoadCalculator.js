@@ -176,7 +176,7 @@ export const flatLoadCalculator = {
       const totals = computeTabTotals(tab);
       return {
         id: tab.id, name: tab.name, description: tab.description || '', type: tab.type,
-        hasLiveLoad: def.hasLiveLoad, llLabel: def.llLabel || 'Live Load', ...totals,
+        hasLiveLoad: def.hasLiveLoad, llLabel: def.llLabel || 'Live Load', llSymbol: def.llSymbol || 'L', ...totals,
       };
     });
     return { perTab, calcVersion: 'v1' };
@@ -299,6 +299,8 @@ export const flatLoadCalculator = {
           if (slopeResult) {
             llGroup.appendChild(el('div', { className: 'mono', style: { fontSize: '0.78rem', color: 'var(--accent)', marginTop: '0.4rem', background: 'var(--accent-bg)', padding: '0.4rem 0.6rem', borderRadius: '3px' } },
               slopeResult.equation));
+            llGroup.appendChild(el('div', { style: { fontSize: '0.75rem', color: 'var(--stale)', marginTop: '0.3rem' } },
+              'Preset and manual entry are locked while a roof slope is set — clear the slope above to enter Lr manually.'));
           }
         }
 
@@ -428,75 +430,80 @@ export const flatLoadCalculator = {
   renderOutputs(container, outputs) {
     if (!outputs || !outputs.perTab) return;
     clearEl(container);
-    const tbl = el('table', { className: 'data-table' });
-    tbl.appendChild(el('tr', null,
-      el('th', null, 'Assembly'),
-      el('th', null, 'Description'),
-      el('th', { className: 'num' }, 'DL'),
-      el('th', { className: 'num' }, 'SDL (grav.)'),
-      el('th', { className: 'num' }, 'SDL (lat.)'),
-      el('th', { className: 'num' }, 'LL (grav.)'),
-      el('th', { className: 'num' }, 'LL (seismic)'),
-      el('th', { className: 'num' }, 'Gravity Total'),
-      el('th', { className: 'num' }, 'Lateral Total'),
-    ));
-    outputs.perTab.forEach((t) => {
-      tbl.appendChild(el('tr', null,
-        el('td', null, t.name),
-        el('td', { style: { color: 'var(--ink-secondary)', fontSize: '0.85rem' } }, t.description || '—'),
-        el('td', { className: 'num mono' }, t.dl.toFixed(1)),
-        el('td', { className: 'num mono' }, t.sdlGravity.toFixed(1)),
-        el('td', { className: 'num mono' }, t.sdlLateral.toFixed(1)),
-        el('td', { className: 'num mono' }, t.hasLiveLoad ? t.llGravity.toFixed(1) : '—'),
-        el('td', { className: 'num mono' }, t.hasLiveLoad ? t.llSeismic.toFixed(1) : '—'),
-        el('td', { className: 'num mono', style: { fontWeight: '600' } }, t.gravityTotal.toFixed(1)),
-        el('td', { className: 'num mono', style: { fontWeight: '600' } }, t.lateralTotal.toFixed(1)),
+    outputs.perTab.forEach((t, idx) => {
+      const rows = getLoadRows(t, t.hasLiveLoad, t.llLabel, t.llSymbol);
+      const tbl = el('table', { className: 'data-table' });
+      tbl.appendChild(el('tr', null, el('th', null, 'Load Type'), el('th', { className: 'num' }, 'Gravity'), el('th', { className: 'num' }, 'Lateral')));
+      rows.forEach((r) => {
+        tbl.appendChild(el('tr', { style: r.bold ? { fontWeight: '600' } : null },
+          el('td', null, r.label), el('td', { className: 'num mono' }, r.gravity.toFixed(1)), el('td', { className: 'num mono' }, r.lateral.toFixed(1))));
+      });
+      container.appendChild(el('div', { style: { marginBottom: idx < outputs.perTab.length - 1 ? '1rem' : 0 } },
+        el('div', { style: { fontWeight: '600', fontSize: '0.9rem', marginBottom: '0.3rem' } },
+          t.name, t.description ? el('span', { style: { fontWeight: '400', color: 'var(--ink-secondary)', fontSize: '0.82rem' } }, ' — ' + t.description) : null),
+        el('div', { className: 'table-scroll' }, tbl),
       ));
     });
-    container.appendChild(el('div', { className: 'table-scroll' }, tbl));
   },
 
   pdfSections(inputs, outputs) {
     const sections = [];
     const perTab = outputs && outputs.perTab ? outputs.perTab : [];
 
-    if (perTab.length > 1) {
+    // Results summary — its own sheet, one D/SD/(Lr or L)/Total table per
+    // assembly, in the same shape as the live "Assembly Totals" panel.
+    perTab.forEach((t) => {
+      const loadRows = getLoadRows(t, t.hasLiveLoad, t.llLabel, t.llSymbol);
       sections.push({
-        title: 'Summary — All Assemblies',
+        title: t.name + (t.description ? ' — ' + t.description : ''),
         table: {
-          headers: ['Assembly', 'Description', 'Gravity Total (psf)', 'Lateral Total (psf)'],
-          rows: perTab.map((t) => [t.name, t.description || '', t.gravityTotal.toFixed(1), t.lateralTotal.toFixed(1)]),
+          headers: ['Load Type', 'Gravity (psf)', 'Lateral (psf)'],
+          rows: loadRows.map((r) => [r.label, r.gravity.toFixed(1), r.lateral.toFixed(1)]),
         },
       });
-    }
+    });
 
-    perTab.forEach((t) => {
-      if (t.description) sections.push({ title: t.name, text: t.description });
+    // Per-assembly input/detail sections start on a fresh sheet.
+    perTab.forEach((t, idx) => {
       const rows = [
         ['Dead Load (D)', t.dl.toFixed(1) + ' psf'],
         ['Superimposed Dead Load — gravity', t.sdlGravity.toFixed(1) + ' psf'],
         ['Superimposed Dead Load — lateral', t.sdlLateral.toFixed(1) + ' psf'],
       ];
       if (t.hasLiveLoad) {
-        rows.push([(t.llLabel || 'Live Load') + ' — gravity', t.llGravity.toFixed(1) + ' psf']);
-        rows.push([(t.llLabel || 'Live Load') + ' — seismic portion', t.llSeismic.toFixed(1) + ' psf']);
+        rows.push([(t.llLabel || 'Live Load') + ' (' + (t.llSymbol || 'L') + ') — gravity', t.llGravity.toFixed(1) + ' psf']);
+        rows.push([(t.llLabel || 'Live Load') + ' (' + (t.llSymbol || 'L') + ') — seismic portion', t.llSeismic.toFixed(1) + ' psf']);
       }
       rows.push(['Gravity Total', t.gravityTotal.toFixed(1) + ' psf']);
       rows.push(['Lateral (Seismic) Total', t.lateralTotal.toFixed(1) + ' psf']);
-      sections.push({ title: t.description ? t.name + ' — Loads' : t.name, rows });
+      sections.push({ title: t.name + ' — Detail', pageBreakBefore: idx === 0, rows });
     });
     return sections;
   },
 };
 
+// Shared row data for the D/SD/(Lr or L)/Total load table — used by the
+// live in-form "Assembly Totals" panel, the in-app Results view, and the
+// PDF summary sheet, so all three stay in the same shape.
+function getLoadRows(totals, hasLiveLoad, llLabel, llSymbol) {
+  const rows = [
+    { label: 'Dead Load (D)', gravity: totals.dl, lateral: totals.dl },
+    { label: 'Superimposed Dead Load (SD)', gravity: totals.sdlGravity, lateral: totals.sdlLateral },
+  ];
+  if (hasLiveLoad) {
+    rows.push({ label: (llLabel || 'Live Load') + ' (' + (llSymbol || 'L') + ')', gravity: totals.llGravity, lateral: totals.llSeismic });
+  }
+  rows.push({ label: 'Total', gravity: totals.gravityTotal, lateral: totals.lateralTotal, bold: true });
+  return rows;
+}
+
 function buildTotalsTable(totals, def) {
+  const rows = getLoadRows(totals, def.hasLiveLoad, def.llLabel, def.llSymbol);
   const tbl = el('table', { className: 'data-table' });
   tbl.appendChild(el('tr', null, el('th', null, 'Load Type'), el('th', { className: 'num' }, 'Gravity'), el('th', { className: 'num' }, 'Lateral')));
-  tbl.appendChild(el('tr', null, el('td', null, 'Dead Load (D)'), el('td', { className: 'num mono' }, totals.dl.toFixed(1)), el('td', { className: 'num mono' }, totals.dl.toFixed(1))));
-  tbl.appendChild(el('tr', null, el('td', null, 'Superimposed Dead Load (SD)'), el('td', { className: 'num mono' }, totals.sdlGravity.toFixed(1)), el('td', { className: 'num mono' }, totals.sdlLateral.toFixed(1))));
-  if (def.hasLiveLoad) {
-    tbl.appendChild(el('tr', null, el('td', null, (def.llLabel || 'Live Load') + ' (L)'), el('td', { className: 'num mono' }, totals.llGravity.toFixed(1)), el('td', { className: 'num mono' }, totals.llSeismic.toFixed(1))));
-  }
-  tbl.appendChild(el('tr', { style: { fontWeight: '600' } }, el('td', null, 'Total'), el('td', { className: 'num mono' }, totals.gravityTotal.toFixed(1)), el('td', { className: 'num mono' }, totals.lateralTotal.toFixed(1))));
+  rows.forEach((r) => {
+    tbl.appendChild(el('tr', { style: r.bold ? { fontWeight: '600' } : null },
+      el('td', null, r.label), el('td', { className: 'num mono' }, r.gravity.toFixed(1)), el('td', { className: 'num mono' }, r.lateral.toFixed(1))));
+  });
   return tbl;
 }
