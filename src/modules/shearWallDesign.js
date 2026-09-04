@@ -1,4 +1,4 @@
-import { el, clearEl } from '../utils.js';
+import { el, clearEl, numOrBlank } from '../utils.js';
 
 export const shearWallDesign = {
   id: 'shear_wall_design',
@@ -85,11 +85,11 @@ export const shearWallDesign = {
         tbl.appendChild(el('tr', null,
           el('td', null, el('input', { type: 'text', value: w.mark || '', placeholder: 'SW-1', onInput(e) { w.mark = e.target.value; } })),
           el('td', null, el('input', { type: 'text', value: w.level || '', placeholder: 'L2', onInput(e) { w.level = e.target.value; } })),
-          el('td', null, el('input', { type: 'number', value: w.length || '', placeholder: '0', onInput(e) { w.length = e.target.value; } })),
-          el('td', null, el('input', { type: 'number', value: w.height || '', placeholder: '0', onInput(e) { w.height = e.target.value; } })),
+          el('td', null, el('input', { type: 'number', value: numOrBlank(w.length), placeholder: '0', onInput(e) { w.length = e.target.value; } })),
+          el('td', null, el('input', { type: 'number', value: numOrBlank(w.height), placeholder: '0', onInput(e) { w.height = e.target.value; } })),
           el('td', null, el('input', { type: 'text', value: w.sheathing || '', placeholder: '—', onInput(e) { w.sheathing = e.target.value; } })),
           el('td', null, el('input', { type: 'text', value: w.nailing || '', placeholder: '—', onInput(e) { w.nailing = e.target.value; } })),
-          el('td', null, el('input', { type: 'number', value: w.demand || '', placeholder: '0', onInput(e) { w.demand = e.target.value; } })),
+          el('td', null, el('input', { type: 'number', value: numOrBlank(w.demand), placeholder: '0', onInput(e) { w.demand = e.target.value; } })),
           el('td', { className: 'row-actions' },
             el('button', { className: 'btn btn-ghost btn-sm', type: 'button', onClick() { inputs.walls.splice(i, 1); renderWalls(); }, title: 'Remove' }, '×')),
         ));
@@ -132,7 +132,7 @@ export const shearWallDesign = {
         title: 'Input — Shear Wall Schedule',
         table: {
           headers: ['Mark', 'Level', 'Length (ft)', 'Height (ft)', 'Sheathing', 'Nailing', 'Demand (plf)'],
-          rows: inputs.walls.map((w) => [w.mark || '', w.level || '', w.length || '', w.height || '', w.sheathing || '', w.nailing || '', w.demand || '']),
+          rows: inputs.walls.map((w) => [w.mark || '', w.level || '', numOrBlank(w.length), numOrBlank(w.height), w.sheathing || '', w.nailing || '', numOrBlank(w.demand)]),
         },
       });
     }

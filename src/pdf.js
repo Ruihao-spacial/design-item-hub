@@ -28,7 +28,6 @@ export async function exportItemPdf(project, item, mod, { saveToStorage = true }
     doc.setTextColor(100);
     doc.text('Project: ' + (project.displayNumber || project.projectNumber) + ' — ' + project.name, margin, margin - 18);
     doc.text(item.label || mod.label, margin, margin - 8);
-    doc.text('Sheet ' + pageNum, pageW - margin, margin - 18, { align: 'right' });
     doc.setDrawColor(180);
     doc.line(margin, margin - 4, pageW - margin, margin - 4);
     if (isPlaceholder) {

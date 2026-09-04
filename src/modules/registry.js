@@ -1,10 +1,11 @@
 import { seismicMassTakeoff } from './seismicMassTakeoff.js';
 import { shearWallDesign } from './shearWallDesign.js';
+import { flatLoadCalculator } from './flatLoadCalculator.js';
 
 // Adding a new design item: create modules/yourModule.js exporting an object
-// with the same shape as the two below, import it here, and push it on.
+// with the same shape as the ones below, import it here, and push it on.
 // No other file needs to change.
-export const DESIGN_ITEM_MODULES = [seismicMassTakeoff, shearWallDesign];
+export const DESIGN_ITEM_MODULES = [flatLoadCalculator, seismicMassTakeoff, shearWallDesign];
 
 export function getModule(typeId) {
   return DESIGN_ITEM_MODULES.find((m) => m.id === typeId);

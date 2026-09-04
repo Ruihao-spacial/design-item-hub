@@ -1,4 +1,4 @@
-import { el, clearEl } from '../utils.js';
+import { el, clearEl, numOrBlank } from '../utils.js';
 
 export const seismicMassTakeoff = {
   id: 'seismic_mass_takeoff',
@@ -61,10 +61,10 @@ export const seismicMassTakeoff = {
       inputs.levels.forEach((lv, i) => {
         tbl.appendChild(el('tr', null,
           el('td', null, el('input', { type: 'text', value: lv.label || '', placeholder: 'e.g. Roof', onInput(e) { lv.label = e.target.value; } })),
-          el('td', null, el('input', { type: 'number', value: lv.elevation || '', placeholder: '0', onInput(e) { lv.elevation = e.target.value; } })),
-          el('td', null, el('input', { type: 'number', value: lv.deadLoad || '', placeholder: '0', onInput(e) { lv.deadLoad = e.target.value; } })),
-          el('td', null, el('input', { type: 'number', value: lv.areaSF || '', placeholder: '0', onInput(e) { lv.areaSF = e.target.value; } })),
-          el('td', null, el('input', { type: 'number', value: lv.wallWeight || '', placeholder: '0', onInput(e) { lv.wallWeight = e.target.value; } })),
+          el('td', null, el('input', { type: 'number', value: numOrBlank(lv.elevation), placeholder: '0', onInput(e) { lv.elevation = e.target.value; } })),
+          el('td', null, el('input', { type: 'number', value: numOrBlank(lv.deadLoad), placeholder: '0', onInput(e) { lv.deadLoad = e.target.value; } })),
+          el('td', null, el('input', { type: 'number', value: numOrBlank(lv.areaSF), placeholder: '0', onInput(e) { lv.areaSF = e.target.value; } })),
+          el('td', null, el('input', { type: 'number', value: numOrBlank(lv.wallWeight), placeholder: '0', onInput(e) { lv.wallWeight = e.target.value; } })),
           el('td', { className: 'row-actions' },
             el('button', { className: 'btn btn-ghost btn-sm', type: 'button', onClick() { inputs.levels.splice(i, 1); renderLevels(); }, title: 'Remove' }, '×')),
         ));
@@ -112,7 +112,7 @@ export const seismicMassTakeoff = {
         title: 'Input — Building Levels',
         table: {
           headers: ['Level', 'Elev. (ft)', 'Dead Load (psf)', 'Area (sf)', 'Wall Wt (psf)'],
-          rows: inputs.levels.map((lv) => [lv.label || '', lv.elevation || '', lv.deadLoad || '', lv.areaSF || '', lv.wallWeight || '']),
+          rows: inputs.levels.map((lv) => [lv.label || '', numOrBlank(lv.elevation), numOrBlank(lv.deadLoad), numOrBlank(lv.areaSF), numOrBlank(lv.wallWeight)]),
         },
       });
     }

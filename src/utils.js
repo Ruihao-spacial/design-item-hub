@@ -36,6 +36,10 @@ export function formatDateTime(value) {
     ' ' + d.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' });
 }
 
+export function numOrBlank(v) {
+  return v === null || v === undefined || v === '' ? '' : v;
+}
+
 export function sanitizeProjectNumber(raw) {
   return raw.replace(/[^A-Za-z0-9_\-.]/g, '-').replace(/-{2,}/g, '-').replace(/^-|-$/g, '') || 'unnamed';
 }
