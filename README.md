@@ -1,6 +1,6 @@
 # Design Item Hub
 
-Shared structural-engineering calculation tool, organized by project number. Each project holds multiple design-item calculations (seismic mass takeoff, shear wall design, and future modules). Real-time shared data across the team via Supabase, deployed on Railway.
+Shared structural-engineering calculation tool, organized by project number. Each project holds multiple design-item calculations. Real-time shared data across the team via Supabase, deployed on Railway.
 
 ## Stack
 
@@ -8,6 +8,18 @@ Shared structural-engineering calculation tool, organized by project number. Eac
 - **Database + Auth**: Supabase (Postgres, Row Level Security, email/password auth, Realtime, Storage)
 - **Hosting**: Railway (auto-deploys from this GitHub repo)
 - **PDF export**: jsPDF (client-side)
+
+## Modules
+
+| Module | Files | Description |
+|--------|-------|-------------|
+| Flat Load Calculator | `flatLoadCalculator.js`, `flatLoadMaterials.js` | Dead/live load assembly builder with material library |
+| Seismic Mass Takeoff | `seismicMassTakeoff.js` | Per-level seismic weight from Flat Load assemblies |
+| Seismic Base Shear | `seismicBaseShear.js`, `seismicBaseShearTables.js` | ASCE 7-22 Cs calculator with seismic system dropdown |
+| ELF Diaphragm & Collector | `elfDiaphragmCollector.js` | ASCE 7-22 §12.8/12.10 lateral force distribution |
+| Shear Wall Design | `shearWallDesign.js`, `shearWallCalc.js`, `shearWallElevation.js`, `shearWallTypes.js`, `shearWallNailing.js`, `shearWallHardware.js` | Multi-story shear wall analysis with nailing/hardware auto-select and interactive SVG elevation |
+
+**Cross-module data flow:** Flat Load Calculator → Seismic Mass Takeoff (per-assembly DL) → ELF (W, per-level). Seismic Base Shear → ELF (Cs, SDS, Ie, Ω0, k auto-fill via ref).
 
 ## Project structure
 
@@ -23,15 +35,27 @@ src/
   utils.js                 — DOM helper (el), formatting, toasts
   modules/
     registry.js            — DESIGN_ITEM_MODULES array — register new modules here
-    seismicMassTakeoff.js  — one module = one file
-    shearWallDesign.js
+    flatLoadCalculator.js  — dead/live load assembly builder
+    flatLoadMaterials.js   — material library data for flat load calc
+    seismicMassTakeoff.js  — per-level seismic weight takeoff
+    seismicBaseShear.js    — ASCE 7-22 Cs calculator
+    seismicBaseShearTables.js — Fa/Fv/TL lookup tables
+    elfDiaphragmCollector.js  — ELF lateral force distribution
+    shearWallDesign.js     — shear wall module UI + PDF
+    shearWallCalc.js       — shear wall calc engine
+    shearWallElevation.js  — interactive SVG elevation drawing
+    shearWallTypes.js      — data model constructors + helpers
+    shearWallNailing.js    — SDPWS 4.3A nailing table + auto-select
+    shearWallHardware.js   — holdown/strap catalogs + post design
   views/
     login.js
     projectPicker.js
     projectDetail.js
     itemForm.js
 supabase/
-  schema.sql                — full database schema, run once on a new Supabase project
+  config.toml              — Supabase CLI local dev config
+  schema.sql               — full database schema, run once on a new Supabase project
+  migrations/              — incremental schema changes
 ```
 
 ## First-time setup
@@ -76,7 +100,7 @@ Public signup is disabled, so accounts are created by an admin:
 
 ## Adding a new design item module
 
-1. Create `src/modules/yourModule.js` exporting an object with this shape (see `seismicMassTakeoff.js` for a full example):
+1. Create `src/modules/yourModule.js` exporting an object with this shape (see `flatLoadCalculator.js` for a full example):
 
 ```js
 export const yourModule = {
@@ -85,12 +109,12 @@ export const yourModule = {
   schemaVersion: 1,
   calcVersion: 'v1',
   refs: [],                          // cross-item references, if any
-  fields: [...],                     // input field metadata (labels/units)
-  outputFields: [...],               // output field metadata
+  fields: [],
+  outputFields: [],
   migrate(item) { return item; },
   summaryLabel(inputs, outputs) { ... },
-  calc(inputs, resolvedRefs) { ... }, // pure function
-  renderForm(container, existingInputs, onSave, projectItems) { ... },
+  calc(inputs, resolvedRefs) { ... },
+  renderForm(container, existingInputs, onSave, projectItems, onInputChange) { ... },
   renderOutputs(container, outputs) { ... },
   pdfSections(inputs, outputs) { ... },
 };
@@ -100,27 +124,24 @@ export const yourModule = {
 
 ```js
 import { yourModule } from './yourModule.js';
-export const DESIGN_ITEM_MODULES = [seismicMassTakeoff, shearWallDesign, yourModule];
+export const DESIGN_ITEM_MODULES = [..., yourModule];
 ```
 
 That's it — no changes needed to the app shell, project views, or PDF infrastructure.
 
 ## Cross-item references
 
-A module can declare `refs` — what it can pull from other items in the same project (e.g. Shear Wall Design pulls total seismic weight from a Seismic Mass Takeoff item). The `extract(outputs)` function on each ref maps the source item's `outputs` into whatever shape the consuming module's `calc()` expects as `resolvedRefs`.
+A module can declare `refs` — what it can pull from other items in the same project (e.g. Seismic Mass Takeoff pulls per-assembly dead loads from a Flat Load Calculator item, and ELF pulls seismic weight from Mass Takeoff). The `extract(outputs)` function on each ref maps the source item's `outputs` into whatever shape the consuming module's `calc()` expects as `resolvedRefs`.
 
 ## Data model
 
 See `supabase/schema.sql` for the authoritative schema. Summary:
 
 - `projects` — one row per project number. `status` is `active` / `complete` / `archived`.
-- `items` — one row per saved calculation. `type` matches a module id. `inputs`/`outputs` are `jsonb` — free-form, owned entirely by the module. `revisions` is a bounded array (last ~10 snapshots) for basic edit history.
+- `items` — one row per saved calculation. `type` matches a module id. `inputs`/`outputs` are `jsonb` — free-form, owned entirely by the module. `custom_name` for user-defined labels. `revisions` is a bounded array (last ~10 snapshots) for basic edit history.
 - Row Level Security: any authenticated user reads and writes everything (no per-user gating) — matches the team's "shared workspace" requirement.
 
 ## Known limitations / open items
 
-- **Placeholder formulas**: both shipped modules (`seismic_mass_takeoff`, `shear_wall_design`) use placeholder `calc()` functions, clearly labeled `PLACEHOLDER_v1`. PDF exports are watermarked while a calc is a placeholder. Real formulas are pending:
-  - Seismic Mass Takeoff: user's MathCAD reference (not yet provided).
-  - Shear Wall Design: `SWS Calc.xlsx` / `Shear_Wall_Schedule.xlsx` / `SWS Supplemental Calculation.pdf` review (deferred).
-- **No real-time edit locking**: unlike a single-writer lease, Postgres writes here are last-writer-wins with a revision history kept for recovery — acceptable at this team's scale (2-5 concurrent users).
-- **PDF calc-sheet template**: currently a generic layout (header, input/output tables, signature block). The firm has an existing template they want to redesign into this — pending that discussion.
+- **No real-time edit locking**: Postgres writes are last-writer-wins with a revision history kept for recovery — acceptable at this team's scale (2-5 concurrent users).
+- **PDF calc-sheet template**: currently a generic layout (header, input/output tables, signature block). A firm-specific template redesign is planned.
