@@ -109,9 +109,10 @@ export async function getItemsByType(projectNumber, type) {
   return data.map(mapItemRow);
 }
 
-export async function saveItem({ itemId, projectNumber, module: mod, inputs, resolvedRefs }) {
+export async function saveItem({ itemId, projectNumber, module: mod, inputs, resolvedRefs, customName }) {
   const outputs = mod.calc(inputs, resolvedRefs || {});
-  const label = mod.summaryLabel(inputs, outputs);
+  const autoLabel = mod.summaryLabel(inputs, outputs);
+  const label = customName || autoLabel;
 
   if (!itemId) {
     const { data: { user } } = await supabase.auth.getUser();
@@ -121,6 +122,7 @@ export async function saveItem({ itemId, projectNumber, module: mod, inputs, res
         project_number: projectNumber,
         type: mod.id,
         label,
+        custom_name: customName || null,
         inputs,
         outputs,
         refs: inputs.refs || {},
@@ -152,6 +154,7 @@ export async function saveItem({ itemId, projectNumber, module: mod, inputs, res
     .from('items')
     .update({
       label,
+      custom_name: customName || null,
       inputs,
       outputs,
       refs: inputs.refs || {},
@@ -188,6 +191,7 @@ function mapItemRow(row) {
     projectNumber: row.project_number,
     type: row.type,
     label: row.label,
+    customName: row.custom_name || '',
     inputs: row.inputs || {},
     outputs: row.outputs || {},
     refs: row.refs || {},

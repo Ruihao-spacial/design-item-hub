@@ -72,10 +72,22 @@ export async function exportItemPdf(project, item, mod, { saveToStorage = true }
 
     if (section.table) {
       const { headers, rows } = section.table;
-      const colW = contentW / headers.length;
+      const colWidths = section.table.colWidths;
+      let colStarts = [];
+      if (colWidths) {
+        let x = 0;
+        colStarts = colWidths.map((w) => { const s = x; x += w * contentW; return s; });
+      } else {
+        const colW = contentW / headers.length;
+        colStarts = headers.map((_, i) => i * colW);
+      }
+      const colW = (i) => {
+        const next = i + 1 < colStarts.length ? colStarts[i + 1] : contentW;
+        return next - colStarts[i] - 4;
+      };
       doc.setFontSize(7);
       doc.setTextColor(100);
-      headers.forEach((h, i) => doc.text(String(h), margin + i * colW, y + 8));
+      headers.forEach((h, i) => doc.text(String(h), margin + colStarts[i], y + 8));
       y += 12;
       doc.setDrawColor(200);
       doc.line(margin, y, pageW - margin, y);
@@ -83,9 +95,14 @@ export async function exportItemPdf(project, item, mod, { saveToStorage = true }
       doc.setFontSize(8);
       doc.setTextColor(26, 34, 51);
       rows.forEach((row) => {
-        checkPage(14);
-        row.forEach((cell, i) => doc.text(String(cell), margin + i * colW, y + 9));
-        y += 13;
+        const cellLines = row.map((cell, i) => doc.splitTextToSize(String(cell), colW(i)));
+        const lineCount = Math.max(...cellLines.map((l) => l.length));
+        const rowH = lineCount * 10 + 3;
+        checkPage(rowH);
+        cellLines.forEach((lines, i) => {
+          lines.forEach((line, li) => doc.text(line, margin + colStarts[i], y + 9 + li * 10));
+        });
+        y += rowH;
       });
       y += 6;
     } else if (section.rows) {
@@ -106,6 +123,39 @@ export async function exportItemPdf(project, item, mod, { saveToStorage = true }
         checkPage(12);
         doc.text(line, margin, y + 9);
         y += 11;
+      });
+      y += 4;
+    } else if (section.equations) {
+      const baseSize = 9;
+      const subSize = 6;
+      section.equations.forEach((eq) => {
+        if (eq.desc) {
+          checkPage(32);
+          doc.setFont('helvetica', 'bold');
+          doc.setFontSize(8);
+          doc.setTextColor(60);
+          doc.text(eq.desc, margin, y + 10);
+          y += 14;
+        }
+        checkPage(20);
+        let curX = margin + 8;
+        (eq.parts || []).forEach((p) => {
+          const size = (p.sub || p.sup) ? subSize : baseSize;
+          const yOff = p.sub ? 3 : (p.sup ? -4 : 0);
+          if (p.greek) doc.setFont('Symbol', 'normal');
+          else doc.setFont('helvetica', p.bold ? 'bold' : 'normal');
+          doc.setFontSize(size);
+          doc.setTextColor(26, 34, 51);
+          doc.text(p.t, curX, y + 10 + yOff);
+          curX += doc.getTextWidth(p.t);
+        });
+        if (eq.ref) {
+          doc.setFont('helvetica', 'italic');
+          doc.setFontSize(7);
+          doc.setTextColor(120);
+          doc.text(eq.ref, pageW - margin, y + 10, { align: 'right' });
+        }
+        y += 18;
       });
       y += 4;
     }

@@ -85,6 +85,7 @@ create table if not exists public.items (
   project_number text not null references public.projects(project_number) on delete cascade,
   type text not null,
   label text not null default '',
+  custom_name text,
   inputs jsonb not null default '{}'::jsonb,
   outputs jsonb not null default '{}'::jsonb,
   refs jsonb not null default '{}'::jsonb,

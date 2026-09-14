@@ -24,19 +24,74 @@ export async function renderItemForm(container, state, { moduleId, itemId, onBac
   }
 
   const newTitle = mod.noNewPrefix ? mod.label : 'New ' + mod.label;
+  let customName = (!isNew && item.customName) ? item.customName : '';
 
   container.appendChild(el('div', { className: 'breadcrumb' },
     el('a', { href: '#', onClick(e) { e.preventDefault(); onBack(true); } }, 'Projects'),
     el('span', { className: 'sep' }, '/'),
     el('a', { href: '#', onClick(e) { e.preventDefault(); onBack(); } }, p.displayNumber || p.projectNumber),
     el('span', { className: 'sep' }, '/'),
-    el('span', null, isNew ? newTitle : (item.label || mod.label)),
+    el('span', null, isNew ? newTitle : (customName || item.label || mod.label)),
   ));
 
-  container.appendChild(el('h2', { style: { marginBottom: '1rem' } }, isNew ? newTitle : mod.label));
+  const nameRow = el('div', { style: { display: 'flex', alignItems: 'center', gap: '0.75rem', marginBottom: '1rem', flexWrap: 'wrap' } },
+    el('input', { className: 'form-input', style: { maxWidth: '320px', fontWeight: '600', fontSize: '1.1rem' }, type: 'text',
+      placeholder: mod.label, value: customName,
+      onInput(e) { customName = e.target.value; markDirty(); } }),
+    el('span', { className: 'badge badge-type' }, mod.label),
+  );
+  container.appendChild(nameRow);
+
+  const dirtyBadge = el('span', { className: 'badge badge-stale', hidden: true, style: { fontSize: '0.78rem', transition: 'opacity 0.5s' } }, 'Unsaved changes');
+  let savedTimer = null;
+  function markDirty() {
+    clearTimeout(savedTimer);
+    dirtyBadge.hidden = false;
+    dirtyBadge.className = 'badge badge-stale';
+    dirtyBadge.textContent = 'Unsaved changes';
+    dirtyBadge.style.opacity = '1';
+  }
+  function clearDirty() {
+    clearTimeout(savedTimer);
+    dirtyBadge.hidden = false;
+    dirtyBadge.className = 'badge badge-pass';
+    dirtyBadge.textContent = 'Saved';
+    dirtyBadge.style.opacity = '1';
+    savedTimer = setTimeout(() => { dirtyBadge.style.opacity = '0'; setTimeout(() => { dirtyBadge.hidden = true; }, 500); }, 2500);
+  }
 
   const formBody = el('div', { className: 'panel-body' });
   container.appendChild(el('div', { className: 'panel' }, formBody));
+
+  const showOutputs = !mod.noOutputSection;
+  let outputSection = null;
+
+  function renderOutputsInPlace(outputs) {
+    if (!outputSection) return;
+    if (!outputs) { outputSection.hidden = true; return; }
+    outputSection.hidden = false;
+    const body = outputSection.querySelector('.output-body');
+    clearEl(body);
+    mod.renderOutputs(body, outputs);
+  }
+
+  if (showOutputs) {
+    outputSection = el('div', { className: 'output-section', hidden: true },
+      el('div', { className: 'output-header' },
+        el('span', null, 'Results'),
+        el('button', { className: 'btn btn-ghost btn-sm', onClick() { if (item) exportItemPdf(p, item, mod); } }, 'Export PDF'),
+      ),
+      el('div', { className: 'output-body' }),
+    );
+    container.appendChild(outputSection);
+    if (!isNew && item.outputs) renderOutputsInPlace(item.outputs);
+  }
+
+  const statusRow = el('div', { style: { display: 'flex', gap: '0.5rem', alignItems: 'center', justifyContent: 'flex-end', marginTop: '0.5rem' } },
+    dirtyBadge,
+    !isNew ? el('button', { className: 'btn btn-ghost btn-sm', onClick() { if (item) exportItemPdf(p, item, mod); } }, 'Export PDF') : null,
+  );
+  container.appendChild(statusRow);
 
   const projectItems = state.items || [];
 
@@ -52,25 +107,18 @@ export async function renderItemForm(container, state, { moduleId, itemId, onBac
       }
     }
     try {
-      const savedId = await saveItem({ itemId, projectNumber: p.projectNumber, module: mod, inputs, resolvedRefs });
+      const savedId = await saveItem({ itemId: state._itemId, projectNumber: p.projectNumber, module: mod, inputs, resolvedRefs, customName });
       showToast(isNew ? 'Calculation saved.' : 'Calculation updated.', 'success');
-      onSaved(savedId);
+      state._itemId = savedId;
+      item = await getItem(savedId);
+      if (mod.migrate) item = mod.migrate(item);
+      renderOutputsInPlace(item.outputs);
+      clearDirty();
+      onSaved(savedId, true);
     } catch (e) {
       showToast('Error saving: ' + (e.message || ''), 'error');
     }
-  }, projectItems);
-
-  if (!isNew && item.outputs) {
-    const outputBody = el('div', { className: 'output-body' });
-    container.appendChild(el('div', { className: 'output-section' },
-      el('div', { className: 'output-header' },
-        el('span', null, 'Results'),
-        el('button', { className: 'btn btn-ghost btn-sm', onClick() { exportItemPdf(p, item, mod); } }, 'Export PDF'),
-      ),
-      outputBody,
-    ));
-    mod.renderOutputs(outputBody, item.outputs);
-  }
+  }, projectItems, () => { markDirty(); });
 
   if (!isNew && item.revisions && item.revisions.length > 0) {
     const revList = el('div', { style: { marginTop: '0.5rem', fontSize: '0.82rem' } });

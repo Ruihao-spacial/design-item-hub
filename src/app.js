@@ -107,9 +107,14 @@ async function renderCurrentView() {
       moduleId: state._moduleId,
       itemId: state._itemId,
       onBack: (toProjects) => navigate(toProjects ? 'projects' : 'project-detail'),
-      onSaved: async () => {
+      onSaved: async (savedId, stayOnForm) => {
         state.currentProject = await getProject(state.currentProject.projectNumber);
-        navigate('project-detail');
+        if (stayOnForm) {
+          state._itemId = savedId;
+          state._moduleId = null;
+        } else {
+          navigate('project-detail');
+        }
       },
     });
   }

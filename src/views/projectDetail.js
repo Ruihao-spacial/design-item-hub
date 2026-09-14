@@ -55,7 +55,7 @@ export async function renderProjectDetail(container, state, { onBack, onOpenItem
       panel.appendChild(el('div', { className: 'item-row', onClick() { onOpenItem(item); } },
         el('div', { className: 'item-info' },
           el('div', { className: 'item-title' },
-            item.label || (mod ? mod.label : item.type),
+            item.customName || item.label || (mod ? mod.label : item.type),
             el('span', { className: 'badge badge-type' }, mod ? mod.label : item.type),
             isStale ? el('span', { className: 'badge badge-stale' }, 'Stale') : null,
           ),

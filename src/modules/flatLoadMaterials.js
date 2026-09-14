@@ -244,7 +244,9 @@ const ROOF = {
   label: 'Roof', short: 'R', defaultName: 'Roof', llLabel: 'Roof Live Load', llSymbol: 'Lr',
   hasLiveLoad: true, defaultLL: 20, hasSlopeReduction: true,
   llPresets: [
-    { label: 'Ordinary roof, flat/low slope (Lr = 20 psf)', psf: 20 },
+    { label: 'Flat / low-slope roof (Lr = 20 psf)', psf: 20, slopeMode: 'flat' },
+    { label: 'Sloped roof 5:12 – 12:12 (enter slope)', psf: null, slopeMode: 'sloped' },
+    { label: 'Steep roof ≥ 12:12 (Lr = 12 psf)', psf: 12, slopeMode: 'steep' },
   ],
   llRef: 'IBC/CBC Table 1607.1 · roof live load Lr, reduced per ASCE 7 §4.8 based on roof slope. Use snow load Sg/Pf if it controls.',
   layers: [
@@ -535,8 +537,65 @@ export const ASSEMBLY_TYPES = {
   intWall: INT_WALL,
 };
 
+export const TYPICAL_ASSEMBLIES = {
+  roof: [
+    { label: 'Typical Roof — Stick Frame',
+      layers: { finish: { selectedIdx: 1 }, waterproof: { selectedIdx: 2 }, rigidInsul: { selectedIdx: 0 }, sheathing: { selectedIdx: 2 }, framing: { selectedIdx: 3 }, cavityInsul: { selectedIdx: 0 }, ceilingBelow: { selectedIdx: 0 } },
+      items: [
+        { kind: 'preset', presetIndex: 0, name: 'Solar PV array', psf: 4, category: 'superimposed', coverageEligible: true, coveragePercent: 40 },
+        { kind: 'preset', presetIndex: 4, name: 'Miscellaneous', psf: 1, category: 'superimposed' },
+      ],
+      liveLoad: 20, roofLLMode: 'flat' },
+    { label: 'Typical Roof — Wood Truss',
+      layers: { finish: { selectedIdx: 1 }, waterproof: { selectedIdx: 2 }, rigidInsul: { selectedIdx: 2, thickness: 2 }, sheathing: { selectedIdx: 2 }, framing: { selectedIdx: 6 }, cavityInsul: { selectedIdx: 4 }, ceilingBelow: { selectedIdx: 2 } },
+      items: [
+        { kind: 'preset', presetIndex: 0, name: 'Solar PV array', psf: 4, category: 'superimposed', coverageEligible: true, coveragePercent: 40 },
+        { kind: 'preset', presetIndex: 1, name: 'Mechanical/HVAC', psf: 0.5, category: 'superimposed' },
+        { kind: 'preset', presetIndex: 2, name: 'Sprinklers', psf: 0.5, category: 'superimposed' },
+        { kind: 'preset', presetIndex: 4, name: 'Miscellaneous', psf: 1, category: 'superimposed' },
+      ],
+      liveLoad: 20, roofLLMode: 'flat' },
+  ],
+  floor: [
+    { label: 'Typical Floor — Hardwood',
+      layers: { finish: { selectedIdx: 1 }, topping: { selectedIdx: 0 }, subfloor: { selectedIdx: 1 }, framing: { selectedIdx: 4 }, cavityInsul: { selectedIdx: 1, thickness: 6 }, ceilingBelow: { selectedIdx: 2 }, partition: { selectedIdx: 0 } },
+      items: [
+        { kind: 'preset', presetIndex: 1, name: 'Sprinklers', psf: 0.5, category: 'superimposed' },
+        { kind: 'preset', presetIndex: 3, name: 'Miscellaneous', psf: 1, category: 'superimposed' },
+      ],
+      liveLoad: 40 },
+  ],
+  ceiling: [
+    { label: 'Typical Ceiling',
+      layers: { finish: { selectedIdx: 2 }, suspended: { selectedIdx: 0 }, insulation: { selectedIdx: 3 }, framing: { selectedIdx: 3 } },
+      items: [
+        { kind: 'preset', presetIndex: 1, name: 'Sprinklers', psf: 0.5, category: 'superimposed' },
+        { kind: 'preset', presetIndex: 3, name: 'Miscellaneous', psf: 1, category: 'superimposed' },
+      ],
+      liveLoad: 20 },
+  ],
+  extWall: [
+    { label: 'Typical Ext. Wall — Stucco',
+      layers: { exteriorFinish: { selectedIdx: 1 }, weatherBarrier: { selectedIdx: 1 }, contInsul: { selectedIdx: 2, thickness: 2 }, sheathing: { selectedIdx: 3 }, framing: { selectedIdx: 5 }, framingExtras: { selectedIdx: 0 }, cavityInsul: { selectedIdx: 4 }, interiorFinish: { selectedIdx: 2 } },
+      items: [
+        { kind: 'preset', presetIndex: 9, name: 'Miscellaneous', psf: 1, category: 'superimposed' },
+      ] },
+  ],
+  intWall: [
+    { label: 'Typical Int. Wall',
+      layers: { finishA: { selectedIdx: 2 }, framing: { selectedIdx: 2 }, framingExtras: { selectedIdx: 0 }, cavityInsul: { selectedIdx: 6 }, finishB: { selectedIdx: 2 } },
+      items: [
+        { kind: 'preset', presetIndex: 9, name: 'Miscellaneous', psf: 1, category: 'superimposed' },
+      ] },
+  ],
+  deck: [],
+};
+
 export function computeMaterialPsf(material, layerState) {
   if (!material) return 0;
+  if (layerState && layerState.psfOverride && layerState.customPsf != null && layerState.customPsf !== '') {
+    return parseFloat(layerState.customPsf) || 0;
+  }
   const quantity = layerState && layerState.quantity != null ? layerState.quantity : 1;
   if (material.kind === 'perInch') {
     const t = layerState && layerState.thickness != null ? layerState.thickness : (material.defaultThick || 1);
