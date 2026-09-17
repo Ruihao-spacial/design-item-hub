@@ -35,7 +35,17 @@ export function onAuthStateChange(callback) {
 }
 
 export async function getCurrentProfile(userId) {
-  const { data, error } = await supabase.from('profiles').select('full_name').eq('id', userId).maybeSingle();
-  if (error) return null;
-  return data;
+  const [profileResult, accessResult] = await Promise.all([
+    supabase.from('profiles').select('id, full_name').eq('id', userId).maybeSingle(),
+    supabase.from('user_access').select('role, active').eq('user_id', userId).maybeSingle(),
+  ]);
+  if (profileResult.error) throw profileResult.error;
+  if (accessResult.error) throw accessResult.error;
+  if (!accessResult.data) return null;
+  return {
+    id: userId,
+    full_name: profileResult.data?.full_name || '',
+    role: accessResult.data.role,
+    active: accessResult.data.active,
+  };
 }

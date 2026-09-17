@@ -6,9 +6,9 @@
   --ink-tertiary: #9CA3AF;
   --surface: #F3F4F6;
   --panel: #FFFFFF;
-  --accent: #1D4ED8;
-  --accent-hover: #1E40AF;
-  --accent-bg: #EFF6FF;
+  --accent: #1705E5;
+  --accent-hover: #0E04A8;
+  --accent-bg: #F0EFFF;
   --accent-text: #FFFFFF;
   --border: #D1D5DB;
   --border-light: #E5E7EB;
@@ -18,7 +18,7 @@
   --fail-bg: #FEF2F2;
   --stale: #D97706;
   --stale-bg: #FFFBEB;
-  --focus-ring: #3B82F6;
+  --focus-ring: #4A3AF0;
   --overlay: rgba(0,0,0,0.3);
   --shadow: 0 1px 3px rgba(0,0,0,0.08);
 }
@@ -46,6 +46,7 @@
 }
 
 *, *::before, *::after { box-sizing: border-box; }
+[hidden] { display: none !important; }
 
 html, body { height: 100%; }
 body {
@@ -82,7 +83,7 @@ a:focus-visible, summary:focus-visible, .filter-tab:focus-visible, .clickable-ro
   background: var(--panel);
   border-bottom: 1px solid var(--border);
   padding: 0 1.25rem;
-  height: 52px;
+  min-height: 64px;
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -90,14 +91,24 @@ a:focus-visible, summary:focus-visible, .filter-tab:focus-visible, .clickable-ro
   top: 0;
   z-index: 100;
 }
-.app-header .logo { display: flex; align-items: center; gap: 0.5rem; padding: 0; border: 0; background: transparent; font-family: inherit; font-weight: 700; font-size: 1.1rem; letter-spacing: -0.01em; color: var(--ink); cursor: pointer; }
+.header-brand { display: flex; align-items: center; gap: 1.5rem; min-width: 0; }
+.app-header .logo { display: flex; align-items: center; gap: 0.75rem; padding: 0; border: 0; background: transparent; font-family: inherit; font-weight: 700; font-size: 1rem; letter-spacing: -0.01em; color: var(--ink); cursor: pointer; }
 .app-header .logo:hover { color: var(--accent); }
 .app-header .logo:focus-visible { outline: 2px solid var(--focus-ring); outline-offset: 4px; border-radius: 3px; }
-.app-header .logo-mark { width: 28px; height: 28px; background: var(--accent); border-radius: 3px; display: flex; align-items: center; justify-content: center; color: var(--accent-text); font-weight: 700; font-size: 0.85rem; font-family: 'IBM Plex Mono', monospace; }
+.header-brand-logo { width: 112px; height: auto; flex: none; }
+.product-name { padding-left: 0.75rem; border-left: 1px solid var(--border); white-space: nowrap; }
+.app-nav { display: flex; align-items: center; gap: 0.2rem; }
+.app-nav-button { padding: 0.45rem 0.65rem; border: 0; border-radius: 3px; background: transparent; color: var(--ink-secondary); font: 500 0.84rem inherit; cursor: pointer; transition: background 160ms ease, color 160ms ease; }
+.app-nav-button:hover { background: var(--accent-bg); color: var(--accent); }
+.app-nav-button.active { background: var(--accent-bg); color: var(--accent); font-weight: 600; }
+.app-nav-button:focus-visible { outline: 2px solid var(--focus-ring); outline-offset: 1px; }
 .user-info { display: flex; align-items: center; gap: 0.75rem; font-size: 0.85rem; color: var(--ink-secondary); }
+.user-identity { display: flex; align-items: center; gap: 0.45rem; }
+.user-identity strong { color: var(--ink); font-weight: 600; }
+.badge-admin { background: #06004A; color: #FFFFFF; }
 
 /* --- Main content --- */
-.main-content { max-width: 960px; margin: 0 auto; padding: 1.5rem 1.25rem 3rem; }
+.main-content { max-width: 1180px; margin: 0 auto; padding: 1.75rem 1.25rem 3rem; }
 
 /* --- Buttons --- */
 .btn {
@@ -223,11 +234,51 @@ a:focus-visible, summary:focus-visible, .filter-tab:focus-visible, .clickable-ro
 .output-body { padding: 0.75rem; }
 
 /* --- Login page --- */
-.login-page { min-height: 100dvh; display: flex; align-items: center; justify-content: center; padding: 1.5rem; background: var(--surface); }
-.login-card { width: 100%; max-width: 360px; background: var(--panel); border: 1px solid var(--border); border-radius: 4px; padding: 2rem; box-shadow: var(--shadow); }
+.login-page { min-height: 100dvh; display: grid; grid-template-columns: minmax(22rem, 1.05fr) minmax(22rem, 0.95fr); align-items: stretch; background: var(--surface); }
+.login-brand-panel { position: relative; overflow: hidden; display: flex; flex-direction: column; justify-content: space-between; min-height: 100dvh; padding: clamp(2.5rem, 6vw, 5.5rem); background: #FFFFFF; color: #06004A; }
+.login-brand-panel::after { content: ''; position: absolute; width: 28rem; height: 28rem; right: -9rem; bottom: -11rem; border-radius: 50%; background: #F0EFFF; z-index: 0; }
+.login-brand-logo { position: relative; z-index: 1; width: clamp(9rem, 15vw, 13rem); height: auto; }
+.login-brand-copy { position: relative; z-index: 1; max-width: 32rem; margin: auto 0; }
+.login-brand-copy h2 { max-width: 11ch; font-size: clamp(2.8rem, 6vw, 5.8rem); line-height: 0.94; letter-spacing: -0.055em; text-wrap: balance; }
+.login-brand-copy > p:last-child { max-width: 30rem; margin: 1.5rem 0 0; color: #514D7C; font-size: 1rem; }
+.login-eyebrow { margin: 0 0 1.25rem; color: var(--accent); font-size: 0.76rem; font-weight: 700; letter-spacing: 0.12em; text-transform: uppercase; }
+.login-orbit { position: absolute; z-index: 1; width: clamp(13rem, 25vw, 21rem); height: auto; right: clamp(-4rem, -2vw, -1rem); bottom: clamp(-3rem, -2vw, -1rem); mix-blend-mode: multiply; }
+.login-card { width: 100%; max-width: 400px; background: var(--panel); border: 1px solid var(--border); border-radius: 8px; padding: 2.25rem; box-shadow: 0 12px 36px rgba(6,0,74,0.12); }
+.login-page > .login-card { align-self: center; justify-self: center; margin: 2rem; }
+.brand-logo { display: block; width: min(220px, 80%); height: auto; margin: 0 auto 1.25rem; }
+.orbit-illustration { display: block; width: 132px; height: 132px; object-fit: cover; margin: -0.25rem auto 1rem; border-radius: 50%; }
+.branded-login-page > .login-card .brand-logo, .branded-login-page > .login-card .orbit-illustration { display: none; }
+.login-page > .login-card:only-child { grid-column: 1 / -1; }
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) .brand-logo, :root[data-theme="dark"] .brand-logo { filter: brightness(0) invert(1); }
+}
 .login-card .logo-mark { width: 40px; height: 40px; margin: 0 auto 1rem; background: var(--accent); border-radius: 3px; display: flex; align-items: center; justify-content: center; color: var(--accent-text); font: 700 1.1rem 'IBM Plex Mono', monospace; }
 .login-card h1 { text-align: center; margin-bottom: 0.25rem; }
 .login-card .subtitle { text-align: center; color: var(--ink-secondary); font-size: 0.85rem; margin-bottom: 1.5rem; }
+@media (max-width: 640px) {
+  .login-page { display: flex; align-items: center; justify-content: center; padding: 1rem; }
+  .login-brand-panel { display: none; }
+  .login-page > .login-card { margin: 0; }
+  .branded-login-page > .login-card .brand-logo, .branded-login-page > .login-card .orbit-illustration { display: block; }
+  .login-card { padding: 1.75rem 1.25rem; }
+  .brand-logo { width: min(190px, 82%); }
+  .orbit-illustration { width: 104px; height: 104px; }
+}
+
+@media (max-width: 900px) {
+  .product-name { display: none; }
+  .header-brand { gap: 0.75rem; }
+  .app-header { align-items: flex-start; gap: 0.75rem; padding-block: 0.65rem; }
+  .app-nav { align-self: center; }
+  .user-identity strong { display: none; }
+}
+
+@media (max-width: 640px) {
+  .app-header { flex-wrap: wrap; }
+  .header-brand { width: 100%; justify-content: space-between; }
+  .user-info { margin-left: auto; }
+  .header-brand-logo { width: 100px; }
+}
 
 @media (max-width: 600px) {
   .toolbar { flex-direction: column; align-items: stretch; }

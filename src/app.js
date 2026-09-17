@@ -5,6 +5,8 @@ import { renderLogin, renderPasswordSetup } from './views/login.js';
 import { renderProjectPicker } from './views/projectPicker.js';
 import { renderProjectDetail } from './views/projectDetail.js';
 import { renderItemForm } from './views/itemForm.js';
+import { renderUserManagement } from './views/userManagement.js';
+import { renderActivityLog } from './views/activityLog.js';
 
 const state = {
   view: 'projects',
@@ -45,6 +47,8 @@ export async function initApp(rootEl) {
     }
     if (!session3 && state.view !== 'login') {
       state.view = 'login';
+      state.currentUser = null;
+      state.currentProfile = null;
       if (unsubProjects) { unsubProjects(); unsubProjects = null; }
       renderLogin(rootEl, async () => {
         const s = await getSession();
@@ -76,6 +80,15 @@ async function enterApp(rootEl, session) {
     state.currentProfile = null;
     showToast('Your profile details could not be loaded.', 'warning');
   }
+  if (!state.currentProfile?.active) {
+    try { await signOut(); } catch { /* The local auth listener will still return to sign-in. */ }
+    showToast('This account is inactive. Ask an administrator to restore access.', 'error');
+    renderLogin(rootEl, async () => {
+      const nextSession = await getSession();
+      await enterApp(rootEl, nextSession);
+    });
+    return;
+  }
   renderShell(rootEl);
   navigate('projects');
   refreshProjects();
@@ -84,11 +97,24 @@ async function enterApp(rootEl, session) {
 
 function renderShell(rootEl) {
   clearEl(rootEl);
+  const isAdmin = state.currentProfile?.role === 'admin';
+  const navigation = el('nav', { className: 'app-nav', 'aria-label': 'Primary navigation' },
+    navButton('Projects', 'projects'),
+    isAdmin ? navButton('Activity', 'activity') : null,
+    isAdmin ? navButton('Users', 'users') : null,
+  );
   const header = el('header', { className: 'app-header' },
-    el('button', { className: 'logo', type: 'button', 'aria-label': 'Engineer service calculator home', onClick() { navigate('projects'); } },
-      el('span', { className: 'logo-mark', 'aria-hidden': 'true' }, 'ES'), 'Engineer service calculator'),
+    el('div', { className: 'header-brand' },
+      el('button', { className: 'logo', type: 'button', 'aria-label': 'Engineer service calculator home', onClick() { navigate('projects'); } },
+        el('img', { className: 'header-brand-logo', src: '/assets/spacial-logo-blue.svg', alt: 'Spacial' }),
+        el('span', { className: 'product-name' }, 'Engineer service calculator')),
+      navigation,
+    ),
     el('div', { className: 'user-info' },
-      state.currentProfile?.full_name || state.currentUser?.email || '',
+      el('span', { className: 'user-identity' },
+        el('strong', null, state.currentProfile?.full_name || state.currentUser?.email || ''),
+        isAdmin ? el('span', { className: 'badge badge-admin' }, 'Admin') : null,
+      ),
       el('button', { className: 'btn btn-ghost btn-sm', onClick: async () => {
         try {
           await signOut();
@@ -102,6 +128,13 @@ function renderShell(rootEl) {
   const main = el('main', { className: 'main-content', id: 'main-content', tabindex: '-1' });
   rootEl.appendChild(header);
   rootEl.appendChild(main);
+
+  function navButton(label, view) {
+    return el('button', {
+      className: 'app-nav-button', type: 'button', 'data-view': view,
+      onClick() { navigate(view); },
+    }, label);
+  }
 }
 
 function getMain() { return document.getElementById('main-content'); }
@@ -117,9 +150,23 @@ async function refreshProjects() {
 }
 
 function navigate(view, data) {
+  if ((view === 'users' || view === 'activity') && state.currentProfile?.role !== 'admin') {
+    view = 'projects';
+    showToast('Administrator access is required.', 'error');
+  }
   state.view = view;
   if (data) Object.assign(state, data);
+  updateNavigation();
   renderCurrentView();
+}
+
+function updateNavigation() {
+  document.querySelectorAll('.app-nav-button').forEach((button) => {
+    const active = button.getAttribute('data-view') === state.view;
+    button.classList.toggle('active', active);
+    if (active) button.setAttribute('aria-current', 'page');
+    else button.removeAttribute('aria-current');
+  });
 }
 
 async function renderCurrentView() {
@@ -167,5 +214,11 @@ async function renderCurrentView() {
         }
       },
     });
+  } else if (state.view === 'users' && state.currentProfile?.role === 'admin') {
+    await renderUserManagement(main, state, { onBack: () => navigate('projects') });
+  } else if (state.view === 'activity' && state.currentProfile?.role === 'admin') {
+    await renderActivityLog(main, state, { onBack: () => navigate('projects') });
+  } else {
+    navigate('projects');
   }
 }

@@ -62,9 +62,11 @@ export function renderLogin(container, onSuccess) {
     onSuccess(result.user);
   }
 
-  container.appendChild(el('main', { className: 'login-page', id: 'main-content' },
+  container.appendChild(el('main', { className: 'login-page branded-login-page', id: 'main-content' },
+    brandPanel('Engineering decisions, documented.'),
     el('form', { className: 'login-card', onSubmit(e) { e.preventDefault(); submit(); } },
-      el('div', { className: 'logo-mark', 'aria-hidden': 'true' }, 'ES'),
+      el('img', { className: 'brand-logo', src: '/assets/spacial-logo-blue.svg', alt: 'Spacial' }),
+      el('img', { className: 'orbit-illustration', src: '/assets/orbit-refined-main.png', alt: 'Orbit, Spacial assistant' }),
       el('h1', null, 'Engineer service calculator'),
       el('div', { className: 'subtitle' }, 'Sign in with your company account'),
       el('div', { className: 'form-group' }, el('label', { className: 'form-label', htmlFor: 'login-email' }, 'Email'), emailInput),
@@ -118,9 +120,11 @@ export function renderPasswordSetup(container, onSuccess) {
     onSuccess();
   }
 
-  container.appendChild(el('main', { className: 'login-page', id: 'main-content' },
+  container.appendChild(el('main', { className: 'login-page branded-login-page', id: 'main-content' },
+    brandPanel('Secure access for the Spacial engineering team.'),
     el('form', { className: 'login-card', onSubmit(e) { e.preventDefault(); submit(); } },
-      el('div', { className: 'logo-mark', 'aria-hidden': 'true' }, 'ES'),
+      el('img', { className: 'brand-logo', src: '/assets/spacial-logo-blue.svg', alt: 'Spacial' }),
+      el('img', { className: 'orbit-illustration', src: '/assets/orbit-refined-main.png', alt: 'Orbit, Spacial assistant' }),
       el('h1', null, 'Set your password'),
       el('div', { className: 'subtitle' }, 'Finish accepting your invitation or password reset.'),
       el('div', { className: 'form-group' }, el('label', { className: 'form-label', htmlFor: 'setup-password' }, 'New password'), passwordInput),
@@ -129,4 +133,16 @@ export function renderPasswordSetup(container, onSuccess) {
     ),
   ));
   passwordInput.focus();
+}
+
+function brandPanel(message) {
+  return el('aside', { className: 'login-brand-panel', 'aria-label': 'Spacial' },
+    el('img', { className: 'login-brand-logo', src: '/assets/spacial-logo-blue.svg', alt: 'Spacial' }),
+    el('div', { className: 'login-brand-copy' },
+      el('p', { className: 'login-eyebrow' }, 'Engineer service calculator'),
+      el('h2', null, message),
+      el('p', null, 'Create traceable calculations, coordinate project work, and keep every saved edit accountable.'),
+    ),
+    el('img', { className: 'login-orbit', src: '/assets/orbit-refined-main.png', alt: 'Orbit, Spacial assistant' }),
+  );
 }

@@ -7,6 +7,7 @@ Shared structural-engineering calculation tool, organized by project number. Eac
 - **Application**: https://engineer-service-calculator-production.up.railway.app
 - **Access**: invite-only Supabase email/password authentication
 - **Runtime**: Railway with Railpack; Supabase provides Postgres, Auth, Realtime, and Storage
+- **Administration**: in-app user creation, admin/member roles, deactivation, and an immutable work history
 
 ## Stack
 
@@ -34,6 +35,7 @@ src/
   main.js                  — entry point
   app.js                   — router / app shell / auth state
   auth.js                  — Supabase auth wrappers
+  admin.js                 — admin-only Edge Function client
   db.js                    — all Supabase database queries
   pdf.js                   — PDF calc-sheet generation
   supabaseClient.js        — Supabase client init
@@ -58,10 +60,13 @@ src/
     projectPicker.js
     projectDetail.js
     itemForm.js
+    userManagement.js
+    activityLog.js
 supabase/
   config.toml              — Supabase CLI local dev config
   schema.sql               — full database schema, run once on a new Supabase project
   migrations/              — incremental schema changes
+  functions/manage-users/  — server-side Supabase Auth administration
 ```
 
 ## First-time setup
@@ -69,7 +74,7 @@ supabase/
 ### 1. Create a Supabase project
 
 1. Go to [supabase.com](https://supabase.com), create a new project (free tier is enough to start).
-2. In the SQL Editor, run the contents of `supabase/schema.sql`. This creates the `profiles`, `projects`, and `items` tables, Row Level Security policies, realtime publication, and a private `calc-sheets` storage bucket.
+2. Link the project with the Supabase CLI and run `supabase db push`. The migrations create the application tables, role-based Row Level Security, immutable audit history, realtime publication, and a private `calc-sheets` storage bucket.
 3. In **Authentication → Providers**, confirm Email is enabled.
 4. In **Authentication → Settings**, turn **off** "Enable email signups" (self-signup) — this is an invite-only team tool. Team members are added via invite (see below).
 5. Copy your project's **URL** and **anon public key** from **Settings → API**.
@@ -89,14 +94,23 @@ npm install
 npm run dev
 ```
 
-### 4. Invite team members
+### 4. Deploy user administration
+
+```bash
+supabase functions deploy manage-users
+```
+
+The function verifies the signed-in caller is an active administrator before using Supabase Auth's server-only administration API. Never place a service-role key in Vite environment variables.
+
+### 5. Add team members
 
 Public signup is disabled, so accounts are created by an admin:
 
-- **Supabase Dashboard**: Authentication → Users → **Invite user**. Enter their email; they get a magic link to set a password.
-- Each invited user automatically gets a `profiles` row (via the `handle_new_user` trigger in the schema) using their email's local part as a default display name — they can update it later.
+- Sign in as an administrator and open **Users**.
+- Create the account with a name, email, temporary password, and admin/member role.
+- New accounts receive a profile and access record automatically. Administrators can deactivate access without deleting work attribution.
 
-### 5. Deploy
+### 6. Deploy
 
 - Push this repo to GitHub.
 - Connect the repo to Railway (railway.app → New Project → Deploy from GitHub repo).
@@ -141,13 +155,15 @@ A module can declare `refs` — what it can pull from other items in the same pr
 
 ## Data model
 
-See `supabase/schema.sql` for the authoritative schema. Summary:
+The ordered files in `supabase/migrations/` are the authoritative schema. Summary:
 
 - `projects` — one row per project number. `status` is `active` / `complete` / `archived`.
 - `items` — one row per saved calculation. `type` matches a module id. `inputs`/`outputs` are `jsonb` — free-form, owned entirely by the module. `custom_name` for user-defined labels. `revisions` is a bounded array (last ~10 snapshots) for basic edit history.
-- Row Level Security: any authenticated user reads and writes everything (no per-user gating) — matches the team's "shared workspace" requirement.
+- `user_access` — active status plus `admin` / `member` authorization, separate from editable profile data.
+- `audit_log` — append-only database-authored history for project, calculation, profile, and access changes.
+- Row Level Security: active members share engineering work; only active administrators can manage users and read the global audit log.
 
 ## Known limitations / open items
 
-- **No real-time edit locking**: Postgres writes are last-writer-wins with a revision history kept for recovery — acceptable at this team's scale (2-5 concurrent users).
+- **No real-time edit locking**: Postgres writes are last-writer-wins. The audit ledger preserves every committed mutation, while the calculation's convenience revision array remains capped.
 - **PDF calc-sheet template**: currently a generic layout (header, input/output tables, signature block). A firm-specific template redesign is planned.
