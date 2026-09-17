@@ -1,6 +1,12 @@
-# Design Item Hub
+# Engineer service calculator
 
 Shared structural-engineering calculation tool, organized by project number. Each project holds multiple design-item calculations. Real-time shared data across the team via Supabase, deployed on Railway.
+
+## Production
+
+- **Application**: https://engineer-service-calculator-production.up.railway.app
+- **Access**: invite-only Supabase email/password authentication
+- **Runtime**: Railway with Railpack; Supabase provides Postgres, Auth, Realtime, and Storage
 
 ## Stack
 
@@ -95,7 +101,7 @@ Public signup is disabled, so accounts are created by an admin:
 - Push this repo to GitHub.
 - Connect the repo to Railway (railway.app → New Project → Deploy from GitHub repo).
 - In Railway's project settings, add the same environment variables as `.env` (`VITE_SUPABASE_URL`, `VITE_SUPABASE_ANON_KEY`).
-- Railway builds via `npm run build` and serves the static output via `npm run start` (see `railway.json`).
+- Railway builds with Railpack via `npm run build` and serves the static output via `npm run start` (see `railway.json`).
 - Every push to the connected branch auto-deploys.
 
 ## Adding a new design item module

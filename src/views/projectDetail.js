@@ -14,11 +14,22 @@ export async function renderProjectDetail(container, state, { onBack, onOpenItem
     el('span', { className: 'mono', style: { fontWeight: '600' } }, p.displayNumber || p.projectNumber),
   ));
 
-  const statusSelect = el('select', { className: 'form-select', style: { width: 'auto', fontSize: '0.8rem', padding: '0.2rem 0.4rem' },
+  const statusSelect = el('select', { className: 'form-select', 'aria-label': 'Project status', style: { width: 'auto', fontSize: '0.8rem', padding: '0.2rem 0.4rem' },
     async onInput(e) {
-      await updateProjectStatus(p.projectNumber, e.target.value);
-      p.status = e.target.value;
-      showToast('Status updated.', 'success');
+      const previousStatus = p.status;
+      const nextStatus = e.target.value;
+      e.target.disabled = true;
+      try {
+        await updateProjectStatus(p.projectNumber, nextStatus);
+        p.status = nextStatus;
+        showToast('Status updated.', 'success');
+      } catch (error) {
+        console.error('Failed to update project status:', error);
+        e.target.value = previousStatus;
+        showToast('Project status could not be updated.', 'error');
+      } finally {
+        e.target.disabled = false;
+      }
     },
   });
   ['active', 'complete', 'archived'].forEach((s) => {
@@ -33,7 +44,14 @@ export async function renderProjectDetail(container, state, { onBack, onOpenItem
     statusSelect,
   ));
 
-  const items = await listItems(p.projectNumber);
+  let items = [];
+  try {
+    items = await listItems(p.projectNumber);
+  } catch (error) {
+    console.error('Failed to load calculations:', error);
+    container.appendChild(el('div', { className: 'error-banner', role: 'alert' }, 'Calculations could not be loaded. Refresh the page to try again.'));
+    showToast('Calculations could not be loaded.', 'error');
+  }
   state.items = items;
   const activeItems = items.filter((it) => !it.archived);
   const archivedItems = items.filter((it) => it.archived);
@@ -52,8 +70,8 @@ export async function renderProjectDetail(container, state, { onBack, onOpenItem
     activeItems.forEach((item) => {
       const mod = getModule(item.type);
       const isStale = mod && item.calcVersion !== mod.calcVersion;
-      panel.appendChild(el('div', { className: 'item-row', onClick() { onOpenItem(item); } },
-        el('div', { className: 'item-info' },
+      panel.appendChild(el('div', { className: 'item-row' },
+        el('button', { className: 'item-info item-open-button', type: 'button', 'aria-label': 'Open calculation ' + (item.customName || item.label || (mod ? mod.label : item.type)), onClick() { onOpenItem(item); } },
           el('div', { className: 'item-title' },
             item.customName || item.label || (mod ? mod.label : item.type),
             el('span', { className: 'badge badge-type' }, mod ? mod.label : item.type),
@@ -62,9 +80,20 @@ export async function renderProjectDetail(container, state, { onBack, onOpenItem
           el('div', { className: 'item-meta' }, el('span', null, item.enteredBy || '—'), el('span', null, formatDate(item.createdAt))),
         ),
         el('div', { className: 'item-actions' },
-          el('button', { className: 'btn btn-ghost btn-sm', title: 'Export PDF', onClick(e) { e.stopPropagation(); exportItemPdf(p, item, mod); } }, 'PDF'),
+          el('button', { className: 'btn btn-ghost btn-sm', title: 'Export PDF', 'aria-label': 'Export calculation as PDF', async onClick() {
+            try { await exportItemPdf(p, item, mod); } catch (error) { console.error('Failed to export PDF:', error); showToast('PDF export failed.', 'error'); }
+          } }, 'PDF'),
           el('button', { className: 'btn btn-ghost btn-sm btn-danger', title: 'Archive',
-            async onClick(e) { e.stopPropagation(); await archiveItem(item.id); showToast('Item archived.', 'success'); renderProjectDetail(container, state, { onBack, onOpenItem, onAddItem, onDeleted }); } }, 'Archive'),
+            async onClick() {
+              try {
+                await archiveItem(item.id);
+                showToast('Item archived.', 'success');
+                await renderProjectDetail(container, state, { onBack, onOpenItem, onAddItem, onDeleted });
+              } catch (error) {
+                console.error('Failed to archive calculation:', error);
+                showToast('Calculation could not be archived.', 'error');
+              }
+            } }, 'Archive'),
         ),
       ));
     });
@@ -84,7 +113,16 @@ export async function renderProjectDetail(container, state, { onBack, onOpenItem
         ),
         el('div', { className: 'item-actions', style: { opacity: '1' } },
           el('button', { className: 'btn btn-ghost btn-sm',
-            async onClick(e) { e.stopPropagation(); await restoreItem(item.id); showToast('Item restored.', 'success'); renderProjectDetail(container, state, { onBack, onOpenItem, onAddItem, onDeleted }); } }, 'Restore'),
+            async onClick() {
+              try {
+                await restoreItem(item.id);
+                showToast('Item restored.', 'success');
+                await renderProjectDetail(container, state, { onBack, onOpenItem, onAddItem, onDeleted });
+              } catch (error) {
+                console.error('Failed to restore calculation:', error);
+                showToast('Calculation could not be restored.', 'error');
+              }
+            } }, 'Restore'),
         ),
       ));
     });
@@ -96,26 +134,40 @@ export async function renderProjectDetail(container, state, { onBack, onOpenItem
     el('button', { className: 'btn btn-danger btn-sm',
       async onClick() {
         if (!confirm('Delete project ' + (p.displayNumber || p.projectNumber) + ' and all its calculations? This cannot be undone.')) return;
-        await deleteProject(p.projectNumber);
-        showToast('Project deleted.', 'success');
-        onDeleted();
+        try {
+          await deleteProject(p.projectNumber);
+          showToast('Project deleted.', 'success');
+          onDeleted();
+        } catch (error) {
+          console.error('Failed to delete project:', error);
+          showToast('Project could not be deleted.', 'error');
+        }
       },
     }, 'Delete Project'),
   ));
 }
 
 function showAddCalcModal(onAddItem) {
-  const backdrop = el('div', { className: 'modal-backdrop', onClick(e) { if (e.target === backdrop) backdrop.remove(); } });
+  const previouslyFocused = document.activeElement;
+  const close = () => {
+    document.removeEventListener('keydown', onEscape);
+    backdrop.remove();
+    previouslyFocused?.focus?.();
+  };
+  const onEscape = (e) => { if (e.key === 'Escape') close(); };
+  const backdrop = el('div', { className: 'modal-backdrop', onClick(e) { if (e.target === backdrop) close(); } });
   const body = el('div', { className: 'modal-body' });
   DESIGN_ITEM_MODULES.forEach((mod) => {
     body.appendChild(el('button', {
       className: 'btn', style: { width: '100%', justifyContent: 'flex-start', marginBottom: '0.5rem', padding: '0.7rem 1rem' },
-      onClick() { backdrop.remove(); onAddItem(mod.id); },
+      onClick() { close(); onAddItem(mod.id); },
     }, el('span', { className: 'badge badge-type', style: { marginRight: '0.5rem' } }, mod.label.slice(0, 3).toUpperCase()), mod.label));
   });
-  backdrop.appendChild(el('div', { className: 'modal' },
-    el('div', { className: 'modal-header' }, el('h3', null, 'Add Calculation'), el('button', { className: 'btn btn-ghost btn-sm', onClick() { backdrop.remove(); } }, '×')),
+  backdrop.appendChild(el('div', { className: 'modal', role: 'dialog', 'aria-modal': 'true', 'aria-labelledby': 'add-calculation-title' },
+    el('div', { className: 'modal-header' }, el('h3', { id: 'add-calculation-title' }, 'Add Calculation'), el('button', { className: 'btn btn-ghost btn-sm', type: 'button', 'aria-label': 'Close add calculation dialog', onClick: close }, '×')),
     body,
   ));
   document.body.appendChild(backdrop);
+  document.addEventListener('keydown', onEscape);
+  body.querySelector('button')?.focus();
 }

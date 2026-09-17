@@ -2,6 +2,7 @@ import { el, clearEl, formatDateTime, showToast } from '../utils.js';
 import { saveItem, getItem } from '../db.js';
 import { getModule } from '../modules/registry.js';
 import { exportItemPdf } from '../pdf.js';
+import { validateEngineeringInputs } from '../validation.js';
 
 export async function renderItemForm(container, state, { moduleId, itemId, onBack, onSaved }) {
   clearEl(container);
@@ -75,11 +76,21 @@ export async function renderItemForm(container, state, { moduleId, itemId, onBac
     mod.renderOutputs(body, outputs);
   }
 
+  async function exportPdf() {
+    if (!item) return;
+    try {
+      await exportItemPdf(p, item, mod);
+    } catch (error) {
+      console.error('Failed to export PDF:', error);
+      showToast('PDF export failed.', 'error');
+    }
+  }
+
   if (showOutputs) {
     outputSection = el('div', { className: 'output-section', hidden: true },
       el('div', { className: 'output-header' },
         el('span', null, 'Results'),
-        el('button', { className: 'btn btn-ghost btn-sm', onClick() { if (item) exportItemPdf(p, item, mod); } }, 'Export PDF'),
+        el('button', { className: 'btn btn-ghost btn-sm', onClick: exportPdf }, 'Export PDF'),
       ),
       el('div', { className: 'output-body' }),
     );
@@ -89,13 +100,20 @@ export async function renderItemForm(container, state, { moduleId, itemId, onBac
 
   const statusRow = el('div', { style: { display: 'flex', gap: '0.5rem', alignItems: 'center', justifyContent: 'flex-end', marginTop: '0.5rem' } },
     dirtyBadge,
-    !isNew ? el('button', { className: 'btn btn-ghost btn-sm', onClick() { if (item) exportItemPdf(p, item, mod); } }, 'Export PDF') : null,
+    !isNew ? el('button', { className: 'btn btn-ghost btn-sm', onClick: exportPdf }, 'Export PDF') : null,
   );
   container.appendChild(statusRow);
 
   const projectItems = state.items || [];
 
   mod.renderForm(formBody, isNew ? null : JSON.parse(JSON.stringify(item.inputs || {})), async (inputs) => {
+    const validationErrors = validateEngineeringInputs(mod.id, inputs);
+    if (validationErrors.length) {
+      const visibleErrors = validationErrors.slice(0, 3).join(' ');
+      const remainder = validationErrors.length > 3 ? ` (+${validationErrors.length - 3} more)` : '';
+      showToast(`Complete the calculation before saving: ${visibleErrors}${remainder}`, 'error');
+      return;
+    }
     const resolvedRefs = {};
     if (mod.refs && mod.refs.length && inputs.refs) {
       for (const ref of mod.refs) {

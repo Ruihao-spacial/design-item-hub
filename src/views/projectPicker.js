@@ -15,16 +15,17 @@ export function renderProjectPicker(container, state, { onOpenProject, onProject
     return true;
   });
 
-  const statusTabs = el('div', { className: 'filter-tabs' });
+  const statusTabs = el('div', { className: 'filter-tabs', role: 'group', 'aria-label': 'Filter projects by status' });
   ['active', 'complete', 'archived', 'all'].forEach((s) => {
     statusTabs.appendChild(el('button', {
       className: 'filter-tab' + (state.statusFilter === s ? ' active' : ''),
+      type: 'button', 'aria-pressed': state.statusFilter === s ? 'true' : 'false',
       onClick() { state.statusFilter = s; renderProjectPicker(container, state, { onOpenProject, onProjectsChanged }); },
     }, s.charAt(0).toUpperCase() + s.slice(1)));
   });
 
   const searchInput = el('input', {
-    className: 'search-input', type: 'text', placeholder: 'Search projects…', value: state.searchQuery || '',
+    className: 'search-input', type: 'search', placeholder: 'Search projects…', value: state.searchQuery || '', 'aria-label': 'Search projects',
     onInput(e) { state.searchQuery = e.target.value; renderProjectPicker(container, state, { onOpenProject, onProjectsChanged }); },
   });
 
@@ -46,10 +47,21 @@ export function renderProjectPicker(container, state, { onOpenProject, onProject
 
   const panel = el('div', { className: 'panel' });
   const tbl = el('table', { className: 'data-table' });
-  tbl.appendChild(el('tr', null, el('th', null, 'Project No.'), el('th', null, 'Name'), el('th', null, 'Status'), el('th', null, 'Created'), el('th', null, 'By')));
+  tbl.appendChild(el('caption', { className: 'sr-only' }, 'Projects'));
+  const thead = el('thead', null, el('tr', null,
+    el('th', { scope: 'col' }, 'Project No.'), el('th', { scope: 'col' }, 'Name'), el('th', { scope: 'col' }, 'Status'),
+    el('th', { scope: 'col' }, 'Created'), el('th', { scope: 'col' }, 'By')));
+  const tbody = el('tbody');
+  tbl.appendChild(thead);
   filtered.forEach((p) => {
     const statusClass = p.status === 'active' ? 'badge-active' : p.status === 'complete' ? 'badge-complete' : 'badge-archived';
-    tbl.appendChild(el('tr', { style: { cursor: 'pointer' }, onClick() { onOpenProject(p); } },
+    const openProject = () => onOpenProject(p);
+    tbody.appendChild(el('tr', {
+      className: 'clickable-row', tabindex: '0', role: 'link',
+      'aria-label': 'Open project ' + (p.displayNumber || p.projectNumber) + (p.name ? ', ' + p.name : ''),
+      onClick: openProject,
+      onKeydown(e) { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); openProject(); } },
+    },
       el('td', { className: 'mono', style: { fontWeight: '600' } }, p.displayNumber || p.projectNumber),
       el('td', null, p.name || '—'),
       el('td', null, el('span', { className: 'badge ' + statusClass }, p.status)),
@@ -57,6 +69,7 @@ export function renderProjectPicker(container, state, { onOpenProject, onProject
       el('td', null, p.createdBy || '—'),
     ));
   });
+  tbl.appendChild(tbody);
   panel.appendChild(el('div', { className: 'table-scroll' }, tbl));
   container.appendChild(panel);
 }
@@ -64,33 +77,59 @@ export function renderProjectPicker(container, state, { onOpenProject, onProject
 function showNewProjectModal(onProjectsChanged) {
   let number = '';
   let name = '';
-  const backdrop = el('div', { className: 'modal-backdrop', onClick(e) { if (e.target === backdrop) backdrop.remove(); } });
-  const numInput = el('input', { className: 'form-input mono', type: 'text', placeholder: 'e.g. 24-105', onInput(e) { number = e.target.value; } });
-  const nameInput = el('input', { className: 'form-input', type: 'text', placeholder: 'e.g. Smith Residence', onInput(e) { name = e.target.value; } });
+  let submitting = false;
+  const previouslyFocused = document.activeElement;
+  const close = () => {
+    document.removeEventListener('keydown', onEscape);
+    backdrop.remove();
+    previouslyFocused?.focus?.();
+  };
+  const onEscape = (e) => { if (e.key === 'Escape') close(); };
+  const backdrop = el('div', { className: 'modal-backdrop', onClick(e) { if (e.target === backdrop) close(); } });
+  const numInput = el('input', { id: 'new-project-number', className: 'form-input mono', type: 'text', placeholder: 'e.g. 24-105', required: 'true', onInput(e) { number = e.target.value; } });
+  const nameInput = el('input', { id: 'new-project-name', className: 'form-input', type: 'text', placeholder: 'e.g. Smith Residence', onInput(e) { name = e.target.value; } });
 
   async function submit() {
+    if (submitting) return;
     if (!number.trim()) { showToast('Project number is required.', 'warning'); return; }
-    const result = await createProject(number.trim(), name.trim());
+    submitting = true;
+    createButton.disabled = true;
+    let result;
+    try {
+      result = await createProject(number.trim(), name.trim());
+    } catch (error) {
+      console.error('Failed to create project:', error);
+      result = { success: false, error: 'Project creation failed. Please try again.' };
+    }
+    submitting = false;
+    createButton.disabled = false;
     if (result.success) {
-      backdrop.remove();
+      close();
       showToast('Project ' + number + ' created.', 'success');
-      onProjectsChanged();
+      try {
+        await onProjectsChanged();
+      } catch (error) {
+        console.error('Failed to refresh projects:', error);
+      }
     } else {
-      showToast(result.error, 'warning');
+      showToast(result.error || 'Project creation failed. Please try again.', 'error');
     }
   }
 
-  backdrop.appendChild(el('div', { className: 'modal' },
-    el('div', { className: 'modal-header' }, el('h3', null, 'New Project'), el('button', { className: 'btn btn-ghost btn-sm', onClick() { backdrop.remove(); } }, '×')),
+  const createButton = el('button', { className: 'btn btn-primary', type: 'submit' }, 'Create');
+  const dialog = el('form', { className: 'modal', role: 'dialog', 'aria-modal': 'true', 'aria-labelledby': 'new-project-title', onSubmit(e) { e.preventDefault(); submit(); } },
+    el('div', { className: 'modal-header' }, el('h3', { id: 'new-project-title' }, 'New Project'), el('button', { className: 'btn btn-ghost btn-sm', type: 'button', 'aria-label': 'Close new project dialog', onClick: close }, '×')),
     el('div', { className: 'modal-body' },
-      el('div', { className: 'form-group' }, el('label', { className: 'form-label' }, 'Project Number'), numInput),
-      el('div', { className: 'form-group' }, el('label', { className: 'form-label' }, 'Project Name'), nameInput),
+      el('div', { className: 'form-group' }, el('label', { className: 'form-label', htmlFor: 'new-project-number' }, 'Project Number'), numInput),
+      el('div', { className: 'form-group' }, el('label', { className: 'form-label', htmlFor: 'new-project-name' }, 'Project Name'), nameInput),
     ),
     el('div', { className: 'modal-footer' },
-      el('button', { className: 'btn', onClick() { backdrop.remove(); } }, 'Cancel'),
-      el('button', { className: 'btn btn-primary', onClick: submit }, 'Create'),
+      el('button', { className: 'btn', type: 'button', onClick: close }, 'Cancel'),
+      createButton,
     ),
-  ));
+  );
+  backdrop.appendChild(dialog);
   document.body.appendChild(backdrop);
+  document.addEventListener('keydown', onEscape);
   numInput.focus();
 }

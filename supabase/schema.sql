@@ -1,4 +1,4 @@
--- Design Item Hub — database schema
+-- Engineer service calculator — database schema
 -- Run this in the Supabase SQL editor (or via `supabase db push`) on a fresh project.
 
 -- ===== profiles =====
