@@ -2,16 +2,17 @@ import { el, clearEl, numOrBlank } from '../utils.js';
 import {
   resetIds, resetWallNum, defaultInputs,
   newLevel, newWallDLType, newLine, newWallId, nextWallMark,
+  newBeam, newSupportPost,
 } from './shearWallTypes.js';
 import { calcAll } from './shearWallCalc.js';
-import { renderElevation } from './shearWallElevation.js';
+import { renderElevation, renderElevationForPdf, computeElevationLayout } from './shearWallElevation.js';
 import { NAILING_TABLE } from './shearWallNailing.js';
 import { NDS_GRADES, HDUE_TABLE, MSTC_TABLE, POST_SIZES, computePostCapacity } from './shearWallHardware.js';
 
 export const shearWallDesign = {
   id: 'shear_wall_design',
   label: 'Shear Wall Design',
-  schemaVersion: 3,
+  schemaVersion: 4,
   calcVersion: 'v2',
   noNewPrefix: true,
   noOutputSection: false,
@@ -21,7 +22,7 @@ export const shearWallDesign = {
   outputFields: [],
 
   migrate(item) {
-    if (item.schemaVersion >= 3) return item;
+    if (item.schemaVersion >= 4) return item;
     const inp = item.inputs || defaultInputs();
     if (!inp.wallThickness) inp.wallThickness = '4';
     if (!inp.woodGrade) inp.woodGrade = 'dfir_no1';
@@ -31,16 +32,25 @@ export const shearWallDesign = {
     });
     (inp.directions || []).forEach(d => (d.lines || []).forEach(ln => {
       if (ln.wallThickness === undefined) ln.wallThickness = '';
+      if (!ln.beams) ln.beams = [];
+      if (!ln.supportPosts) ln.supportPosts = [];
       (ln.walls || []).forEach(w => { delete w.capacity; });
     }));
-    return { ...item, inputs: inp, schemaVersion: 3 };
+    return { ...item, inputs: inp, schemaVersion: 4 };
   },
 
   summaryLabel(inputs) {
-    let wallCount = 0;
-    (inputs.directions || []).forEach(d => (d.lines || []).forEach(ln => { wallCount += (ln.walls || []).length; }));
+    let wallCount = 0, beamCount = 0, postCount = 0;
+    (inputs.directions || []).forEach(d => (d.lines || []).forEach(ln => {
+      wallCount += (ln.walls || []).length;
+      beamCount += (ln.beams || []).length;
+      postCount += (ln.supportPosts || []).length;
+    }));
     const lineCount = (inputs.directions || []).reduce((s, d) => s + (d.lines || []).length, 0);
-    return 'Shear Walls — ' + wallCount + ' wall' + (wallCount !== 1 ? 's' : '') + ', ' + lineCount + ' line' + (lineCount !== 1 ? 's' : '');
+    let label = 'Shear Walls — ' + wallCount + ' wall' + (wallCount !== 1 ? 's' : '') + ', ' + lineCount + ' line' + (lineCount !== 1 ? 's' : '');
+    if (beamCount) label += ', ' + beamCount + ' beam' + (beamCount !== 1 ? 's' : '');
+    if (postCount) label += ', ' + postCount + ' post' + (postCount !== 1 ? 's' : '');
+    return label;
   },
 
   calc(inputs) { return calcAll(inputs); },
@@ -384,8 +394,17 @@ export const shearWallDesign = {
       });
       hdr.appendChild(el('label', { className: 'form-label', style: { marginBottom: 0 } }, 'Wall:'));
       hdr.appendChild(ltSel);
-      hdr.appendChild(el('button', { className: 'btn btn-sm', type: 'button',
-        onClick() { previewTC(line, dir); } }, 'Preview T/C'));
+      const previewBtn = el('button', { className: 'btn btn-sm', type: 'button',
+        onClick() {
+          if (elevationHandle && elevationHandle.hasResults) {
+            elevationHandle.clearResults();
+            previewBtn.textContent = 'Preview T/C';
+          } else {
+            previewTC(line, dir);
+            previewBtn.textContent = 'Clear Preview';
+          }
+        } }, 'Preview T/C');
+      hdr.appendChild(previewBtn);
 
       const copyFromSel = el('select', { className: 'form-select', style: { width: '100px', fontSize: '0.8rem' } });
       copyFromSel.appendChild(el('option', { value: '' }, 'Copy from…'));
@@ -436,20 +455,24 @@ export const shearWallDesign = {
     if (!outputs || !outputs.perDirection) return;
     clearEl(container);
 
-    let totalWalls = 0, failing = 0, warned = 0;
-    outputs.perDirection.forEach(d => d.perLine.forEach(ln => ln.perLevel.forEach(pl => {
-      totalWalls += pl.walls.length;
-      for (const w of pl.walls) {
-        if (w.dcRatio > 1.0 || w.hbReductionFactor < 1.0) failing++;
-        else if (w.hOverBFlag) warned++;
-      }
-    })));
+    let totalWalls = 0, failing = 0, warned = 0, auditIssues = 0;
+    outputs.perDirection.forEach(d => d.perLine.forEach(ln => {
+      ln.perLevel.forEach(pl => {
+        totalWalls += pl.walls.length;
+        for (const w of pl.walls) {
+          if (w.dcRatio > 1.0 || w.hbReductionFactor < 1.0) failing++;
+          else if (w.hOverBFlag) warned++;
+        }
+      });
+      auditIssues += (ln.loadPathAudit?.warnings || []).length;
+    }));
     const summaryParts = [totalWalls + ' wall' + (totalWalls !== 1 ? 's' : '') + ' analyzed'];
     if (failing > 0) summaryParts.push(failing + ' failing');
     if (warned > 0) summaryParts.push(warned + ' h/b warning');
-    if (!failing && !warned) summaryParts.push('all passing');
+    if (auditIssues > 0) summaryParts.push(auditIssues + ' load path issue' + (auditIssues !== 1 ? 's' : ''));
+    if (!failing && !warned && !auditIssues) summaryParts.push('all passing');
     const summaryText = summaryParts.join(' — ');
-    const summaryClass = failing > 0 ? 'badge-fail' : warned > 0 ? 'badge-stale' : 'badge-pass';
+    const summaryClass = (failing > 0 || auditIssues > 0) ? 'badge-fail' : warned > 0 ? 'badge-stale' : 'badge-pass';
     container.appendChild(el('div', { style: { marginBottom: '0.75rem' } }, el('span', { className: 'badge ' + summaryClass }, summaryText)));
 
     container.appendChild(renderMethodFootnotes());
@@ -474,10 +497,12 @@ export const shearWallDesign = {
             const govT = Math.max(w.governingTensionLeft, w.governingTensionRight);
             const govC = Math.max(w.governingComprLeft, w.governingComprRight);
             const nailLabel = w.nailing ? w.nailing.label : '?';
-            const hdL = w.anchorageLeft ? w.anchorageLeft.id : el('span', { style: { color: 'var(--fail)' } }, 'OVER');
-            const hdR = w.anchorageRight ? w.anchorageRight.id : el('span', { style: { color: 'var(--fail)' } }, 'OVER');
-            const postL = w.postLeft ? w.postLeft.postLabel : el('span', { style: { color: 'var(--fail)' } }, 'OVER');
-            const postR = w.postRight ? w.postRight.postLabel : el('span', { style: { color: 'var(--fail)' } }, 'OVER');
+            const fmtHW = (hw, dc) => hw ? hw.id + (dc != null ? ' (' + dc.toFixed(2) + ')' : '') : el('span', { style: { color: 'var(--fail)' } }, 'OVER');
+            const fmtPost = (p, dc) => p ? p.postLabel + (dc != null ? ' (' + dc.toFixed(2) + ')' : '') : el('span', { style: { color: 'var(--fail)' } }, 'OVER');
+            const hdL = fmtHW(w.anchorageLeft, w.anchorageDCLeft);
+            const hdR = fmtHW(w.anchorageRight, w.anchorageDCRight);
+            const postL = fmtPost(w.postLeft, w.postDCLeft);
+            const postR = fmtPost(w.postRight, w.postDCRight);
             const allPass = w.dcRatio <= 1.0 && w.anchorageLeft && w.anchorageRight && w.postLeft && w.postRight;
             tbl.appendChild(el('tr', null,
               el('td', { className: 'mono' }, w.mark), el('td', null, pl.levelName),
@@ -503,9 +528,10 @@ export const shearWallDesign = {
           }
         }
 
+        const markMap = {};
+        ln.perLevel.forEach(pl => pl.walls.forEach(w => { markMap[w.wallId] = w.mark || w.wallId; }));
+
         if (ln.stackGroups && ln.stackGroups.length) {
-          const markMap = {};
-          ln.perLevel.forEach(pl => pl.walls.forEach(w => { markMap[w.wallId] = w.mark || w.wallId; }));
           container.appendChild(el('div', { style: { fontWeight: '500', fontSize: '0.85rem', marginTop: '0.5rem', marginBottom: '0.25rem' } }, 'Stacking Summary — ' + ln.lineName));
           const stbl = el('table', { className: 'data-table', style: { fontSize: '0.85rem' } });
           stbl.appendChild(el('tr', null, el('th', null, 'Stack'), el('th', null, 'Wall'), el('th', { className: 'num' }, 'Accum T (k)'), el('th', { className: 'num' }, 'Accum C (k)')));
@@ -521,6 +547,71 @@ export const shearWallDesign = {
             });
           }
           container.appendChild(el('div', { className: 'table-scroll', style: { marginBottom: '0.75rem' } }, stbl));
+        }
+
+        // Beam transfer summary
+        if (ln.beamTransfers && ln.beamTransfers.length) {
+          container.appendChild(el('div', { style: { fontWeight: '500', fontSize: '0.85rem', marginTop: '0.5rem', marginBottom: '0.25rem' } }, 'Beam Transfers — ' + ln.lineName));
+          const btbl = el('table', { className: 'data-table', style: { fontSize: '0.85rem' } });
+          btbl.appendChild(el('tr', null, el('th', null, 'Beam'), el('th', null, 'Span (ft)'), el('th', null, 'Source Walls'),
+            el('th', { className: 'num' }, 'R_L T (k)'), el('th', { className: 'num' }, 'R_L C (k)'),
+            el('th', { className: 'num' }, 'R_R T (k)'), el('th', { className: 'num' }, 'R_R C (k)')));
+          for (const bt of ln.beamTransfers) {
+            const srcMarks = bt.sourceWallIds.map(id => markMap[id] || id).join(', ');
+            btbl.appendChild(el('tr', null,
+              el('td', { className: 'mono' }, bt.beamId), el('td', { className: 'num mono' }, bt.length.toFixed(1)),
+              el('td', { className: 'mono' }, srcMarks),
+              el('td', { className: 'num mono' }, bt.leftReaction.tension.toFixed(2)),
+              el('td', { className: 'num mono' }, bt.leftReaction.compression.toFixed(2)),
+              el('td', { className: 'num mono' }, bt.rightReaction.tension.toFixed(2)),
+              el('td', { className: 'num mono' }, bt.rightReaction.compression.toFixed(2)),
+            ));
+          }
+          container.appendChild(el('div', { className: 'table-scroll', style: { marginBottom: '0.75rem' } }, btbl));
+        }
+
+        // Support post schedule
+        if (ln.postPaths && ln.postPaths.length) {
+          container.appendChild(el('div', { style: { fontWeight: '500', fontSize: '0.85rem', marginTop: '0.5rem', marginBottom: '0.25rem' } }, 'Support Posts — ' + ln.lineName));
+          const ptbl = el('table', { className: 'data-table', style: { fontSize: '0.85rem' } });
+          ptbl.appendChild(el('tr', null, el('th', null, 'Post'), el('th', { className: 'num' }, 'Pos (ft)'),
+            el('th', null, 'Level'), el('th', { className: 'num' }, 'Accum T (k)'), el('th', { className: 'num' }, 'Accum C (k)'),
+            el('th', null, 'HD'), el('th', { className: 'num' }, 'HD D/C'), el('th', null, 'Post'), el('th', { className: 'num' }, 'Post D/C'),
+            el('th', null, 'Feeds Into')));
+          for (const pp of ln.postPaths) {
+            for (const pl of pp.perLevel) {
+              const hdLabel = pl.holdown ? pl.holdown.id : 'OVER';
+              const postLabel = pl.post ? pl.post.postLabel : 'OVER';
+              const feedsLabel = pl.feedsInto ? (markMap[pl.feedsInto.wallId] || pl.feedsInto.wallId) + ' ' + pl.feedsInto.side : 'Independent';
+              ptbl.appendChild(el('tr', null,
+                el('td', { className: 'mono' }, pp.postId), el('td', { className: 'num mono' }, pp.position.toFixed(1)),
+                el('td', null, pl.levelName), el('td', { className: 'num mono' }, pl.accumT.toFixed(2)), el('td', { className: 'num mono' }, pl.accumC.toFixed(2)),
+                el('td', { className: 'mono' }, hdLabel), el('td', { className: 'num mono' }, pl.hdDC != null ? pl.hdDC.toFixed(2) : '—'),
+                el('td', { className: 'mono' }, postLabel), el('td', { className: 'num mono' }, pl.postDC != null ? pl.postDC.toFixed(2) : '—'),
+                el('td', { style: { fontSize: '0.8rem' } }, feedsLabel),
+              ));
+            }
+          }
+          container.appendChild(el('div', { className: 'table-scroll', style: { marginBottom: '0.75rem' } }, ptbl));
+        }
+
+        // Load path audit
+        if (ln.loadPathAudit && ln.loadPathAudit.warnings.length > 0) {
+          container.appendChild(el('div', { style: { fontWeight: '500', fontSize: '0.85rem', marginTop: '0.5rem', marginBottom: '0.25rem' } },
+            el('span', { className: 'badge badge-fail', style: { marginRight: '0.5rem' } }, ln.loadPathAudit.warnings.length + ' load path issue' + (ln.loadPathAudit.warnings.length !== 1 ? 's' : '')),
+            ln.lineName));
+          const atbl = el('table', { className: 'data-table', style: { fontSize: '0.85rem' } });
+          atbl.appendChild(el('tr', null, el('th', null, 'Element'), el('th', null, 'Level'), el('th', null, 'Issue')));
+          for (const w of ln.loadPathAudit.warnings) {
+            atbl.appendChild(el('tr', null,
+              el('td', { className: 'mono' }, w.elementMark), el('td', null, w.levelName),
+              el('td', { style: { color: 'var(--fail)' } }, w.message),
+            ));
+          }
+          container.appendChild(el('div', { className: 'table-scroll', style: { marginBottom: '0.75rem' } }, atbl));
+        } else if (ln.loadPathAudit && ln.loadPathAudit.allClear && (ln.beamTransfers?.length || ln.postPaths?.length)) {
+          container.appendChild(el('div', { style: { marginBottom: '0.5rem' } },
+            el('span', { className: 'badge badge-pass' }, 'All load paths verified')));
         }
       }
     }
@@ -556,10 +647,10 @@ export const shearWallDesign = {
           for (const pl of ln.perLevel) { for (const w of pl.walls) {
             const nail = w.nailing ? w.nailing.label : '?';
             const cap = w.effectiveCapacity != null ? w.effectiveCapacity.toFixed(0) : '—';
-            const ancL = w.anchorageLeft ? w.anchorageLeft.id : 'OVER';
-            const ancR = w.anchorageRight ? w.anchorageRight.id : 'OVER';
-            const postL = w.postLeft ? w.postLeft.postLabel : 'OVER';
-            const postR = w.postRight ? w.postRight.postLabel : 'OVER';
+            const ancL = w.anchorageLeft ? w.anchorageLeft.id + (w.anchorageDCLeft != null ? ' (' + w.anchorageDCLeft.toFixed(2) + ')' : '') : 'OVER';
+            const ancR = w.anchorageRight ? w.anchorageRight.id + (w.anchorageDCRight != null ? ' (' + w.anchorageDCRight.toFixed(2) + ')' : '') : 'OVER';
+            const postL = w.postLeft ? w.postLeft.postLabel + (w.postDCLeft != null ? ' (' + w.postDCLeft.toFixed(2) + ')' : '') : 'OVER';
+            const postR = w.postRight ? w.postRight.postLabel + (w.postDCRight != null ? ' (' + w.postDCRight.toFixed(2) + ')' : '') : 'OVER';
             wallRows.push([w.mark, pl.levelName, w.length.toFixed(1), nail, w.unitShear_ASD.toFixed(0), cap, w.dcRatio.toFixed(2), ancL, ancR, postL, postR]);
           } }
           if (wallRows.length) sections.push({ title: dir.dirName + ' / ' + ln.lineName + ' — Wall Schedule', pageBreakBefore: true, table: { headers: ['Mark', 'Level', 'Len', 'Nailing', 'v', 'Cap', 'D/C', 'HD/S L', 'HD/S R', 'Post L', 'Post R'], rows: wallRows, colWidths: [0.06, 0.08, 0.05, 0.1, 0.06, 0.06, 0.06, 0.1, 0.1, 0.08, 0.08] } });
@@ -569,6 +660,49 @@ export const shearWallDesign = {
           if (ln.stackGroups && ln.stackGroups.length) {
             const sRows = []; for (const sg of ln.stackGroups) { sg.wallIds.forEach((wid, idx) => { sRows.push([sg.wallIds.join(' → '), wid, sg.accumulatedTension[idx] != null ? sg.accumulatedTension[idx].toFixed(2) : '—', sg.accumulatedCompression[idx] != null ? sg.accumulatedCompression[idx].toFixed(2) : '—']); }); }
             sections.push({ title: dir.dirName + ' / ' + ln.lineName + ' — Stacking', table: { headers: ['Stack', 'Wall', 'Accum T (k)', 'Accum C (k)'], rows: sRows } });
+          }
+
+          // Beam transfers
+          if (ln.beamTransfers && ln.beamTransfers.length) {
+            const btRows = ln.beamTransfers.map(bt => [bt.beamId, bt.length.toFixed(1), bt.sourceWallIds.join(', '),
+              bt.leftReaction.tension.toFixed(2), bt.leftReaction.compression.toFixed(2),
+              bt.rightReaction.tension.toFixed(2), bt.rightReaction.compression.toFixed(2)]);
+            sections.push({ title: dir.dirName + ' / ' + ln.lineName + ' — Beam Transfers', table: { headers: ['Beam', 'Span', 'Source Walls', 'R_L T (k)', 'R_L C (k)', 'R_R T (k)', 'R_R C (k)'], rows: btRows } });
+          }
+
+          // Support post schedule
+          if (ln.postPaths && ln.postPaths.length) {
+            const ppRows = [];
+            for (const pp of ln.postPaths) {
+              for (const pl of pp.perLevel) {
+                const feedsLabel = pl.feedsInto ? pl.feedsInto.wallId + ' ' + pl.feedsInto.side : 'Independent';
+                ppRows.push([pp.postId, pp.position.toFixed(1), pl.levelName,
+                  pl.accumT.toFixed(2), pl.accumC.toFixed(2),
+                  pl.holdown ? pl.holdown.id : 'OVER', pl.hdDC != null ? pl.hdDC.toFixed(2) : '—',
+                  pl.post ? pl.post.postLabel : 'OVER', pl.postDC != null ? pl.postDC.toFixed(2) : '—', feedsLabel]);
+              }
+            }
+            sections.push({ title: dir.dirName + ' / ' + ln.lineName + ' — Support Posts', table: { headers: ['Post', 'Pos', 'Level', 'T (k)', 'C (k)', 'HD', 'HD D/C', 'Post', 'Post D/C', 'Feeds Into'], rows: ppRows, colWidths: [0.06, 0.05, 0.08, 0.06, 0.06, 0.1, 0.07, 0.1, 0.07, 0.12] } });
+          }
+
+          // Load path audit
+          if (ln.loadPathAudit && ln.loadPathAudit.warnings.length > 0) {
+            const auditRows = ln.loadPathAudit.warnings.map(w => [w.elementMark, w.levelName, w.message]);
+            sections.push({ title: dir.dirName + ' / ' + ln.lineName + ' — Load Path Audit', table: { headers: ['Element', 'Level', 'Issue'], rows: auditRows } });
+          }
+
+          // Elevation diagram
+          const inputLine = (inputs.directions || []).flatMap(d => d.lines || []).find(l => l.id === ln.lineId);
+          if (inputLine) {
+            const elevLayout = computeElevationLayout(inputLine, inputs.levels, { width: 500, overlays: true });
+            sections.push({
+              title: dir.dirName + ' / ' + ln.lineName + ' — Elevation',
+              elevation: {
+                renderFn: (w) => renderElevationForPdf(inputLine, inputs.levels, inputs.wallDLTypes || [], ln, w),
+                aspectRatio: elevLayout.totalH / elevLayout.svgW,
+              },
+              pageBreakBefore: true,
+            });
           }
         }
       }
@@ -641,12 +775,12 @@ function renderWallCalcDetail(w, pl, dir) {
 
   if (w.anchorageLeft || w.anchorageRight || w.postLeft || w.postRight) {
     body.appendChild(el('div', { style: { borderTop: '1px solid var(--border-light)', margin: '0.25rem 0' } }));
-    const ancL = w.anchorageLeft ? w.anchorageLeft.id + ' (' + w.anchorageLeft.cap + ' lb)' : 'OVER CAPACITY';
-    const ancR = w.anchorageRight ? w.anchorageRight.id + ' (' + w.anchorageRight.cap + ' lb)' : 'OVER CAPACITY';
+    const ancL = w.anchorageLeft ? w.anchorageLeft.id + ' (' + w.anchorageLeft.cap + ' lb, D/C=' + (w.anchorageDCLeft != null ? w.anchorageDCLeft.toFixed(2) : '?') + ')' : 'OVER CAPACITY';
+    const ancR = w.anchorageRight ? w.anchorageRight.id + ' (' + w.anchorageRight.cap + ' lb, D/C=' + (w.anchorageDCRight != null ? w.anchorageDCRight.toFixed(2) : '?') + ')' : 'OVER CAPACITY';
     line(w.anchorageType + ' Left:', ancL);
     line(w.anchorageType + ' Right:', ancR);
-    const pL = w.postLeft ? w.postLeft.postLabel + ' (' + w.postLeft.capacityKips + 'k)' : 'OVER CAPACITY';
-    const pR = w.postRight ? w.postRight.postLabel + ' (' + w.postRight.capacityKips + 'k)' : 'OVER CAPACITY';
+    const pL = w.postLeft ? w.postLeft.postLabel + ' (' + w.postLeft.capacityKips + 'k, D/C=' + (w.postDCLeft != null ? w.postDCLeft.toFixed(2) : '?') + ')' : 'OVER CAPACITY';
+    const pR = w.postRight ? w.postRight.postLabel + ' (' + w.postRight.capacityKips + 'k, D/C=' + (w.postDCRight != null ? w.postDCRight.toFixed(2) : '?') + ')' : 'OVER CAPACITY';
     line('Post Left:', pL);
     line('Post Right:', pR);
   }

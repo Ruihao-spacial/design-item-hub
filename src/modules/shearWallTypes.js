@@ -1,6 +1,6 @@
 const SVG_NS = 'http://www.w3.org/2000/svg';
 
-let _id = { lvl: 1, dir: 1, ln: 1, w: 1, gu: 1, gp: 1, wdt: 1 };
+let _id = { lvl: 1, dir: 1, ln: 1, w: 1, gu: 1, gp: 1, wdt: 1, bm: 1, sp: 1 };
 
 export function resetIds(inputs) {
   const max = { lvl: 0, dir: 0, ln: 0, w: 0, gu: 0, gp: 0, wdt: 0 };
@@ -17,6 +17,8 @@ export function resetIds(inputs) {
     (d.lines || []).forEach(ln => {
       extract(ln.id);
       (ln.walls || []).forEach(w => extract(w.id));
+      (ln.beams || []).forEach(b => extract(b.id));
+      (ln.supportPosts || []).forEach(s => extract(s.id));
       Object.values(ln.gravityLoads || {}).forEach(gl => {
         (gl.uniform || []).forEach(u => extract(u.id));
         (gl.point || []).forEach(p => extract(p.id));
@@ -33,6 +35,8 @@ export function newWallId() { return 'w-' + (_id.w++); }
 export function newUniformId() { return 'gu-' + (_id.gu++); }
 export function newPointId() { return 'gp-' + (_id.gp++); }
 export function newWDTId() { return 'wdt-' + (_id.wdt++); }
+export function newBeamId() { return 'bm-' + (_id.bm++); }
+export function newSupportPostId() { return 'sp-' + (_id.sp++); }
 
 let _wallNum = 1;
 export function resetWallNum(inputs) {
@@ -65,7 +69,7 @@ export function newLine(name) {
   return {
     id: newLineId(), name: name || '', totalLength: 60,
     wallThickness: '',
-    levelLoads: {}, walls: [], gravityLoads: {},
+    levelLoads: {}, walls: [], beams: [], supportPosts: [], gravityLoads: {},
   };
 }
 
@@ -86,6 +90,14 @@ export function newUniformLoad(start, end) {
 
 export function newPointLoad(position) {
   return { id: newPointId(), position: position ?? 0, dlKips: '' };
+}
+
+export function newBeam(levelId, position, length) {
+  return { id: newBeamId(), levelId, position: position ?? 0, length: length ?? 8 };
+}
+
+export function newSupportPost(levelId, position) {
+  return { id: newSupportPostId(), levelId, position: position ?? 0 };
 }
 
 export function defaultInputs() {

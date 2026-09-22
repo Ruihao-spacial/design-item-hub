@@ -194,7 +194,243 @@ export function accumulateStackTC(stackGroupIds, wallResultsMap) {
     accT.push(cumT);
     accC.push(cumC);
   }
-  return { accumulatedTension: accT, accumulatedCompression: accC };
+
+  const perComboAccum = {};
+  const topWr = wallResultsMap[stackGroupIds[0]];
+  if (topWr && topWr.combos) {
+    for (const comboKey of Object.keys(topWr.combos)) {
+      const cumTL = [], cumTR = [], cumCL = [], cumCR = [];
+      let runTL = 0, runTR = 0, runCL = 0, runCR = 0;
+      for (const wid of stackGroupIds) {
+        const wr = wallResultsMap[wid];
+        const c = wr && wr.combos ? wr.combos[comboKey] : null;
+        if (c) {
+          runTL = r2(runTL + (c.tensionLeft || 0));
+          runTR = r2(runTR + (c.tensionRight || 0));
+          runCL = r2(runCL + (c.comprLeft || 0));
+          runCR = r2(runCR + (c.comprRight || 0));
+        }
+        cumTL.push(runTL); cumTR.push(runTR);
+        cumCL.push(runCL); cumCR.push(runCR);
+      }
+      perComboAccum[comboKey] = { cumTL, cumTR, cumCL, cumCR };
+    }
+  }
+
+  return { accumulatedTension: accT, accumulatedCompression: accC, perComboAccum };
+}
+
+// === Beam transfers ===
+
+export function resolveBeamTransfers(beams, allWalls, wallResultsMap, levels) {
+  if (!beams || !beams.length) return [];
+  const results = [];
+  for (const beam of beams) {
+    const bmStart = parseFloat(beam.position) || 0;
+    const bmEnd = bmStart + (parseFloat(beam.length) || 0);
+    const bmSpan = bmEnd - bmStart;
+    if (bmSpan <= 0) continue;
+
+    const sourceWalls = allWalls.filter(w => {
+      if (w.levelId !== beam.levelId) return false;
+      const ws = parseFloat(w.position) || 0;
+      const we = ws + (parseFloat(w.length) || 0);
+      return ws < bmEnd && we > bmStart;
+    });
+
+    let leftT = 0, leftC = 0, rightT = 0, rightC = 0;
+    const sourceIds = [];
+    for (const sw of sourceWalls) {
+      const wr = wallResultsMap[sw.id];
+      if (!wr) continue;
+      sourceIds.push(sw.id);
+      const wPos = parseFloat(sw.position) || 0;
+      const wLen = parseFloat(sw.length) || 0;
+      const centroid = wPos + wLen / 2;
+      const armRight = (centroid - bmStart) / bmSpan;
+      const armLeft = (bmEnd - centroid) / bmSpan;
+      const t = wr.accumTension != null ? wr.accumTension : Math.max(wr.governingTensionLeft, wr.governingTensionRight);
+      const c = wr.accumCompression != null ? wr.accumCompression : Math.max(wr.governingComprLeft, wr.governingComprRight);
+      leftT = r2(leftT + t * armLeft);
+      leftC = r2(leftC + c * armLeft);
+      rightT = r2(rightT + t * armRight);
+      rightC = r2(rightC + c * armRight);
+    }
+
+    results.push({
+      beamId: beam.id, levelId: beam.levelId,
+      position: bmStart, length: bmSpan,
+      sourceWallIds: sourceIds,
+      leftReaction: { tension: leftT, compression: leftC },
+      rightReaction: { tension: rightT, compression: rightC },
+    });
+  }
+  return results;
+}
+
+// === Support post paths ===
+
+function pointInWallEnd(pos, wall, tolerance) {
+  const tol = tolerance || 0.1;
+  const wStart = parseFloat(wall.position) || 0;
+  const wEnd = wStart + (parseFloat(wall.length) || 0);
+  if (Math.abs(pos - wStart) <= tol) return 'left';
+  if (Math.abs(pos - wEnd) <= tol) return 'right';
+  return null;
+}
+
+export function resolvePostPaths(supportPosts, beams, allWalls, wallResultsMap, levels, beamTransfers, lineThickness, grade) {
+  if (!supportPosts || !supportPosts.length) return [];
+  const results = [];
+  const bottomLevelId = levels.length > 0 ? levels[levels.length - 1].id : null;
+  const bottomLevel = levels.length > 0 ? levels[levels.length - 1] : null;
+  if (!bottomLevel) return [];
+
+  for (const sp of supportPosts) {
+    const pos = parseFloat(sp.position) || 0;
+    let accumT = 0, accumC = 0;
+
+    // Collect from beam reactions at any level
+    for (const bt of (beamTransfers || [])) {
+      if (Math.abs(bt.position - pos) <= 0.1) {
+        accumT = r2(accumT + bt.leftReaction.tension);
+        accumC = r2(accumC + bt.leftReaction.compression);
+      }
+      if (Math.abs(bt.position + bt.length - pos) <= 0.1) {
+        accumT = r2(accumT + bt.rightReaction.tension);
+        accumC = r2(accumC + bt.rightReaction.compression);
+      }
+    }
+
+    // Collect from wall ends at levels above the bottom that are NOT in a direct stack
+    for (const w of allWalls) {
+      if (w.levelId === bottomLevelId) continue;
+      const side = pointInWallEnd(pos, w);
+      if (!side) continue;
+      // Skip walls that have direct stacking below (they're handled by the stacking system)
+      const wLevelIdx = levels.findIndex(l => l.id === w.levelId);
+      if (wLevelIdx < 0 || wLevelIdx >= levels.length - 1) continue;
+      const belowLevelId = levels[wLevelIdx + 1].id;
+      const hasDirectStack = allWalls.some(bw =>
+        bw.levelId === belowLevelId && overlaps(w, bw));
+      if (hasDirectStack) continue;
+      // Also skip if a beam covers this wall (beam reactions already collected)
+      const hasBeam = (beams || []).some(b => {
+        if (b.levelId !== w.levelId) return false;
+        const bs = parseFloat(b.position) || 0;
+        const be = bs + (parseFloat(b.length) || 0);
+        const ws = parseFloat(w.position) || 0;
+        const we = ws + (parseFloat(w.length) || 0);
+        return ws < be && we > bs;
+      });
+      if (hasBeam) continue;
+
+      const wr = wallResultsMap[w.id];
+      if (!wr) continue;
+      const t = side === 'left'
+        ? (wr.accumTension != null ? wr.accumTension : wr.governingTensionLeft)
+        : (wr.accumTension != null ? wr.accumTension : wr.governingTensionRight);
+      const c = side === 'left'
+        ? (wr.accumCompression != null ? wr.accumCompression : wr.governingComprLeft)
+        : (wr.accumCompression != null ? wr.accumCompression : wr.governingComprRight);
+      accumT = r2(accumT + t);
+      accumC = r2(accumC + c);
+    }
+
+    // Check if post feeds into a wall end at the bottom level
+    let feedsInto = null;
+    for (const w of allWalls) {
+      if (w.levelId !== bottomLevelId) continue;
+      const side = pointInWallEnd(pos, w);
+      if (side) { feedsInto = { wallId: w.id, side }; break; }
+    }
+
+    const floorH = parseFloat(bottomLevel.floorToFloor) || 10;
+    const holdown = autoSelectHoldown(accumT);
+    const post = autoSelectPost(accumC, lineThickness || '4', grade, floorH);
+    const hdDC = holdown && holdown.cap > 0 ? r2(accumT * 1000 / holdown.cap) : null;
+    const postDC = post && post.capacityKips > 0 ? r2(accumC / post.capacityKips) : null;
+
+    const perLevel = [{
+      levelId: bottomLevelId, levelName: bottomLevel.name || '',
+      accumT, accumC, holdown, post, hdDC, postDC, feedsInto,
+    }];
+
+    results.push({ postId: sp.id, position: pos, startLevelId: bottomLevelId, perLevel });
+  }
+  return results;
+}
+
+// === Load path audit ===
+
+export function auditLoadPaths(allWalls, beams, supportPosts, levels, beamTransfers, postPaths) {
+  const warnings = [];
+  const bottomLevelId = levels.length > 0 ? levels[levels.length - 1].id : null;
+
+  for (const w of allWalls) {
+    if (w.levelId === bottomLevelId) continue;
+    const wStart = parseFloat(w.position) || 0;
+    const wEnd = wStart + (parseFloat(w.length) || 0);
+    const wLevelIdx = levels.findIndex(l => l.id === w.levelId);
+    if (wLevelIdx < 0 || wLevelIdx >= levels.length - 1) continue;
+    const belowLevelId = levels[wLevelIdx + 1].id;
+
+    const hasDirectStack = allWalls.some(bw =>
+      bw.levelId === belowLevelId && overlaps(w, bw));
+    if (hasDirectStack) continue;
+
+    const hasBeam = (beams || []).some(b => {
+      if (b.levelId !== w.levelId) return false;
+      const bs = parseFloat(b.position) || 0;
+      const be = bs + (parseFloat(b.length) || 0);
+      return wStart < be && wEnd > bs;
+    });
+    if (hasBeam) continue;
+
+    const hasPostLeft = (supportPosts || []).some(sp =>
+      Math.abs((parseFloat(sp.position) || 0) - wStart) <= 0.1);
+    const hasPostRight = (supportPosts || []).some(sp =>
+      Math.abs((parseFloat(sp.position) || 0) - wEnd) <= 0.1);
+    if (hasPostLeft && hasPostRight) continue;
+
+    warnings.push({
+      type: 'unsupported_wall', elementId: w.id, elementMark: w.mark || w.id,
+      levelId: w.levelId, levelName: levels[wLevelIdx].name || '',
+      message: 'Wall has no support below — add stacking wall, beam, or support posts',
+    });
+  }
+
+  for (const b of (beams || [])) {
+    const bStart = parseFloat(b.position) || 0;
+    const bEnd = bStart + (parseFloat(b.length) || 0);
+    const bLevelIdx = levels.findIndex(l => l.id === b.levelId);
+    if (bLevelIdx < 0 || bLevelIdx >= levels.length - 1) continue;
+    const belowLevelId = levels[bLevelIdx + 1].id;
+
+    for (const [side, pos] of [['left', bStart], ['right', bEnd]]) {
+      const hasPost = (supportPosts || []).some(sp =>
+        Math.abs((parseFloat(sp.position) || 0) - pos) <= 0.1);
+      const hasWallEnd = allWalls.some(bw => {
+        if (bw.levelId !== belowLevelId) return false;
+        return pointInWallEnd(pos, bw) !== null;
+      });
+      const hasWallBelow = allWalls.some(bw => {
+        if (bw.levelId !== belowLevelId) return false;
+        const bs = parseFloat(bw.position) || 0;
+        const be = bs + (parseFloat(bw.length) || 0);
+        return pos >= bs && pos <= be;
+      });
+      if (!hasPost && !hasWallEnd && !hasWallBelow) {
+        warnings.push({
+          type: 'unsupported_beam_end', elementId: b.id, elementMark: b.id,
+          levelId: b.levelId, levelName: levels[bLevelIdx].name || '', side,
+          message: 'Beam ' + side + ' support has no post or wall below',
+        });
+      }
+    }
+  }
+
+  return { warnings, allClear: warnings.length === 0 };
 }
 
 // === Main calc with nailing iteration + hardware auto-select ===
@@ -354,7 +590,7 @@ export function calcAll(inputs) {
             ? findPost(w.postRightOverride, lineThickness, grade, floorH)
             : autoSelectPost(tc.governingComprRight, lineThickness, grade, floorH);
 
-          return {
+          const wallResult = {
             wallId: w.id, mark: w.mark || '', position: parseFloat(w.position) || 0, length: wLen,
             hOverB: ar.hOverB, hOverBFlag: ar.flag, hbReductionFactor: ar.reductionFactor,
             share_1E: r2(sh.seismic), share_1W: r2(sh.wind),
@@ -374,6 +610,8 @@ export function calcAll(inputs) {
             postLeft, postRight,
             ...tc,
           };
+          computeHardwareDC(wallResult, false);
+          return wallResult;
         });
 
         return {
@@ -395,6 +633,15 @@ export function calcAll(inputs) {
           if (wr) {
             wr.accumTension = acc.accumulatedTension[idx];
             wr.accumCompression = acc.accumulatedCompression[idx];
+            if (acc.perComboAccum) {
+              wr.accumPerCombo = {};
+              for (const [key, pca] of Object.entries(acc.perComboAccum)) {
+                wr.accumPerCombo[key] = {
+                  tensionLeft: pca.cumTL[idx], tensionRight: pca.cumTR[idx],
+                  comprLeft: pca.cumCL[idx], comprRight: pca.cumCR[idx],
+                };
+              }
+            }
             // Re-select hardware using accumulated forces for stacked walls
             if (idx > 0) {
               const accumT = acc.accumulatedTension[idx];
@@ -411,13 +658,45 @@ export function calcAll(inputs) {
               const flH = wr.floorH;
               wr.postLeft = autoSelectPost(accumC, lineThickness, grade, flH);
               wr.postRight = autoSelectPost(accumC, lineThickness, grade, flH);
+              computeHardwareDC(wr, true);
             }
           }
         });
         return { wallIds: ids, ...acc };
       });
 
-      return { lineId: line.id, lineName: line.name || '', perLevel, stackGroups };
+      // Phase 3b: Beam transfers
+      const beamTransfers = resolveBeamTransfers(line.beams || [], allWalls, wallResultsMap, levels);
+
+      // Phase 3c: Support post paths
+      const postPaths = resolvePostPaths(
+        line.supportPosts || [], line.beams || [], allWalls, wallResultsMap,
+        levels, beamTransfers, lineThickness, grade,
+      );
+
+      // Apply post-to-wall interaction: add post demand to wall end holdowns
+      for (const pp of postPaths) {
+        for (const pl of pp.perLevel) {
+          if (!pl.feedsInto) continue;
+          const wr = wallResultsMap[pl.feedsInto.wallId];
+          if (!wr) continue;
+          if (pl.feedsInto.side === 'left') {
+            wr.postDemandLeft = r2((wr.postDemandLeft || 0) + pl.accumT);
+            wr.postComprLeft = r2((wr.postComprLeft || 0) + pl.accumC);
+          } else {
+            wr.postDemandRight = r2((wr.postDemandRight || 0) + pl.accumT);
+            wr.postComprRight = r2((wr.postComprRight || 0) + pl.accumC);
+          }
+        }
+      }
+
+      // Phase 3d: Load path audit
+      const loadPathAudit = auditLoadPaths(
+        allWalls, line.beams || [], line.supportPosts || [],
+        levels, beamTransfers, postPaths,
+      );
+
+      return { lineId: line.id, lineName: line.name || '', perLevel, stackGroups, beamTransfers, postPaths, loadPathAudit };
     });
 
     return { dirId: dir.id, dirName: dir.name || '', rho: parseFloat(dir.rho) || 1, perLine };
@@ -447,3 +726,14 @@ function findPost(id, wallThickness, grade, floorH) {
 
 function r2(v) { return Math.round(v * 100) / 100; }
 function r4(v) { return Math.round(v * 10000) / 10000; }
+
+function computeHardwareDC(wr, isStacked) {
+  const tDemandL = (isStacked && wr.accumTension != null ? wr.accumTension : wr.governingTensionLeft) * 1000;
+  const tDemandR = (isStacked && wr.accumTension != null ? wr.accumTension : wr.governingTensionRight) * 1000;
+  const cDemandL = isStacked && wr.accumCompression != null ? wr.accumCompression : wr.governingComprLeft;
+  const cDemandR = isStacked && wr.accumCompression != null ? wr.accumCompression : wr.governingComprRight;
+  wr.anchorageDCLeft = wr.anchorageLeft && wr.anchorageLeft.cap > 0 ? r2(tDemandL / wr.anchorageLeft.cap) : null;
+  wr.anchorageDCRight = wr.anchorageRight && wr.anchorageRight.cap > 0 ? r2(tDemandR / wr.anchorageRight.cap) : null;
+  wr.postDCLeft = wr.postLeft && wr.postLeft.capacityKips > 0 ? r2(cDemandL / wr.postLeft.capacityKips) : null;
+  wr.postDCRight = wr.postRight && wr.postRight.capacityKips > 0 ? r2(cDemandR / wr.postRight.capacityKips) : null;
+}

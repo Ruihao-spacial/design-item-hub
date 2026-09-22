@@ -54,6 +54,26 @@ export async function exportItemPdf(project, item, mod, { saveToStorage = true }
   doc.text(mod.label, margin, y + 14);
   y += 28;
 
+  async function svgToCanvas(svgElement, w, h) {
+    const serializer = new XMLSerializer();
+    const svgString = serializer.serializeToString(svgElement);
+    const blob = new Blob([svgString], { type: 'image/svg+xml;charset=utf-8' });
+    const url = URL.createObjectURL(blob);
+    const img = new Image();
+    await new Promise((resolve, reject) => { img.onload = resolve; img.onerror = reject; img.src = url; });
+    const scale = 2;
+    const canvas = document.createElement('canvas');
+    canvas.width = w * scale;
+    canvas.height = h * scale;
+    const ctx = canvas.getContext('2d');
+    ctx.fillStyle = '#ffffff';
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+    ctx.scale(scale, scale);
+    ctx.drawImage(img, 0, 0, w, h);
+    URL.revokeObjectURL(url);
+    return canvas;
+  }
+
   const sections = mod.pdfSections ? mod.pdfSections(item.inputs || {}, item.outputs || {}) : [];
   for (const section of sections) {
     if (section.pageBreakBefore && y > margin) {
@@ -158,6 +178,26 @@ export async function exportItemPdf(project, item, mod, { saveToStorage = true }
         y += 18;
       });
       y += 4;
+    } else if (section.elevation) {
+      const { renderFn, aspectRatio } = section.elevation;
+      const imgW = contentW;
+      const imgH = imgW * aspectRatio;
+      const maxH = pageH - margin * 2 - 80;
+      const finalW = imgH > maxH ? imgW * (maxH / imgH) : imgW;
+      const finalH = imgH > maxH ? maxH : imgH;
+      checkPage(finalH + 20);
+      try {
+        const svgElement = renderFn(finalW);
+        const canvas = await svgToCanvas(svgElement, finalW, finalH);
+        doc.addImage(canvas, 'PNG', margin, y, finalW, finalH);
+        y += finalH + 10;
+      } catch (e) {
+        console.error('PDF elevation render failed:', e);
+        doc.setFontSize(8);
+        doc.setTextColor(200, 60, 60);
+        doc.text('[Elevation diagram could not be rendered]', margin, y + 10);
+        y += 20;
+      }
     }
   }
 
