@@ -217,3 +217,74 @@ export async function uploadCalcSheet(projectNumber, itemId, blob) {
   const { data } = await supabase.storage.from('calc-sheets').createSignedUrl(path, 60 * 60);
   return data?.signedUrl;
 }
+
+// ===== immutable activity history =====
+
+export async function listActivity({ projectNumber, actorId, action, limit = 30, cursor } = {}) {
+  const boundedLimit = Math.min(Math.max(Number(limit) || 30, 1), 100);
+  let query = supabase
+    .from('audit_log')
+    .select('*')
+    .order('occurred_at', { ascending: false })
+    .order('id', { ascending: false })
+    .limit(boundedLimit);
+
+  if (projectNumber) query = query.eq('project_number', projectNumber);
+  if (actorId) query = query.eq('actor_id', actorId);
+  if (cursor) query = query.lt('occurred_at', cursor);
+
+  const rawFilter = rawActivityFilter(action);
+  if (rawFilter?.entityType) query = query.eq('entity_type', rawFilter.entityType);
+  if (rawFilter?.operation) query = query.eq('action', rawFilter.operation);
+
+  const { data, error } = await query;
+  if (error) throw error;
+  const rows = data || [];
+  const entries = action ? rows.filter(row => semanticActivityAction(row) === action) : rows;
+  return {
+    entries,
+    nextCursor: rows.length === boundedLimit ? rows.at(-1)?.occurred_at || null : null,
+  };
+}
+
+function rawActivityFilter(action) {
+  const filters = {
+    'project.created': { entityType: 'projects', operation: 'insert' },
+    'project.status_changed': { entityType: 'projects', operation: 'update' },
+    'project.deleted': { entityType: 'projects', operation: 'delete' },
+    'calculation.created': { entityType: 'items', operation: 'insert' },
+    'calculation.edited': { entityType: 'items', operation: 'update' },
+    'calculation.archived': { entityType: 'items', operation: 'update' },
+    'calculation.restored': { entityType: 'items', operation: 'update' },
+    'calculation.deleted': { entityType: 'items', operation: 'delete' },
+    'user.created': { entityType: 'user_access', operation: 'insert' },
+    'user.role_changed': { entityType: 'user_access', operation: 'update' },
+    'user.status_changed': { entityType: 'user_access', operation: 'update' },
+    'user.deleted': { entityType: 'user_access', operation: 'delete' },
+  };
+  return filters[action] || null;
+}
+
+function semanticActivityAction(entry) {
+  const before = entry.old_values || {};
+  const after = entry.new_values || {};
+  if (entry.entity_type === 'projects') {
+    if (entry.action === 'insert') return 'project.created';
+    if (entry.action === 'delete') return 'project.deleted';
+    if (before.status !== after.status) return 'project.status_changed';
+    return 'project.edited';
+  }
+  if (entry.entity_type === 'items') {
+    if (entry.action === 'insert') return 'calculation.created';
+    if (entry.action === 'delete') return 'calculation.deleted';
+    if (before.archived !== after.archived) return after.archived ? 'calculation.archived' : 'calculation.restored';
+    return 'calculation.edited';
+  }
+  if (entry.entity_type === 'user_access') {
+    if (entry.action === 'insert') return 'user.created';
+    if (entry.action === 'delete') return 'user.deleted';
+    if (before.role !== after.role) return 'user.role_changed';
+    if (before.active !== after.active) return 'user.status_changed';
+  }
+  return `${entry.entity_type}.${entry.action}`;
+}

@@ -6,6 +6,20 @@ export async function signIn(email, password) {
   return { success: true, user: data.user };
 }
 
+export async function requestPasswordReset(email) {
+  const { error } = await supabase.auth.resetPasswordForEmail(email, {
+    redirectTo: window.location.origin,
+  });
+  if (error) return { success: false, error: error.message };
+  return { success: true };
+}
+
+export async function updatePassword(password) {
+  const { error } = await supabase.auth.updateUser({ password });
+  if (error) return { success: false, error: error.message };
+  return { success: true };
+}
+
 export async function signOut() {
   await supabase.auth.signOut();
 }
@@ -16,12 +30,22 @@ export async function getSession() {
 }
 
 export function onAuthStateChange(callback) {
-  const { data } = supabase.auth.onAuthStateChange((_event, session) => callback(session));
+  const { data } = supabase.auth.onAuthStateChange((event, session) => callback(session, event));
   return () => data.subscription.unsubscribe();
 }
 
 export async function getCurrentProfile(userId) {
-  const { data, error } = await supabase.from('profiles').select('full_name').eq('id', userId).maybeSingle();
-  if (error) return null;
-  return data;
+  const [profileResult, accessResult] = await Promise.all([
+    supabase.from('profiles').select('id, full_name').eq('id', userId).maybeSingle(),
+    supabase.from('user_access').select('role, active').eq('user_id', userId).maybeSingle(),
+  ]);
+  if (profileResult.error) throw profileResult.error;
+  if (accessResult.error) throw accessResult.error;
+  if (!accessResult.data) return null;
+  return {
+    id: userId,
+    full_name: profileResult.data?.full_name || '',
+    role: accessResult.data.role,
+    active: accessResult.data.active,
+  };
 }
