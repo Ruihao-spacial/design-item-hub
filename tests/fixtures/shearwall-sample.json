@@ -1,0 +1,309 @@
+{
+  "_note": "Shear Wall Design regression fixture. Line A = aligned stacked walls only (regression vs Phase 3 code). Line B = story-3 wall on stacked posts. Line C = wall on transfer beam with post + point supports.",
+  "sds": 1.2,
+  "loadType": "both",
+  "wallThickness": "4",
+  "woodGrade": "dfir_no1",
+  "wallDLTypes": [
+    {
+      "id": "wdt-1",
+      "name": "Exterior",
+      "psf": 9.5
+    }
+  ],
+  "levels": [
+    {
+      "id": "lvl-1",
+      "name": "3rd",
+      "floorToFloor": 10,
+      "floorClearSpan": "16",
+      "anchorageType": "auto"
+    },
+    {
+      "id": "lvl-2",
+      "name": "2nd",
+      "floorToFloor": 10,
+      "floorClearSpan": "16",
+      "anchorageType": "auto"
+    },
+    {
+      "id": "lvl-3",
+      "name": "1st",
+      "floorToFloor": 10,
+      "floorClearSpan": "16",
+      "anchorageType": "auto"
+    }
+  ],
+  "directions": [
+    {
+      "id": "dir-1",
+      "name": "N-S",
+      "rho": 1,
+      "lines": [
+        {
+          "id": "ln-1",
+          "name": "Line A",
+          "totalLength": 40,
+          "wallThickness": "",
+          "levelLoads": {
+            "lvl-1": {
+              "seismic": 8,
+              "wind": 5
+            },
+            "lvl-2": {
+              "seismic": 6,
+              "wind": 4
+            },
+            "lvl-3": {
+              "seismic": 5,
+              "wind": 3
+            }
+          },
+          "walls": [
+            {
+              "id": "w-1",
+              "mark": "SW-1",
+              "levelId": "lvl-1",
+              "position": 0,
+              "length": 8,
+              "wallDLTypeId": "wdt-1",
+              "nailingPattern": ""
+            },
+            {
+              "id": "w-2",
+              "mark": "SW-2",
+              "levelId": "lvl-1",
+              "position": 20,
+              "length": 10,
+              "wallDLTypeId": "wdt-1",
+              "nailingPattern": ""
+            },
+            {
+              "id": "w-3",
+              "mark": "SW-3",
+              "levelId": "lvl-2",
+              "position": 0,
+              "length": 8,
+              "wallDLTypeId": "wdt-1",
+              "nailingPattern": ""
+            },
+            {
+              "id": "w-4",
+              "mark": "SW-4",
+              "levelId": "lvl-2",
+              "position": 20,
+              "length": 10,
+              "wallDLTypeId": "wdt-1",
+              "nailingPattern": ""
+            },
+            {
+              "id": "w-5",
+              "mark": "SW-5",
+              "levelId": "lvl-3",
+              "position": 0,
+              "length": 8,
+              "wallDLTypeId": "wdt-1",
+              "nailingPattern": ""
+            },
+            {
+              "id": "w-6",
+              "mark": "SW-6",
+              "levelId": "lvl-3",
+              "position": 20,
+              "length": 10,
+              "wallDLTypeId": "wdt-1",
+              "nailingPattern": ""
+            }
+          ],
+          "beams": [],
+          "supportPosts": [],
+          "gravityLoads": {
+            "lvl-1": {
+              "uniform": [
+                {
+                  "id": "gu-1",
+                  "start": 0,
+                  "end": 40,
+                  "dlPlf": 200
+                }
+              ],
+              "point": []
+            }
+          }
+        },
+        {
+          "id": "ln-2",
+          "name": "Line B",
+          "totalLength": 40,
+          "wallThickness": "",
+          "levelLoads": {
+            "lvl-1": {
+              "seismic": 4,
+              "wind": 2
+            },
+            "lvl-2": {
+              "seismic": 3,
+              "wind": 2
+            },
+            "lvl-3": {
+              "seismic": 3,
+              "wind": 2
+            }
+          },
+          "walls": [
+            {
+              "id": "w-7",
+              "mark": "SW-7",
+              "levelId": "lvl-1",
+              "position": 10,
+              "length": 8,
+              "wallDLTypeId": "wdt-1",
+              "nailingPattern": ""
+            },
+            {
+              "id": "w-8",
+              "mark": "SW-8",
+              "levelId": "lvl-1",
+              "position": 30,
+              "length": 6,
+              "wallDLTypeId": "wdt-1",
+              "nailingPattern": ""
+            },
+            {
+              "id": "w-9",
+              "mark": "SW-9",
+              "levelId": "lvl-2",
+              "position": 30,
+              "length": 6,
+              "wallDLTypeId": "wdt-1",
+              "nailingPattern": ""
+            },
+            {
+              "id": "w-10",
+              "mark": "SW-10",
+              "levelId": "lvl-3",
+              "position": 30,
+              "length": 6,
+              "wallDLTypeId": "wdt-1",
+              "nailingPattern": ""
+            }
+          ],
+          "beams": [],
+          "supportPosts": [
+            {
+              "id": "sp-1",
+              "mark": "P-1",
+              "levelId": "lvl-2",
+              "position": 10
+            },
+            {
+              "id": "sp-2",
+              "mark": "P-2",
+              "levelId": "lvl-2",
+              "position": 18
+            },
+            {
+              "id": "sp-3",
+              "mark": "P-3",
+              "levelId": "lvl-3",
+              "position": 10
+            },
+            {
+              "id": "sp-4",
+              "mark": "P-4",
+              "levelId": "lvl-3",
+              "position": 18
+            }
+          ],
+          "gravityLoads": {}
+        },
+        {
+          "id": "ln-3",
+          "name": "Line C",
+          "totalLength": 40,
+          "wallThickness": "",
+          "levelLoads": {
+            "lvl-2": {
+              "seismic": 4,
+              "wind": 0
+            },
+            "lvl-3": {
+              "seismic": 3,
+              "wind": 0
+            }
+          },
+          "walls": [
+            {
+              "id": "w-11",
+              "mark": "SW-11",
+              "levelId": "lvl-2",
+              "position": 4,
+              "length": 6,
+              "wallDLTypeId": "wdt-1",
+              "nailingPattern": ""
+            },
+            {
+              "id": "w-15",
+              "mark": "SW-15",
+              "levelId": "lvl-2",
+              "position": 24,
+              "length": 6,
+              "wallDLTypeId": "wdt-1",
+              "nailingPattern": ""
+            },
+            {
+              "id": "w-12",
+              "mark": "SW-12",
+              "levelId": "lvl-3",
+              "position": 14,
+              "length": 8,
+              "wallDLTypeId": "wdt-1",
+              "nailingPattern": ""
+            },
+            {
+              "id": "w-16",
+              "mark": "SW-16",
+              "levelId": "lvl-3",
+              "position": 24,
+              "length": 6,
+              "wallDLTypeId": "wdt-1",
+              "nailingPattern": ""
+            }
+          ],
+          "beams": [
+            {
+              "id": "bm-1",
+              "mark": "BM-1",
+              "levelId": "lvl-2",
+              "position": 2,
+              "length": 12,
+              "supports": [
+                {
+                  "id": "bs-1",
+                  "position": 2,
+                  "type": "post",
+                  "anchorageOverride": ""
+                },
+                {
+                  "id": "bs-2",
+                  "position": 14,
+                  "type": "point",
+                  "anchorageOverride": ""
+                }
+              ]
+            }
+          ],
+          "supportPosts": [
+            {
+              "id": "sp-5",
+              "mark": "P-5",
+              "levelId": "lvl-3",
+              "position": 2
+            }
+          ],
+          "gravityLoads": {}
+        }
+      ]
+    }
+  ]
+}

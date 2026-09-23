@@ -17,7 +17,7 @@ Shared structural-engineering calculation tool, organized by project number. Eac
 | Seismic Mass Takeoff | `seismicMassTakeoff.js` | Per-level seismic weight from Flat Load assemblies |
 | Seismic Base Shear | `seismicBaseShear.js`, `seismicBaseShearTables.js` | ASCE 7-22 Cs calculator with seismic system dropdown |
 | ELF Diaphragm & Collector | `elfDiaphragmCollector.js` | ASCE 7-22 §12.8/12.10 lateral force distribution |
-| Shear Wall Design | `shearWallDesign.js`, `shearWallCalc.js`, `shearWallElevation.js`, `shearWallTypes.js`, `shearWallNailing.js`, `shearWallHardware.js` | Multi-story shear wall analysis with nailing/hardware auto-select and interactive SVG elevation |
+| Shear Wall Design | `shearWallDesign.js`, `shearWallCalc.js`, `shearWallLoadPath.js`, `shearWallElevation.js`, `shearWallTypes.js`, `shearWallNailing.js`, `shearWallHardware.js` | Multi-story shear wall analysis: nailing/hardware auto-select, vertical load path through wall ends, posts at any story and transfer beams with user-defined supports, interactive SVG elevation |
 
 **Cross-module data flow:** Flat Load Calculator → Seismic Mass Takeoff (per-assembly DL) → ELF (W, per-level). Seismic Base Shear → ELF (Cs, SDS, Ie, Ω0, k auto-fill via ref).
 
@@ -42,7 +42,8 @@ src/
     seismicBaseShearTables.js — Fa/Fv/TL lookup tables
     elfDiaphragmCollector.js  — ELF lateral force distribution
     shearWallDesign.js     — shear wall module UI + PDF
-    shearWallCalc.js       — shear wall calc engine
+    shearWallCalc.js       — shear wall calc engine (distribution, T/C per combo, CALC_VERSION)
+    shearWallLoadPath.js   — vertical load path: wall ends, posts, transfer beams, audit
     shearWallElevation.js  — interactive SVG elevation drawing
     shearWallTypes.js      — data model constructors + helpers
     shearWallNailing.js    — SDPWS 4.3A nailing table + auto-select
@@ -52,6 +53,14 @@ src/
     projectPicker.js
     projectDetail.js
     itemForm.js
+scripts/
+  upgradeShearWallItems.mjs — bulk-upgrade saved shear wall items (dry run by default)
+  lib/shearWallLoadCheck.mjs — "does this saved item open?" check shared with the tests
+tests/
+  shearWall.test.mjs       — shear wall calc + regression + legacy-definition checks (npm test)
+  fixtures/                — sample definitions, regression baseline, legacy/ saved definitions by schema
+docs/
+  shear-wall-backlog.md    — deferred shear wall items and gaps
 supabase/
   config.toml              — Supabase CLI local dev config
   schema.sql               — full database schema, run once on a new Supabase project
@@ -141,7 +150,16 @@ See `supabase/schema.sql` for the authoritative schema. Summary:
 - `items` — one row per saved calculation. `type` matches a module id. `inputs`/`outputs` are `jsonb` — free-form, owned entirely by the module. `custom_name` for user-defined labels. `revisions` is a bounded array (last ~10 snapshots) for basic edit history.
 - Row Level Security: any authenticated user reads and writes everything (no per-user gating) — matches the team's "shared workspace" requirement.
 
+## Tests and upgrades
+
+- `npm test` — shear wall calc checks, aligned-stacking regression, and every saved definition in `tests/fixtures/legacy/` must open (form tabs, results, PDF sections, elevations) under a stand-in DOM (`linkedom`, dev-only).
+- `SB_EMAIL=… SB_PASSWORD=… npm run upgrade:shearwall` — dry run over every saved Shear Wall Design item in the database from `.env`; add `-- --apply` to write the upgraded definition and regenerated results (previous version goes into `revisions`).
+
+**Shear Wall Design stores the definition as the source of truth.** `items.inputs` (levels, lines, walls, beams, posts, loads) is authoritative; `items.outputs` is only a snapshot. The module sets `regenerateResults: true`, so `itemForm.js` recalculates results from the migrated definition on open and after save — old projects always show the current rules and visuals. When changing the definition shape: add a step to `DEFINITION_MIGRATIONS` in `shearWallDesign.js`, bump `schemaVersion`, and add a fixture of the previous version to `tests/fixtures/legacy/`. Bump `CALC_VERSION` in `shearWallCalc.js` on calc changes.
+
 ## Known limitations / open items
+
+- **Shear Wall Design backlog**: see `docs/shear-wall-backlog.md`.
 
 - **No real-time edit locking**: Postgres writes are last-writer-wins with a revision history kept for recovery — acceptable at this team's scale (2-5 concurrent users).
 - **PDF calc-sheet template**: currently a generic layout (header, input/output tables, signature block). A firm-specific template redesign is planned.

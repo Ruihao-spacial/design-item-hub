@@ -3,6 +3,9 @@ import { formatDate } from './utils.js';
 import { uploadCalcSheet } from './db.js';
 
 export async function exportItemPdf(project, item, mod, { saveToStorage = true } = {}) {
+  // The project-page PDF button passes the stored row — bring its definition up to the current schema first
+  // (migrations are idempotent, so items already migrated by the form pass through unchanged)
+  if (mod.migrate && item) item = mod.migrate({ ...item });
   const doc = new jsPDF({ orientation: 'portrait', unit: 'pt', format: 'letter' });
   const pageW = doc.internal.pageSize.getWidth();
   const pageH = doc.internal.pageSize.getHeight();

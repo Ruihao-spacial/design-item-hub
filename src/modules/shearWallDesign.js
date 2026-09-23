@@ -1,19 +1,18 @@
 import { el, clearEl, numOrBlank } from '../utils.js';
 import {
-  resetIds, resetWallNum, defaultInputs,
+  resetIds, resetWallNum, resetElementNums, defaultInputs,
   newLevel, newWallDLType, newLine, newWallId, nextWallMark,
-  newBeam, newSupportPost,
 } from './shearWallTypes.js';
-import { calcAll } from './shearWallCalc.js';
-import { renderElevation, renderElevationForPdf, computeElevationLayout } from './shearWallElevation.js';
+import { calcAll, CALC_VERSION } from './shearWallCalc.js';
+import { renderElevation, renderElevationForPdf, pdfElevationAspect } from './shearWallElevation.js';
 import { NAILING_TABLE } from './shearWallNailing.js';
 import { NDS_GRADES, HDUE_TABLE, MSTC_TABLE, POST_SIZES, computePostCapacity } from './shearWallHardware.js';
 
 export const shearWallDesign = {
   id: 'shear_wall_design',
   label: 'Shear Wall Design',
-  schemaVersion: 4,
-  calcVersion: 'v2',
+  schemaVersion: 5,
+  calcVersion: CALC_VERSION,
   noNewPrefix: true,
   noOutputSection: false,
 
@@ -21,23 +20,11 @@ export const shearWallDesign = {
   fields: [],
   outputFields: [],
 
-  migrate(item) {
-    if (item.schemaVersion >= 4) return item;
-    const inp = item.inputs || defaultInputs();
-    if (!inp.wallThickness) inp.wallThickness = '4';
-    if (!inp.woodGrade) inp.woodGrade = 'dfir_no1';
-    (inp.levels || []).forEach(l => {
-      if (!l.floorClearSpan) l.floorClearSpan = '16';
-      if (!l.anchorageType) l.anchorageType = 'auto';
-    });
-    (inp.directions || []).forEach(d => (d.lines || []).forEach(ln => {
-      if (ln.wallThickness === undefined) ln.wallThickness = '';
-      if (!ln.beams) ln.beams = [];
-      if (!ln.supportPosts) ln.supportPosts = [];
-      (ln.walls || []).forEach(w => { delete w.capacity; });
-    }));
-    return { ...item, inputs: inp, schemaVersion: 4 };
-  },
+  // Definition (inputs) is the source of truth — results are always regenerated from it
+  regenerateResults: true,
+  wideLayout: true, // item form uses the wide page so the elevation has room
+
+  migrate(item) { return migrateDefinition(item); },
 
   summaryLabel(inputs) {
     let wallCount = 0, beamCount = 0, postCount = 0;
@@ -60,6 +47,7 @@ export const shearWallDesign = {
     if (!inputs.refs) inputs.refs = {};
     resetIds(inputs);
     resetWallNum(inputs);
+    resetElementNums(inputs);
     clearEl(container);
 
     let activeTopTab = 'summary';
@@ -442,7 +430,13 @@ export const shearWallDesign = {
       panel.appendChild(elevContainer);
       if (elevationHandle) { elevationHandle.destroy(); elevationHandle = null; }
       elevationHandle = renderElevation(elevContainer, line, inputs.levels, inputs.wallDLTypes, {
-        onWallChange() {}, onGravityChange() {}, onInputChange: notifyChange,
+        onWallChange() {}, onGravityChange() {},
+        designContext: () => ({ wallThickness: inputs.wallThickness, woodGrade: inputs.woodGrade, loadType: inputs.loadType }),
+        onInputChange() {
+          notifyChange();
+          // Preview results go stale on every edit — recompute while the preview is shown
+          if (elevationHandle && elevationHandle.hasResults) previewTC(line, dir);
+        },
       });
 
       return panel;
@@ -454,6 +448,12 @@ export const shearWallDesign = {
   renderOutputs(container, outputs) {
     if (!outputs || !outputs.perDirection) return;
     clearEl(container);
+    // Saved results from an older calc version have a different shape — don't render them
+    if (outputs.calcVersion !== CALC_VERSION) {
+      container.appendChild(el('div', { style: { marginBottom: '0.75rem' } },
+        el('span', { className: 'badge badge-stale' }, 'Results are from an older calc version — click Calculate & Save to refresh')));
+      return;
+    }
 
     let totalWalls = 0, failing = 0, warned = 0, auditIssues = 0;
     outputs.perDirection.forEach(d => d.perLine.forEach(ln => {
@@ -528,71 +528,22 @@ export const shearWallDesign = {
           }
         }
 
-        const markMap = {};
-        ln.perLevel.forEach(pl => pl.walls.forEach(w => { markMap[w.wallId] = w.mark || w.wallId; }));
-
-        if (ln.stackGroups && ln.stackGroups.length) {
-          container.appendChild(el('div', { style: { fontWeight: '500', fontSize: '0.85rem', marginTop: '0.5rem', marginBottom: '0.25rem' } }, 'Stacking Summary — ' + ln.lineName));
-          const stbl = el('table', { className: 'data-table', style: { fontSize: '0.85rem' } });
-          stbl.appendChild(el('tr', null, el('th', null, 'Stack'), el('th', null, 'Wall'), el('th', { className: 'num' }, 'Accum T (k)'), el('th', { className: 'num' }, 'Accum C (k)')));
-          for (const sg of ln.stackGroups) {
-            const stackLabel = sg.wallIds.map(id => markMap[id] || id).join(' → ');
-            sg.wallIds.forEach((wid, idx) => {
-              stbl.appendChild(el('tr', null,
-                el('td', { className: 'mono', style: { color: idx === 0 ? 'var(--ink)' : 'var(--ink-tertiary)' } }, idx === 0 ? stackLabel : ''),
-                el('td', { className: 'mono' }, markMap[wid] || wid),
-                el('td', { className: 'num mono' }, sg.accumulatedTension[idx] != null ? sg.accumulatedTension[idx].toFixed(2) : '—'),
-                el('td', { className: 'num mono' }, sg.accumulatedCompression[idx] != null ? sg.accumulatedCompression[idx].toFixed(2) : '—'),
-              ));
-            });
-          }
-          container.appendChild(el('div', { className: 'table-scroll', style: { marginBottom: '0.75rem' } }, stbl));
+        // Wall end connections (where each wall end's accumulated force goes)
+        if (ln.wallDeliveries && ln.wallDeliveries.some(d => d.receiver.type !== 'foundation')) {
+          container.appendChild(el('div', { style: { fontWeight: '500', fontSize: '0.85rem', marginTop: '0.5rem', marginBottom: '0.25rem' } }, 'Wall End Connections — ' + ln.lineName));
+          container.appendChild(simpleTable(WALL_END_HEADERS, wallEndRows(ln), [3, 4]));
         }
 
-        // Beam transfer summary
+        // Beam supports (reactions at user-defined supports)
         if (ln.beamTransfers && ln.beamTransfers.length) {
-          container.appendChild(el('div', { style: { fontWeight: '500', fontSize: '0.85rem', marginTop: '0.5rem', marginBottom: '0.25rem' } }, 'Beam Transfers — ' + ln.lineName));
-          const btbl = el('table', { className: 'data-table', style: { fontSize: '0.85rem' } });
-          btbl.appendChild(el('tr', null, el('th', null, 'Beam'), el('th', null, 'Span (ft)'), el('th', null, 'Source Walls'),
-            el('th', { className: 'num' }, 'R_L T (k)'), el('th', { className: 'num' }, 'R_L C (k)'),
-            el('th', { className: 'num' }, 'R_R T (k)'), el('th', { className: 'num' }, 'R_R C (k)')));
-          for (const bt of ln.beamTransfers) {
-            const srcMarks = bt.sourceWallIds.map(id => markMap[id] || id).join(', ');
-            btbl.appendChild(el('tr', null,
-              el('td', { className: 'mono' }, bt.beamId), el('td', { className: 'num mono' }, bt.length.toFixed(1)),
-              el('td', { className: 'mono' }, srcMarks),
-              el('td', { className: 'num mono' }, bt.leftReaction.tension.toFixed(2)),
-              el('td', { className: 'num mono' }, bt.leftReaction.compression.toFixed(2)),
-              el('td', { className: 'num mono' }, bt.rightReaction.tension.toFixed(2)),
-              el('td', { className: 'num mono' }, bt.rightReaction.compression.toFixed(2)),
-            ));
-          }
-          container.appendChild(el('div', { className: 'table-scroll', style: { marginBottom: '0.75rem' } }, btbl));
+          container.appendChild(el('div', { style: { fontWeight: '500', fontSize: '0.85rem', marginTop: '0.5rem', marginBottom: '0.25rem' } }, 'Transfer Beams — ' + ln.lineName));
+          container.appendChild(simpleTable(BEAM_HEADERS, beamSupportRows(ln), [2, 3, 5, 6]));
         }
 
-        // Support post schedule
+        // Post schedule
         if (ln.postPaths && ln.postPaths.length) {
-          container.appendChild(el('div', { style: { fontWeight: '500', fontSize: '0.85rem', marginTop: '0.5rem', marginBottom: '0.25rem' } }, 'Support Posts — ' + ln.lineName));
-          const ptbl = el('table', { className: 'data-table', style: { fontSize: '0.85rem' } });
-          ptbl.appendChild(el('tr', null, el('th', null, 'Post'), el('th', { className: 'num' }, 'Pos (ft)'),
-            el('th', null, 'Level'), el('th', { className: 'num' }, 'Accum T (k)'), el('th', { className: 'num' }, 'Accum C (k)'),
-            el('th', null, 'HD'), el('th', { className: 'num' }, 'HD D/C'), el('th', null, 'Post'), el('th', { className: 'num' }, 'Post D/C'),
-            el('th', null, 'Feeds Into')));
-          for (const pp of ln.postPaths) {
-            for (const pl of pp.perLevel) {
-              const hdLabel = pl.holdown ? pl.holdown.id : 'OVER';
-              const postLabel = pl.post ? pl.post.postLabel : 'OVER';
-              const feedsLabel = pl.feedsInto ? (markMap[pl.feedsInto.wallId] || pl.feedsInto.wallId) + ' ' + pl.feedsInto.side : 'Independent';
-              ptbl.appendChild(el('tr', null,
-                el('td', { className: 'mono' }, pp.postId), el('td', { className: 'num mono' }, pp.position.toFixed(1)),
-                el('td', null, pl.levelName), el('td', { className: 'num mono' }, pl.accumT.toFixed(2)), el('td', { className: 'num mono' }, pl.accumC.toFixed(2)),
-                el('td', { className: 'mono' }, hdLabel), el('td', { className: 'num mono' }, pl.hdDC != null ? pl.hdDC.toFixed(2) : '—'),
-                el('td', { className: 'mono' }, postLabel), el('td', { className: 'num mono' }, pl.postDC != null ? pl.postDC.toFixed(2) : '—'),
-                el('td', { style: { fontSize: '0.8rem' } }, feedsLabel),
-              ));
-            }
-          }
-          container.appendChild(el('div', { className: 'table-scroll', style: { marginBottom: '0.75rem' } }, ptbl));
+          container.appendChild(el('div', { style: { fontWeight: '500', fontSize: '0.85rem', marginTop: '0.5rem', marginBottom: '0.25rem' } }, 'Posts — ' + ln.lineName));
+          container.appendChild(simpleTable(POST_HEADERS, postRows(ln), [2, 3, 4]));
         }
 
         // Load path audit
@@ -613,12 +564,19 @@ export const shearWallDesign = {
           container.appendChild(el('div', { style: { marginBottom: '0.5rem' } },
             el('span', { className: 'badge badge-pass' }, 'All load paths verified')));
         }
+        if (ln.loadPathAudit && ln.loadPathAudit.notes && ln.loadPathAudit.notes.length) {
+          const nbox = el('div', { style: { fontSize: '0.8rem', color: 'var(--ink-secondary)', marginBottom: '0.75rem' } });
+          ln.loadPathAudit.notes.forEach(n => nbox.appendChild(el('div', null, 'ⓘ ' + n.message)));
+          container.appendChild(nbox);
+        }
       }
     }
   },
 
-  pdfSections(inputs, outputs) {
+  // Always built from the definition — stored results are only a snapshot
+  pdfSections(inputs) {
     const sections = [];
+    const outputs = calcAll(inputs);
     const gradeLabel = (NDS_GRADES.find(g => g.id === inputs.woodGrade) || {}).label || inputs.woodGrade;
     const configRows = [
       ['Load Type', inputs.loadType || '—'], ['SDS', inputs.sds || '—'],
@@ -644,62 +602,50 @@ export const shearWallDesign = {
       for (const dir of outputs.perDirection) {
         for (const ln of dir.perLine) {
           const wallRows = [];
+          const inLine = (inputs.directions || []).flatMap(d => d.lines || []).find(l => l.id === ln.lineId) || {};
+          let anyManual = false;
+          const star = (v, on) => { if (on) anyManual = true; return on ? v + ' *' : v; };
           for (const pl of ln.perLevel) { for (const w of pl.walls) {
+            const wIn = (inLine.walls || []).find(x => x.id === w.wallId) || {};
             const nail = w.nailing ? w.nailing.label : '?';
             const cap = w.effectiveCapacity != null ? w.effectiveCapacity.toFixed(0) : '—';
             const ancL = w.anchorageLeft ? w.anchorageLeft.id + (w.anchorageDCLeft != null ? ' (' + w.anchorageDCLeft.toFixed(2) + ')' : '') : 'OVER';
             const ancR = w.anchorageRight ? w.anchorageRight.id + (w.anchorageDCRight != null ? ' (' + w.anchorageDCRight.toFixed(2) + ')' : '') : 'OVER';
             const postL = w.postLeft ? w.postLeft.postLabel + (w.postDCLeft != null ? ' (' + w.postDCLeft.toFixed(2) + ')' : '') : 'OVER';
             const postR = w.postRight ? w.postRight.postLabel + (w.postDCRight != null ? ' (' + w.postDCRight.toFixed(2) + ')' : '') : 'OVER';
-            wallRows.push([w.mark, pl.levelName, w.length.toFixed(1), nail, w.unitShear_ASD.toFixed(0), cap, w.dcRatio.toFixed(2), ancL, ancR, postL, postR]);
+            wallRows.push([w.mark, pl.levelName, w.length.toFixed(1), star(nail, !!wIn.nailingPattern), w.unitShear_ASD.toFixed(0), cap, w.dcRatio.toFixed(2),
+              star(ancL, !!wIn.anchorageLeftOverride), star(ancR, !!wIn.anchorageRightOverride), star(postL, !!wIn.postLeftOverride), star(postR, !!wIn.postRightOverride)]);
           } }
-          if (wallRows.length) sections.push({ title: dir.dirName + ' / ' + ln.lineName + ' — Wall Schedule', pageBreakBefore: true, table: { headers: ['Mark', 'Level', 'Len', 'Nailing', 'v', 'Cap', 'D/C', 'HD/S L', 'HD/S R', 'Post L', 'Post R'], rows: wallRows, colWidths: [0.06, 0.08, 0.05, 0.1, 0.06, 0.06, 0.06, 0.1, 0.1, 0.08, 0.08] } });
+          if (wallRows.length) sections.push({ title: dir.dirName + ' / ' + ln.lineName + ' — Wall Schedule' + (anyManual ? ' (* = manual override)' : ''), pageBreakBefore: true, table: { headers: ['Mark', 'Level', 'Len', 'Nailing', 'v', 'Cap', 'D/C', 'HD/S L', 'HD/S R', 'Post L', 'Post R'], rows: wallRows, colWidths: [0.06, 0.08, 0.05, 0.1, 0.06, 0.06, 0.06, 0.1, 0.1, 0.08, 0.08] } });
           const tcRows = [];
           for (const pl of ln.perLevel) { for (const w of pl.walls) { tcRows.push([w.mark, pl.levelName, w.dlTotal.toFixed(2), w.governingTensionLeft.toFixed(2), w.governingTensionRight.toFixed(2), w.governingComprLeft.toFixed(2), w.governingComprRight.toFixed(2)]); } }
           if (tcRows.length) sections.push({ title: dir.dirName + ' / ' + ln.lineName + ' — T/C Results', table: { headers: ['Mark', 'Level', 'DL (k)', 'T Left (k)', 'T Right (k)', 'C Left (k)', 'C Right (k)'], rows: tcRows } });
-          if (ln.stackGroups && ln.stackGroups.length) {
-            const sRows = []; for (const sg of ln.stackGroups) { sg.wallIds.forEach((wid, idx) => { sRows.push([sg.wallIds.join(' → '), wid, sg.accumulatedTension[idx] != null ? sg.accumulatedTension[idx].toFixed(2) : '—', sg.accumulatedCompression[idx] != null ? sg.accumulatedCompression[idx].toFixed(2) : '—']); }); }
-            sections.push({ title: dir.dirName + ' / ' + ln.lineName + ' — Stacking', table: { headers: ['Stack', 'Wall', 'Accum T (k)', 'Accum C (k)'], rows: sRows } });
+          if (ln.wallDeliveries && ln.wallDeliveries.some(d => d.receiver.type !== 'foundation')) {
+            sections.push({ title: dir.dirName + ' / ' + ln.lineName + ' — Wall End Connections', table: { headers: WALL_END_HEADERS, rows: wallEndRows(ln), colWidths: [0.1, 0.14, 0.08, 0.12, 0.12, 0.3] } });
           }
 
-          // Beam transfers
           if (ln.beamTransfers && ln.beamTransfers.length) {
-            const btRows = ln.beamTransfers.map(bt => [bt.beamId, bt.length.toFixed(1), bt.sourceWallIds.join(', '),
-              bt.leftReaction.tension.toFixed(2), bt.leftReaction.compression.toFixed(2),
-              bt.rightReaction.tension.toFixed(2), bt.rightReaction.compression.toFixed(2)]);
-            sections.push({ title: dir.dirName + ' / ' + ln.lineName + ' — Beam Transfers', table: { headers: ['Beam', 'Span', 'Source Walls', 'R_L T (k)', 'R_L C (k)', 'R_R T (k)', 'R_R C (k)'], rows: btRows } });
+            sections.push({ title: dir.dirName + ' / ' + ln.lineName + ' — Transfer Beams', table: { headers: BEAM_HEADERS, rows: beamSupportRows(ln), colWidths: [0.07, 0.08, 0.06, 0.08, 0.07, 0.08, 0.08, 0.14, 0.2] } });
           }
-
-          // Support post schedule
           if (ln.postPaths && ln.postPaths.length) {
-            const ppRows = [];
-            for (const pp of ln.postPaths) {
-              for (const pl of pp.perLevel) {
-                const feedsLabel = pl.feedsInto ? pl.feedsInto.wallId + ' ' + pl.feedsInto.side : 'Independent';
-                ppRows.push([pp.postId, pp.position.toFixed(1), pl.levelName,
-                  pl.accumT.toFixed(2), pl.accumC.toFixed(2),
-                  pl.holdown ? pl.holdown.id : 'OVER', pl.hdDC != null ? pl.hdDC.toFixed(2) : '—',
-                  pl.post ? pl.post.postLabel : 'OVER', pl.postDC != null ? pl.postDC.toFixed(2) : '—', feedsLabel]);
-              }
-            }
-            sections.push({ title: dir.dirName + ' / ' + ln.lineName + ' — Support Posts', table: { headers: ['Post', 'Pos', 'Level', 'T (k)', 'C (k)', 'HD', 'HD D/C', 'Post', 'Post D/C', 'Feeds Into'], rows: ppRows, colWidths: [0.06, 0.05, 0.08, 0.06, 0.06, 0.1, 0.07, 0.1, 0.07, 0.12] } });
+            sections.push({ title: dir.dirName + ' / ' + ln.lineName + ' — Posts', table: { headers: POST_HEADERS, rows: postRows(ln), colWidths: [0.07, 0.09, 0.07, 0.08, 0.08, 0.16, 0.16, 0.2] } });
           }
 
           // Load path audit
-          if (ln.loadPathAudit && ln.loadPathAudit.warnings.length > 0) {
-            const auditRows = ln.loadPathAudit.warnings.map(w => [w.elementMark, w.levelName, w.message]);
+          if (ln.loadPathAudit && (ln.loadPathAudit.warnings.length > 0 || (ln.loadPathAudit.notes || []).length > 0)) {
+            const auditRows = ln.loadPathAudit.warnings.map(w => [w.elementMark, w.levelName, w.message])
+              .concat((ln.loadPathAudit.notes || []).map(n => [n.elementMark, n.levelName, 'Note: ' + n.message]));
             sections.push({ title: dir.dirName + ' / ' + ln.lineName + ' — Load Path Audit', table: { headers: ['Element', 'Level', 'Issue'], rows: auditRows } });
           }
 
           // Elevation diagram
           const inputLine = (inputs.directions || []).flatMap(d => d.lines || []).find(l => l.id === ln.lineId);
           if (inputLine) {
-            const elevLayout = computeElevationLayout(inputLine, inputs.levels, { width: 500, overlays: true });
             sections.push({
               title: dir.dirName + ' / ' + ln.lineName + ' — Elevation',
               elevation: {
                 renderFn: (w) => renderElevationForPdf(inputLine, inputs.levels, inputs.wallDLTypes || [], ln, w),
-                aspectRatio: elevLayout.totalH / elevLayout.svgW,
+                aspectRatio: pdfElevationAspect(inputLine, inputs.levels, 500, true),
               },
               pageBreakBefore: true,
             });
@@ -718,6 +664,62 @@ export const shearWallDesign = {
   },
 };
 
+const WALL_END_HEADERS = ['Wall', 'Level', 'End', 'ΣT (k)', 'ΣC (k)', 'Delivers to'];
+
+// Ends landing on the foundation are omitted — the wall's own holdown covers them
+function wallEndRows(ln) {
+  const wallById = {}, levelById = {};
+  ln.perLevel.forEach(pl => pl.walls.forEach(w => { wallById[w.wallId] = w; levelById[w.wallId] = pl.levelName; }));
+  return ln.wallDeliveries.filter(d => d.receiver.type !== 'foundation').map(d => [
+    (wallById[d.wallId] || {}).mark || d.wallId, levelById[d.wallId] || '', d.side === 'left' ? 'Left' : 'Right',
+    d.env.T.toFixed(2), d.env.C.toFixed(2),
+    d.receiver.type === 'wall_mid' || d.receiver.type === 'none' ? d.receiver.label + ' — needs a post' : d.receiver.label,
+  ]);
+}
+
+const BEAM_HEADERS = ['Beam', 'Level', 'Span (ft)', 'Support (ft)', 'Type', 'R T (k)', 'R C (k)', 'HD/Strap', 'Goes to'];
+const POST_HEADERS = ['Post', 'Story', 'Pos (ft)', 'ΣT (k)', 'ΣC (k)', 'Base HD/Strap', 'Post', 'Lands on'];
+
+function fmtConnection(item) {
+  const r = item.receiver;
+  if (!r || !['beam', 'post', 'wall_end', 'foundation'].includes(r.type)) return '—';
+  if (!item.anchorage) return 'OVER';
+  return item.anchorage.id + (item.anchorageDC != null ? ' (' + item.anchorageDC.toFixed(2) + ')' : '');
+}
+
+function fmtReceiver(r) {
+  if (!r) return '—';
+  if (r.type === 'reported') return 'Reaction only (design externally)';
+  return r.label;
+}
+
+function beamSupportRows(ln) {
+  return ln.beamTransfers.flatMap(bt => {
+    if (!bt.supports.length) return [[bt.mark, bt.levelName, bt.length.toFixed(1), '—', '—', '—', '—', '—', 'Needs 2 valid supports']];
+    return bt.supports.map((s, i) => [
+      i === 0 ? bt.mark : '', i === 0 ? bt.levelName : '', i === 0 ? bt.length.toFixed(1) : '',
+      s.position.toFixed(2), s.type === 'post' ? 'Post' : 'Point',
+      s.envelopeT.toFixed(2), s.envelopeC.toFixed(2), fmtConnection(s), fmtReceiver(s.receiver),
+    ]);
+  });
+}
+
+function postRows(ln) {
+  return ln.postPaths.map(pp => [
+    pp.mark, pp.levelName, pp.position.toFixed(1), pp.envelopeT.toFixed(2), pp.envelopeC.toFixed(2),
+    fmtConnection(pp), pp.post ? pp.post.postLabel + (pp.postDC != null ? ' (' + pp.postDC.toFixed(2) + ')' : '') : 'OVER',
+    fmtReceiver(pp.receiver),
+  ]);
+}
+
+function simpleTable(headers, rows, numCols) {
+  const isNum = (i) => (numCols || []).includes(i);
+  const tbl = el('table', { className: 'data-table', style: { fontSize: '0.85rem' } });
+  tbl.appendChild(el('tr', null, ...headers.map((h, i) => el('th', isNum(i) ? { className: 'num' } : null, h))));
+  rows.forEach(r => tbl.appendChild(el('tr', null, ...r.map((c, i) => el('td', { className: isNum(i) ? 'num mono' : 'mono', style: { color: c === 'OVER' ? 'var(--fail)' : null } }, c)))));
+  return el('div', { className: 'table-scroll', style: { marginBottom: '0.75rem' } }, tbl);
+}
+
 function renderMethodFootnotes() {
   const notes = el('div', { style: { fontSize: '0.8rem', color: 'var(--ink-secondary)', marginBottom: '1rem', lineHeight: '1.6' } });
   notes.appendChild(el('div', null,
@@ -726,7 +728,9 @@ function renderMethodFootnotes() {
     el('strong', null, 'T/C: '), 'ASCE 7-22 ASD Combos 5 & 8 with E', el('sub', null, 'v'),
     ' = 0.2S', el('sub', null, 'DS'), '×D (0.7 applied to full E including E', el('sub', null, 'v'), ').'));
   notes.appendChild(el('div', null,
-    el('strong', null, 'Stacking: '), 'Simple force addition — net T at lower level = local T + accumulated T from above.'));
+    el('strong', null, 'Stacking: '), 'Simple force addition at aligned wall ends — net T at lower end = local T + accumulated T from above. A wall end landing mid-wall must sit on a post; its load goes down the post and does not change the T/C of the wall below.'));
+  notes.appendChild(el('div', null,
+    el('strong', null, 'Beams & posts: '), 'Wall end forces and post loads are applied per load combination as point loads; beam reactions by statics at the 2 user-defined supports. ΣT/ΣC and R values are ASD envelopes. Beam reactions exclude floor gravity load.'));
   return notes;
 }
 
@@ -787,4 +791,87 @@ function renderWallCalcDetail(w, pl, dir) {
 
   const details = el('details', { style: { marginBottom: '0.5rem', borderLeft: '3px solid var(--border-light)', paddingLeft: '0.75rem' } }, summary, body);
   return details;
+}
+
+// === Definition migrations ===
+// Saved definitions are upgraded step by step to the current schema. To change the definition shape:
+// add a step here, bump schemaVersion, and add a legacy fixture of the previous version in
+// tests/fixtures/legacy/. Steps must be idempotent. Results are never migrated — they are regenerated.
+
+function migrateToV4(inp) {
+  if (!inp.wallThickness) inp.wallThickness = '4';
+  if (!inp.woodGrade) inp.woodGrade = 'dfir_no1';
+  (inp.levels || []).forEach(l => {
+    if (!l.floorClearSpan) l.floorClearSpan = '16';
+    if (!l.anchorageType) l.anchorageType = 'auto';
+  });
+  (inp.directions || []).forEach(d => (d.lines || []).forEach(ln => {
+    if (ln.wallThickness === undefined) ln.wallThickness = '';
+    if (!ln.beams) ln.beams = [];
+    if (!ln.supportPosts) ln.supportPosts = [];
+    (ln.walls || []).forEach(w => { delete w.capacity; }); // v2 stored a derived capacity on walls
+  }));
+  return inp;
+}
+
+const DEFINITION_MIGRATIONS = [
+  { to: 4, up: migrateToV4 },
+  { to: 5, up: migrateV4toV5 },
+];
+const CURRENT_SCHEMA = DEFINITION_MIGRATIONS[DEFINITION_MIGRATIONS.length - 1].to;
+
+export function migrateDefinition(item) {
+  const from = parseInt(item.schemaVersion, 10) || 1;
+  if (from >= CURRENT_SCHEMA && item.inputs && item.inputs.directions) return item;
+  let inp = item.inputs && item.inputs.directions ? JSON.parse(JSON.stringify(item.inputs)) : defaultInputs();
+  for (const step of DEFINITION_MIGRATIONS) {
+    if (step.to > from) inp = step.up(inp);
+  }
+  return { ...item, inputs: inp, schemaVersion: CURRENT_SCHEMA };
+}
+
+// Schema v5: unique beam/post ids (v4 generated duplicate 'bm-NaN'/'sp-NaN'), marks,
+// explicit beam supports (v4 beams were implicitly supported at both ends).
+export function migrateV4toV5(inp) {
+  if (!inp) return inp;
+  const maxOf = (prefix, ids) => ids.reduce((m, id) => {
+    const mm = String(id || '').match(new RegExp('^' + prefix + '-(\d+)$'));
+    return mm ? Math.max(m, +mm[1]) : m;
+  }, 0);
+  const lines = (inp.directions || []).flatMap(d => d.lines || []);
+  const allBeams = lines.flatMap(l => l.beams || []);
+  const allPosts = lines.flatMap(l => l.supportPosts || []);
+  let nb = maxOf('bm', allBeams.map(b => b.id));
+  let np = maxOf('sp', allPosts.map(p => p.id));
+  let ns = maxOf('bs', allBeams.flatMap(b => (b.supports || []).map(s => s.id)));
+  let mb = maxOf('BM', allBeams.map(b => b.mark));
+  let mp = maxOf('P', allPosts.map(p => p.mark));
+  const seenB = new Set(), seenP = new Set();
+
+  for (const ln of lines) {
+    if (!ln.beams) ln.beams = [];
+    if (!ln.supportPosts) ln.supportPosts = [];
+    for (const p of ln.supportPosts) {
+      if (!/^sp-\d+$/.test(p.id || '') || seenP.has(p.id)) p.id = 'sp-' + (++np);
+      seenP.add(p.id);
+      if (!p.mark) p.mark = 'P-' + (++mp);
+      if (p.anchorageOverride === undefined) p.anchorageOverride = '';
+      if (p.postOverride === undefined) p.postOverride = '';
+    }
+    for (const b of ln.beams) {
+      if (!/^bm-\d+$/.test(b.id || '') || seenB.has(b.id)) b.id = 'bm-' + (++nb);
+      seenB.add(b.id);
+      if (!b.mark) b.mark = 'BM-' + (++mb);
+      if (!Array.isArray(b.supports)) {
+        const bs = parseFloat(b.position) || 0;
+        const be = bs + (parseFloat(b.length) || 0);
+        b.supports = [bs, be].map(x => ({
+          id: 'bs-' + (++ns), position: x,
+          type: ln.supportPosts.some(p => Math.abs((parseFloat(p.position) || 0) - x) <= 0.1) ? 'post' : 'point',
+          anchorageOverride: '',
+        }));
+      }
+    }
+  }
+  return inp;
 }

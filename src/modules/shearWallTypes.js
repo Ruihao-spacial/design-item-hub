@@ -1,9 +1,9 @@
 const SVG_NS = 'http://www.w3.org/2000/svg';
 
-let _id = { lvl: 1, dir: 1, ln: 1, w: 1, gu: 1, gp: 1, wdt: 1, bm: 1, sp: 1 };
+let _id = { lvl: 1, dir: 1, ln: 1, w: 1, gu: 1, gp: 1, wdt: 1, bm: 1, sp: 1, bs: 1 };
 
 export function resetIds(inputs) {
-  const max = { lvl: 0, dir: 0, ln: 0, w: 0, gu: 0, gp: 0, wdt: 0 };
+  const max = { lvl: 0, dir: 0, ln: 0, w: 0, gu: 0, gp: 0, wdt: 0, bm: 0, sp: 0, bs: 0 };
   const extract = (id) => {
     if (!id) return;
     const m = id.match(/^([a-z]+)-(\d+)$/);
@@ -17,7 +17,10 @@ export function resetIds(inputs) {
     (d.lines || []).forEach(ln => {
       extract(ln.id);
       (ln.walls || []).forEach(w => extract(w.id));
-      (ln.beams || []).forEach(b => extract(b.id));
+      (ln.beams || []).forEach(b => {
+        extract(b.id);
+        (b.supports || []).forEach(s => extract(s.id));
+      });
       (ln.supportPosts || []).forEach(s => extract(s.id));
       Object.values(ln.gravityLoads || {}).forEach(gl => {
         (gl.uniform || []).forEach(u => extract(u.id));
@@ -37,6 +40,7 @@ export function newPointId() { return 'gp-' + (_id.gp++); }
 export function newWDTId() { return 'wdt-' + (_id.wdt++); }
 export function newBeamId() { return 'bm-' + (_id.bm++); }
 export function newSupportPostId() { return 'sp-' + (_id.sp++); }
+export function newBeamSupportId() { return 'bs-' + (_id.bs++); }
 
 let _wallNum = 1;
 export function resetWallNum(inputs) {
@@ -52,6 +56,28 @@ export function resetWallNum(inputs) {
   _wallNum = maxNum + 1;
 }
 export function nextWallMark() { return 'SW-' + (_wallNum++); }
+
+let _beamNum = 1;
+let _postNum = 1;
+export function resetElementNums(inputs) {
+  let maxBm = 0, maxP = 0;
+  (inputs.directions || []).forEach(d =>
+    (d.lines || []).forEach(ln => {
+      (ln.beams || []).forEach(b => {
+        const m = (b.mark || '').match(/^BM-(\d+)$/);
+        if (m) maxBm = Math.max(maxBm, +m[1]);
+      });
+      (ln.supportPosts || []).forEach(p => {
+        const m = (p.mark || '').match(/^P-(\d+)$/);
+        if (m) maxP = Math.max(maxP, +m[1]);
+      });
+    })
+  );
+  _beamNum = maxBm + 1;
+  _postNum = maxP + 1;
+}
+export function nextBeamMark() { return 'BM-' + (_beamNum++); }
+export function nextPostMark() { return 'P-' + (_postNum++); }
 
 export function newLevel(name) {
   return { id: newLevelId(), name: name || '', floorToFloor: '', floorClearSpan: '16', anchorageType: 'auto' };
@@ -92,12 +118,19 @@ export function newPointLoad(position) {
   return { id: newPointId(), position: position ?? 0, dlKips: '' };
 }
 
+// Beam sits at the bottom floor line of story levelId and carries that story's walls/posts
 export function newBeam(levelId, position, length) {
-  return { id: newBeamId(), levelId, position: position ?? 0, length: length ?? 8 };
+  return { id: newBeamId(), mark: nextBeamMark(), levelId, position: position ?? 0, length: length ?? 8, supports: [] };
 }
 
+// type: 'point' (support at this level) | 'post' (links to a post in the story below)
+export function newBeamSupport(position, type) {
+  return { id: newBeamSupportId(), position: position ?? 0, type: type || 'point', anchorageOverride: '' };
+}
+
+// A post occupies one story (levelId), floor-to-floor
 export function newSupportPost(levelId, position) {
-  return { id: newSupportPostId(), levelId, position: position ?? 0 };
+  return { id: newSupportPostId(), mark: nextPostMark(), levelId, position: position ?? 0, anchorageOverride: '', postOverride: '' };
 }
 
 export function defaultInputs() {

@@ -3,6 +3,32 @@ import { saveItem, getItem } from '../db.js';
 import { getModule } from '../modules/registry.js';
 import { exportItemPdf } from '../pdf.js';
 
+async function resolveRefs(mod, inputs) {
+  const resolvedRefs = {};
+  if (mod.refs && mod.refs.length && inputs && inputs.refs) {
+    for (const ref of mod.refs) {
+      const refId = inputs.refs[ref.key];
+      if (refId) {
+        const refItem = await getItem(refId);
+        if (refItem) resolvedRefs[ref.key] = ref.extract(refItem.outputs || {});
+      }
+    }
+  }
+  return resolvedRefs;
+}
+
+// Modules with regenerateResults treat the stored definition (inputs) as the source of truth:
+// results are recalculated with the current calc instead of trusting the stored snapshot.
+async function withCurrentResults(mod, item) {
+  if (!mod.regenerateResults || !item) return item;
+  try {
+    return { ...item, outputs: mod.calc(item.inputs || {}, await resolveRefs(mod, item.inputs)) };
+  } catch (e) {
+    console.error('Recalculating results failed:', e);
+    return { ...item, outputs: null };
+  }
+}
+
 export async function renderItemForm(container, state, { moduleId, itemId, onBack, onSaved }) {
   clearEl(container);
   const p = state.currentProject;
@@ -21,7 +47,10 @@ export async function renderItemForm(container, state, { moduleId, itemId, onBac
     mod = getModule(item.type);
     if (!mod) { onBack(); return; }
     if (mod.migrate) item = mod.migrate(item);
+    item = await withCurrentResults(mod, item);
   }
+
+  container.classList.toggle('main-content--wide', !!mod.wideLayout);
 
   const newTitle = mod.noNewPrefix ? mod.label : 'New ' + mod.label;
   let customName = (!isNew && item.customName) ? item.customName : '';
@@ -72,7 +101,14 @@ export async function renderItemForm(container, state, { moduleId, itemId, onBac
     outputSection.hidden = false;
     const body = outputSection.querySelector('.output-body');
     clearEl(body);
-    mod.renderOutputs(body, outputs);
+    // A results bug must never take the form down with it
+    try {
+      mod.renderOutputs(body, outputs);
+    } catch (e) {
+      console.error('Rendering results failed:', e);
+      clearEl(body);
+      body.appendChild(el('span', { className: 'badge badge-fail' }, 'Results could not be displayed — click Calculate & Save to refresh'));
+    }
   }
 
   if (showOutputs) {
@@ -96,22 +132,14 @@ export async function renderItemForm(container, state, { moduleId, itemId, onBac
   const projectItems = state.items || [];
 
   mod.renderForm(formBody, isNew ? null : JSON.parse(JSON.stringify(item.inputs || {})), async (inputs) => {
-    const resolvedRefs = {};
-    if (mod.refs && mod.refs.length && inputs.refs) {
-      for (const ref of mod.refs) {
-        const refId = inputs.refs[ref.key];
-        if (refId) {
-          const refItem = await getItem(refId);
-          if (refItem) resolvedRefs[ref.key] = ref.extract(refItem.outputs || {});
-        }
-      }
-    }
+    const resolvedRefs = await resolveRefs(mod, inputs);
     try {
       const savedId = await saveItem({ itemId: state._itemId, projectNumber: p.projectNumber, module: mod, inputs, resolvedRefs, customName });
       showToast(isNew ? 'Calculation saved.' : 'Calculation updated.', 'success');
       state._itemId = savedId;
       item = await getItem(savedId);
       if (mod.migrate) item = mod.migrate(item);
+      item = await withCurrentResults(mod, item);
       renderOutputsInPlace(item.outputs);
       clearDirty();
       onSaved(savedId, true);
