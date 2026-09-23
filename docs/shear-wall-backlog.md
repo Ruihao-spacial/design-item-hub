@@ -1,13 +1,13 @@
 # Shear Wall Design — Backlog
 
 Open items after the 2026-09-22 elevation review rounds. All review comments from those rounds are implemented;
-this file tracks what is deferred. Branch: `shearwall-load-path` (uncommitted as of 2026-09-22; CALC_VERSION v5, schema v5).
+this file tracks what is deferred. Branch: `shearwall-load-path` (committed and pushed 2026-09-22, not yet merged to `master`; CALC_VERSION v5, schema v5).
 
 ## Pending approval / housekeeping
 | # | Item | Notes |
 |---|---|---|
 | H1 | Bulk upgrade of the local database — **optional** | Not required: the item form migrates and regenerates on open, and the project-page PDF now migrates on export (fixed 2026-09-22). Opening and saving the two Test 123 shear wall items clears the "Stale" badge and refreshes the stored label. Keep `SB_EMAIL=… SB_PASSWORD=… npm run upgrade:shearwall [-- --apply]` for the cloud move (U2), when every stored item should be brought to the current schema at once. |
-| H2 | Commit and merge `shearwall-load-path` into `master` | Why: everything since `b959485` (Phase 3) exists only as uncommitted changes on one local disk. Committing gives a restore point, pushing gives a GitHub backup, separate commits keep the history reviewable and revertible, and `master` is what a later Railway deploy builds from. Suggested: commit on the branch and push now, then merge to `master` once accepted. |
+| H2 | Merge `shearwall-load-path` into `master` — **committed `9723949` and pushed 2026-09-22; merge pending** | Why: everything since `b959485` (Phase 3) exists only as uncommitted changes on one local disk. Committing gives a restore point, pushing gives a GitHub backup, separate commits keep the history reviewable and revertible, and `master` is what a later Railway deploy builds from. Suggested: commit on the branch and push now, then merge to `master` once accepted. |
 
 ## Known gaps (found in review, not fixed)
 | # | Item | Where | Notes |
