@@ -1,4 +1,4 @@
-import { el, clearEl, numOrBlank } from '../utils.js';
+import { el, clearEl, numOrBlank, sameNumber } from '../utils.js';
 
 let nextLevelId = 1;
 let nextRowId = 1;
@@ -51,12 +51,28 @@ function levelTotals(level) {
   return { area: round1(at), line: round1(lt), point: round1(pt), total: round1(at + lt + pt) };
 }
 
+// Lateral DL of a Flat Load assembly, as copied into area / line mass rows
+function assemblyDLpsf(asm) {
+  return Math.round((asm.dlLateral || asm.dl || 0) * 10) / 10;
+}
+
+// Rows that copied their psf from a Flat Load assembly: [{ level, row, kind }]
+function linkedRows(inputs) {
+  const out = [];
+  for (const level of inputs.levels || []) {
+    for (const row of level.areaMasses || []) if (row.refKey) out.push({ level, row, kind: 'area' });
+    for (const row of level.lineMasses || []) if (row.refKey) out.push({ level, row, kind: 'line' });
+  }
+  return out;
+}
+
 export const seismicMassTakeoff = {
   id: 'seismic_mass_takeoff',
   label: 'Seismic Mass Takeoff',
   schemaVersion: 2,
   calcVersion: 'v1',
   noNewPrefix: true,
+  regenerateResults: true,
   refs: [
     { key: 'flatLoadSource', label: 'Flat Load Calculator', sourceType: 'flat_load_calculator',
       extract: (outputs) => ({ perTab: outputs.perTab }) },
@@ -107,6 +123,31 @@ export const seismicMassTakeoff = {
     return { perLevel, totalSeismicWeight, calcVersion: 'v1' };
   },
 
+  // Copied assembly psf values that no longer match the linked Flat Load item
+  linkDiff(inputs, linked) {
+    const tabs = linked.flatLoadSource && linked.flatLoadSource.perTab;
+    if (!tabs) return [];
+    const changes = [];
+    for (const { level, row, kind } of linkedRows(inputs)) {
+      const asm = tabs.find(t => t.id === row.refKey);
+      const where = (level.name || 'Level') + ' · ' + (row.element || kind + ' mass');
+      if (!asm) { changes.push({ refKey: 'flatLoadSource', label: where + ' — assembly no longer in Flat Load', from: row.psf, to: null, missing: true }); continue; }
+      const psf = assemblyDLpsf(asm);
+      if (!sameNumber(row.psf, psf)) changes.push({ refKey: 'flatLoadSource', label: where + ' (' + (asm.name || 'assembly') + ') psf', from: row.psf, to: psf });
+    }
+    return changes;
+  },
+
+  applyLinks(inputs, linked) {
+    const tabs = linked.flatLoadSource && linked.flatLoadSource.perTab;
+    if (!tabs) return inputs;
+    for (const { row } of linkedRows(inputs)) {
+      const asm = tabs.find(t => t.id === row.refKey);
+      if (asm) row.psf = assemblyDLpsf(asm); // missing assemblies are left for the engineer
+    }
+    return inputs;
+  },
+
   renderForm(container, existingInputs, onSave, projectItems, onInputChange) {
     const isV2 = existingInputs && existingInputs.levels && existingInputs.levels.length > 0 && existingInputs.levels[0].areaMasses !== undefined;
     const inputs = isV2
@@ -121,10 +162,6 @@ export const seismicMassTakeoff = {
       if (!inputs.refs.flatLoadSource) return [];
       const linked = flatLoadItems.find(it => it.id === inputs.refs.flatLoadSource);
       return (linked && linked.outputs && linked.outputs.perTab) ? linked.outputs.perTab : [];
-    }
-
-    function assemblyDLpsf(asm) {
-      return Math.round((asm.dlLateral || asm.dl || 0) * 10) / 10;
     }
 
     const formBody = el('div');

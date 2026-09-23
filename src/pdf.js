@@ -1,8 +1,9 @@
 import { jsPDF } from 'jspdf';
 import { formatDate } from './utils.js';
 import { uploadCalcSheet } from './db.js';
+import { currentOutputs } from './results.js';
 
-export async function exportItemPdf(project, item, mod, { saveToStorage = true } = {}) {
+export async function exportItemPdf(project, item, mod, { saveToStorage = true, items = [] } = {}) {
   // The project-page PDF button passes the stored row — bring its definition up to the current schema first
   // (migrations are idempotent, so items already migrated by the form pass through unchanged)
   if (mod.migrate && item) item = mod.migrate({ ...item });
@@ -77,7 +78,9 @@ export async function exportItemPdf(project, item, mod, { saveToStorage = true }
     return canvas;
   }
 
-  const sections = mod.pdfSections ? mod.pdfSections(item.inputs || {}, item.outputs || {}) : [];
+  // Same results the form shows: regenerated from the definition when the module opts in
+  const outputs = (mod.regenerateResults ? currentOutputs(mod, item, items) : item.outputs) || {};
+  const sections = mod.pdfSections ? mod.pdfSections(item.inputs || {}, outputs) : [];
   for (const section of sections) {
     if (section.pageBreakBefore && y > margin) {
       renderFooter();

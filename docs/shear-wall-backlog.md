@@ -13,7 +13,6 @@ this file tracks what is deferred. Branch: `shearwall-load-path` (committed and 
 | # | Item | Where | Notes |
 |---|---|---|---|
 | G3 | Beam reactions exclude floor gravity load | `shearWallLoadPath.js` | By design for now. **Note for the future Beam Calculator module:** consume Shear Wall `beamTransfers[].supports[]` (per-combo reactions, loads on the beam) through the existing `refs` / `extract` mechanism, add floor gravity (DL / LL tributary) and do the sizing there. Then decide whether the beam's reactions should flow back into the shear wall load path (support posts). Ties to R7. |
-| G4 | "Regenerate results from the definition" applies to Shear Wall Design only | `regenerateResults` flag, `itemForm.js` | User chose this scope. Other modules still render stored results (protected by the try/catch notice). |
 | G5 | Page-level recalculate-on-open path not exercised in automated tests | `itemForm.js` imports `db.js` (Vite env) | Accepted as-is (2026-09-22). Covered by build + code review + `scripts/lib/shearWallLoadCheck.mjs`. |
 
 ## Done / fixed
@@ -21,6 +20,11 @@ this file tracks what is deferred. Branch: `shearwall-load-path` (committed and 
 - **H4 (2026-09-22):** Test 123 cleanup (duplicate posts P-8 / P-13 on P-1).
 - **G1 (2026-09-22):** the wall HD/Strap override list uses the wall level's floor-span strap table (`hwOptionsFor`), matching the post / beam-support panels and the quick editor.
 - **G2 (2026-09-22):** every combination and load case reports both ends from one formula (net = fD·D/2 ∓ OTM/L). 1.0E / 1.0W are lateral only (T = C = V·h/L); they previously included dead load. The uplift-side end in D + 0.7ρE / D + 0.6W and a net-compression end in 0.6D combos are no longer dropped to 0. CALC_VERSION v5.
+- **G4 (2026-09-22, branch `results-and-links`):**
+  - All modules now regenerate results from their definition (`regenerateResults`), in the form, on the project page and in PDFs, through the shared `src/results.js`.
+  - Linked values copied from upstream items are checked on open: Mass Takeoff psf from Flat Load assemblies; ELF W / hx from Mass Takeoff and Sds, Cs, Ie, Ω0, k from Base Shear.
+  - When they differ, the item shows a notice with **Update from linked items** (fills the form, not saved) and **Dismiss**, and the project list shows **Upstream changed**.
+  - Stored outputs remain the saved record. Tests: `tests/links.test.mjs`.
 - **Project-page PDF (2026-09-22):** `exportItemPdf` migrates the stored item before building sections, so a PDF exported from the project list of a not-yet-re-saved item uses the current definition schema.
 
 ## Added 2026-09-22 (elevation / UI)

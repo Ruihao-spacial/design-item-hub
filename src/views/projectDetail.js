@@ -2,6 +2,7 @@ import { el, clearEl, formatDate, showToast } from '../utils.js';
 import { updateProjectStatus, deleteProject, archiveItem, restoreItem, listItems } from '../db.js';
 import { DESIGN_ITEM_MODULES, getModule } from '../modules/registry.js';
 import { exportItemPdf } from '../pdf.js';
+import { linkChanges } from '../results.js';
 
 export async function renderProjectDetail(container, state, { onBack, onOpenItem, onAddItem, onDeleted }) {
   clearEl(container);
@@ -70,18 +71,24 @@ export async function renderProjectDetail(container, state, { onBack, onOpenItem
     activeItems.forEach((item) => {
       const mod = getModule(item.type);
       const isStale = mod && item.calcVersion !== mod.calcVersion;
+      const changes = mod ? linkChanges(mod, item, items) : [];
+      const changesTip = changes.slice(0, 4).map(c => c.source + ': ' + c.label + (c.missing ? '' : ' ' + c.from + ' → ' + c.to)).join('\n')
+        + (changes.length > 4 ? '\n+' + (changes.length - 4) + ' more' : '') + '\nOpen the item and click "Update from linked items".';
       panel.appendChild(el('div', { className: 'item-row' },
         el('button', { className: 'item-info item-open-button', type: 'button', 'aria-label': 'Open calculation ' + (item.customName || item.label || (mod ? mod.label : item.type)), onClick() { onOpenItem(item); } },
           el('div', { className: 'item-title' },
             item.customName || item.label || (mod ? mod.label : item.type),
             el('span', { className: 'badge badge-type' }, mod ? mod.label : item.type),
-            isStale ? el('span', { className: 'badge badge-stale' }, 'Stale') : null,
+            isStale ? el('span', { className: 'badge badge-stale', title: mod && mod.regenerateResults
+              ? 'Saved with an older calc version. Results shown are recalculated with the current version; re-save to refresh the saved record.'
+              : 'Saved with an older calc version — re-save to update the results.' }, 'Stale') : null,
+            changes.length ? el('span', { className: 'badge badge-stale', title: changesTip }, 'Upstream changed') : null,
           ),
           el('div', { className: 'item-meta' }, el('span', null, item.enteredBy || '—'), el('span', null, formatDate(item.createdAt))),
         ),
         el('div', { className: 'item-actions' },
           el('button', { className: 'btn btn-ghost btn-sm', title: 'Export PDF', 'aria-label': 'Export calculation as PDF', async onClick() {
-            try { await exportItemPdf(p, item, mod); } catch (error) { console.error('Failed to export PDF:', error); showToast('PDF export failed.', 'error'); }
+            try { await exportItemPdf(p, item, mod, { items }); } catch (error) { console.error('Failed to export PDF:', error); showToast('PDF export failed.', 'error'); }
           } }, 'PDF'),
           el('button', { className: 'btn btn-ghost btn-sm btn-danger', title: 'Archive',
             async onClick() {

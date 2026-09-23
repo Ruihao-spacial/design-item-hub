@@ -3,7 +3,9 @@ import { saveItem, getItem } from '../db.js';
 import { getModule } from '../modules/registry.js';
 import { exportItemPdf } from '../pdf.js';
 import { validateEngineeringInputs } from '../validation.js';
+import { currentOutputs, linkChanges, applyLinkUpdates } from '../results.js';
 
+// Refs for saving, read fresh from the database
 async function resolveRefs(mod, inputs) {
   const resolvedRefs = {};
   if (mod.refs && mod.refs.length && inputs && inputs.refs) {
@@ -20,14 +22,9 @@ async function resolveRefs(mod, inputs) {
 
 // Modules with regenerateResults treat the stored definition (inputs) as the source of truth:
 // results are recalculated with the current calc instead of trusting the stored snapshot.
-async function withCurrentResults(mod, item) {
+function withCurrentResults(mod, item, projectItems) {
   if (!mod.regenerateResults || !item) return item;
-  try {
-    return { ...item, outputs: mod.calc(item.inputs || {}, await resolveRefs(mod, item.inputs)) };
-  } catch (e) {
-    console.error('Recalculating results failed:', e);
-    return { ...item, outputs: null };
-  }
+  return { ...item, outputs: currentOutputs(mod, item, projectItems) };
 }
 
 export async function renderItemForm(container, state, { moduleId, itemId, onBack, onSaved }) {
@@ -48,7 +45,7 @@ export async function renderItemForm(container, state, { moduleId, itemId, onBac
     mod = getModule(item.type);
     if (!mod) { onBack(); return; }
     if (mod.migrate) item = mod.migrate(item);
-    item = await withCurrentResults(mod, item);
+    item = withCurrentResults(mod, item, state.items || []);
   }
 
   container.classList.toggle('main-content--wide', !!mod.wideLayout);
@@ -90,6 +87,37 @@ export async function renderItemForm(container, state, { moduleId, itemId, onBac
     savedTimer = setTimeout(() => { dirtyBadge.style.opacity = '0'; setTimeout(() => { dirtyBadge.hidden = true; }, 500); }, 2500);
   }
 
+  // Linked values that changed in upstream items: list them, offer Update (fills the form, not saved) / Dismiss
+  const linkNotice = el('div', { className: 'panel', hidden: true, style: { marginBottom: '0.75rem', borderColor: 'var(--stale)' } });
+  container.appendChild(linkNotice);
+  function renderLinkNotice() {
+    clearEl(linkNotice);
+    const changes = isNew ? [] : linkChanges(mod, item, state.items || []);
+    linkNotice.hidden = !changes.length;
+    if (!changes.length) return;
+    const fmt = (v) => v == null || v === '' ? '—' : String(v);
+    const body = el('div', { className: 'panel-body', style: { fontSize: '0.85rem' } },
+      el('div', { style: { fontWeight: '600', marginBottom: '0.35rem' } }, '⚠ Linked values changed upstream'));
+    const bySource = new Map();
+    changes.forEach(c => { if (!bySource.has(c.source)) bySource.set(c.source, []); bySource.get(c.source).push(c); });
+    for (const [source, list] of bySource) {
+      body.appendChild(el('div', { style: { color: 'var(--ink-secondary)', marginTop: '0.25rem' } }, source + ':'));
+      list.forEach(c => body.appendChild(el('div', { className: 'mono', style: { marginLeft: '1rem', fontSize: '0.8rem' } },
+        c.missing ? c.label : c.label + '  ' + fmt(c.from) + ' → ' + fmt(c.to))));
+    }
+    body.appendChild(el('div', { style: { display: 'flex', gap: '0.5rem', marginTop: '0.5rem' } },
+      el('button', { className: 'btn btn-sm btn-primary', type: 'button', onClick() {
+        item = { ...item, inputs: applyLinkUpdates(mod, item.inputs, state.items || [], item.id) };
+        linkNotice.hidden = true;
+        renderModuleForm(item.inputs);
+        markDirty();
+        showToast('Linked values updated — review, then Calculate & Save.', 'success');
+      } }, 'Update from linked items'),
+      el('button', { className: 'btn btn-sm btn-ghost', type: 'button', onClick() { linkNotice.hidden = true; } }, 'Dismiss')));
+    linkNotice.appendChild(body);
+  }
+  renderLinkNotice();
+
   const formBody = el('div', { className: 'panel-body' });
   container.appendChild(el('div', { className: 'panel' }, formBody));
 
@@ -115,7 +143,7 @@ export async function renderItemForm(container, state, { moduleId, itemId, onBac
   async function exportPdf() {
     if (!item) return;
     try {
-      await exportItemPdf(p, item, mod);
+      await exportItemPdf(p, item, mod, { items: state.items || [] });
     } catch (error) {
       console.error('Failed to export PDF:', error);
       showToast('PDF export failed.', 'error');
@@ -142,29 +170,39 @@ export async function renderItemForm(container, state, { moduleId, itemId, onBac
 
   const projectItems = state.items || [];
 
-  mod.renderForm(formBody, isNew ? null : JSON.parse(JSON.stringify(item.inputs || {})), async (inputs) => {
-    const validationErrors = validateEngineeringInputs(mod.id, inputs);
-    if (validationErrors.length) {
-      const visibleErrors = validationErrors.slice(0, 3).join(' ');
-      const remainder = validationErrors.length > 3 ? ` (+${validationErrors.length - 3} more)` : '';
-      showToast(`Complete the calculation before saving: ${visibleErrors}${remainder}`, 'error');
-      return;
-    }
-    const resolvedRefs = await resolveRefs(mod, inputs);
-    try {
-      const savedId = await saveItem({ itemId: state._itemId, projectNumber: p.projectNumber, module: mod, inputs, resolvedRefs, customName });
-      showToast(isNew ? 'Calculation saved.' : 'Calculation updated.', 'success');
-      state._itemId = savedId;
-      item = await getItem(savedId);
-      if (mod.migrate) item = mod.migrate(item);
-      item = await withCurrentResults(mod, item);
-      renderOutputsInPlace(item.outputs);
-      clearDirty();
-      onSaved(savedId, true);
-    } catch (e) {
-      showToast('Error saving: ' + (e.message || ''), 'error');
-    }
-  }, projectItems, () => { markDirty(); });
+  function renderModuleForm(formInputs) {
+    clearEl(formBody);
+    mod.renderForm(formBody, formInputs ? JSON.parse(JSON.stringify(formInputs)) : null, async (inputs) => {
+      const validationErrors = validateEngineeringInputs(mod.id, inputs);
+      if (validationErrors.length) {
+        const visibleErrors = validationErrors.slice(0, 3).join(' ');
+        const remainder = validationErrors.length > 3 ? ` (+${validationErrors.length - 3} more)` : '';
+        showToast(`Complete the calculation before saving: ${visibleErrors}${remainder}`, 'error');
+        return;
+      }
+      const resolvedRefs = await resolveRefs(mod, inputs);
+      try {
+        const savedId = await saveItem({ itemId: state._itemId, projectNumber: p.projectNumber, module: mod, inputs, resolvedRefs, customName });
+        showToast(isNew ? 'Calculation saved.' : 'Calculation updated.', 'success');
+        state._itemId = savedId;
+        const saved = await getItem(savedId);
+        // Keep the in-memory project list current so link checks see the saved values
+        if (Array.isArray(state.items)) {
+          const i = state.items.findIndex(x => x.id === savedId);
+          if (i >= 0) state.items[i] = saved; else state.items.push(saved);
+        }
+        item = mod.migrate ? mod.migrate(saved) : saved;
+        item = withCurrentResults(mod, item, state.items || []);
+        renderOutputsInPlace(item.outputs);
+        renderLinkNotice();
+        clearDirty();
+        onSaved(savedId, true);
+      } catch (e) {
+        showToast('Error saving: ' + (e.message || ''), 'error');
+      }
+    }, projectItems, () => { markDirty(); });
+  }
+  renderModuleForm(isNew ? null : item.inputs || {});
 
   if (!isNew && item.revisions && item.revisions.length > 0) {
     const revList = el('div', { style: { marginTop: '0.5rem', fontSize: '0.82rem' } });

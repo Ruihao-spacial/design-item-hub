@@ -40,6 +40,13 @@ export function numOrBlank(v) {
   return v === null || v === undefined || v === '' ? '' : v;
 }
 
+// Numeric comparison for linked values ('0.15' vs 0.150 is not a change).
+// Blank counts as 0, the same way the calcs read it (parseFloat(v) || 0).
+export function sameNumber(a, b, tol) {
+  const x = parseFloat(a) || 0, y = parseFloat(b) || 0;
+  return Math.abs(x - y) <= (tol != null ? tol : 0.005);
+}
+
 export function sanitizeProjectNumber(raw) {
   return raw.replace(/[^A-Za-z0-9_\-.]/g, '-').replace(/-{2,}/g, '-').replace(/^-|-$/g, '') || 'unnamed';
 }
