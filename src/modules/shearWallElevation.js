@@ -2,7 +2,7 @@ import { el, clearEl, numOrBlank } from '../utils.js';
 import { svgEl, newWall, newUniformLoad, newPointLoad, newBeam, newBeamSupport, newSupportPost, newOpening } from './shearWallTypes.js';
 import { NAILING_TABLE } from './shearWallNailing.js';
 import { HDUE_TABLE, MSTC_TABLE, POST_SIZES, getGradeById, FTAO_STRAP_TABLE, jambPostOptions } from './shearWallHardware.js';
-import { openingProblems, wallPiers } from './shearWallOpenings.js';
+import { openingProblems, wallPiers, expandWalls, sortedOpenings, hasOpenings, wallMethod } from './shearWallOpenings.js';
 import { findAnchorage, findPost } from './shearWallCalc.js';
 
 const GUTTER = 80;
@@ -230,6 +230,64 @@ function beamLabelBand(layout, li) {
   if (below) return below.topBandH ? { reactY: below.topReactY, reactH: below.topReactH, hwY: below.topHwY, hwH: below.topHwH } : null;
   const f = layout.fdnBand;
   return f ? { reactY: f.reactY, reactH: f.reactH, hwY: f.hwY, hwH: f.hwH } : null;
+}
+
+// Walls as drawn: a segmented wall with valid openings is drawn pier by pier, with the same ids as the
+// calc results (w-5#p1 …). parent = the wall in the definition (selection, drag, overrides).
+function drawParts(line, levels) {
+  const walls = line.walls || [];
+  return expandWalls(walls, levels).walls.map(part => ({
+    part, parent: walls.find(w => w.id === (part.parentWallId || part.id)) || part,
+    isPier: !!part.parentWallId,
+  }));
+}
+
+// Opening boxes (px) of a wall: x/width along the line, head/sill heights above the floor line
+function openingBoxes(w, lv, pxPerFt) {
+  const ftH = parseFloat(lv.ftH) || 0;
+  if (!(ftH > 0)) return [];
+  const scale = (lv.floorY - lv.y) / ftH;
+  return sortedOpenings(w).map(o => ({
+    x: GUTTER + (num(w.position) + o.offset) * pxPerFt, w: o.width * pxPerFt,
+    yHead: lv.floorY - o.head * scale, ySill: lv.floorY - o.sill * scale,
+  }));
+}
+
+// Openings of one wall: white cut-outs (red dashed outline when the geometry is invalid).
+// Segmented: dashed outline of the whole wall (sheathing above/below openings is not part of the piers).
+// FTAO: jamb posts at the opening edges and the continuous straps at head and sill with the strap label.
+function drawWallOpenings(svg, w, lv, beams, pxPerFt, P, opts) {
+  if (!hasOpenings(w)) return;
+  const r = wallRectOf(w, lv, beams, pxPerFt);
+  const valid = openingProblems(w, lv.ftH).length === 0;
+  const boxes = openingBoxes(w, lv, pxPerFt);
+  const ftao = wallMethod(w) === 'ftao';
+  if (valid && !ftao) {
+    svg.appendChild(svgEl('rect', { x: r.x, y: r.y, width: Math.max(r.w, 2), height: Math.max(r.h, 8), fill: 'none', stroke: P.ink, 'stroke-width': 0.75, 'stroke-dasharray': '3,3', opacity: 0.6, rx: 2, 'pointer-events': 'none' }));
+  }
+  for (const b of boxes) {
+    const top = Math.max(b.yHead, r.y + 1), bot = Math.min(b.ySill, r.bottom - 1);
+    if (bot - top < 1) continue;
+    svg.appendChild(svgEl('rect', valid
+      ? { x: b.x, y: top, width: Math.max(b.w, 1), height: bot - top, fill: P.surface, stroke: P.ink, 'stroke-width': 0.75, 'pointer-events': 'none' }
+      : { x: b.x, y: top, width: Math.max(b.w, 1), height: bot - top, fill: 'none', stroke: P.fail, 'stroke-width': 1, 'stroke-dasharray': '3,2', 'pointer-events': 'none' }));
+    if (opts.placer) opts.placer.reserve({ x: b.x, y: top, w: b.w, h: bot - top });
+  }
+  if (!valid || !ftao || !boxes.length) return;
+  for (const b of boxes) {
+    for (const x of [b.x, b.x + b.w]) {
+      svg.appendChild(svgEl('line', { x1: x, y1: r.y + 1, x2: x, y2: r.bottom - 1, stroke: P.ink, 'stroke-width': 1.5, opacity: 0.55, 'pointer-events': 'none' }));
+    }
+  }
+  const yHead = Math.min(...boxes.map(b => b.yHead)) - 2;
+  const ySill = Math.max(...boxes.map(b => b.ySill)) + 2;
+  const strapId = opts.ftao && opts.ftao.strap ? opts.ftao.strap.id + (opts.ftao.strap.override ? (opts.pdf ? ' *' : ' ✎') : '') : opts.ftao ? 'OVER' : 'strap';
+  for (const y of [yHead, ySill]) {
+    svg.appendChild(svgEl('line', { x1: r.x + 1, y1: y, x2: r.x + r.w - 1, y2: y, stroke: P.beam, 'stroke-width': 1.5, 'stroke-dasharray': '5,3', 'pointer-events': 'none' }));
+  }
+  const a = { x: r.x + r.w - 3, y: yHead - 3, 'text-anchor': 'end', fill: P.beam, 'font-size': '8', 'font-weight': '600' };
+  svg.appendChild(haloText(a, strapId, P.surface, opts.tip || null));
+  if (opts.placer) opts.placer.reserveText(a, strapId);
 }
 
 // Wall rect: floor line to floor line, ending at the beam top when a beam carries the whole wall
@@ -917,14 +975,19 @@ export function renderElevation(container, line, levels, wallDLTypes, callbacks)
     const body = [];
     let title = '', fields = [], resetKeys = [], target = null;
     if (kind === 'nailing' || kind === 'wallEnd') {
-      const w = (line.walls || []).find(x => x.id === id);
+      const found = drawParts(line, levels).find(p => p.part.id === id);
+      const w = found && found.part;
+      const pw = found && found.parent;
       const wr = w && findWallResult(w.id);
       if (!w || !wr) { hideQuickEdit(); return; }
       const li = levelIndexOf(w.levelId), lvl = levels[li];
-      target = w;
+      target = pw;
+      // Pier ends at an opening have no override of their own (auto-selected)
+      const nPiers = found.isPier ? drawParts(line, levels).filter(p => p.parent.id === pw.id).length : 1;
+      const outer = (side) => !found.isPier || (side === 'left' ? w.pierIndex === 0 : w.pierIndex === nPiers - 1);
       if (kind === 'nailing') {
-        title = (w.mark || w.id) + ' · nailing';
-        fields.push(qeField('Nailing', w, 'nailingPattern', nailingGroups(wr), wr.nailing ? wr.nailing.label : '?'));
+        title = (w.mark || w.id) + ' · nailing' + (found.isPier ? ' (all piers of ' + (pw.mark || pw.id) + ')' : '');
+        fields.push(qeField('Nailing', pw, 'nailingPattern', nailingGroups(wr), wr.nailing ? wr.nailing.label : '?'));
         body.push('v ' + (wr.unitShear_ASD || 0).toFixed(0) + ' plf / cap ' + (wr.effectiveCapacity || 0).toFixed(0) + ' plf → D/C ' + dcTxt(wr.dcRatio)
           + (wr.hbReductionFactor < 1 ? ' (h/b factor ' + wr.hbReductionFactor.toFixed(2) + ')' : ''));
         resetKeys = ['nailingPattern'];
@@ -933,9 +996,10 @@ export function renderElevation(container, line, levels, wallDLTypes, callbacks)
       for (const side of sides) {
         const d = wallEndData(w, wr, side);
         if (kind === 'wallEnd') title = (w.mark || w.id) + ' · ' + side + ' end';
-        fields.push(qeField(side[0].toUpperCase() + side.slice(1) + ' HD/Strap', w, 'anchorage' + d.S1 + 'Override', anchorageGroups(lvl, li, d.T), d.anc ? d.anc.id : 'OVER'));
-        fields.push(qeField(side[0].toUpperCase() + side.slice(1) + ' post', w, 'post' + d.S1 + 'Override', postGroups(lvl, d.C), d.post ? d.post.postLabel : 'OVER'));
         body.push(side + ': ' + d.ancText + ' · ' + d.postText);
+        if (!outer(side)) { body.push('Pier end at an opening — hardware is auto-selected'); continue; }
+        fields.push(qeField(side[0].toUpperCase() + side.slice(1) + ' HD/Strap', pw, 'anchorage' + d.S1 + 'Override', anchorageGroups(lvl, li, d.T), d.anc ? d.anc.id : 'OVER'));
+        fields.push(qeField(side[0].toUpperCase() + side.slice(1) + ' post', pw, 'post' + d.S1 + 'Override', postGroups(lvl, d.C), d.post ? d.post.postLabel : 'OVER'));
         resetKeys.push('anchorage' + d.S1 + 'Override', 'post' + d.S1 + 'Override');
       }
     } else if (kind === 'post') {
@@ -1197,22 +1261,26 @@ export function renderElevation(container, line, levels, wallDLTypes, callbacks)
       markChanged();
     }
 
-    drawAuditWarnings(svg, line.walls || [], levelYs, pxPerFt);
+    const parts = drawParts(line, levels);
+    drawAuditWarnings(svg, parts.map(p => p.part), levelYs, pxPerFt);
 
     const selKey = selectedWallId ? { type: 'wall', id: selectedWallId } : selectedBeamId ? { type: 'beam', id: selectedBeamId } : selectedPostId ? { type: 'post', id: selectedPostId } : null;
     const rel = loadPathRelations(wallResults, selKey);
     const highlightActive = rel.sources.size + rel.receivers.size > 0;
     const anyBands = showForces || showHW;
 
-    for (const w of (line.walls || [])) {
+    const openingsDrawn = new Set();
+    for (const { part: w, parent: pw, isPier } of parts) {
       const lv = levelYs.find(l => l.id === w.levelId);
       if (!lv) continue;
       const r = wallRectOf(w, lv, beams, pxPerFt);
       const body = wallBodyOf(lv);
       const wx = r.x, ww = r.w;
-      const isSel = w.id === selectedWallId;
+      const isSel = pw.id === selectedWallId;
+      const isFtaoWall = hasOpenings(w) && wallMethod(w) === 'ftao';
       const ar = (parseFloat(lv.ftH) || 0) / (parseFloat(w.length) || 1);
-      const related = isSel || rel.sources.has('wall:' + w.id) || rel.receivers.has('wall:' + w.id);
+      const relHas = (set) => set.has('wall:' + w.id) || set.has('wall:' + pw.id);
+      const related = isSel || relHas(rel.sources) || relHas(rel.receivers);
 
       let fill = WALL_COLOR;
       const wr = (wallResults && (showForcesOn || showHardwareOn)) ? findWallResult(w.id) : null;
@@ -1236,8 +1304,8 @@ export function renderElevation(container, line, levels, wallDLTypes, callbacks)
           e.stopPropagation();
           const svgRect = svg.getBoundingClientRect(); // measure before pickAt redraws the SVG
           const startFt = (e.clientX - svgRect.left - GUTTER) / pxPerFt;
-          if (pickAt(e, 'wall', w.id)) return; // overlapping walls: choose first, no drag
-          dragState = { wallId: w.id, startFt, origPos: num(w.position) };
+          if (pickAt(e, 'wall', pw.id)) return; // overlapping walls: choose first, no drag
+          dragState = { wallId: pw.id, startFt, origPos: num(pw.position) };
         },
         onClick(e) {
           if (placementMode === 'none') return;
@@ -1247,8 +1315,14 @@ export function renderElevation(container, line, levels, wallDLTypes, callbacks)
       });
       svg.appendChild(wallRect);
       if (anyBands) drawWallBandScrim(svg, r, lv, 'var(--surface)');
+      if (hasOpenings(pw) && !openingsDrawn.has(pw.id)) {
+        openingsDrawn.add(pw.id);
+        const fr = isFtaoWall && wr ? wr.ftao : null;
+        drawWallOpenings(svg, pw, lv, beams, pxPerFt, LIVE_PALETTE, { placer, ftao: fr,
+          tip: fr && fr.strap ? (pw.mark || pw.id) + ' FTAO strap ' + fr.strap.id + ' · F_max ' + fr.strapDemand + ' lb / ' + fr.strap.cap + ' lb → D/C ' + (fr.strapDC != null ? fr.strapDC.toFixed(2) : '—') : null });
+      }
 
-      if (ar > 2.0) {
+      if (ar > 2.0 && !isFtaoWall) {
         const a = { x: wx + ww / 2, y: r.y + 10, 'text-anchor': 'middle', fill: 'var(--fail)', 'font-size': '8', 'font-weight': '700' };
         svg.appendChild(haloText(a, 'h/b=' + ar.toFixed(1)));
         placer.reserveText(a, 'h/b=' + ar.toFixed(1));
@@ -1260,7 +1334,7 @@ export function renderElevation(container, line, levels, wallDLTypes, callbacks)
         put({ x: wx + ww / 2, y: body.y + 16, 'text-anchor': 'middle', fill: '#fff', 'font-size': '9', 'font-weight': '600' }, markLabel);
         const nailFS = ww > 50 ? 10 : 8;
         const nailAttrs = { x: wx + ww / 2, y: body.y + body.h / 2 - 7, 'text-anchor': 'middle', 'dominant-baseline': 'middle', fill: '#fff', 'font-size': String(nailFS), 'font-weight': '600' };
-        const nailText = (wr.nailing ? wr.nailing.label : '') + (w.nailingPattern ? ' ✎' : '');
+        const nailText = (wr.nailing ? wr.nailing.label : '') + (pw.nailingPattern ? ' ✎' : '');
         put(nailAttrs, nailText);
         const pill = dcPill(wx + ww / 2, body.y + body.h / 2 + 8, wr.dcRatio, nailFS - 1);
         svg.appendChild(pill.g);
@@ -1270,7 +1344,7 @@ export function renderElevation(container, line, levels, wallDLTypes, callbacks)
         const tx = Math.min(nb.x, pill.box.x), ty = nb.y, tw = Math.max(nb.x + nb.w, pill.box.x + pill.box.w) - tx, th = pill.box.y + pill.box.h - ty;
         svg.appendChild(svgEl('rect', { x: tx, y: ty, width: tw, height: th, fill: 'transparent', 'data-edit': 'nailing:' + w.id, style: { cursor: 'pointer' },
           'data-tip': markLabel + ' nailing ' + (wr.nailing ? wr.nailing.label : '?') + ' · v ' + (wr.unitShear_ASD || 0).toFixed(0) + ' plf / cap ' + (wr.effectiveCapacity || 0).toFixed(0)
-            + ' plf → D/C ' + (wr.dcRatio != null ? wr.dcRatio.toFixed(2) : '—') + (w.nailingPattern ? ' · manual override' : ' · auto') + ' · click to change' }));
+            + ' plf → D/C ' + (wr.dcRatio != null ? wr.dcRatio.toFixed(2) : '—') + (isFtaoWall ? ' (FTAO governing zone)' : '') + (pw.nailingPattern ? ' · manual override' : ' · auto') + ' · click to change' }));
         drawHardwareLabels(svg, wr, wx, body.y, ww, body.h, placer, w);
       } else {
         put({ x: wx + ww / 2, y: body.y + body.h / 2, 'text-anchor': 'middle', 'dominant-baseline': 'middle', fill: '#fff', 'font-size': ww > 40 ? '11' : '9', 'font-weight': '600' }, markLabel);
@@ -2216,7 +2290,9 @@ export function renderElevationForPdf(line, levels, wallDLTypes, lineResults, wi
     }
   }
 
-  for (const w of walls) {
+  const pdfParts = drawParts(line, levels);
+  const openingsDrawn = new Set();
+  for (const { part: w, parent: pw } of pdfParts) {
     const lv = levelYs.find(l => l.id === w.levelId);
     if (!lv) continue;
     const r = wallRectOf(w, lv, beams, pxPerFt);
@@ -2233,6 +2309,10 @@ export function renderElevationForPdf(line, levels, wallDLTypes, lineResults, wi
 
     svg.appendChild(svgEl('rect', { x: wx, y: r.y, width: Math.max(ww, 2), height: Math.max(r.h, 8), fill, opacity: 0.7, stroke: C.ink, 'stroke-width': 1, rx: 2 }));
     if (lineResults) drawWallBandScrim(svg, r, lv, C.surface);
+    if (hasOpenings(pw) && !openingsDrawn.has(pw.id)) {
+      openingsDrawn.add(pw.id);
+      drawWallOpenings(svg, pw, lv, beams, pxPerFt, PDF_PALETTE, { placer, ftao: wr && wr.ftao, pdf: true });
+    }
     const markAttrs = { x: wx + ww / 2, y: body.y + body.h / 2, 'text-anchor': 'middle', 'dominant-baseline': 'middle', fill: '#fff', 'font-size': ww > 40 ? '10' : '8', 'font-weight': '600' };
     svg.appendChild(wallText(markAttrs, w.mark || w.id));
     placer.reserveText(markAttrs, w.mark || w.id);
@@ -2282,7 +2362,7 @@ export function renderElevationForPdf(line, levels, wallDLTypes, lineResults, wi
   if (lineResults && lineResults.loadPathAudit) {
     for (const warn of lineResults.loadPathAudit.warnings) {
       if (warn.type === 'unsupported_wall') {
-        const w = walls.find(ww => ww.id === warn.elementId);
+        const w = pdfParts.map(p => p.part).find(ww => ww.id === warn.elementId);
         if (!w) continue;
         const lv = levelYs.find(l => l.id === w.levelId);
         if (!lv) continue;

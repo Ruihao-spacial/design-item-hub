@@ -24,9 +24,9 @@ Shared structural-engineering calculation tool, organized by project number. Eac
 | Seismic Mass Takeoff | `seismicMassTakeoff.js` | Per-level seismic weight from Flat Load assemblies |
 | Seismic Base Shear | `seismicBaseShear.js`, `seismicBaseShearTables.js` | ASCE 7-22 Cs calculator with seismic system dropdown |
 | ELF Diaphragm & Collector | `elfDiaphragmCollector.js` | ASCE 7-22 §12.8/12.10 lateral force distribution |
-| Shear Wall Design | `shearWallDesign.js`, `shearWallCalc.js`, `shearWallLoadPath.js`, `shearWallElevation.js`, `shearWallTypes.js`, `shearWallNailing.js`, `shearWallHardware.js` | Multi-story shear wall analysis: nailing/hardware auto-select, vertical load path through wall ends, posts at any story and transfer beams with user-defined supports, interactive SVG elevation |
+| Shear Wall Design | `shearWallDesign.js`, `shearWallCalc.js`, `shearWallLoadPath.js`, `shearWallElevation.js`, `shearWallTypes.js`, `shearWallNailing.js`, `shearWallHardware.js`, `shearWallOpenings.js`, `shearWallFtao.js`, `shearWallFtaoAdapter.js`, `shearWallDeflection.js` | Multi-story shear wall analysis: nailing/hardware auto-select, vertical load path through wall ends, posts at any story and transfer beams with user-defined supports, walls with openings (segmented piers or FTAO per APA T555), SDPWS 2021 deflection and story drift, LRFD forces (reported), interactive SVG elevation |
 
-**Cross-module data flow:** Flat Load Calculator → Seismic Mass Takeoff (per-assembly DL) → ELF (W, per-level). Seismic Base Shear → ELF (Cs, SDS, Ie, Ω0, k auto-fill via ref).
+**Cross-module data flow:** Flat Load Calculator → Seismic Mass Takeoff (per-assembly DL) → ELF (W, per-level). Seismic Base Shear → ELF (Cs, SDS, Ie, Ω0, k auto-fill via ref). Seismic Base Shear → Shear Wall Design (Sds, Cd, Ie, Risk Category for drift).
 
 ## Project structure
 
@@ -55,7 +55,11 @@ src/
     shearWallElevation.js  — interactive SVG elevation drawing
     shearWallTypes.js      — data model constructors + helpers
     shearWallNailing.js    — SDPWS 4.3A nailing table + auto-select
-    shearWallHardware.js   — holdown/strap catalogs + post design
+    shearWallHardware.js   — holdown/strap/FTAO strap catalogs + post design
+    shearWallOpenings.js   — wall openings: geometry checks, segmented-wall piers
+    shearWallFtao.js       — FTAO engine (vendored from the ftao-shear-wall skill, APA T555)
+    shearWallFtaoAdapter.js — builds FTAO engine input from a wall and runs it
+    shearWallDeflection.js — SDPWS Eq. 4.3-1 deflection, ASCE 7 drift limits
   views/
     login.js
     projectPicker.js
@@ -68,6 +72,9 @@ scripts/
   lib/shearWallLoadCheck.mjs — "does this saved item open?" check shared with the tests
 tests/
   shearWall.test.mjs       — shear wall calc + regression + legacy-definition checks (npm test)
+  shearWallPhase4.test.mjs — openings (segmented / FTAO), deflection & drift, LRFD, schema v6
+test/
+  ftao.test.js             — FTAO engine regression vs APA T555 examples (node --test)
   fixtures/                — sample definitions, regression baseline, legacy/ saved definitions by schema
 docs/
   shear-wall-backlog.md    — deferred shear wall items and gaps

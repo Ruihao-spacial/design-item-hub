@@ -10,6 +10,7 @@ import { getGradeById } from '../src/modules/shearWallHardware.js';
 import { wallPiers, openingProblems } from '../src/modules/shearWallOpenings.js';
 import { checkShearWallItem } from '../scripts/lib/shearWallLoadCheck.mjs';
 import { shearWallDesign } from '../src/modules/shearWallDesign.js';
+import { renderElevation, renderElevationForPdf } from '../src/modules/shearWallElevation.js';
 
 const near = (a, b, tol, msg) => assert.ok(Math.abs(a - b) <= tol, (msg || '') + ' expected ' + b + ' ± ' + tol + ', got ' + a);
 let passed = 0;
@@ -200,6 +201,35 @@ test('Openings definition renders: form, results, PDF sections, elevations', () 
   for (const t of ['FTAO calc', 'LRFD Wall End Forces', 'Story Drift', 'SW-2a', 'SW-2b']) assert.ok(c.textContent.includes(t), 'results show ' + t);
   const titles = shearWallDesign.pdfSections(inp).map(x => x.title).join(' | ');
   for (const t of ['FTAO SW-1', 'LRFD Forces', 'Story Drift', 'Wall Deflection']) assert.ok(titles.includes(t), 'PDF has ' + t);
+});
+
+test('Elevation: segmented piers drawn with their marks, FTAO strap label, pier quick edit sets the parent', () => {
+  const inp = oneStory([t555Wall(), wall('w-2', 25, 10, { openings: [{ id: 'op-3', offset: 4, width: 2, sill: 3, head: 7 }] })], { seismic: 8, floorH: 8 });
+  const line = inp.directions[0].lines[0];
+  const resFor = () => shearWallDesign.calc(inp).perDirection[0].perLine[0];
+  const c = document.createElement('div');
+  const h = renderElevation(c, line, inp.levels, [], { onInputChange() { h.showResults(resFor()); } });
+  h.showResults(resFor());
+  const texts = () => [...c.querySelectorAll('text')].map(t => t.textContent);
+  assert.ok(texts().includes('SW-2a') && texts().includes('SW-2b'), 'pier marks');
+  const strap = resFor().perLevel[0].walls.find(w => w.method === 'ftao').ftao.strap.id;
+  assert.ok(texts().includes(strap), 'FTAO strap label ' + strap);
+  c.querySelector('.elevation-wrapper').getBoundingClientRect = () => ({ left: 0, top: 0 });
+  const t = c.querySelector('[data-edit="nailing:w-2#p1"]');
+  assert.ok(t, 'pier nailing target');
+  const ev = new window.Event('click', { bubbles: true }); ev.clientX = 10; ev.clientY = 10;
+  t.dispatchEvent(ev);
+  const qe = c.querySelector('.quick-edit');
+  assert.ok(qe && !qe.hidden, 'quick editor open');
+  const sel = qe.querySelector('select');
+  [...sel.querySelectorAll('option')].forEach(o => o.removeAttribute('selected'));
+  [...sel.querySelectorAll('option')].find(o => o.getAttribute('value') === '3').setAttribute('selected', '');
+  sel.dispatchEvent(new window.Event('change'));
+  assert.equal(line.walls[1].nailingPattern, '3', 'parent wall nailing overridden');
+  const pdf = renderElevationForPdf(line, inp.levels, [], resFor(), 600);
+  const pdfTexts = [...pdf.querySelectorAll('text')].map(x => x.textContent);
+  assert.ok(pdfTexts.includes('SW-2a') && pdfTexts.includes(strap), 'PDF shows piers and strap');
+  h.destroy();
 });
 
 test('Base Shear link: changed Cd flagged, applyLinks copies Sds/Cd/Ie/RC', () => {

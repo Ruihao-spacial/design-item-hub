@@ -1,7 +1,7 @@
 # Shear Wall Design — Backlog
 
-Open items after the 2026-09-22 elevation review rounds. All review comments from those rounds are implemented;
-this file tracks what is deferred. Branch: `shearwall-load-path` (committed and pushed 2026-09-22, not yet merged to `master`; CALC_VERSION v5, schema v5).
+Open items after the 2026-09-22 elevation review rounds and Phase 4 round 1 (R1–R3, 2026-09-24).
+Branches: `shearwall-load-path` (pushed, merge to `master` by someone else), `results-and-links` (G4, pushed 2026-09-24), `phase4-r1-r3` (local, not pushed; CALC_VERSION v6, schema v6).
 
 ## Pending approval / housekeeping
 | # | Item | Notes |
@@ -9,8 +9,22 @@ this file tracks what is deferred. Branch: `shearwall-load-path` (committed and 
 | H1 | Bulk upgrade of the local database — **optional** | Not required: the item form migrates and regenerates on open, and the project-page PDF now migrates on export (fixed 2026-09-22). Opening and saving the two Test 123 shear wall items clears the "Stale" badge and refreshes the stored label. Keep `SB_EMAIL=… SB_PASSWORD=… npm run upgrade:shearwall [-- --apply]` for the cloud move (U2), when every stored item should be brought to the current schema at once. |
 | H2 | Merge `shearwall-load-path` into `master` — **committed `9723949` and pushed 2026-09-22; merge pending** | Why: everything since `b959485` (Phase 3) exists only as uncommitted changes on one local disk. Committing gives a restore point, pushing gives a GitHub backup, separate commits keep the history reviewable and revertible, and `master` is what a later Railway deploy builds from. Suggested: commit on the branch and push now, then merge to `master` once accepted. |
 
-| H5 | App test of G4 on branch `results-and-links` (local only, not pushed) | Flat Load edit → Mass Takeoff shows "Upstream changed" → Update + save → ELF flagged; Base Shear Cs → ELF notice; project-page PDF matches the form. Push only when asked. |
+| H5 | App test of G4 on branch `results-and-links` — **passed and pushed 2026-09-24** | Flat Load edit → Mass Takeoff shows "Upstream changed" → Update + save → ELF flagged; Base Shear Cs → ELF notice; project-page PDF matches the form. |
 | H6 | Local Supabase project name changed by master | `supabase/config.toml` `project_id` is now `engineer-service-calculator`. Running `supabase start` from this code creates a new, empty local stack; existing local data lives in the `*_design-item-hub` containers. Plan a data move before restarting the local stack. After pulling master, apply new migrations with `npx supabase migration up --local` from the repo folder (2026-09-22: `20260917000000_user_management_audit` was needed for login). |
+
+| H7 | App test of Phase 4 round 1 on `phase4-r1-r3` (local, not pushed) | Add openings to a Test 123 wall, switch Segmented ↔ FTAO, link the Base Shear item (Cd / Ie / Risk Category), check elevation (cut-outs, piers, straps), results (FTAO calc, LRFD forces, story drift) and PDF. Push only when asked. |
+
+## Phase 4 round 1 — open items (2026-09-24)
+| # | Item | Notes |
+|---|---|---|
+| P1 | MSTC δ basis | HDUE δ is at the ASD cap (user). MSTC δ is assumed to be on the same basis; confirm. |
+| P2 | Segmented walls: dead load over openings | Uniform / point dead load that falls on an opening width is not given to the adjacent piers (less uplift resistance — conservative for T, slightly low for C). |
+| P3 | FTAO jamb posts | Jamb (opening-edge) posts are used for FTAO deflection only; they are not sized for compression. Default (2)2x of the line thickness, override (3)2x / 4x / 6x. |
+| P4 | Drift = largest wall δ per line and level | Capacity-based distribution kept (user); deflection-based (relative stiffness) distribution not implemented. |
+| P5 | Walls on beams / posts | Support deflection is not included in the wall deflection (noted in the table). |
+| P6 | FTAO with unequal opening heights | Engine analyzes the whole wall at the governing opening (APA largest-opening rule); straps drawn at the highest head and lowest sill. |
+| P7 | Wind deflection | Only when the service factor α_s is entered; report only (no limit). |
+| P8 | FTAO hold-down | Wall-end T/C and hardware use the usual net formula with dead load over L_wall; the engine's gross H (no dead load) is shown as a reference. |
 
 ## Known gaps (found in review, not fixed)
 | # | Item | Where | Notes |
@@ -38,12 +52,19 @@ this file tracks what is deferred. Branch: `shearwall-load-path` (committed and 
 - Overlap chooser for stacked elements; "Find element…" by mark / ID.
 - Quick editor: hover nailing / hardware labels for demand, capacity and D/C; click to override nailing, HD/strap and post with per-option D/C. Manual overrides are marked ✎ (live) and `*` (PDF elevation + Wall Schedule).
 
-## Phase 4 roadmap (not started)
+## Done — Phase 4 round 1 (2026-09-24, branch `phase4-r1-r3`)
+- **R1 openings:** wall `openings[]` (offset, width, sill, head) with method **Segmented** (pier by pier, marks SW-1a/b…) or **FTAO** (APA T555 / Diekmann engine vendored from the user's ftao-shear-wall skill as `shearWallFtao.js`, adapter `shearWallFtaoAdapter.js`, geometry `shearWallOpenings.js`). FTAO capacity weight = engine V_cap,ASD; nailing auto-select per governing zone; strap auto-select from the FTAO strap catalog (D2); jamb posts (D3); T555 narrow piers opt-in. Bad geometry / engine hard stops → wall designed as solid with an audit warning. Elevation: cut-outs, pier-by-pier results, FTAO strap lines + label, jamb ticks (live + PDF).
+- **Aspect ratio:** SDPWS 2021 for all walls (1.25 − 0.125h/b above 2; > 3.5 not a shear wall, carries no shear). Changes only schema4 fixture SW-6 (h/b 2.5: 1.0 → 0.9375).
+- **R2 deflection & drift:** SDPWS Eq. 4.3-1 per wall at 1.0E (ρ = 1), Ga by sheathing (Plywood default), Δa = δ·T/cap + plate crushing; δx = Cd·δxe/Ie vs Table 12.12-1 (Risk Category + row). Cd / Ie / Risk Category / Sds linked from the Base Shear item (G4-style notice).
+- **R2 files:** `shearWallDeflection.js` (3-term terms, drift limits).
+- **R3 LRFD:** forces only — ASCE 7-22 §2.3.6 combos in `computeWallTC` (group `lrfd`), accumulated through the load path, LRFD tables in results and PDF, HDUE LRFD cap 1.4× shown.
+- Fixed: `migrateV4toV5` id regex (`'\d'` in a string), deferred elevation draw after destroy.
+- Tests: `test/ftao.test.js` (engine, 15), `tests/shearWallPhase4.test.mjs` (18).
+
+## Phase 4 roadmap
 | # | Item | Notes |
 |---|---|---|
-| R1 | Segmented walls / force transfer around openings (FTAO) | Different h/b rules; no capacity reduction for perforated/FTAO (earlier decision). |
-| R2 | Deflection method | Holdown δ values already stored in the catalogs. |
-| R3 | LRFD combinations | Nailing table already has `lrfdE` / `lrfdW`; per-combo load path supports extra combos. |
+| R1–R3 | Done 2026-09-24 | See above. |
 | R4 | Amplified (Ω₀) seismic forces for collectors and connections | |
 | R5 | Links to other modules | Seismic Mass Takeoff → W, ELF → Cs and story forces. |
 | R6 | Non-uniform dead load and point loads in the 1.0D display | |
