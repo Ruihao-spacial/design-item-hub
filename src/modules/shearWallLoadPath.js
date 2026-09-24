@@ -20,11 +20,11 @@ function addInto(target, src) { for (const k of Object.keys(target)) target[k] +
 function roundMap(m) { const o = {}; for (const [k, v] of Object.entries(m)) o[k] = r2(v); return o; }
 function span(e) { const s = num(e.position); return [s, s + num(e.length)]; }
 
-// Envelope over ASD combos: T = max uplift, C = max compression
-export function envelope(map, comboGroups) {
+// Envelope over one combo group (ASD designs; LRFD is reported): T = max uplift, C = max compression
+export function envelope(map, comboGroups, group = 'asd') {
   let T = 0, C = 0;
   for (const [k, v] of Object.entries(map || {})) {
-    if (comboGroups[k] !== 'asd') continue;
+    if (comboGroups[k] !== group) continue;
     if (v < 0) T = Math.max(T, -v); else C = Math.max(C, v);
   }
   return { T: r2(T), C: r2(C) };
@@ -41,6 +41,7 @@ export function resolveVerticalLoadPath(ctx) {
   const comboGroups = {};
   comboKeys.forEach(k => { comboGroups[k] = sample.combos[k].group; });
   const env = (m) => envelope(m, comboGroups);
+  const envL = (m) => envelope(m, comboGroups, 'lrfd');
 
   const levelName = (li) => (levels[li] && levels[li].name) || '';
   const levelIdx = {};
@@ -201,7 +202,7 @@ export function resolveVerticalLoadPath(ctx) {
       st.sources.filter(s => s.type !== 'post').forEach(s => addInto(levelLoad, s.map));
       postPaths.push({
         postId: p.id, mark: markOf(p), levelId: lvl.id, levelName: levelName(li), position: x, floorH,
-        perCombo: roundMap(st.load), envelopeT: e.T, envelopeC: e.C,
+        perCombo: roundMap(st.load), envelopeT: e.T, envelopeC: e.C, lrfd: envL(st.load),
         levelLoad: roundMap(levelLoad), levelLoadEnv: env(levelLoad),
         hasPostAbove: st.sources.some(s => s.type === 'post'),
         sources: st.sources, receiver: rec,
@@ -256,7 +257,7 @@ export function resolveVerticalLoadPath(ctx) {
               + ': reaction T ' + e.T.toFixed(2) + 'k / C ' + e.C.toFixed(2) + 'k — design support externally' });
         }
         const hw = hasConnection(rec) ? selectAnchorage(li, e.T, s.anchorageOverride) : noHardware;
-        return { supportId: s.id, position: x, type, perCombo: roundMap(R), envelopeT: e.T, envelopeC: e.C, receiver: rec, ...hw };
+        return { supportId: s.id, position: x, type, perCombo: roundMap(R), envelopeT: e.T, envelopeC: e.C, lrfd: envL(R), receiver: rec, ...hw };
       });
 
       beamTransfers.push({
@@ -276,6 +277,7 @@ export function resolveVerticalLoadPath(ctx) {
     if (!wr || !wr.combos || !inc) continue;
     const accum = {};
     let tL = 0, tR = 0, cL = 0, cR = 0;
+    const lr = { tL: 0, tR: 0, cL: 0, cR: 0 };
     for (const k of comboKeys) {
       const c = wr.combos[k];
       const netL = (c.comprLeft || 0) - (c.tensionLeft || 0) + inc.left[k];
@@ -284,6 +286,10 @@ export function resolveVerticalLoadPath(ctx) {
         tensionLeft: r2(Math.max(0, -netL)), comprLeft: r2(Math.max(0, netL)),
         tensionRight: r2(Math.max(0, -netR)), comprRight: r2(Math.max(0, netR)),
       };
+      if (comboGroups[k] === 'lrfd') {
+        lr.tL = Math.max(lr.tL, accum[k].tensionLeft); lr.tR = Math.max(lr.tR, accum[k].tensionRight);
+        lr.cL = Math.max(lr.cL, accum[k].comprLeft); lr.cR = Math.max(lr.cR, accum[k].comprRight);
+      }
       if (comboGroups[k] !== 'asd') continue;
       tL = Math.max(tL, accum[k].tensionLeft); tR = Math.max(tR, accum[k].tensionRight);
       cL = Math.max(cL, accum[k].comprLeft); cR = Math.max(cR, accum[k].comprRight);
@@ -294,6 +300,7 @@ export function resolveVerticalLoadPath(ctx) {
     wr.accumCompression = Math.max(demand.cL, demand.cR);
     wr.injections = inc.sources;
     wr.hwDemand = demand;
+    wr.accumLRFD = { tL: r2(lr.tL), tR: r2(lr.tR), cL: r2(lr.cL), cR: r2(lr.cR) };
 
     const lvl = levels[levelIdx[w.levelId]];
     const floorSpan = (lvl && lvl.floorClearSpan) || '16';

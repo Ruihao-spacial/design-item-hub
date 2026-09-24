@@ -684,7 +684,7 @@ function wallDisplayTC(wr, combo) {
     if (wr.accumPerCombo) {
       let aTL = 0, aTR = 0, aCL = 0, aCR = 0;
       for (const [key, ac] of Object.entries(wr.accumPerCombo)) {
-        if (wr.combos && wr.combos[key] && wr.combos[key].group === 'load_case') continue;
+        if (wr.combos && wr.combos[key] && wr.combos[key].group !== 'asd') continue;
         aTL = Math.max(aTL, ac.tensionLeft || 0);
         aTR = Math.max(aTR, ac.tensionRight || 0);
         aCL = Math.max(aCL, ac.comprLeft || 0);
@@ -1951,6 +1951,7 @@ export function renderElevation(container, line, levels, wallDLTypes, callbacks)
       const comboKeys = sampleWall && sampleWall.combos ? Object.keys(sampleWall.combos) : [];
       const asdKeys = comboKeys.filter(k => { const c = sampleWall.combos[k]; return !c.group || c.group === 'asd'; });
       const caseKeys = comboKeys.filter(k => { const c = sampleWall.combos[k]; return c.group === 'load_case'; });
+      const lrfdKeys = comboKeys.filter(k => sampleWall.combos[k].group === 'lrfd');
 
       const envGroup = el('optgroup', { label: 'Envelope' });
       envGroup.appendChild(el('option', { value: 'governing' }, 'ASD Governing'));
@@ -1964,6 +1965,11 @@ export function renderElevation(container, line, levels, wallDLTypes, callbacks)
         const lcGroup = el('optgroup', { label: 'Load Cases' });
         for (const key of caseKeys) lcGroup.appendChild(el('option', { value: key }, key));
         sel.appendChild(lcGroup);
+      }
+      if (lrfdKeys.length) {
+        const lrGroup = el('optgroup', { label: 'LRFD Combos (forces only)' });
+        for (const key of lrfdKeys) lrGroup.appendChild(el('option', { value: key }, key));
+        sel.appendChild(lrGroup);
       }
       if (currentCombo) {
         const opt = sel.querySelector('option[value="' + currentCombo + '"]');

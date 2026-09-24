@@ -1,5 +1,6 @@
 // === HDUE Holdown Catalog (concrete anchorage) ===
-// ASD allowable tension (lbs), deflection at 1.0E/1.0W
+// cap = ASD allowable tension (lbs). delta = deflection (in) at the ASD cap, used for 1.0E / 1.0W
+// deflection: Δa = delta · T(1.0) / cap. LRFD cap = 1.4 · cap (delta scales the same way).
 export const HDUE_TABLE = [
   { id: 'HDUE3',  cap: 3790,  minPost: { '4': '(2)2x4', '6': '(2)2x6' }, delta: 0.127 },
   { id: 'HDUE5',  cap: 5375,  minPost: { '4': '(2)2x4', '6': '(2)2x6' }, delta: 0.146 },
@@ -10,7 +11,8 @@ export const HDUE_TABLE = [
 ];
 
 // === MSTC Strap Catalog (floor-to-floor) ===
-// Keyed by floor clear span (inches). ASD allowable tension (lbs).
+// Keyed by floor clear span (inches). ASD allowable tension (lbs). No LRFD value.
+// delta is taken as the deflection at the ASD cap (same basis as HDUE — assumption, noted in results).
 export const MSTC_TABLE = {
   '16': [
     { id: 'MSTC28', cap: 1535, delta: 0.0808 },
@@ -31,6 +33,48 @@ export const MSTC_TABLE = {
     { id: 'MSTC78', cap: 5850, delta: 0.1448 },
   ],
 };
+
+export const HDUE_LRFD_FACTOR = 1.4;
+// LRFD tension capacity (lbs) — HDUE only; MSTC straps have no LRFD value
+export function lrfdCap(hw) {
+  return hw && HDUE_TABLE.some(h => h.id === hw.id) ? Math.round(hw.cap * HDUE_LRFD_FACTOR) : null;
+}
+
+// === FTAO Wall Strap Catalog (straps above / below openings) ===
+// ASD allowable tension (lbs). Fasteners total / end length (in) for DF/SP and SPF/HF framing.
+// The app designs with DF-L framing and shows the 0.148" (10d) nail row.
+export const FTAO_STRAP_TABLE = [
+  { id: 'CS22',    gauge: 22, cap:  845, nails: [{ d: '0.148 x 2½', dfsp: [10, 6], spfhf: [12, 7] }, { d: '0.131 x 2½', dfsp: [12, 7], spfhf: [14, 8] }] },
+  { id: 'CS20',    gauge: 20, cap: 1030, nails: [{ d: '0.148 x 2½', dfsp: [12, 7], spfhf: [14, 9] }, { d: '0.131 x 2½', dfsp: [14, 9], spfhf: [16, 9] }] },
+  { id: 'CS18',    gauge: 18, cap: 1370, nails: [{ d: '0.148 x 2½', dfsp: [16, 9], spfhf: [18, 11] }, { d: '0.131 x 2½', dfsp: [18, 11], spfhf: [22, 12] }] },
+  { id: 'CS16',    gauge: 16, cap: 1705, nails: [{ d: '0.148 x 2½', dfsp: [20, 11], spfhf: [22, 13] }, { d: '0.131 x 2½', dfsp: [22, 13], spfhf: [26, 15] }] },
+  { id: 'CS14',    gauge: 14, cap: 2490, nails: [{ d: '0.148 x 2½', dfsp: [26, 15], spfhf: [30, 16] }, { d: '0.131 x 2½', dfsp: [30, 16], spfhf: [36, 19] }] },
+  { id: 'CMSTC16', gauge: 16, cap: 4690, nails: [{ d: '0.148 x 3¼', dfsp: [50, 20], spfhf: [50, 25] }] },
+  { id: 'CMST14',  gauge: 14, cap: 6475, nails: [{ d: '0.148 x 2½', dfsp: [66, 30], spfhf: [76, 34] }, { d: '0.162 x 2½', dfsp: [56, 26], spfhf: [66, 30] }] },
+  { id: 'CMST12',  gauge: 12, cap: 9215, nails: [{ d: '0.148 x 2½', dfsp: [86, 39], spfhf: [98, 44] }, { d: '0.162 x 2½', dfsp: [74, 33], spfhf: [84, 38] }] },
+];
+
+// Lightest strap with ASD allowable ≥ demand (lbs); null when none is enough
+export function autoSelectFtaoStrap(lbs) {
+  if (!(lbs > 0)) return FTAO_STRAP_TABLE[0];
+  return FTAO_STRAP_TABLE.find(s => s.cap >= lbs) || null;
+}
+
+export function getFtaoStrap(id) {
+  return FTAO_STRAP_TABLE.find(s => s.id === id) || null;
+}
+
+// 10d (0.148") DF/SP row of a strap: { d, count, endLength }
+export function strapNailing(strap) {
+  const row = strap && (strap.nails.find(n => n.d.startsWith('0.148')) || strap.nails[0]);
+  return row ? { d: row.d, count: row.dfsp[0], endLength: row.dfsp[1] } : null;
+}
+
+// Jamb (opening edge) posts: (2)2x minimum, same thickness as the line's wall
+export function jambPostOptions(wallThickness) {
+  const posts = POST_SIZES[wallThickness] || POST_SIZES['4'];
+  return posts.filter(p => p.id !== '2x4');
+}
 
 export function autoSelectHoldown(tensionKips) {
   const lbs = tensionKips * 1000;
@@ -53,11 +97,11 @@ export function autoSelectStrap(tensionKips, floorClearSpan) {
 
 // === NDS 2018 Table 4A — Douglas Fir-Larch Grades ===
 export const NDS_GRADES = [
-  { id: 'dfir_ss',     label: 'DF-L Select Structural', Fc: 1700, Fcperp: 625, E: 1900000, Emin: 690000 },
-  { id: 'dfir_no1btr', label: 'DF-L No.1 & Btr',       Fc: 1550, Fcperp: 625, E: 1800000, Emin: 660000 },
-  { id: 'dfir_no1',    label: 'DF-L No.1',              Fc: 1500, Fcperp: 625, E: 1700000, Emin: 620000 },
-  { id: 'dfir_no2',    label: 'DF-L No.2',              Fc: 1350, Fcperp: 625, E: 1600000, Emin: 582000 },
-  { id: 'dfir_no3',    label: 'DF-L No.3',              Fc:  775, Fcperp: 625, E: 1400000, Emin: 510000 },
+  { id: 'dfir_ss', species: 'DF-L', label: 'DF-L Select Structural', Fc: 1700, Fcperp: 625, E: 1900000, Emin: 690000 },
+  { id: 'dfir_no1btr', species: 'DF-L', label: 'DF-L No.1 & Btr',       Fc: 1550, Fcperp: 625, E: 1800000, Emin: 660000 },
+  { id: 'dfir_no1', species: 'DF-L', label: 'DF-L No.1',              Fc: 1500, Fcperp: 625, E: 1700000, Emin: 620000 },
+  { id: 'dfir_no2', species: 'DF-L', label: 'DF-L No.2',              Fc: 1350, Fcperp: 625, E: 1600000, Emin: 582000 },
+  { id: 'dfir_no3', species: 'DF-L', label: 'DF-L No.3',              Fc:  775, Fcperp: 625, E: 1400000, Emin: 510000 },
 ];
 
 // === Post Size Catalog ===

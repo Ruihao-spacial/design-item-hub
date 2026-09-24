@@ -1,9 +1,9 @@
 const SVG_NS = 'http://www.w3.org/2000/svg';
 
-let _id = { lvl: 1, dir: 1, ln: 1, w: 1, gu: 1, gp: 1, wdt: 1, bm: 1, sp: 1, bs: 1 };
+let _id = { lvl: 1, dir: 1, ln: 1, w: 1, gu: 1, gp: 1, wdt: 1, bm: 1, sp: 1, bs: 1, op: 1 };
 
 export function resetIds(inputs) {
-  const max = { lvl: 0, dir: 0, ln: 0, w: 0, gu: 0, gp: 0, wdt: 0, bm: 0, sp: 0, bs: 0 };
+  const max = { lvl: 0, dir: 0, ln: 0, w: 0, gu: 0, gp: 0, wdt: 0, bm: 0, sp: 0, bs: 0, op: 0 };
   const extract = (id) => {
     if (!id) return;
     const m = id.match(/^([a-z]+)-(\d+)$/);
@@ -16,7 +16,10 @@ export function resetIds(inputs) {
     extract(d.id);
     (d.lines || []).forEach(ln => {
       extract(ln.id);
-      (ln.walls || []).forEach(w => extract(w.id));
+      (ln.walls || []).forEach(w => {
+        extract(w.id);
+        (w.openings || []).forEach(o => extract(o.id));
+      });
       (ln.beams || []).forEach(b => {
         extract(b.id);
         (b.supports || []).forEach(s => extract(s.id));
@@ -41,6 +44,7 @@ export function newWDTId() { return 'wdt-' + (_id.wdt++); }
 export function newBeamId() { return 'bm-' + (_id.bm++); }
 export function newSupportPostId() { return 'sp-' + (_id.sp++); }
 export function newBeamSupportId() { return 'bs-' + (_id.bs++); }
+export function newOpeningId() { return 'op-' + (_id.op++); }
 
 let _wallNum = 1;
 export function resetWallNum(inputs) {
@@ -107,7 +111,18 @@ export function newWall(levelId, position, wallDLTypeId) {
     nailingPattern: '',
     anchorageLeftOverride: '', anchorageRightOverride: '',
     postLeftOverride: '', postRightOverride: '',
+    ...wallOpeningDefaults(),
   };
+}
+
+// Openings and wall-with-openings settings (schema v6). method: 'segmented' | 'ftao'
+export function wallOpeningDefaults() {
+  return { openings: [], method: 'segmented', narrowPier: false, ftaoStrapOverride: '', jambPostOverride: '' };
+}
+
+// Window-type opening: offset from the wall's left end, width, sill and head heights above the floor (ft)
+export function newOpening(offset, width, sill, head) {
+  return { id: newOpeningId(), offset: offset ?? 1, width: width ?? 3, sill: sill ?? 3, head: head ?? 7 };
 }
 
 export function newUniformLoad(start, end) {
@@ -147,12 +162,18 @@ export function defaultInputs() {
   return {
     sds: '', loadType: 'seismic',
     wallThickness: '4',
+    ...deflectionDefaults(),
     woodGrade: 'dfir_no1',
     wallDLTypes: [wdt1, wdt2],
     levels: [lvl1, lvl2],
     directions: [dir1, dir2],
     refs: {}, notes: '',
   };
+}
+
+// Deflection / drift settings (schema v6). cd, ie, riskCategory are copied from a linked Base Shear item.
+export function deflectionDefaults() {
+  return { sheathing: 'ply', cd: '', ie: '', riskCategory: '', driftRow: 'other', alphaS: '' };
 }
 
 export function svgEl(tag, attrs, ...children) {

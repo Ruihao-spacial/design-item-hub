@@ -2,6 +2,7 @@ import { el, clearEl, numOrBlank } from '../utils.js';
 import {
   resetIds, resetWallNum, resetElementNums, defaultInputs,
   newLevel, newWallDLType, newLine, newWallId, nextWallMark,
+  wallOpeningDefaults, deflectionDefaults,
 } from './shearWallTypes.js';
 import { calcAll, CALC_VERSION } from './shearWallCalc.js';
 import { renderElevation, renderElevationForPdf, pdfElevationAspect } from './shearWallElevation.js';
@@ -11,7 +12,7 @@ import { NDS_GRADES, HDUE_TABLE, MSTC_TABLE, POST_SIZES, computePostCapacity } f
 export const shearWallDesign = {
   id: 'shear_wall_design',
   label: 'Shear Wall Design',
-  schemaVersion: 5,
+  schemaVersion: 6,
   calcVersion: CALC_VERSION,
   noNewPrefix: true,
   noOutputSection: false,
@@ -814,9 +815,23 @@ function migrateToV4(inp) {
   return inp;
 }
 
+// Schema v6: wall openings (segmented / FTAO), deflection and drift settings
+export function migrateV5toV6(inp) {
+  if (!inp) return inp;
+  const dd = deflectionDefaults();
+  for (const [k, v] of Object.entries(dd)) if (inp[k] === undefined) inp[k] = v;
+  if (!inp.refs) inp.refs = {};
+  (inp.directions || []).forEach(d => (d.lines || []).forEach(ln => (ln.walls || []).forEach(w => {
+    const wd = wallOpeningDefaults();
+    for (const [k, v] of Object.entries(wd)) if (w[k] === undefined) w[k] = v;
+  })));
+  return inp;
+}
+
 const DEFINITION_MIGRATIONS = [
   { to: 4, up: migrateToV4 },
   { to: 5, up: migrateV4toV5 },
+  { to: 6, up: migrateV5toV6 },
 ];
 const CURRENT_SCHEMA = DEFINITION_MIGRATIONS[DEFINITION_MIGRATIONS.length - 1].to;
 
