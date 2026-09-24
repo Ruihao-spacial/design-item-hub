@@ -835,7 +835,7 @@ export function migrateDefinition(item) {
 export function migrateV4toV5(inp) {
   if (!inp) return inp;
   const maxOf = (prefix, ids) => ids.reduce((m, id) => {
-    const mm = String(id || '').match(new RegExp('^' + prefix + '-(\d+)$'));
+    const mm = String(id || '').match(new RegExp('^' + prefix + '-(\\d+)$'));
     return mm ? Math.max(m, +mm[1]) : m;
   }, 0);
   const lines = (inp.directions || []).flatMap(d => d.lines || []);

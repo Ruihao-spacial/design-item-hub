@@ -48,6 +48,20 @@ test('Migration v4→v5: duplicate bm-NaN / sp-NaN re-IDed, marks + explicit sup
   assert.equal(JSON.stringify(inp), again, 'migration is idempotent');
 });
 
+test('Migration v4→v5: mixed valid and NaN ids continue after the highest existing number', () => {
+  const inp = { levels: [{ id: 'lvl-1' }, { id: 'lvl-2' }], directions: [{ lines: [{
+    walls: [],
+    beams: [{ id: 'bm-3', mark: 'BM-3', levelId: 'lvl-1', position: 0, length: 10 }, { id: 'bm-NaN', levelId: 'lvl-1', position: 20, length: 6 }],
+    supportPosts: [{ id: 'sp-4', mark: 'P-4', levelId: 'lvl-2', position: 0 }, { id: 'sp-NaN', levelId: 'lvl-2', position: 26 }],
+  }] }] };
+  migrateV4toV5(inp);
+  const ln = inp.directions[0].lines[0];
+  assert.deepEqual(ln.beams.map(b => b.id), ['bm-3', 'bm-4']);
+  assert.deepEqual(ln.beams.map(b => b.mark), ['BM-3', 'BM-4']);
+  assert.deepEqual(ln.supportPosts.map(p => p.id), ['sp-4', 'sp-5']);
+  assert.deepEqual(ln.supportPosts.map(p => p.mark), ['P-4', 'P-5']);
+});
+
 test('Regression: aligned stacked walls match Phase 3 results (nailing, T/C, accumulation, hardware)', () => {
   const ln = lineOut(calcAll(fixture()), 'Line A');
   const rows = ln.perLevel.flatMap(p => p.walls).map(w => ({ mark: w.mark, nailing: w.nailing.id, dcRatio: w.dcRatio,
