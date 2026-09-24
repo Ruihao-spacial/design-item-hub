@@ -2,7 +2,7 @@ import { NAILING_TABLE, autoSelectNailing, getNailingById } from './shearWallNai
 import { autoSelectHoldown, autoSelectStrap, autoSelectPost, getGradeById, HDUE_TABLE, MSTC_TABLE, POST_SIZES, computePostCapacity, lrfdCap } from './shearWallHardware.js';
 import { resolveVerticalLoadPath } from './shearWallLoadPath.js';
 import { aspectFactor } from './shearWallFtao.js';
-import { expandWalls, hasOpenings, wallMethod } from './shearWallOpenings.js';
+import { expandWalls, hasOpenings, wallMethod, wallPiers, sortedOpenings } from './shearWallOpenings.js';
 import { ftaoCapacityLbf, ftaoDesign, ftaoLoadTypes } from './shearWallFtaoAdapter.js';
 import { wallDeflection, postArea, driftLimit } from './shearWallDeflection.js';
 
@@ -46,7 +46,8 @@ export function resolveGravityAtWall(wall, gravityLoadsAtLevel, wallDLTypes) {
   let wallSelfDL = 0;
   if (wall.wallDLTypeId && wallDLTypes) {
     const wdt = wallDLTypes.find(t => t.id === wall.wallDLTypeId);
-    if (wdt) wallSelfDL = (parseFloat(wdt.psf) || 0) * len * h / 1000;
+    // FTAO walls: no wall weight where the openings are (_openingArea, ft²)
+    if (wdt) wallSelfDL = (parseFloat(wdt.psf) || 0) * Math.max(0, len * h - (wall._openingArea || 0)) / 1000;
   }
 
   let diagramDL = 0;
@@ -210,7 +211,22 @@ export function calcAll(inputs) {
     const perLine = (dir.lines || []).map(line => {
       const lineThickness = line.wallThickness || globalThickness;
       const storyShears = accumulateStoryShear(line.levelLoads || {}, levels);
-      const ftaoCtx = (w) => ({ floorH: floorHOf(w.levelId), rho: rhoN, grade, sheathing, cd: inputs.cd, ie: inputs.ie, alphaS, lineThickness, loadType });
+      const ftaoCtx = (w) => ({ floorH: floorHOf(w.levelId), rho: rhoN, sds, grade, sheathing, cd: inputs.cd, ie: inputs.ie, alphaS, lineThickness, loadType });
+      // Dead load (kips) at each FTAO jamb: half the adjacent pier's load + half the header load above the opening
+      const jambDL = (w) => {
+        const h = floorHOf(w.levelId);
+        const gl = (line.gravityLoads || {})[w.levelId];
+        const dlOver = (position, length, height) => resolveGravityAtWall({ position, length, wallDLTypeId: w.wallDLTypeId, _floorToFloor: height }, gl, wallDLTypes).dlTotal;
+        const piers = wallPiers(w);
+        const x0 = parseFloat(w.position) || 0;
+        const out = [];
+        sortedOpenings(w).forEach((o, j) => {
+          const header = dlOver(x0 + o.offset, o.width, h - o.head);
+          out.push(dlOver(piers[j].start, piers[j].length, h) / 2 + header / 2);
+          out.push(dlOver(piers[j + 1].start, piers[j + 1].length, h) / 2 + header / 2);
+        });
+        return out;
+      };
 
       // Segmented walls → piers. Openings with bad geometry, and FTAO walls the engine rejects,
       // are designed as solid walls and reported in the audit.
@@ -339,7 +355,7 @@ export function calcAll(inputs) {
           let ftao = null, arInfo = ar;
           if (isFtao(w)) {
             // Sheathing checks at the governing FTAO zone (pier, corner zone or above/below opening)
-            ftao = ftaoDesign(w, ftaoCtx(w), n, sh, { endPosts: null, anchorage: null });
+            ftao = ftaoDesign(w, ftaoCtx(w), n, sh, { endPosts: null, anchorage: null, jambDL: jambDL(w) });
             const zoneOf = (lt) => {
               const r = ftao.perType[lt];
               if (!r) return { plf: 0, cap: 0, dc: 0 };
@@ -376,7 +392,7 @@ export function calcAll(inputs) {
           }
           const effCap = dcGoverning === 'wind' ? sheathCapW : sheathCapE;
 
-          const wWithH = { ...w, _floorToFloor: floorH };
+          const wWithH = { ...w, _floorToFloor: floorH, _openingArea: isFtao(w) ? sortedOpenings(w).reduce((a, o) => a + o.width * (o.head - o.sill), 0) : 0 };
           const grav = resolveGravityAtWall(wWithH, (line.gravityLoads || {})[lvl.id], wallDLTypes);
           const tc = computeWallTC(sh.seismic, sh.wind, grav.dlTotal, wLen, floorH, rho, sds, loadType);
 
@@ -470,7 +486,7 @@ export function calcAll(inputs) {
         const size = (p) => { const A = postArea(p, lineThickness); return A ? { area: A } : null; };
         try {
           wr.ftao = ftaoDesign(w, ftaoCtx(w), getNailingById(wr.nailing.id), exactShares[w.id],
-            { endPosts: [size(wr.postLeft), size(wr.postRight)], anchorage: softer });
+            { endPosts: [size(wr.postLeft), size(wr.postRight)], anchorage: softer, jambDL: jambDL(w) });
         } catch (e) { if (wr.ftao) wr.ftao.warnings.push('Final FTAO check failed: ' + ((e.errors || [e.message]).join('; '))); }
       }
 

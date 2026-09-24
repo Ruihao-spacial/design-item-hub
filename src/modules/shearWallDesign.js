@@ -353,6 +353,7 @@ export const shearWallDesign = {
       sec.appendChild(el('div', { style: { fontSize: '0.8rem', color: 'var(--ink-secondary)', marginBottom: '1rem' } }, 'LRFD cap = 1.4 × ASD cap (reported with LRFD forces only). δ is at the ASD cap; deflection uses Δa = δ·T(1.0)/cap.'));
 
       sec.appendChild(el('div', { className: 'section-header' }, 'MSTC Strap Catalog (Floor-to-Floor)'));
+      sec.appendChild(el('div', { style: { fontSize: '0.8rem', color: 'var(--ink-secondary)', marginBottom: '0.5rem' } }, 'δ is at the strap LRFD cap = ASD cap / 0.7 (deflection only); Δa = δ·T(1.0)/(cap/0.7). No LRFD design check for straps.'));
       for (const [span, table] of Object.entries(MSTC_TABLE)) {
         sec.appendChild(el('div', { style: { fontWeight: '500', fontSize: '0.85rem', marginBottom: '0.25rem' } }, span + '" Clear Span'));
         const sTbl = el('table', { className: 'data-table', style: { fontSize: '0.85rem' } });
@@ -745,6 +746,7 @@ export const shearWallDesign = {
               sections.push({ title: t + ' — ' + LT_LABEL[lt] + ' piers', table: { headers: FTAO_PIER_HEADERS, rows: ftaoPierRows(w, lt) } });
               sections.push({ title: t + ' — ' + LT_LABEL[lt] + ' checks', table: { headers: FTAO_CHECK_HEADERS, rows: ftaoCheckRows(w, lt), colWidths: [0.4, 0.15, 0.15, 0.1, 0.1] } });
             }
+            if ((w.ftao.jambs || []).length) sections.push({ title: t + ' — Jamb posts (C = f_D·DL + v_i·h_o)', table: { headers: FTAO_JAMB_HEADERS, rows: ftaoJambRows(w) } });
           } }
           const lrRows = lrfdRows(ln);
           if (lrRows.length) sections.push({ title: dir.dirName + ' / ' + ln.lineName + ' — LRFD Forces (reported only)', table: { headers: LRFD_HEADERS, rows: lrRows } });
@@ -805,6 +807,7 @@ function wallFails(w) {
   if (w.dcRatio > 1.0 || w.hbNotPermitted) return true;
   if (w.method === 'ftao' && w.ftao) {
     if (w.ftao.strapDC == null || w.ftao.strapDC > 1.0) return true;
+    if ((w.ftao.jambs || []).some(j => !j.post || j.dc > 1.0)) return true;
     if (Object.values(w.ftao.perType || {}).some(r => (r.plateBearing || []).some(b => b.status === 'NG'))) return true;
   }
   return false;
@@ -835,7 +838,6 @@ function ftaoSummaryLines(w) {
   const st = f.strap;
   lines.push(['Strap', st ? st.id + (st.override ? ' *' : '') + ' — ' + st.cap + ' lb ASD, D/C ' + f2(f.strapDC) + ' at F_max ' + f.strapDemand + ' lb; ('
     + st.nailing.count + ') ' + st.nailing.d + ', ' + st.nailing.endLength + '" end length; continuous full wall length above and below openings' : 'OVER — no strap carries ' + f.strapDemand + ' lb']);
-  lines.push(['Jamb posts', f.jambPost.label + (f.jambPost.override ? ' *' : '') + ' at opening edges']);
   return lines;
 }
 
@@ -858,6 +860,15 @@ function ftaoCheckRows(w, lt) {
 }
 const FTAO_CHECK_HEADERS = ['Zone', 'Demand', 'Capacity', 'DCR', 'Status'];
 
+// Jamb posts at the opening edges: C = fD·DL + v_i·h_o (Diekmann pier chord), NDS post capacity
+function ftaoJambRows(w) {
+  return (w.ftao.jambs || []).map(j => [
+    'Opening ' + j.opening + ' ' + j.side, f2(j.dl), f0(j.v) + ' × ' + f2(j.ho), f2(j.C),
+    j.post ? j.post.label + (j.override ? ' *' : '') : 'OVER', j.post ? f2(j.post.capacityKips) : '—', f2(j.dc),
+  ]);
+}
+const FTAO_JAMB_HEADERS = ['Jamb', 'DL (k)', 'v_i × h_o (plf × ft)', 'C (k)', 'Post', 'Cap (k)', 'D/C'];
+
 function renderFtaoDetail(w, pl) {
   const body = el('div', { style: { fontSize: '0.8rem', padding: '0.5rem 0', color: 'var(--ink-secondary)' } });
   for (const [k, v] of ftaoSummaryLines(w)) {
@@ -868,6 +879,10 @@ function renderFtaoDetail(w, pl) {
     body.appendChild(el('div', { style: { fontWeight: '500', margin: '0.4rem 0 0.2rem' } }, LT_LABEL[lt] + ' — piers (APA T555 / Diekmann)'));
     body.appendChild(simpleTable(FTAO_PIER_HEADERS, ftaoPierRows(w, lt), [1, 2, 3, 4, 5, 6]));
     body.appendChild(simpleTable(FTAO_CHECK_HEADERS, ftaoCheckRows(w, lt), [1, 2, 3]));
+  }
+  if ((w.ftao.jambs || []).length) {
+    body.appendChild(el('div', { style: { fontWeight: '500', margin: '0.4rem 0 0.2rem' } }, 'Jamb posts — C = f_D·DL + v_i·h_o (ASD)'));
+    body.appendChild(simpleTable(FTAO_JAMB_HEADERS, ftaoJambRows(w), [1, 3, 5, 6]));
   }
   if (w.ftao.warnings.length) {
     const wb = el('div', { style: { color: 'var(--stale, #b7791f)' } });
@@ -1007,7 +1022,7 @@ function renderMethodFootnotes() {
   notes.appendChild(el('div', null,
     el('strong', null, 'Openings: '), 'Segmented walls are designed pier by pier (full-height piers, hardware at every pier end). FTAO walls use APA T555 (Diekmann) with the governing opening height; wall-end T/C still includes dead load, the FTAO H shown is gross (no dead load).'));
   notes.appendChild(el('div', null,
-    el('strong', null, 'Deflection: '), 'SDPWS 2021 Eq. 4.3-1 at 1.0E (ρ = 1) with lateral-only end forces; Δa = holdown/strap δ × T/cap (δ at ASD cap; MSTC assumed the same) + sill plate crushing. δx = Cd·δxe/Ie vs ASCE 7-22 Table 12.12-1.'));
+    el('strong', null, 'Deflection: '), 'SDPWS 2021 Eq. 4.3-1 at 1.0E (ρ = 1) with lateral-only end forces; Δa = δ × T/P_δ, P_δ = load at which δ was measured (HDUE: ASD cap; MSTC: LRFD cap = ASD cap / 0.7) + sill plate crushing. δx = Cd·δxe/Ie vs ASCE 7-22 Table 12.12-1.'));
   notes.appendChild(el('div', null,
     el('strong', null, 'LRFD: '), 'ASCE 7-22 §2.3.6 combinations are reported as forces only (e.g. for foundations); all design checks are ASD. HDUE LRFD cap = 1.4 × ASD.'));
   notes.appendChild(el('div', null,

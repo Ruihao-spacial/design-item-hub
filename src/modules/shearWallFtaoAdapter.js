@@ -2,7 +2,7 @@
 // Engine units: lbf, ft, in, psi. Line shares are in kips at the 1.0 level (1.0E / 1.0W).
 import { createFTAO } from './shearWallFtao.js';
 import { nominalFor, gaFor } from './shearWallNailing.js';
-import { autoSelectFtaoStrap, getFtaoStrap, strapNailing, jambPostOptions } from './shearWallHardware.js';
+import { autoSelectFtaoStrap, getFtaoStrap, strapNailing, jambPostOptions, deltaBasisLoad, computePostCapacity } from './shearWallHardware.js';
 import { sortedOpenings, wallPiers } from './shearWallOpenings.js';
 
 function num(v) { return parseFloat(v) || 0; }
@@ -28,8 +28,8 @@ export function jambPostFor(wall, lineThickness) {
   return opts.find(p => p.id === wall.jambPostOverride) || opts[0];
 }
 
-// ctx: { floorH, rho, grade, sheathing, cd, ie, alphaS, lineThickness }
-// parts: { nailing, endPosts: [postL, postR] (post size objects or null), anchorage, strap }
+// ctx: { floorH, rho, sds, grade, sheathing, cd, ie, alphaS, lineThickness, loadType }
+// parts: { nailing, endPosts: [postL, postR] (post size objects or null), anchorage, strap, jambAreas: { edgeIndex: in² } }
 function engineInput(wall, ctx, lt, parts) {
   const geo = ftaoGeometry(wall, ctx.floorH);
   const nEdges = 2 * geo.L.length;
@@ -37,6 +37,7 @@ function engineInput(wall, ctx, lt, parts) {
   const area = (i) => {
     if (i === 0 && parts.endPosts && parts.endPosts[0]) return parts.endPosts[0].area;
     if (i === nEdges - 1 && parts.endPosts && parts.endPosts[1]) return parts.endPosts[1].area;
+    if (parts.jambAreas && parts.jambAreas[i] > 0) return parts.jambAreas[i];
     return jamb.area;
   };
   const anc = parts.anchorage;
@@ -54,7 +55,7 @@ function engineInput(wall, ctx, lt, parts) {
     E_post: Array(nEdges).fill(ctx.grade.E),
     A_post: Array.from({ length: nEdges }, (_, i) => area(i)),
     Fcperp_plate: ctx.grade.Fcperp,
-    HD_allow: anc && anc.cap > 0 ? anc.cap : 1,
+    HD_allow: deltaBasisLoad(anc) || 1, // engine scales d_a by T / HD_allow
     d_a: anc && anc.delta != null ? anc.delta : 0,
     strap_allow: parts.strap ? parts.strap.cap : 1,
   };
@@ -66,8 +67,49 @@ export function ftaoCapacityLbf(wall, ctx, nailing, lt) {
   return createFTAO(engineInput(wall, ctx, lt, { nailing })).capacity().Vcap_ASD;
 }
 
+// Jamb posts (opening edges), sized for the Diekmann pier chord force (ASD):
+//   C = fD·DL_jamb + v_i·h_o   (v_i = ASD pier shear beside the opening, h_o = governing opening height)
+// fD = 1.0 + 0.14·SDS (D + 0.7ρE) or 1.0 (D + 0.6W). DL_jamb (kips) = half the pier's dead load +
+// half the header load above the opening, from the caller (hw.jambDL, jamb order: opening 1 left, right, …).
+// Engine edge index of opening j's jambs: left = 2j + 1 (pier j right side), right = 2j + 2 (pier j+1 left side).
+function sizeJambs(wall, ctx, perType, hw) {
+  const opts = jambPostOptions(ctx.lineThickness);
+  const override = wall.jambPostOverride ? opts.find(p => p.id === wall.jambPostOverride) : null;
+  const N = sortedOpenings(wall).length;
+  const jambs = [];
+  for (let j = 0; j < N; j++) {
+    for (const side of ['left', 'right']) {
+      const k = 2 * j + (side === 'left' ? 0 : 1);
+      const pierIdx = side === 'left' ? j : j + 1;
+      const dl = (hw.jambDL && hw.jambDL[k]) || 0;
+      let C = 0, ho = 0, v = 0, lt = null;
+      for (const [t, { d0 }] of Object.entries(perType)) {
+        const fD = t === 'E' ? 1.0 + 0.14 * num(ctx.sds) : 1.0;
+        const vi = d0.forces.piers[pierIdx].v;
+        const c = (fD * dl * 1000 + vi * d0.geometry.ho) / 1000;
+        if (c > C) { C = c; ho = d0.geometry.ho; v = vi; lt = t; }
+      }
+      const capOf = (p) => computePostCapacity(p, ctx.grade, ctx.floorH);
+      let post = override ? capOf(override) : null;
+      let size = override;
+      if (!override) {
+        for (const p of opts) { const r = capOf(p); if (r.capacityKips >= C) { post = r; size = p; break; } }
+      }
+      jambs.push({
+        opening: j + 1, side, edge: 2 * j + (side === 'left' ? 1 : 2), loadType: lt,
+        dl: r2(dl), v: Math.round(v), ho: r2(ho), C: r2(C),
+        post: post ? { id: size.id, label: size.label, area: size.area, capacityKips: post.capacityKips } : null,
+        dc: post && post.capacityKips > 0 ? r2(C / post.capacityKips) : null,
+        override: !!override,
+      });
+    }
+  }
+  return jambs;
+}
+
 // Full FTAO design at the wall's line shares (kips, 1.0 level) with the selected end posts and
-// anchorage. Picks the lightest FTAO strap for Fmax (or the override). Throws on hard stops.
+// anchorage. Picks the lightest FTAO strap for Fmax (or the override) and sizes the jamb posts.
+// hw: { endPosts, anchorage, jambDL }. Throws on engine hard stops.
 export function ftaoDesign(wall, ctx, nailing, shares, hw) {
   const perType = {};
   let Fmax = 0;
@@ -82,19 +124,22 @@ export function ftaoDesign(wall, ctx, nailing, shares, hw) {
 
   const override = wall.ftaoStrapOverride ? getFtaoStrap(wall.ftaoStrapOverride) : null;
   const strap = override || autoSelectFtaoStrap(Fmax);
-  const jamb = jambPostFor(wall, ctx.lineThickness);
+  const jambs = sizeJambs(wall, ctx, perType, hw);
+  const jambAreas = {};
+  const fallback = jambPostFor(wall, ctx.lineThickness);
+  jambs.forEach(jb => { jambAreas[jb.edge] = jb.post ? jb.post.area : fallback.area; });
   const result = {
     method: 'ftao',
     strap: strap ? { id: strap.id, cap: strap.cap, gauge: strap.gauge, nailing: strapNailing(strap), override: !!override } : null,
     strapDemand: Math.round(Fmax),
     strapDC: strap ? r2(Fmax / strap.cap) : null,
-    jambPost: { id: jamb.id, label: jamb.label, area: jamb.area, override: !!wall.jambPostOverride && jamb.id === wall.jambPostOverride },
+    jambs,
     perType: {},
     warnings: [],
   };
 
   for (const [lt, { V1 }] of Object.entries(perType)) {
-    const el = createFTAO(engineInput(wall, ctx, lt, { nailing, endPosts: hw.endPosts, anchorage: hw.anchorage, strap }));
+    const el = createFTAO(engineInput(wall, ctx, lt, { nailing, endPosts: hw.endPosts, anchorage: hw.anchorage, strap, jambAreas }));
     const d = el.design(V1);
     let defl = null;
     if (lt === 'E' || num(ctx.alphaS) > 0) {
@@ -120,5 +165,6 @@ export function ftaoDesign(wall, ctx, nailing, shares, hw) {
   }
   result.governing = gov;
   if (!strap) result.warnings.push('No FTAO strap in the catalog carries ' + Math.round(Fmax) + ' lb');
+  jambs.filter(jb => !jb.post).forEach(jb => result.warnings.push('Opening ' + jb.opening + ' ' + jb.side + ' jamb: no ' + ctx.lineThickness + '" post carries ' + jb.C.toFixed(2) + ' k'));
   return result;
 }

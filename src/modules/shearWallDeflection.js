@@ -1,11 +1,12 @@
 // Shear wall deflection and story drift — SDPWS 2021 Eq. 4.3-1 (3-term):
 //   δ = 8vh³/(EAb) + vh/(1000·Ga) + h·Δa/b
 // v (plf) at the 1.0 level (1.0E with ρ = 1, or α_s·1.0W for service wind), h and b in ft, E psi, A in², Ga kips/in.
-// Δa = holdown/strap slip δ·T/cap (catalog δ is at the ASD cap) + Δc plate crushing at the compression end.
+// Δa = holdown/strap slip δ·T/P_δ (P_δ = load at which the catalog δ was measured: HDUE ASD cap, MSTC cap/0.7)
+// + Δc plate crushing at the compression end.
 // T and C are the lateral-only 1.0E / 1.0W end forces (no dead load). FTAO walls use the FTAO engine instead.
 import { crushingDeflection } from './shearWallFtao.js';
 import { gaFor, getNailingById } from './shearWallNailing.js';
-import { POST_SIZES } from './shearWallHardware.js';
+import { POST_SIZES, deltaBasisLoad } from './shearWallHardware.js';
 
 function r4(v) { return Math.round(v * 10000) / 10000; }
 
@@ -31,7 +32,8 @@ export function postArea(postResult, wallThickness) {
 export function deflectionTerms({ v, h, b, E, A, Ga, T, anchorage, C, Ac, Fcperp }) {
   const t1 = 8 * v * h ** 3 / (E * A * b);
   const t2 = v * h / (1000 * Ga);
-  const dHD = anchorage && anchorage.cap > 0 && anchorage.delta != null ? anchorage.delta * T / anchorage.cap : 0;
+  const basis = deltaBasisLoad(anchorage);
+  const dHD = basis > 0 && anchorage.delta != null ? anchorage.delta * T / basis : 0;
   const r = Ac > 0 && Fcperp > 0 ? C / (Ac * Fcperp) : 0;
   const dC = crushingDeflection(r);
   const t3 = h * (dHD + dC) / b;

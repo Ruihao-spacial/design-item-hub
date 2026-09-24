@@ -17,9 +17,9 @@ Branches: `shearwall-load-path` (pushed, merge to `master` by someone else), `re
 ## Phase 4 round 1 — open items (2026-09-24)
 | # | Item | Notes |
 |---|---|---|
-| P1 | MSTC δ basis | HDUE δ is at the ASD cap (user). MSTC δ is assumed to be on the same basis; confirm. |
-| P2 | Segmented walls: dead load over openings | Uniform / point dead load that falls on an opening width is not given to the adjacent piers (less uplift resistance — conservative for T, slightly low for C). |
-| P3 | FTAO jamb posts | Jamb (opening-edge) posts are used for FTAO deflection only; they are not sized for compression. Default (2)2x of the line thickness, override (3)2x / 4x / 6x. |
+| P1 | MSTC δ basis — **resolved 2026-09-24** | User: MSTC δ is at the strap LRFD cap = ASD cap / 0.7 (deflection only). HDUE δ is at the ASD cap. `deltaBasisLoad()` in `shearWallHardware.js`. |
+| P2 | Dead load over openings — **resolved 2026-09-24** | User rule: only loads directly above the shear wall length count. Segmented piers take loads over the pier length only (loads over openings are not carried). FTAO walls take loads over the full wall length including above openings; FTAO wall self-weight excludes the opening areas. |
+| P3 | FTAO jamb posts — **resolved 2026-09-24** | Sized for compression per the Diekmann pier chord (user): C = f_D·DL + v_i·h_o (ASD; f_D = 1 + 0.14SDS seismic, 1.0 wind). DL = half the adjacent pier's DL + half the header DL above the opening. Lightest (2)2x-or-heavier post of the line thickness; override applies to all jambs. Jamb areas feed the FTAO deflection. |
 | P4 | Drift = largest wall δ per line and level | Capacity-based distribution kept (user); deflection-based (relative stiffness) distribution not implemented. |
 | P5 | Walls on beams / posts | Support deflection is not included in the wall deflection (noted in the table). |
 | P6 | FTAO with unequal opening heights | Engine analyzes the whole wall at the governing opening (APA largest-opening rule); straps drawn at the highest head and lowest sill. |

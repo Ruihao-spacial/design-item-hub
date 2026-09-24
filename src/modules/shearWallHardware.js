@@ -12,7 +12,7 @@ export const HDUE_TABLE = [
 
 // === MSTC Strap Catalog (floor-to-floor) ===
 // Keyed by floor clear span (inches). ASD allowable tension (lbs). No LRFD value.
-// delta is taken as the deflection at the ASD cap (same basis as HDUE — assumption, noted in results).
+// delta is the deflection at the strap LRFD cap = ASD cap / 0.7 (used for deflection only; no LRFD design check).
 export const MSTC_TABLE = {
   '16': [
     { id: 'MSTC28', cap: 1535, delta: 0.0808 },
@@ -36,6 +36,13 @@ export const MSTC_TABLE = {
 
 export const HDUE_LRFD_FACTOR = 1.4;
 // LRFD tension capacity (lbs) — HDUE only; MSTC straps have no LRFD value
+// Load (lbs) at which the catalog delta was measured: HDUE at the ASD cap, MSTC at cap / 0.7
+export const MSTC_DELTA_LOAD_FACTOR = 1 / 0.7;
+export function deltaBasisLoad(hw) {
+  if (!hw || !(hw.cap > 0)) return 0;
+  return HDUE_TABLE.some(h => h.id === hw.id) ? hw.cap : hw.cap * MSTC_DELTA_LOAD_FACTOR;
+}
+
 export function lrfdCap(hw) {
   return hw && HDUE_TABLE.some(h => h.id === hw.id) ? Math.round(hw.cap * HDUE_LRFD_FACTOR) : null;
 }

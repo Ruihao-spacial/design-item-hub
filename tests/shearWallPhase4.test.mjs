@@ -113,9 +113,42 @@ test('FTAO engine hard stop (pier h_o/b > 3.5) → designed as solid, flagged', 
 });
 
 test('3-term deflection terms by hand (SDPWS Eq. 4.3-1 + Δc)', () => {
-  const d = deflectionTerms({ v: 500, h: 10, b: 8, E: 1.7e6, A: 10.5, Ga: 16, T: 6250, anchorage: { cap: 7015, delta: 0.154 }, C: 6250, Ac: 10.5, Fcperp: 625 });
+  const d = deflectionTerms({ v: 500, h: 10, b: 8, E: 1.7e6, A: 10.5, Ga: 16, T: 6250, anchorage: { id: 'HDUE7', cap: 7015, delta: 0.154 }, C: 6250, Ac: 10.5, Fcperp: 625 });
   near(d.t1, 0.0280, 0.0001); near(d.t2, 0.3125, 0.0001); near(d.dHD, 0.1372, 0.0001);
   near(d.dC, 0.0365, 0.0001); near(d.t3, 0.2171, 0.0001); near(d.delta, 0.5577, 0.0002);
+});
+
+test('Strap slip uses the MSTC LRFD cap (ASD cap / 0.7); HDUE uses the ASD cap', () => {
+  const m = deflectionTerms({ v: 500, h: 10, b: 8, E: 1.7e6, A: 10.5, Ga: 16, T: 2000, anchorage: { id: 'MSTC40', cap: 3070, delta: 0.097 }, C: 0, Ac: 10.5, Fcperp: 625 });
+  near(m.dHD, 0.097 * 2000 / (3070 / 0.7), 0.0001);
+  const h = deflectionTerms({ v: 500, h: 10, b: 8, E: 1.7e6, A: 10.5, Ga: 16, T: 2000, anchorage: { id: 'HDUE5', cap: 5375, delta: 0.146 }, C: 0, Ac: 10.5, Fcperp: 625 });
+  near(h.dHD, 0.146 * 2000 / 5375, 0.0001);
+});
+
+test('FTAO jamb posts: C = fD·DL + v_i·h_o; self-weight excludes openings; loads over openings count for FTAO', () => {
+  const V1 = 3750 / 0.7 / 1000;
+  const bare = wallsOf(calcAll(oneStory([t555Wall()], { seismic: V1, floorH: 8 })))[0];
+  const j1 = bare.ftao.jambs[0];
+  assert.equal(bare.ftao.jambs.length, 4);
+  near(j1.C, 337.3 * (8 / 3) / 1000, 0.005, 'no DL: C = v1·h_o');
+  assert.ok(j1.post && j1.post.id === '(2)2x4' && j1.dc < 1);
+  const withDL = oneStory([t555Wall({ wallDLTypeId: 'wdt-1' })], { seismic: V1, floorH: 8 });
+  withDL.wallDLTypes = [{ id: 'wdt-1', name: 'Ext', psf: 10 }];
+  const w = wallsOf(calcAll(withDL))[0];
+  near(w.dlWallSelf, (19.5 * 8 - (6 + 2) * (8 / 3)) * 10 / 1000, 0.005, 'self-weight without openings');
+  near(w.ftao.jambs[0].dl, (4 * 8 * 10 / 2 + 6 * (4 / 3) * 10 / 2) / 1000, 0.005, 'half pier + half header');
+  near(w.ftao.jambs[0].C, 1.14 * w.ftao.jambs[0].dl + 337.3 * (8 / 3) / 1000, 0.006);
+  // A uniform load over opening 1 reaches the FTAO wall (overturning DL) and its jambs
+  withDL.directions[0].lines[0].gravityLoads = { 'lvl-1': { uniform: [{ id: 'gu-1', start: 4, end: 10, dlPlf: 200 }], point: [] } };
+  const g = wallsOf(calcAll(withDL))[0];
+  near(g.dlFromDiagram, 1.2, 0.005);
+  near(g.ftao.jambs[0].dl - w.ftao.jambs[0].dl, 0.6, 0.005);
+});
+
+test('Segmented: only loads over the pier lengths reach the piers', () => {
+  const inp = oneStory([wall('w-1', 0, 10, { openings: [{ id: 'op-1', offset: 4, width: 2, sill: 3, head: 7 }] })]);
+  inp.directions[0].lines[0].gravityLoads = { 'lvl-1': { uniform: [{ id: 'gu-1', start: 0, end: 10, dlPlf: 100 }], point: [] } };
+  assert.deepEqual(wallsOf(calcAll(inp)).map(p => p.dlFromDiagram), [0.4, 0.4]);
 });
 
 test('Wall deflection uses 1.0E shear, selected posts/holdown, Ga for sheathing; drift vs Table 12.12-1', () => {
