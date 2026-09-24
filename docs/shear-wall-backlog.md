@@ -12,7 +12,7 @@ Branches: `shearwall-load-path` (pushed, merge to `master` by someone else), `re
 | H5 | App test of G4 on branch `results-and-links` — **passed and pushed 2026-09-24** | Flat Load edit → Mass Takeoff shows "Upstream changed" → Update + save → ELF flagged; Base Shear Cs → ELF notice; project-page PDF matches the form. |
 | H6 | Local Supabase project name changed by master | `supabase/config.toml` `project_id` is now `engineer-service-calculator`. Running `supabase start` from this code creates a new, empty local stack; existing local data lives in the `*_design-item-hub` containers. Plan a data move before restarting the local stack. After pulling master, apply new migrations with `npx supabase migration up --local` from the repo folder (2026-09-22: `20260917000000_user_management_audit` was needed for login). |
 
-| H7 | App test of Phase 4 round 1 on `phase4-r1-r3` (local, not pushed) | Add openings to a Test 123 wall, switch Segmented ↔ FTAO, link the Base Shear item (Cd / Ie / Risk Category), check elevation (cut-outs, piers, straps), results (FTAO calc, LRFD forces, story drift) and PDF. Push only when asked. |
+| H7 | App test of Phase 4 round 1 on `phase4-r1-r3` — **passed 2026-09-24** | Add openings to a Test 123 wall, switch Segmented ↔ FTAO, link the Base Shear item (Cd / Ie / Risk Category), check elevation (cut-outs, piers, straps), results (FTAO calc, LRFD forces, story drift) and PDF. Push only when asked. |
 
 ## Phase 4 round 1 — open items (2026-09-24)
 | # | Item | Notes |
