@@ -1,7 +1,8 @@
 import { el, clearEl, numOrBlank } from '../utils.js';
-import { svgEl, newWall, newUniformLoad, newPointLoad, newBeam, newBeamSupport, newSupportPost } from './shearWallTypes.js';
+import { svgEl, newWall, newUniformLoad, newPointLoad, newBeam, newBeamSupport, newSupportPost, newOpening } from './shearWallTypes.js';
 import { NAILING_TABLE } from './shearWallNailing.js';
-import { HDUE_TABLE, MSTC_TABLE, POST_SIZES, getGradeById } from './shearWallHardware.js';
+import { HDUE_TABLE, MSTC_TABLE, POST_SIZES, getGradeById, FTAO_STRAP_TABLE, jambPostOptions } from './shearWallHardware.js';
+import { openingProblems, wallPiers } from './shearWallOpenings.js';
 import { findAnchorage, findPost } from './shearWallCalc.js';
 
 const GUTTER = 80;
@@ -772,6 +773,7 @@ export function renderElevation(container, line, levels, wallDLTypes, callbacks)
   let selectedBeamId = null;
   let selectedPostId = null;
   let placementMode = 'none'; // 'none' | 'wall' | 'beam' | 'post'
+  let destroyed = false;
   let dragState = null; // { wallId, startFt, origPos }
   let currentCombo = null;
   let showForcesOn = false;
@@ -1101,6 +1103,7 @@ export function renderElevation(container, line, levels, wallDLTypes, callbacks)
   function markChanged() { if (onInputChange) onInputChange(); }
 
   function drawSVG() {
+    if (destroyed) return; // deferred first draw after the elevation was removed
     clearEl(svgContainer);
     const containerW = Math.max(svgContainer.clientWidth || 600, 400);
     const showForces = !!(wallResults && showForcesOn && currentCombo !== null);
@@ -1708,6 +1711,7 @@ export function renderElevation(container, line, levels, wallDLTypes, callbacks)
       panelField('Post Left', hwSelect(w, 'postLeftOverride', postItems, postLabelFn)),
       panelField('Post Right', hwSelect(w, 'postRightOverride', postItems, postLabelFn)),
     ));
+    renderOpeningsEditor(w);
 
     if (wallResults) {
       const wr = findWallResult(w.id);
@@ -1729,6 +1733,53 @@ export function renderElevation(container, line, levels, wallDLTypes, callbacks)
       }
     }
     propPanel.appendChild(panelRow(deleteBtn));
+  }
+
+  // Openings (windows) in the selected wall: method, list of offset / width / sill / head, FTAO options
+  function renderOpeningsEditor(w) {
+    if (!Array.isArray(w.openings)) w.openings = [];
+    const refresh = () => { markChanged(); renderPropPanel(); drawSVG(); };
+    propPanel.appendChild(panelSub('Openings (windows; model doors as separate walls)'));
+    const methodSel = el('select', { className: 'form-select', style: { width: '190px' }, onChange(e) { w.method = e.target.value; refresh(); } });
+    [['segmented', 'Segmented (piers designed separately)'], ['ftao', 'FTAO (force transfer around openings)']].forEach(([v, label]) => {
+      const o = el('option', { value: v }, label); if ((w.method || 'segmented') === v) o.selected = true; methodSel.appendChild(o);
+    });
+    const items = [panelField('Method', methodSel)];
+    if (w.method === 'ftao') {
+      items.push(panelField('FTAO strap', hwSelect(w, 'ftaoStrapOverride', FTAO_STRAP_TABLE, it => it.id + ' (' + it.cap + ' lb)')));
+      const jSel = el('select', { className: 'form-select', style: { width: '110px' }, onChange(e) { w.jambPostOverride = e.target.value; markChanged(); } });
+      jambPostOptions(designCtx().thickness).forEach((p, i) => {
+        const o = el('option', { value: i === 0 ? '' : p.id }, p.label + (i === 0 ? ' (default)' : ''));
+        if ((w.jambPostOverride || '') === (i === 0 ? '' : p.id)) o.selected = true;
+        jSel.appendChild(o);
+      });
+      items.push(panelField('Jamb posts', jSel));
+      items.push(panelField('Narrow piers', el('label', { style: { display: 'flex', alignItems: 'center', gap: '4px', fontSize: '0.8rem' } },
+        el('input', { type: 'checkbox', checked: !!w.narrowPier, onChange(e) { w.narrowPier = e.target.checked; refresh(); } }), '1.5–2 ft (APA T555, CBC §104.11)')));
+    }
+    propPanel.appendChild(panelRow(...items));
+    if (w.openings.length) {
+      const tbl = el('table', { className: 'dynamic-table', style: { fontSize: '0.8rem', marginBottom: '0.35rem' } });
+      tbl.appendChild(el('tr', null, el('th', null, '#'), el('th', null, 'Offset (ft)'), el('th', null, 'Width (ft)'), el('th', null, 'Sill (ft)'), el('th', null, 'Head (ft)'), el('th', { className: 'row-actions' }, '')));
+      w.openings.forEach((o, i) => {
+        const cell = (key) => el('td', null, el('input', { type: 'number', step: 'any', value: numOrBlank(o[key]), style: { width: '64px' }, onChange(e) { o[key] = e.target.value; refresh(); } }));
+        tbl.appendChild(el('tr', null, el('td', null, String(i + 1)), cell('offset'), cell('width'), cell('sill'), cell('head'),
+          el('td', { className: 'row-actions' }, el('button', { className: 'btn btn-ghost btn-sm', type: 'button', onClick() { w.openings.splice(i, 1); refresh(); } }, '×'))));
+      });
+      propPanel.appendChild(el('div', { className: 'table-scroll' }, tbl));
+      const lvl = levels[levelIndexOf(w.levelId)];
+      const problems = openingProblems(w, lvl && lvl.floorToFloor);
+      const piers = wallPiers(w).map(p => p.length.toFixed(2)).join(' / ');
+      propPanel.appendChild(el('div', { style: { fontSize: '0.8rem', marginBottom: '0.35rem', color: problems.length ? 'var(--fail)' : 'var(--ink-secondary)' } },
+        problems.length ? '⚠ ' + problems.join('; ') + ' — wall is designed as solid until fixed.' : 'Full-height piers (ft): ' + piers + '. Offset from the wall’s left end; sill and head above the floor line.'));
+    }
+    propPanel.appendChild(el('button', { className: 'btn btn-sm', type: 'button', style: { marginBottom: '0.5rem' }, onClick() {
+      const L = num(w.length);
+      const last = w.openings.map(o => num(o.offset) + num(o.width)).reduce((a, b) => Math.max(a, b), 0);
+      const offset = Math.min(Math.max(last + 2, 2), Math.max(L - 5, 0));
+      w.openings.push(newOpening(offset, 3, 3, 7));
+      refresh();
+    } }, '+ Opening'));
   }
 
   function renderBeamPropPanel() {
@@ -2072,6 +2123,7 @@ export function renderElevation(container, line, levels, wallDLTypes, callbacks)
   document.addEventListener('keydown', onKeyDown);
 
   function destroy() {
+    destroyed = true;
     document.removeEventListener('keydown', onKeyDown);
     document.removeEventListener('mousedown', onDocMouseDown);
     if (isExpanded) toggleExpand();

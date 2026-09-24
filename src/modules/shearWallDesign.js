@@ -1,13 +1,18 @@
-import { el, clearEl, numOrBlank } from '../utils.js';
+import { el, clearEl, numOrBlank, sameNumber } from '../utils.js';
 import {
   resetIds, resetWallNum, resetElementNums, defaultInputs,
   newLevel, newWallDLType, newLine, newWallId, nextWallMark,
-  wallOpeningDefaults, deflectionDefaults,
+  wallOpeningDefaults, deflectionDefaults, newOpeningId,
 } from './shearWallTypes.js';
 import { calcAll, CALC_VERSION } from './shearWallCalc.js';
 import { renderElevation, renderElevationForPdf, pdfElevationAspect } from './shearWallElevation.js';
-import { NAILING_TABLE } from './shearWallNailing.js';
-import { NDS_GRADES, HDUE_TABLE, MSTC_TABLE, POST_SIZES, computePostCapacity } from './shearWallHardware.js';
+import { NAILING_TABLE, SHEATHING_TYPES, FOOTNOTE_10_NOTE, sheathingLabel } from './shearWallNailing.js';
+import { NDS_GRADES, HDUE_TABLE, MSTC_TABLE, POST_SIZES, computePostCapacity, FTAO_STRAP_TABLE, strapNailing, lrfdCap, getGradeById } from './shearWallHardware.js';
+import { DRIFT_ROWS, driftLimit } from './shearWallDeflection.js';
+
+// Values copied from a linked Seismic Base Shear item
+const BASE_SHEAR_FIELDS = [['sds', 'Sds'], ['cd', 'Cd'], ['ie', 'Ie'], ['riskCategory', 'Risk Category']];
+const sameValue = (a, b) => (typeof b === 'number' ? sameNumber(a, b, 0.0005) : String(a || '') === String(b || ''));
 
 export const shearWallDesign = {
   id: 'shear_wall_design',
@@ -17,7 +22,10 @@ export const shearWallDesign = {
   noNewPrefix: true,
   noOutputSection: false,
 
-  refs: [],
+  refs: [
+    { key: 'baseShearSource', label: 'Seismic Base Shear', sourceType: 'seismic_base_shear',
+      extract: (outputs) => ({ sds: outputs.sds, cd: outputs.cd, ie: outputs.ie, riskCategory: outputs.riskCategory }) },
+  ],
   fields: [],
   outputFields: [],
 
@@ -26,6 +34,20 @@ export const shearWallDesign = {
   wideLayout: true, // item form uses the wide page so the elevation has room
 
   migrate(item) { return migrateDefinition(item); },
+
+  // Sds / Cd / Ie / Risk Category copied from the Base Shear item that no longer match it
+  linkDiff(inputs, linked) {
+    const bs = linked.baseShearSource;
+    if (!bs) return [];
+    return BASE_SHEAR_FIELDS.filter(([k]) => bs[k] != null && !sameValue(inputs[k], bs[k]))
+      .map(([k, label]) => ({ refKey: 'baseShearSource', label, from: inputs[k], to: bs[k] }));
+  },
+
+  applyLinks(inputs, linked) {
+    const bs = linked.baseShearSource;
+    if (bs) for (const [k] of BASE_SHEAR_FIELDS) if (bs[k] != null) inputs[k] = String(bs[k]);
+    return inputs;
+  },
 
   summaryLabel(inputs) {
     let wallCount = 0, beamCount = 0, postCount = 0;
@@ -134,6 +156,7 @@ export const shearWallDesign = {
       row1.appendChild(el('div', { className: 'form-group', style: { marginBottom: 0 } },
         el('label', { className: 'form-label' }, 'Wood Grade'), gradeSelect));
       sec.appendChild(row1);
+      sec.appendChild(renderDeflectionSettings());
 
       sec.appendChild(el('div', { style: { fontWeight: '500', fontSize: '0.85rem', marginBottom: '0.25rem' } }, 'Wall Dead Load Types'));
       const wdtTbl = el('table', { className: 'dynamic-table', style: { fontSize: '0.85rem', maxWidth: '360px' } });
@@ -201,6 +224,55 @@ export const shearWallDesign = {
       return sec;
     }
 
+    // Sheathing (Ga), Base Shear link (Sds, Cd, Ie, Risk Category), drift limit row, service wind factor
+    function renderDeflectionSettings() {
+      const box = el('div', { style: { marginBottom: '1rem' } });
+      box.appendChild(el('div', { className: 'section-header' }, 'Deflection & Drift'));
+      const row = el('div', { style: { display: 'flex', gap: '1rem', flexWrap: 'wrap', alignItems: 'flex-end' } });
+      const field = (label, input) => el('div', { className: 'form-group', style: { marginBottom: 0 } }, el('label', { className: 'form-label' }, ...[].concat(label)), input);
+      const select = (key, options, width) => {
+        const s = el('select', { className: 'form-select', style: { width }, onChange(e) { inputs[key] = e.target.value; notifyChange(); } });
+        options.forEach(([v, label]) => { const o = el('option', { value: v }, label); if (String(inputs[key] || '') === v) o.selected = true; s.appendChild(o); });
+        return s;
+      };
+      const numInput = (key, width, placeholder) => el('input', { className: 'form-input mono', type: 'number', step: 'any', value: numOrBlank(inputs[key]), placeholder: placeholder || '', style: { width },
+        onChange(e) { inputs[key] = e.target.value; notifyChange(); } });
+
+      row.appendChild(field('Sheathing (Ga)', select('sheathing', SHEATHING_TYPES.map(t => [t.id, t.label]), '110px')));
+
+      const bsItems = (projectItems || []).filter(it => it.type === 'seismic_base_shear' && !it.archived);
+      const linkSel = el('select', { className: 'form-select', style: { maxWidth: '260px' }, onChange(e) {
+        if (e.target.value) {
+          inputs.refs.baseShearSource = e.target.value;
+          const linked = bsItems.find(it => it.id === e.target.value);
+          if (linked && linked.outputs) for (const [k] of BASE_SHEAR_FIELDS) if (linked.outputs[k] != null) inputs[k] = String(linked.outputs[k]);
+        } else {
+          delete inputs.refs.baseShearSource;
+        }
+        notifyChange(); renderAll();
+      } });
+      linkSel.appendChild(el('option', { value: '' }, bsItems.length ? '— None —' : 'No Base Shear item in project'));
+      bsItems.forEach(it => {
+        const o = el('option', { value: it.id }, (it.custom_name || it.customName || it.label || 'Seismic Base Shear') + (it.outputs ? ' (Cd=' + it.outputs.cd + ')' : ''));
+        if (inputs.refs.baseShearSource === it.id) o.selected = true;
+        linkSel.appendChild(o);
+      });
+      row.appendChild(field('Link to Seismic Base Shear', linkSel));
+      row.appendChild(field(['C', el('sub', null, 'd')], numInput('cd', '60px')));
+      row.appendChild(field(['I', el('sub', null, 'e')], numInput('ie', '60px')));
+      row.appendChild(field('Risk Cat.', select('riskCategory', [['', '—'], ['I', 'I'], ['II', 'II'], ['III', 'III'], ['IV', 'IV']], '70px')));
+      row.appendChild(field('Drift limit (Table 12.12-1)', select('driftRow', DRIFT_ROWS.map(r => [r.id, r.label]), '260px')));
+      if (inputs.loadType === 'wind' || inputs.loadType === 'both') {
+        row.appendChild(field(['Service wind α', el('sub', null, 's')], numInput('alphaS', '70px', 'blank = skip')));
+      }
+      box.appendChild(row);
+      const lim = driftLimit(inputs.driftRow, inputs.riskCategory);
+      box.appendChild(el('div', { style: { fontSize: '0.8rem', color: 'var(--ink-secondary)', marginTop: '0.35rem' } },
+        'Deflection per SDPWS 2021 Eq. 4.3-1 at 1.0E (ρ = 1), ' + sheathingLabel(inputs.sheathing) + ' Ga. δx = Cd·δxe/Ie; allowable Δa = '
+        + (lim != null ? lim + '·h_sx' : '— (set Risk Category)') + '. Linked values show an update notice when the Base Shear item changes.'));
+      return box;
+    }
+
     function renderMasterLoadingTable() {
       const showE = inputs.loadType === 'seismic' || inputs.loadType === 'both';
       const showW = inputs.loadType === 'wind' || inputs.loadType === 'both';
@@ -256,26 +328,29 @@ export const shearWallDesign = {
       const sec = el('div');
 
       sec.appendChild(el('div', { className: 'section-header' }, 'Shearwall Nailing Capacity — SDPWS Table 4.3A'));
-      sec.appendChild(el('div', { style: { fontSize: '0.8rem', color: 'var(--ink-secondary)', marginBottom: '0.5rem' } }, '15/32 WSP Structural 1, 10d common nail, 0.92 factor'));
+      sec.appendChild(el('div', { style: { fontSize: '0.8rem', color: 'var(--ink-secondary)', marginBottom: '0.5rem' } }, '15/32 WSP Structural 1, 10d common nail. ' + FOOTNOTE_10_NOTE + ' ASD: E = V_n/2.8, W = V_n/2.0. LRFD (SDPWS 2021 §4.1.4): φ = 0.5 seismic, 0.8 wind. Ga for deflection uses the ' + sheathingLabel(inputs.sheathing) + ' column (Summary tab).'));
       const nTbl = el('table', { className: 'data-table', style: { fontSize: '0.85rem' } });
       nTbl.appendChild(el('tr', null, el('th', null, 'E.N.'), el('th', null, 'Sides'), el('th', { className: 'num' }, 'V_n (plf)'),
         el('th', { className: 'num' }, 'ASD E (plf)'), el('th', { className: 'num' }, 'ASD W (plf)'),
-        el('th', { className: 'num' }, 'LRFD E (plf)'), el('th', { className: 'num' }, 'LRFD W (plf)')));
+        el('th', { className: 'num' }, 'LRFD E (plf)'), el('th', { className: 'num' }, 'LRFD W (plf)'),
+        el('th', { className: 'num' }, 'Ga OSB (k/in)'), el('th', { className: 'num' }, 'Ga PLY (k/in)')));
       for (const n of NAILING_TABLE) {
         nTbl.appendChild(el('tr', null, el('td', { className: 'mono' }, n.id), el('td', null, n.sides === 2 ? 'Both' : '1'),
           el('td', { className: 'num mono' }, n.vn), el('td', { className: 'num mono' }, n.asdE), el('td', { className: 'num mono' }, n.asdW),
-          el('td', { className: 'num mono' }, n.lrfdE), el('td', { className: 'num mono' }, n.lrfdW)));
+          el('td', { className: 'num mono' }, n.lrfdE), el('td', { className: 'num mono' }, n.lrfdW),
+          el('td', { className: 'num mono' }, n.gaOSB), el('td', { className: 'num mono' }, n.gaPLY)));
       }
       sec.appendChild(el('div', { className: 'table-scroll', style: { marginBottom: '1rem' } }, nTbl));
 
       sec.appendChild(el('div', { className: 'section-header' }, 'HDUE Holdown Catalog (Concrete Anchorage)'));
       const hTbl = el('table', { className: 'data-table', style: { fontSize: '0.85rem' } });
-      hTbl.appendChild(el('tr', null, el('th', null, 'Model'), el('th', { className: 'num' }, 'ASD Cap (lb)'), el('th', null, 'Min Post (4")'), el('th', null, 'Min Post (6")'), el('th', { className: 'num' }, 'δ (in)')));
+      hTbl.appendChild(el('tr', null, el('th', null, 'Model'), el('th', { className: 'num' }, 'ASD Cap (lb)'), el('th', { className: 'num' }, 'LRFD Cap (lb)'), el('th', null, 'Min Post (4")'), el('th', null, 'Min Post (6")'), el('th', { className: 'num' }, 'δ @ ASD cap (in)')));
       for (const hd of HDUE_TABLE) {
-        hTbl.appendChild(el('tr', null, el('td', { className: 'mono' }, hd.id), el('td', { className: 'num mono' }, hd.cap),
+        hTbl.appendChild(el('tr', null, el('td', { className: 'mono' }, hd.id), el('td', { className: 'num mono' }, hd.cap), el('td', { className: 'num mono' }, lrfdCap(hd)),
           el('td', { className: 'mono' }, hd.minPost['4']), el('td', { className: 'mono' }, hd.minPost['6']), el('td', { className: 'num mono' }, hd.delta)));
       }
-      sec.appendChild(el('div', { className: 'table-scroll', style: { marginBottom: '1rem' } }, hTbl));
+      sec.appendChild(el('div', { className: 'table-scroll', style: { marginBottom: '0.25rem' } }, hTbl));
+      sec.appendChild(el('div', { style: { fontSize: '0.8rem', color: 'var(--ink-secondary)', marginBottom: '1rem' } }, 'LRFD cap = 1.4 × ASD cap (reported with LRFD forces only). δ is at the ASD cap; deflection uses Δa = δ·T(1.0)/cap.'));
 
       sec.appendChild(el('div', { className: 'section-header' }, 'MSTC Strap Catalog (Floor-to-Floor)'));
       for (const [span, table] of Object.entries(MSTC_TABLE)) {
@@ -288,12 +363,23 @@ export const shearWallDesign = {
         sec.appendChild(el('div', { className: 'table-scroll', style: { marginBottom: '0.75rem' } }, sTbl));
       }
 
+      sec.appendChild(el('div', { className: 'section-header' }, 'FTAO Wall Straps (above / below openings)'));
+      sec.appendChild(el('div', { style: { fontSize: '0.8rem', color: 'var(--ink-secondary)', marginBottom: '0.5rem' } }, 'ASD allowable tension. Fasteners and end length shown for DF/SP framing, 0.148" nails (lightest strap ≥ F_max is selected; straps run the full wall length above and below the openings).'));
+      const fsTbl = el('table', { className: 'data-table', style: { fontSize: '0.85rem' } });
+      fsTbl.appendChild(el('tr', null, el('th', null, 'Model'), el('th', { className: 'num' }, 'Ga.'), el('th', { className: 'num' }, 'ASD Cap (lb)'), el('th', null, 'Fasteners (total)'), el('th', { className: 'num' }, 'End length (in)')));
+      for (const st of FTAO_STRAP_TABLE) {
+        const nl = strapNailing(st);
+        fsTbl.appendChild(el('tr', null, el('td', { className: 'mono' }, st.id), el('td', { className: 'num mono' }, st.gauge), el('td', { className: 'num mono' }, st.cap),
+          el('td', { className: 'mono' }, '(' + nl.count + ') ' + nl.d), el('td', { className: 'num mono' }, nl.endLength)));
+      }
+      sec.appendChild(el('div', { className: 'table-scroll', style: { marginBottom: '1rem' } }, fsTbl));
+
       const thickness = inputs.wallThickness || '4';
       const gradeObj = NDS_GRADES.find(g => g.id === inputs.woodGrade) || NDS_GRADES[2];
       const posts = POST_SIZES[thickness] || POST_SIZES['4'];
       sec.appendChild(el('div', { className: 'section-header', style: { marginTop: '0.5rem' } }, 'Post Compression Capacity — ' + gradeObj.label + ', ' + thickness + '" Wall'));
       sec.appendChild(el('div', { style: { fontSize: '0.8rem', color: 'var(--ink-secondary)', marginBottom: '0.5rem' } },
-        'NDS 2018, CD=1.6, Ke=1.0, l2=6" (braced by sheathing). Heights from project levels.'));
+        'NDS 2018, CD=1.6, Ke=1.0, l2=6" (braced by sheathing). Heights from project levels. Sill plate bearing / crushing uses ' + gradeObj.species + ' Fc⊥ = ' + gradeObj.Fcperp + ' psi.'));
       const heights = [...new Set(inputs.levels.map(l => parseFloat(l.floorToFloor) || 0).filter(h => h > 0))];
       if (heights.length === 0) heights.push(10);
       for (const h of heights) {
@@ -415,6 +501,9 @@ export const shearWallDesign = {
             id: newWallId(), mark: nextWallMark(), levelId: toId,
             position: sw.position, length: sw.length,
             wallDLTypeId: sw.wallDLTypeId || '', nailingPattern: sw.nailingPattern || '',
+            ...wallOpeningDefaults(),
+            method: sw.method || 'segmented', narrowPier: !!sw.narrowPier,
+            openings: (sw.openings || []).map(o => ({ ...o, id: newOpeningId() })),
           });
         }
         notifyChange(); renderAll();
@@ -461,7 +550,7 @@ export const shearWallDesign = {
       ln.perLevel.forEach(pl => {
         totalWalls += pl.walls.length;
         for (const w of pl.walls) {
-          if (w.dcRatio > 1.0 || w.hbReductionFactor < 1.0) failing++;
+          if (wallFails(w)) failing++;
           else if (w.hOverBFlag) warned++;
         }
       });
@@ -506,7 +595,7 @@ export const shearWallDesign = {
             const postR = fmtPost(w.postRight, w.postDCRight);
             const allPass = w.dcRatio <= 1.0 && w.anchorageLeft && w.anchorageRight && w.postLeft && w.postRight;
             tbl.appendChild(el('tr', null,
-              el('td', { className: 'mono' }, w.mark), el('td', null, pl.levelName),
+              el('td', { className: 'mono' }, w.mark + (w.method === 'ftao' ? ' (FTAO)' : '')), el('td', null, pl.levelName),
               el('td', { className: 'mono', style: { fontSize: '0.8rem' } }, nailLabel),
               el('td', { className: 'num mono' }, w.unitShear_ASD.toFixed(0)),
               el('td', { className: 'num mono' }, w.effectiveCapacity != null ? w.effectiveCapacity.toFixed(0) : '—'),
@@ -515,7 +604,7 @@ export const shearWallDesign = {
               el('td', { className: 'mono', style: { fontSize: '0.8rem' } }, hdL), el('td', { className: 'mono', style: { fontSize: '0.8rem' } }, hdR),
               el('td', { className: 'mono', style: { fontSize: '0.8rem' } }, postL), el('td', { className: 'mono', style: { fontSize: '0.8rem' } }, postR),
               el('td', null,
-                !allPass || w.hbReductionFactor < 1.0
+                !allPass || wallFails(w)
                   ? el('span', { className: 'badge badge-fail' }, 'NG')
                   : w.hOverBFlag
                     ? el('span', { className: 'badge badge-stale' }, 'WARN')
@@ -525,7 +614,28 @@ export const shearWallDesign = {
           container.appendChild(el('div', { className: 'table-scroll', style: { marginBottom: '0.5rem' } }, tbl));
 
           for (const w of pl.walls) {
-            container.appendChild(renderWallCalcDetail(w, pl, dir));
+            container.appendChild(w.method === 'ftao' && w.ftao ? renderFtaoDetail(w, pl) : renderWallCalcDetail(w, pl, dir));
+          }
+        }
+
+        // LRFD forces (reported for foundation / beam design; design above is ASD)
+        const lr = lrfdRows(ln);
+        if (lr.length) {
+          container.appendChild(el('div', { style: { fontWeight: '500', fontSize: '0.85rem', marginTop: '0.5rem', marginBottom: '0.25rem' } }, 'LRFD Wall End Forces — ' + ln.lineName + ' (forces only)'));
+          container.appendChild(simpleTable(LRFD_HEADERS, lr, [2, 3, 4, 5]));
+        }
+
+        // Deflection and story drift
+        const dr = driftRows(ln);
+        if (dr.length) {
+          container.appendChild(el('div', { style: { fontWeight: '500', fontSize: '0.85rem', marginTop: '0.5rem', marginBottom: '0.25rem' } }, 'Story Drift — ' + ln.lineName));
+          container.appendChild(simpleTable(DRIFT_HEADERS, dr, [1, 2, 4, 5, 6]));
+          if (ln.drift && ln.drift.missing) container.appendChild(el('div', { style: { fontSize: '0.8rem', color: 'var(--stale, #b7791f)', marginBottom: '0.5rem' } }, 'ⓘ ' + ln.drift.missing));
+          const wd = wallDeflectionRows(ln);
+          if (wd.length) {
+            container.appendChild(el('details', { style: { marginBottom: '0.75rem' } },
+              el('summary', { style: { cursor: 'pointer', fontSize: '0.82rem', color: 'var(--ink-secondary)' } }, 'Wall deflections (SDPWS Eq. 4.3-1 terms)'),
+              simpleTable(WALL_DEFL_HEADERS, wd, [2, 3, 4, 5, 6, 7, 8])));
           }
         }
 
@@ -584,7 +694,13 @@ export const shearWallDesign = {
       ['Default Wall', (inputs.wallThickness || '4') + '" framing'],
       ['Wood Grade', gradeLabel],
       ['Levels', (inputs.levels || []).length],
+      ['Sheathing (Ga)', sheathingLabel(inputs.sheathing)],
+      ['Sill plate', (getGradeById(inputs.woodGrade).species || '') + ', Fc⊥ = ' + getGradeById(inputs.woodGrade).Fcperp + ' psi'],
+      ['Cd / Ie / Risk Category', (inputs.cd || '—') + ' / ' + (inputs.ie || '—') + ' / ' + (inputs.riskCategory || '—') + ((inputs.refs || {}).baseShearSource ? ' (linked to Seismic Base Shear)' : '')],
+      ['Drift limit', ((DRIFT_ROWS.find(r => r.id === inputs.driftRow) || DRIFT_ROWS[0]).label) + (driftLimit(inputs.driftRow, inputs.riskCategory) != null ? ' — ' + driftLimit(inputs.driftRow, inputs.riskCategory) + '·h_sx' : '')],
+      ['Nailing capacities', FOOTNOTE_10_NOTE],
     ];
+    if (inputs.loadType !== 'seismic') configRows.push(['Service wind α_s', inputs.alphaS || '— (wind deflection not computed)']);
     (inputs.wallDLTypes || []).forEach(t => { configRows.push(['Wall DL: ' + (t.name || '?'), (t.psf || 0) + ' psf']); });
     sections.push({ title: 'Building Configuration', rows: configRows });
 
@@ -607,20 +723,36 @@ export const shearWallDesign = {
           let anyManual = false;
           const star = (v, on) => { if (on) anyManual = true; return on ? v + ' *' : v; };
           for (const pl of ln.perLevel) { for (const w of pl.walls) {
-            const wIn = (inLine.walls || []).find(x => x.id === w.wallId) || {};
+            const wIn = (inLine.walls || []).find(x => x.id === (w.parentWallId || w.wallId)) || {};
             const nail = w.nailing ? w.nailing.label : '?';
             const cap = w.effectiveCapacity != null ? w.effectiveCapacity.toFixed(0) : '—';
             const ancL = w.anchorageLeft ? w.anchorageLeft.id + (w.anchorageDCLeft != null ? ' (' + w.anchorageDCLeft.toFixed(2) + ')' : '') : 'OVER';
             const ancR = w.anchorageRight ? w.anchorageRight.id + (w.anchorageDCRight != null ? ' (' + w.anchorageDCRight.toFixed(2) + ')' : '') : 'OVER';
             const postL = w.postLeft ? w.postLeft.postLabel + (w.postDCLeft != null ? ' (' + w.postDCLeft.toFixed(2) + ')' : '') : 'OVER';
             const postR = w.postRight ? w.postRight.postLabel + (w.postDCRight != null ? ' (' + w.postDCRight.toFixed(2) + ')' : '') : 'OVER';
-            wallRows.push([w.mark, pl.levelName, w.length.toFixed(1), star(nail, !!wIn.nailingPattern), w.unitShear_ASD.toFixed(0), cap, w.dcRatio.toFixed(2),
+            wallRows.push([w.mark + (w.method === 'ftao' ? ' (FTAO)' : ''), pl.levelName, w.length.toFixed(1), star(nail, !!wIn.nailingPattern), w.unitShear_ASD.toFixed(0), cap, w.dcRatio.toFixed(2),
               star(ancL, !!wIn.anchorageLeftOverride), star(ancR, !!wIn.anchorageRightOverride), star(postL, !!wIn.postLeftOverride), star(postR, !!wIn.postRightOverride)]);
           } }
           if (wallRows.length) sections.push({ title: dir.dirName + ' / ' + ln.lineName + ' — Wall Schedule' + (anyManual ? ' (* = manual override)' : ''), pageBreakBefore: true, table: { headers: ['Mark', 'Level', 'Len', 'Nailing', 'v', 'Cap', 'D/C', 'HD/S L', 'HD/S R', 'Post L', 'Post R'], rows: wallRows, colWidths: [0.06, 0.08, 0.05, 0.1, 0.06, 0.06, 0.06, 0.1, 0.1, 0.08, 0.08] } });
           const tcRows = [];
           for (const pl of ln.perLevel) { for (const w of pl.walls) { tcRows.push([w.mark, pl.levelName, w.dlTotal.toFixed(2), w.governingTensionLeft.toFixed(2), w.governingTensionRight.toFixed(2), w.governingComprLeft.toFixed(2), w.governingComprRight.toFixed(2)]); } }
-          if (tcRows.length) sections.push({ title: dir.dirName + ' / ' + ln.lineName + ' — T/C Results', table: { headers: ['Mark', 'Level', 'DL (k)', 'T Left (k)', 'T Right (k)', 'C Left (k)', 'C Right (k)'], rows: tcRows } });
+          if (tcRows.length) sections.push({ title: dir.dirName + ' / ' + ln.lineName + ' — T/C Results (ASD)', table: { headers: ['Mark', 'Level', 'DL (k)', 'T Left (k)', 'T Right (k)', 'C Left (k)', 'C Right (k)'], rows: tcRows } });
+          for (const pl of ln.perLevel) { for (const w of pl.walls) {
+            if (w.method !== 'ftao' || !w.ftao) continue;
+            const t = dir.dirName + ' / ' + ln.lineName + ' — FTAO ' + w.mark + ' (' + pl.levelName + ')';
+            sections.push({ title: t, rows: ftaoSummaryLines(w).concat(w.ftao.warnings.map(m => ['Warning', m])) });
+            for (const lt of Object.keys(w.ftao.perType)) {
+              sections.push({ title: t + ' — ' + LT_LABEL[lt] + ' piers', table: { headers: FTAO_PIER_HEADERS, rows: ftaoPierRows(w, lt) } });
+              sections.push({ title: t + ' — ' + LT_LABEL[lt] + ' checks', table: { headers: FTAO_CHECK_HEADERS, rows: ftaoCheckRows(w, lt), colWidths: [0.4, 0.15, 0.15, 0.1, 0.1] } });
+            }
+          } }
+          const lrRows = lrfdRows(ln);
+          if (lrRows.length) sections.push({ title: dir.dirName + ' / ' + ln.lineName + ' — LRFD Forces (reported only)', table: { headers: LRFD_HEADERS, rows: lrRows } });
+          const drRows = driftRows(ln);
+          if (drRows.length) sections.push({ title: dir.dirName + ' / ' + ln.lineName + ' — Story Drift', table: { headers: DRIFT_HEADERS, rows: drRows, colWidths: [0.16, 0.08, 0.09, 0.1, 0.14, 0.1, 0.13, 0.1] } });
+          if (ln.drift && ln.drift.missing) sections.push({ title: dir.dirName + ' / ' + ln.lineName + ' — Drift note', text: ln.drift.missing });
+          const wdRows = wallDeflectionRows(ln);
+          if (wdRows.length) sections.push({ title: dir.dirName + ' / ' + ln.lineName + ' — Wall Deflection (SDPWS Eq. 4.3-1)', table: { headers: WALL_DEFL_HEADERS, rows: wdRows, colWidths: [0.08, 0.26, 0.07, 0.07, 0.1, 0.1, 0.1, 0.1, 0.08] } });
           if (ln.wallDeliveries && ln.wallDeliveries.some(d => d.receiver.type !== 'foundation')) {
             sections.push({ title: dir.dirName + ' / ' + ln.lineName + ' — Wall End Connections', table: { headers: WALL_END_HEADERS, rows: wallEndRows(ln), colWidths: [0.1, 0.14, 0.08, 0.12, 0.12, 0.3] } });
           }
@@ -654,16 +786,161 @@ export const shearWallDesign = {
         }
       }
       const sdsVal = inputs.sds || 'SDS';
-      sections.push({ title: 'Load Combinations (ASD)', equations: [
+      sections.push({ title: 'Load Combinations (ASD design, LRFD reported)', equations: [
         { desc: 'Seismic Uplift (ASCE 7 Combo 8)', parts: [{ t: 'T = [0.7ρV·h - (0.6-0.14' }, { t: sdsVal, bold: true }, { t: ')DL·L/2] / L' }] },
         { desc: 'Seismic Compression (ASCE 7 Combo 5)', parts: [{ t: 'C = [0.7ρV·h + (1.0+0.14' }, { t: sdsVal, bold: true }, { t: ')DL·L/2] / L' }] },
         { desc: 'Wind Uplift (ASCE 7 Combo 7)', parts: [{ t: 'T = [0.6V' }, { t: 'w', sub: true }, { t: '·h - 0.6DL·L/2] / L' }] },
         { desc: 'Wind Compression (ASCE 7 Combo 4)', parts: [{ t: 'C = [0.6V' }, { t: 'w', sub: true }, { t: '·h + DL·L/2] / L' }] },
+        { desc: 'LRFD Seismic Uplift (ASCE 7 §2.3.6)', parts: [{ t: 'T = [ρV·h - (0.9-0.2' }, { t: sdsVal, bold: true }, { t: ')DL·L/2] / L' }] },
+        { desc: 'LRFD Seismic Compression (ASCE 7 §2.3.6)', parts: [{ t: 'C = [ρV·h + (1.2+0.2' }, { t: sdsVal, bold: true }, { t: ')DL·L/2] / L' }] },
+        { desc: 'LRFD Wind (ASCE 7 §2.3.1)', parts: [{ t: 'T = [V' }, { t: 'w', sub: true }, { t: '·h - 0.9DL·L/2] / L,  C = [V' }, { t: 'w', sub: true }, { t: '·h + 1.2DL·L/2] / L' }] },
       ] });
     }
     return sections;
   },
 };
+
+// A wall fails when sheathing D/C > 1, h/b > 3.5, or (FTAO) the strap or sill plate bearing fails
+function wallFails(w) {
+  if (w.dcRatio > 1.0 || w.hbNotPermitted) return true;
+  if (w.method === 'ftao' && w.ftao) {
+    if (w.ftao.strapDC == null || w.ftao.strapDC > 1.0) return true;
+    if (Object.values(w.ftao.perType || {}).some(r => (r.plateBearing || []).some(b => b.status === 'NG'))) return true;
+  }
+  return false;
+}
+
+const f0 = (v) => (v == null || !isFinite(v) ? '—' : Math.round(v).toString());
+const f2 = (v) => (v == null || !isFinite(v) ? '—' : v.toFixed(2));
+const f3 = (v) => (v == null || !isFinite(v) ? '—' : v.toFixed(3));
+const f4 = (v) => (v == null || !isFinite(v) ? '—' : v.toFixed(4));
+const LT_LABEL = { E: 'Seismic', W: 'Wind' };
+
+// FTAO wall rows for one load type: summary lines, pier table rows, zone check rows
+function ftaoSummaryLines(w) {
+  const f = w.ftao;
+  const lines = [];
+  const any = Object.values(f.perType)[0];
+  if (any) {
+    const g = any.geometry;
+    lines.push(['Geometry', 'L_wall = ' + g.Lwall.toFixed(2) + ' ft, h = ' + g.h.toFixed(2) + ' ft; governing opening ' + g.governing
+      + ' (h_a ' + g.ha.toFixed(2) + ' / h_o ' + g.ho.toFixed(2) + ' / h_b ' + g.hb.toFixed(2) + ' ft)']);
+  }
+  for (const [lt, r] of Object.entries(f.perType)) {
+    lines.push([LT_LABEL[lt] + ' loads', 'V1.0 = ' + f0(r.V_1p0) + ' lb; V_ASD = ' + r.kASD.toFixed(3) + '·V = ' + f0(r.V_ASD) + ' lb']);
+    lines.push([LT_LABEL[lt] + ' forces', 'H (gross T = C) = ' + f0(r.H) + ' lb; v_a = v_b = ' + f0(r.va) + ' plf; F_max = ' + f0(r.Fmax) + ' lb; anchorage ' + f0(r.anchorage_plf) + ' plf']);
+    lines.push([LT_LABEL[lt] + ' governing', r.governing.zone + ', DCR ' + f2(r.governing.dcr) + ' (' + r.governing.status + ')']);
+    if (r.deflection) lines.push([LT_LABEL[lt] + ' deflection', 'Δ = ' + f3(r.deflection.Delta_in) + ' in (average of ' + r.deflection.cases.length + ' pier cases at V = ' + f0(r.deflection.V_defl) + ' lb)']);
+  }
+  const st = f.strap;
+  lines.push(['Strap', st ? st.id + (st.override ? ' *' : '') + ' — ' + st.cap + ' lb ASD, D/C ' + f2(f.strapDC) + ' at F_max ' + f.strapDemand + ' lb; ('
+    + st.nailing.count + ') ' + st.nailing.d + ', ' + st.nailing.endLength + '" end length; continuous full wall length above and below openings' : 'OVER — no strap carries ' + f.strapDemand + ' lb']);
+  lines.push(['Jamb posts', f.jambPost.label + (f.jambPost.override ? ' *' : '') + ' at opening edges']);
+  return lines;
+}
+
+function ftaoPierRows(w, lt) {
+  const r = w.ftao.perType[lt];
+  if (!r) return [];
+  const car = r.geometry.piers;
+  return r.piers.map((p, i) => [
+    'Pier ' + p.i, p.L.toFixed(2), car[i].aspect.toFixed(2), car[i].Car.toFixed(3), f0(p.v), f0(p.vc), f0(p.R),
+  ]);
+}
+const FTAO_PIER_HEADERS = ['Pier', 'L (ft)', 'h_o/b', 'C_ar', 'v (plf)', 'v_c corner (plf)', 'R (lb)'];
+
+function ftaoCheckRows(w, lt) {
+  const r = w.ftao.perType[lt];
+  if (!r) return [];
+  const rows = r.sheathing.map(z => [z.zone, f0(z.demand) + ' plf', f0(z.capacity) + ' plf', f2(z.dcr), z.status]);
+  (r.plateBearing || []).forEach(b => rows.push(['Sill plate bearing, ' + b.end + ' end', f0(b.fc_perp) + ' psi', f0(b.Fc_perp_prime) + ' psi', f2(b.dcr), b.status]));
+  return rows;
+}
+const FTAO_CHECK_HEADERS = ['Zone', 'Demand', 'Capacity', 'DCR', 'Status'];
+
+function renderFtaoDetail(w, pl) {
+  const body = el('div', { style: { fontSize: '0.8rem', padding: '0.5rem 0', color: 'var(--ink-secondary)' } });
+  for (const [k, v] of ftaoSummaryLines(w)) {
+    body.appendChild(el('div', { style: { fontFamily: 'var(--font-mono, monospace)', lineHeight: '1.6' } },
+      el('span', { style: { display: 'inline-block', minWidth: '150px', color: 'var(--ink-tertiary)' } }, k + ':'), v));
+  }
+  for (const lt of Object.keys(w.ftao.perType)) {
+    body.appendChild(el('div', { style: { fontWeight: '500', margin: '0.4rem 0 0.2rem' } }, LT_LABEL[lt] + ' — piers (APA T555 / Diekmann)'));
+    body.appendChild(simpleTable(FTAO_PIER_HEADERS, ftaoPierRows(w, lt), [1, 2, 3, 4, 5, 6]));
+    body.appendChild(simpleTable(FTAO_CHECK_HEADERS, ftaoCheckRows(w, lt), [1, 2, 3]));
+  }
+  if (w.ftao.warnings.length) {
+    const wb = el('div', { style: { color: 'var(--stale, #b7791f)' } });
+    w.ftao.warnings.forEach(m => wb.appendChild(el('div', null, '⚠ ' + m)));
+    body.appendChild(wb);
+  }
+  const summary = el('summary', { style: { cursor: 'pointer', fontSize: '0.82rem', fontWeight: '500', color: 'var(--ink-secondary)' } },
+    'FTAO calc — ' + w.mark + ' (' + pl.levelName + ', L=' + w.length.toFixed(1) + ' ft, h=' + (w.floorH || 0).toFixed(1) + ' ft)');
+  return el('details', { style: { marginBottom: '0.5rem', borderLeft: '3px solid var(--border-light)', paddingLeft: '0.75rem' } }, summary, body);
+}
+
+const LRFD_HEADERS = ['Element', 'Level', 'T L (k)', 'T R (k)', 'C L (k)', 'C R (k)', 'HDUE LRFD cap L / R (lb)'];
+
+// LRFD envelopes (accumulated through the load path) for walls, post bases and beam supports
+function lrfdRows(ln) {
+  const rows = [];
+  for (const pl of ln.perLevel) {
+    for (const w of pl.walls) {
+      if (!w.lrfd) continue;
+      const caps = [w.lrfdCapLeft, w.lrfdCapRight].map(c => (c == null ? '—' : c)).join(' / ');
+      rows.push([w.mark, pl.levelName, f2(w.lrfd.tL), f2(w.lrfd.tR), f2(w.lrfd.cL), f2(w.lrfd.cR), caps]);
+    }
+  }
+  for (const pp of ln.postPaths || []) {
+    if (pp.lrfd) rows.push([pp.mark + ' base', pp.levelName, f2(pp.lrfd.T), '', f2(pp.lrfd.C), '', lrfdCap(pp.anchorage) || '—']);
+  }
+  for (const bt of ln.beamTransfers || []) {
+    (bt.supports || []).forEach((s, i) => {
+      if (s.lrfd) rows.push([bt.mark + (i === 0 ? ' L' : ' R') + ' support', bt.levelName, f2(s.lrfd.T), '', f2(s.lrfd.C), '', lrfdCap(s.anchorage) || '—']);
+    });
+  }
+  return rows;
+}
+
+const DRIFT_HEADERS = ['Level', 'h_sx (ft)', 'δxe (in)', 'Governing wall', 'δx = Cd·δxe/Ie (in)', 'δx / h_sx', 'Allowable Δa (in)', 'Status'];
+
+function driftRows(ln) {
+  const d = ln.drift;
+  if (!d) return [];
+  const rows = [];
+  for (const r of d.rows) {
+    if (r.seismic) {
+      const s = r.seismic;
+      rows.push([r.levelName + ' (seismic)', f2(r.hsx), f3(s.deltaXE), s.wallMark, f3(s.deltaX), f4(s.ratio), s.allowable != null ? f3(s.allowable) : '—',
+        s.pass == null ? '—' : s.pass ? 'OK' : 'NG']);
+    }
+    if (r.wind) {
+      rows.push([r.levelName + ' (wind, service)', f2(r.hsx), f3(r.wind.delta), r.wind.wallMark, '—', f4(r.wind.ratio), '—', 'Report only']);
+    }
+  }
+  return rows;
+}
+
+const WALL_DEFL_HEADERS = ['Wall', 'Case', 'v (plf)', 'Ga (k/in)', '8vh³/EAb', 'vh/1000Ga', 'Δa (in)', 'hΔa/b', 'δ (in)'];
+
+function wallDeflectionRows(ln) {
+  const rows = [];
+  for (const pl of ln.perLevel) {
+    for (const w of pl.walls) {
+      for (const [lt, d] of Object.entries(w.deflection || {})) {
+        if (!d) continue;
+        const note = (w.onBeam ? ' — on beam, support deflection not included' : '');
+        if (d.dirs) {
+          const g = d.dirs.reduce((a, b) => (b.delta > a.delta ? b : a));
+          rows.push([w.mark, (lt === 'E' ? '1.0E ' : 'α_s·W ') + g.dir + note, f0(d.v), d.Ga, f4(g.t1), f4(g.t2), f4(g.dHD + g.dC), f4(g.t3), f3(d.delta)]);
+        } else {
+          rows.push([w.mark, (lt === 'E' ? '1.0E' : 'α_s·W') + ' FTAO pier average' + note, '—', '—', '—', '—', '—', '—', f3(d.delta)]);
+        }
+      }
+    }
+  }
+  return rows;
+}
 
 const WALL_END_HEADERS = ['Wall', 'Level', 'End', 'ΣT (k)', 'ΣC (k)', 'Delivers to'];
 
@@ -724,7 +1001,15 @@ function simpleTable(headers, rows, numCols) {
 function renderMethodFootnotes() {
   const notes = el('div', { style: { fontSize: '0.8rem', color: 'var(--ink-secondary)', marginBottom: '1rem', lineHeight: '1.6' } });
   notes.appendChild(el('div', null,
-    el('strong', null, 'Distribution: '), 'SDPWS 4.3.3.4.1 Simplified Method — load proportional to wall ASD capacity × length.'));
+    el('strong', null, 'Distribution: '), 'SDPWS 4.3.3.4.1 Simplified Method — load proportional to wall ASD capacity × length (FTAO walls: engine V_cap,ASD). ' + FOOTNOTE_10_NOTE));
+  notes.appendChild(el('div', null,
+    el('strong', null, 'Aspect ratio: '), 'SDPWS 2021 — h/b > 2: capacity × (1.25 − 0.125h/b); h/b > 3.5 is not a shear wall (carries no shear).'));
+  notes.appendChild(el('div', null,
+    el('strong', null, 'Openings: '), 'Segmented walls are designed pier by pier (full-height piers, hardware at every pier end). FTAO walls use APA T555 (Diekmann) with the governing opening height; wall-end T/C still includes dead load, the FTAO H shown is gross (no dead load).'));
+  notes.appendChild(el('div', null,
+    el('strong', null, 'Deflection: '), 'SDPWS 2021 Eq. 4.3-1 at 1.0E (ρ = 1) with lateral-only end forces; Δa = holdown/strap δ × T/cap (δ at ASD cap; MSTC assumed the same) + sill plate crushing. δx = Cd·δxe/Ie vs ASCE 7-22 Table 12.12-1.'));
+  notes.appendChild(el('div', null,
+    el('strong', null, 'LRFD: '), 'ASCE 7-22 §2.3.6 combinations are reported as forces only (e.g. for foundations); all design checks are ASD. HDUE LRFD cap = 1.4 × ASD.'));
   notes.appendChild(el('div', null,
     el('strong', null, 'T/C: '), 'ASCE 7-22 ASD Combos 5 & 8 with E', el('sub', null, 'v'),
     ' = 0.2S', el('sub', null, 'DS'), '×D (0.7 applied to full E including E', el('sub', null, 'v'), ').'));

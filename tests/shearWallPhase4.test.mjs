@@ -8,6 +8,8 @@ import { ftaoCapacityLbf } from '../src/modules/shearWallFtaoAdapter.js';
 import { getNailingById } from '../src/modules/shearWallNailing.js';
 import { getGradeById } from '../src/modules/shearWallHardware.js';
 import { wallPiers, openingProblems } from '../src/modules/shearWallOpenings.js';
+import { checkShearWallItem } from '../scripts/lib/shearWallLoadCheck.mjs';
+import { shearWallDesign } from '../src/modules/shearWallDesign.js';
 
 const near = (a, b, tol, msg) => assert.ok(Math.abs(a - b) <= tol, (msg || '') + ' expected ' + b + ' ± ' + tol + ', got ' + a);
 let passed = 0;
@@ -184,6 +186,29 @@ test('Migration v5→v6 adds opening and deflection defaults, idempotent', () =>
   const again = JSON.stringify(inp);
   migrateV5toV6(inp);
   assert.equal(JSON.stringify(inp), again);
+});
+
+test('Openings definition renders: form, results, PDF sections, elevations', () => {
+  const inp = oneStory([t555Wall(), wall('w-2', 25, 10, { openings: [{ id: 'op-3', offset: 4, width: 2, sill: 3, head: 7 }] })],
+    { seismic: 8, floorH: 8, loadType: 'both', extra: { cd: '4', ie: '1', riskCategory: 'II', alphaS: '0.7' } });
+  inp.directions[0].lines[0].levelLoads['lvl-1'].wind = 6;
+  const r = checkShearWallItem({ schemaVersion: 6, inputs: inp });
+  assert.ok(r.ok, r.error);
+  const out = shearWallDesign.calc(inp);
+  const c = document.createElement('div');
+  shearWallDesign.renderOutputs(c, out);
+  for (const t of ['FTAO calc', 'LRFD Wall End Forces', 'Story Drift', 'SW-2a', 'SW-2b']) assert.ok(c.textContent.includes(t), 'results show ' + t);
+  const titles = shearWallDesign.pdfSections(inp).map(x => x.title).join(' | ');
+  for (const t of ['FTAO SW-1', 'LRFD Forces', 'Story Drift', 'Wall Deflection']) assert.ok(titles.includes(t), 'PDF has ' + t);
+});
+
+test('Base Shear link: changed Cd flagged, applyLinks copies Sds/Cd/Ie/RC', () => {
+  const inp = { sds: '1.0', cd: '4', ie: '1.0', riskCategory: 'II' };
+  const linked = { baseShearSource: { sds: 1.0, cd: 5, ie: 1.0, riskCategory: 'II' } };
+  const ch = shearWallDesign.linkDiff(inp, linked);
+  assert.deepEqual(ch.map(c => c.label), ['Cd']);
+  shearWallDesign.applyLinks(inp, linked);
+  assert.equal(inp.cd, '5');
 });
 
 console.log(passed + ' passed' + (process.exitCode ? ', some FAILED' : ''));

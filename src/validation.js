@@ -106,6 +106,27 @@ function validateElf(inputs, errors) {
   });
 }
 
+// Opening geometry that cannot be built. Pier widths and h/b are design checks shown in the results.
+function validateWallOpenings(errors, wall, wallLabel, level) {
+  const openings = Array.isArray(wall.openings) ? wall.openings : [];
+  if (!openings.length) return;
+  const length = asNumber(wall.length);
+  const height = level ? asNumber(level.floorToFloor) : NaN;
+  if (wall.method === 'ftao' && openings.length > 3) errors.push(`${wallLabel}: FTAO covers 1–3 openings.`);
+  const sorted = [...openings].sort((a, b) => asNumber(a.offset) - asNumber(b.offset));
+  sorted.forEach((o, i) => {
+    const label = `${wallLabel} opening ${i + 1}`;
+    const offset = asNumber(o.offset), width = asNumber(o.width), sill = asNumber(o.sill), head = asNumber(o.head);
+    if (!(width > 0)) errors.push(`${label} needs a width.`);
+    if (!(offset >= 0) || (Number.isFinite(length) && offset + width > length + 0.01)) errors.push(`${label} must be inside the wall.`);
+    if (!(sill > 0)) errors.push(`${label} needs a sill height above the floor (split the wall for a door).`);
+    if (!(head > sill)) errors.push(`${label} head must be above its sill.`);
+    if (Number.isFinite(height) && height > 0 && !(head < height)) errors.push(`${label} head must be below the floor-to-floor height.`);
+    const prev = sorted[i - 1];
+    if (prev && offset < asNumber(prev.offset) + asNumber(prev.width) - 0.01) errors.push(`${label} overlaps opening ${i}.`);
+  });
+}
+
 function validateShearWall(inputs, errors) {
   const loadType = inputs.loadType || 'seismic';
   if (loadType === 'seismic' || loadType === 'both') requirePositive(errors, inputs.sds, 'Sᴅₛ');
@@ -141,6 +162,7 @@ function validateShearWall(inputs, errors) {
         if (Number.isFinite(lineLength) && Number.isFinite(end) && end > lineLength) {
           errors.push(`${wallLabel} extends beyond ${lineLabel}.`);
         }
+        validateWallOpenings(errors, wall, wallLabel, levels.find(l => l.id === wall.levelId));
       });
     });
   });
