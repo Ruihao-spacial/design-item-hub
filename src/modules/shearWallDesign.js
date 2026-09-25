@@ -1048,7 +1048,7 @@ function simpleTable(headers, rows, numCols) {
 function renderMethodFootnotes() {
   const notes = el('div', { style: { fontSize: '0.8rem', color: 'var(--ink-secondary)', marginBottom: '1rem', lineHeight: '1.6' } });
   notes.appendChild(el('div', null,
-    el('strong', null, 'Distribution: '), 'Wall capacity approach (SDPWS 4.3.3.4.1): load proportional to wall ASD capacity × length (FTAO walls: engine V_cap,ASD). Deflection approach: walls at a level deflect equally — shares ∝ k = V/δ (SDPWS Eq. 4.3-1 at 1.0E / 1.0W), iterated until shares change < 1%. ' + FOOTNOTE_10_NOTE));
+    el('strong', null, 'Distribution: '), 'Wall capacity approach (SDPWS 4.3.3.4.1): load proportional to wall ASD capacity × length (FTAO walls: engine V_cap,ASD). Deflection approach: walls at a level deflect equally — shares ∝ k = V/δ (SDPWS Eq. 4.3-1 at 1.0E / 1.0W), iterated until no share changes by more than 5% of the story shear (max 20 passes). ' + FOOTNOTE_10_NOTE));
   notes.appendChild(el('div', null,
     el('strong', null, 'Aspect ratio: '), 'SDPWS 2021 — h/b > 2: capacity × (1.25 − 0.125h/b); h/b > 3.5 is not a shear wall (carries no shear).'));
   notes.appendChild(el('div', null,

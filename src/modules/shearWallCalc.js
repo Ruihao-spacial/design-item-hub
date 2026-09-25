@@ -558,7 +558,7 @@ export function lineDistribution(inputs, line) {
   return m === 'deflection' ? 'deflection' : 'capacity';
 }
 
-const DIST_TOL = 0.01;   // converged when no share changes by more than 1% of the story shear
+const DIST_TOL = 0.05;   // converged when no share changes by more than 5% of the story shear
 const DIST_MAX_PASSES = 20;
 
 // Deflection approach: walls at a level in a line deflect equally, so shares ∝ stiffness k = V/δ
