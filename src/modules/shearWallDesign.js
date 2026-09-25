@@ -74,14 +74,21 @@ export const shearWallDesign = {
     clearEl(container);
 
     let activeTopTab = 'summary';
+    let activeResultTab = 'walls';
+    let refreshLineResults = null; // set by the open line tab
+    let resultsTimer = null;
     let activeDirLineTabs = {};
     let elevationHandle = null;
 
-    function notifyChange() { if (onInputChange) onInputChange(); }
+    function notifyChange() {
+      if (onInputChange) onInputChange();
+      if (refreshLineResults) { clearTimeout(resultsTimer); resultsTimer = setTimeout(() => refreshLineResults && refreshLineResults(), 400); }
+    }
 
     function renderAll() {
       clearEl(container);
       if (elevationHandle) { elevationHandle.destroy(); elevationHandle = null; }
+      refreshLineResults = null;
 
       const tabBar = el('div', { style: { display: 'flex', gap: '2px', marginBottom: '1rem', borderBottom: '2px solid var(--border)', paddingBottom: '0' } });
 
@@ -552,12 +559,37 @@ export const shearWallDesign = {
         },
       });
 
+      // This line's results (all reports for the line), recalculated from the current definition
+      const resultsBox = el('div', { style: { marginTop: '1rem', borderTop: '2px solid var(--border)', paddingTop: '0.75rem' } });
+      panel.appendChild(resultsBox);
+      refreshLineResults = () => {
+        clearEl(resultsBox);
+        resultsBox.appendChild(el('div', { className: 'section-header', style: { marginTop: 0 } }, 'Line Results — ' + (dir.name || '') + ' / ' + (line.name || '')));
+        let out;
+        try { out = calcAll(inputs); } catch (e) {
+          console.error('Line results failed:', e);
+          resultsBox.appendChild(el('span', { className: 'badge badge-fail' }, 'Results could not be calculated — check the inputs'));
+          return;
+        }
+        const dirOut = (out.perDirection || []).find(d => d.dirId === dir.id);
+        const lnOut = dirOut && dirOut.perLine.find(l => l.lineId === line.id);
+        if (!lnOut) return;
+        try {
+          renderLineResults(resultsBox, lnOut, dirOut, { tab: activeResultTab, onTab(t) { activeResultTab = t; refreshLineResults(); } });
+        } catch (e) {
+          console.error('Rendering line results failed:', e);
+          resultsBox.appendChild(el('span', { className: 'badge badge-fail' }, 'Results could not be displayed'));
+        }
+      };
+      refreshLineResults();
+
       return panel;
     }
 
     renderAll();
   },
 
+  // Project summary only — each line's full results are in its tab (direction → line)
   renderOutputs(container, outputs) {
     if (!outputs || !outputs.perDirection) return;
     clearEl(container);
@@ -567,146 +599,23 @@ export const shearWallDesign = {
         el('span', { className: 'badge badge-stale' }, 'Results are from an older calc version — click Calculate & Save to refresh')));
       return;
     }
-
-    let totalWalls = 0, failing = 0, warned = 0, auditIssues = 0;
-    outputs.perDirection.forEach(d => d.perLine.forEach(ln => {
-      ln.perLevel.forEach(pl => {
-        totalWalls += pl.walls.length;
-        for (const w of pl.walls) {
-          if (wallFails(w)) failing++;
-          else if (w.hOverBFlag) warned++;
-        }
-      });
-      auditIssues += (ln.loadPathAudit?.warnings || []).length;
-    }));
-    const summaryParts = [totalWalls + ' wall' + (totalWalls !== 1 ? 's' : '') + ' analyzed'];
-    if (failing > 0) summaryParts.push(failing + ' failing');
-    if (warned > 0) summaryParts.push(warned + ' h/b warning');
-    if (auditIssues > 0) summaryParts.push(auditIssues + ' load path issue' + (auditIssues !== 1 ? 's' : ''));
-    if (!failing && !warned && !auditIssues) summaryParts.push('all passing');
-    const summaryText = summaryParts.join(' — ');
-    const summaryClass = (failing > 0 || auditIssues > 0) ? 'badge-fail' : warned > 0 ? 'badge-stale' : 'badge-pass';
-    container.appendChild(el('div', { style: { marginBottom: '0.75rem' } }, el('span', { className: 'badge ' + summaryClass }, summaryText)));
-
-    container.appendChild(renderMethodFootnotes());
-
+    const all = { walls: 0, failing: 0, warned: 0, issues: 0, driftNG: 0 };
+    const rows = [];
     for (const dir of outputs.perDirection) {
-      container.appendChild(el('div', { className: 'section-header' }, dir.dirName + ' (ρ = ' + dir.rho + ')'));
       for (const ln of dir.perLine) {
-        container.appendChild(el('div', { style: { fontWeight: '500', marginBottom: '0.25rem' } }, ln.lineName,
-          el('span', { style: { fontWeight: 'normal', fontSize: '0.8rem', color: 'var(--ink-secondary)', marginLeft: '0.5rem' } }, distributionText(ln))));
-        if (ln.distribution && ln.distribution.note) container.appendChild(el('div', { style: { fontSize: '0.8rem', color: 'var(--stale, #b7791f)', marginBottom: '0.25rem' } }, 'ⓘ ' + ln.distribution.note));
-        for (const pl of ln.perLevel) {
-          if (!pl.walls.length) continue;
-          const tbl = el('table', { className: 'data-table' });
-          tbl.appendChild(el('tr', null,
-            el('th', null, 'Mark'), el('th', null, 'Level'), el('th', null, 'Nailing'),
-            el('th', { className: 'num' }, 'v (plf)'), el('th', { className: 'num' }, 'Cap (plf)'), el('th', { className: 'num' }, 'D/C'),
-            el('th', { className: 'num' }, 'T (k)'), el('th', { className: 'num' }, 'C (k)'),
-            el('th', null, 'HD/Strap L'), el('th', null, 'HD/Strap R'),
-            el('th', null, 'Post L'), el('th', null, 'Post R'),
-            el('th', null, 'Status'),
-          ));
-          for (const w of pl.walls) {
-            const dcBadge = el('span', { className: 'badge ' + (w.dcRatio > 1.0 ? 'badge-fail' : 'badge-pass') }, w.dcRatio.toFixed(2));
-            const govT = Math.max(w.governingTensionLeft, w.governingTensionRight);
-            const govC = Math.max(w.governingComprLeft, w.governingComprRight);
-            const nailLabel = w.nailing ? w.nailing.label : '?';
-            const fmtHW = (hw, dc) => hw ? hw.id + (dc != null ? ' (' + dc.toFixed(2) + ')' : '') : el('span', { style: { color: 'var(--fail)' } }, 'OVER');
-            const fmtPost = (p, dc) => p ? p.postLabel + (dc != null ? ' (' + dc.toFixed(2) + ')' : '') : el('span', { style: { color: 'var(--fail)' } }, 'OVER');
-            const hdL = fmtHW(w.anchorageLeft, w.anchorageDCLeft);
-            const hdR = fmtHW(w.anchorageRight, w.anchorageDCRight);
-            const postL = fmtPost(w.postLeft, w.postDCLeft);
-            const postR = fmtPost(w.postRight, w.postDCRight);
-            const allPass = w.dcRatio <= 1.0 && w.anchorageLeft && w.anchorageRight && w.postLeft && w.postRight;
-            tbl.appendChild(el('tr', null,
-              el('td', { className: 'mono' }, w.mark + (w.method === 'ftao' ? ' (FTAO)' : '')), el('td', null, pl.levelName),
-              el('td', { className: 'mono', style: { fontSize: '0.8rem' } }, nailLabel),
-              el('td', { className: 'num mono' }, w.unitShear_ASD.toFixed(0)),
-              el('td', { className: 'num mono' }, w.effectiveCapacity != null ? w.effectiveCapacity.toFixed(0) : '—'),
-              el('td', { className: 'num' }, dcBadge),
-              el('td', { className: 'num mono' }, govT.toFixed(2)), el('td', { className: 'num mono' }, govC.toFixed(2)),
-              el('td', { className: 'mono', style: { fontSize: '0.8rem' } }, hdL), el('td', { className: 'mono', style: { fontSize: '0.8rem' } }, hdR),
-              el('td', { className: 'mono', style: { fontSize: '0.8rem' } }, postL), el('td', { className: 'mono', style: { fontSize: '0.8rem' } }, postR),
-              el('td', null,
-                !allPass || wallFails(w)
-                  ? el('span', { className: 'badge badge-fail' }, 'NG')
-                  : w.hOverBFlag
-                    ? el('span', { className: 'badge badge-stale' }, 'WARN')
-                    : el('span', { className: 'badge badge-pass' }, 'OK')),
-            ));
-          }
-          container.appendChild(el('div', { className: 'table-scroll', style: { marginBottom: '0.5rem' } }, tbl));
-
-          for (const w of pl.walls) {
-            container.appendChild(w.method === 'ftao' && w.ftao ? renderFtaoDetail(w, pl) : renderWallCalcDetail(w, pl, dir, ln));
-          }
-        }
-
-        // LRFD forces (reported for foundation / beam design; design above is ASD)
-        const lr = lrfdRows(ln);
-        if (lr.length) {
-          container.appendChild(el('div', { style: { fontWeight: '500', fontSize: '0.85rem', marginTop: '0.5rem', marginBottom: '0.25rem' } }, 'LRFD Wall End Forces — ' + ln.lineName + ' (forces only)'));
-          container.appendChild(simpleTable(LRFD_HEADERS, lr, [2, 3, 4, 5]));
-        }
-
-        // Deflection and story drift
-        const dr = driftRows(ln);
-        if (dr.length) {
-          container.appendChild(el('div', { style: { fontWeight: '500', fontSize: '0.85rem', marginTop: '0.5rem', marginBottom: '0.25rem' } }, 'Story Drift — ' + ln.lineName));
-          container.appendChild(simpleTable(DRIFT_HEADERS, dr, [1, 2, 4, 5, 6]));
-          if (ln.drift && ln.drift.missing) container.appendChild(el('div', { style: { fontSize: '0.8rem', color: 'var(--stale, #b7791f)', marginBottom: '0.5rem' } }, 'ⓘ ' + ln.drift.missing));
-          const wd = wallDeflectionRows(ln);
-          if (wd.length) {
-            container.appendChild(el('details', { style: { marginBottom: '0.75rem' } },
-              el('summary', { style: { cursor: 'pointer', fontSize: '0.82rem', color: 'var(--ink-secondary)' } }, 'Wall deflections (SDPWS Eq. 4.3-1 terms)'),
-              simpleTable(WALL_DEFL_HEADERS, wd, [2, 3, 4, 5, 6, 7, 8])));
-          }
-        }
-
-        // Wall end connections (where each wall end's accumulated force goes)
-        if (ln.wallDeliveries && ln.wallDeliveries.some(d => d.receiver.type !== 'foundation')) {
-          container.appendChild(el('div', { style: { fontWeight: '500', fontSize: '0.85rem', marginTop: '0.5rem', marginBottom: '0.25rem' } }, 'Wall End Connections — ' + ln.lineName));
-          container.appendChild(simpleTable(WALL_END_HEADERS, wallEndRows(ln), [3, 4]));
-        }
-
-        // Beam supports (reactions at user-defined supports)
-        if (ln.beamTransfers && ln.beamTransfers.length) {
-          container.appendChild(el('div', { style: { fontWeight: '500', fontSize: '0.85rem', marginTop: '0.5rem', marginBottom: '0.25rem' } }, 'Transfer Beams — ' + ln.lineName));
-          container.appendChild(simpleTable(BEAM_HEADERS, beamSupportRows(ln), [2, 3, 5, 6]));
-        }
-
-        // Post schedule
-        if (ln.postPaths && ln.postPaths.length) {
-          container.appendChild(el('div', { style: { fontWeight: '500', fontSize: '0.85rem', marginTop: '0.5rem', marginBottom: '0.25rem' } }, 'Posts — ' + ln.lineName));
-          container.appendChild(simpleTable(POST_HEADERS, postRows(ln), [2, 3, 4]));
-        }
-
-        // Load path audit
-        if (ln.loadPathAudit && ln.loadPathAudit.warnings.length > 0) {
-          container.appendChild(el('div', { style: { fontWeight: '500', fontSize: '0.85rem', marginTop: '0.5rem', marginBottom: '0.25rem' } },
-            el('span', { className: 'badge badge-fail', style: { marginRight: '0.5rem' } }, ln.loadPathAudit.warnings.length + ' load path issue' + (ln.loadPathAudit.warnings.length !== 1 ? 's' : '')),
-            ln.lineName));
-          const atbl = el('table', { className: 'data-table', style: { fontSize: '0.85rem' } });
-          atbl.appendChild(el('tr', null, el('th', null, 'Element'), el('th', null, 'Level'), el('th', null, 'Issue')));
-          for (const w of ln.loadPathAudit.warnings) {
-            atbl.appendChild(el('tr', null,
-              el('td', { className: 'mono' }, w.elementMark), el('td', null, w.levelName),
-              el('td', { style: { color: 'var(--fail)' } }, w.message),
-            ));
-          }
-          container.appendChild(el('div', { className: 'table-scroll', style: { marginBottom: '0.75rem' } }, atbl));
-        } else if (ln.loadPathAudit && ln.loadPathAudit.allClear && (ln.beamTransfers?.length || ln.postPaths?.length)) {
-          container.appendChild(el('div', { style: { marginBottom: '0.5rem' } },
-            el('span', { className: 'badge badge-pass' }, 'All load paths verified')));
-        }
-        if (ln.loadPathAudit && ln.loadPathAudit.notes && ln.loadPathAudit.notes.length) {
-          const nbox = el('div', { style: { fontSize: '0.8rem', color: 'var(--ink-secondary)', marginBottom: '0.75rem' } });
-          ln.loadPathAudit.notes.forEach(n => nbox.appendChild(el('div', null, 'ⓘ ' + n.message)));
-          container.appendChild(nbox);
-        }
+        const st = lineStats(ln);
+        all.walls += st.walls; all.failing += st.failing; all.warned += st.warned; all.issues += st.issues;
+        if (st.drift === 'NG') all.driftNG++;
+        rows.push([dir.dirName, ln.lineName, String(st.walls), st.walls ? st.maxDC.toFixed(2) : '—',
+          ln.distribution && ln.distribution.method === 'deflection' ? 'Deflection' : 'Capacity',
+          st.drift || '—', String(st.issues), lineStatusBadge(st)]);
       }
     }
+    container.appendChild(el('div', { style: { marginBottom: '0.5rem' } }, lineStatusBadge({ ...all, drift: all.driftNG ? 'NG' : null })));
+    container.appendChild(el('div', { style: { fontSize: '0.85rem', color: 'var(--ink-secondary)', marginBottom: '0.5rem' } },
+      'Full results for each wall line are in its tab above (direction → line), below the elevation.'));
+    container.appendChild(simpleTable(['Direction', 'Line', 'Walls', 'Max D/C', 'Distribution', 'Drift', 'Load path issues', 'Status'], rows, [2, 3, 6]));
+    container.appendChild(renderMethodFootnotes());
   },
 
   // Always built from the definition — stored results are only a snapshot
@@ -742,8 +651,25 @@ export const shearWallDesign = {
       if (loadRows.length) sections.push({ title: dir.name + ' — Lateral Loading (Unfactored)', table: { headers: ['Line', 'Level', '1.0E (kip)', '1.0W (kip)'], rows: loadRows } });
     }
     if (outputs && outputs.perDirection) {
+      sections.push({ title: 'Project Summary — Wall Lines', table: {
+        headers: ['Direction', 'Line', 'Walls', 'Max D/C', 'Distribution', 'Drift', 'Load path issues', 'Status'],
+        rows: outputs.perDirection.flatMap(dir => dir.perLine.map(ln => {
+          const st = lineStats(ln);
+          return [dir.dirName, ln.lineName, st.walls, st.walls ? st.maxDC.toFixed(2) : '—', ln.distribution && ln.distribution.method === 'deflection' ? 'Deflection' : 'Capacity',
+            st.drift || '—', st.issues, st.failing || st.issues || st.drift === 'NG' ? 'NG' : st.warned ? 'WARN' : 'OK'];
+        })) } });
       for (const dir of outputs.perDirection) {
         for (const ln of dir.perLine) {
+          const lst = lineStats(ln);
+          const T = (name) => dir.dirName + ' / ' + ln.lineName + ' — ' + name;
+          sections.push({ title: dir.dirName + ' / ' + ln.lineName, pageBreakBefore: true, rows: [
+            ['Walls', lst.walls + (lst.failing ? ' (' + lst.failing + ' failing)' : '') + (lst.warned ? ', ' + lst.warned + ' h/b warning' : '')],
+            ['Max sheathing D/C', lst.walls ? lst.maxDC.toFixed(2) : '—'],
+            ['Distribution', distributionText(ln)],
+            ['Story drift', lst.drift || '—'],
+            ['Load path issues', lst.issues],
+            ['Status', lst.failing || lst.issues || lst.drift === 'NG' ? 'NG' : lst.warned ? 'WARN' : 'OK'],
+          ] });
           const wallRows = [];
           const inLine = (inputs.directions || []).flatMap(d => d.lines || []).find(l => l.id === ln.lineId) || {};
           let anyManual = false;
@@ -759,7 +685,7 @@ export const shearWallDesign = {
             wallRows.push([w.mark + (w.method === 'ftao' ? ' (FTAO)' : ''), pl.levelName, w.length.toFixed(1), star(nail, !!wIn.nailingPattern), w.unitShear_ASD.toFixed(0), cap, w.dcRatio.toFixed(2),
               star(ancL, !!wIn.anchorageLeftOverride), star(ancR, !!wIn.anchorageRightOverride), star(postL, !!wIn.postLeftOverride), star(postR, !!wIn.postRightOverride)]);
           } }
-          if (wallRows.length) sections.push({ title: dir.dirName + ' / ' + ln.lineName + ' — Wall Schedule, ' + distributionText(ln) + (anyManual ? ' (* = manual override)' : ''), pageBreakBefore: true, table: { headers: ['Mark', 'Level', 'Len', 'Nailing', 'v', 'Cap', 'D/C', 'HD/S L', 'HD/S R', 'Post L', 'Post R'], rows: wallRows, colWidths: [0.06, 0.08, 0.05, 0.1, 0.06, 0.06, 0.06, 0.1, 0.1, 0.08, 0.08] } });
+          if (wallRows.length) sections.push({ title: T('Wall Schedule') + (anyManual ? ' (* = manual override)' : ''), table: { headers: ['Mark', 'Level', 'Len', 'Nailing', 'v', 'Cap', 'D/C', 'HD/S L', 'HD/S R', 'Post L', 'Post R'], rows: wallRows, colWidths: [0.06, 0.08, 0.05, 0.1, 0.06, 0.06, 0.06, 0.1, 0.1, 0.08, 0.08] } });
           const tcRows = [];
           for (const pl of ln.perLevel) { for (const w of pl.walls) { tcRows.push([w.mark, pl.levelName, w.dlTotal.toFixed(2), w.governingTensionLeft.toFixed(2), w.governingTensionRight.toFixed(2), w.governingComprLeft.toFixed(2), w.governingComprRight.toFixed(2)]); } }
           if (tcRows.length) sections.push({ title: dir.dirName + ' / ' + ln.lineName + ' — T/C Results (ASD)', table: { headers: ['Mark', 'Level', 'DL (k)', 'T Left (k)', 'T Right (k)', 'C Left (k)', 'C Right (k)'], rows: tcRows } });
@@ -773,13 +699,6 @@ export const shearWallDesign = {
             }
             if ((w.ftao.jambs || []).length) sections.push({ title: t + ' — Jamb posts (C = f_D·DL + v_i·h_o)', table: { headers: FTAO_JAMB_HEADERS, rows: ftaoJambRows(w) } });
           } }
-          const lrRows = lrfdRows(ln);
-          if (lrRows.length) sections.push({ title: dir.dirName + ' / ' + ln.lineName + ' — LRFD Forces (reported only)', table: { headers: LRFD_HEADERS, rows: lrRows } });
-          const drRows = driftRows(ln);
-          if (drRows.length) sections.push({ title: dir.dirName + ' / ' + ln.lineName + ' — Story Drift', table: { headers: DRIFT_HEADERS, rows: drRows, colWidths: [0.16, 0.08, 0.09, 0.1, 0.14, 0.1, 0.13, 0.1] } });
-          if (ln.drift && ln.drift.missing) sections.push({ title: dir.dirName + ' / ' + ln.lineName + ' — Drift note', text: ln.drift.missing });
-          const wdRows = wallDeflectionRows(ln);
-          if (wdRows.length) sections.push({ title: dir.dirName + ' / ' + ln.lineName + ' — Wall Deflection (SDPWS Eq. 4.3-1)', table: { headers: WALL_DEFL_HEADERS, rows: wdRows, colWidths: [0.08, 0.26, 0.07, 0.07, 0.1, 0.1, 0.1, 0.1, 0.08] } });
           if (ln.wallDeliveries && ln.wallDeliveries.some(d => d.receiver.type !== 'foundation')) {
             sections.push({ title: dir.dirName + ' / ' + ln.lineName + ' — Wall End Connections', table: { headers: WALL_END_HEADERS, rows: wallEndRows(ln), colWidths: [0.1, 0.14, 0.08, 0.12, 0.12, 0.3] } });
           }
@@ -798,6 +717,13 @@ export const shearWallDesign = {
             sections.push({ title: dir.dirName + ' / ' + ln.lineName + ' — Load Path Audit', table: { headers: ['Element', 'Level', 'Issue'], rows: auditRows } });
           }
 
+          const drRows = driftRows(ln);
+          if (drRows.length) sections.push({ title: dir.dirName + ' / ' + ln.lineName + ' — Story Drift', table: { headers: DRIFT_HEADERS, rows: drRows, colWidths: [0.16, 0.08, 0.09, 0.1, 0.14, 0.1, 0.13, 0.1] } });
+          if (ln.drift && ln.drift.missing) sections.push({ title: dir.dirName + ' / ' + ln.lineName + ' — Drift note', text: ln.drift.missing });
+          const wdRows = wallDeflectionRows(ln);
+          if (wdRows.length) sections.push({ title: dir.dirName + ' / ' + ln.lineName + ' — Wall Deflection (SDPWS Eq. 4.3-1)', table: { headers: WALL_DEFL_HEADERS, rows: wdRows, colWidths: [0.08, 0.26, 0.07, 0.07, 0.1, 0.1, 0.1, 0.1, 0.08] } });
+          const lrRows = lrfdRows(ln);
+          if (lrRows.length) sections.push({ title: dir.dirName + ' / ' + ln.lineName + ' — LRFD Forces (reported only)', table: { headers: LRFD_HEADERS, rows: lrRows } });
           // Elevation diagram
           const inputLine = (inputs.directions || []).flatMap(d => d.lines || []).find(l => l.id === ln.lineId);
           if (inputLine) {
@@ -826,6 +752,198 @@ export const shearWallDesign = {
     return sections;
   },
 };
+
+// === Per-line results (shown in each line's tab; the bottom Results section only summarizes) ===
+
+function lineStats(ln) {
+  let walls = 0, failing = 0, warned = 0, maxDC = 0;
+  for (const pl of ln.perLevel) {
+    for (const w of pl.walls) {
+      walls++;
+      maxDC = Math.max(maxDC, w.dcRatio || 0);
+      if (wallFails(w) || !(w.anchorageLeft && w.anchorageRight && w.postLeft && w.postRight)) failing++;
+      else if (w.hOverBFlag) warned++;
+    }
+  }
+  const issues = (ln.loadPathAudit && ln.loadPathAudit.warnings.length) || 0;
+  const driftRowsE = ((ln.drift && ln.drift.rows) || []).filter(r => r.seismic && r.seismic.pass != null);
+  const drift = !driftRowsE.length ? null : driftRowsE.every(r => r.seismic.pass) ? 'OK' : 'NG';
+  return { walls, failing, warned, maxDC, issues, drift };
+}
+
+function lineStatusBadge(st) {
+  const bad = st.failing > 0 || st.issues > 0 || st.drift === 'NG';
+  const text = st.walls + ' wall' + (st.walls !== 1 ? 's' : '')
+    + (st.failing ? ' — ' + st.failing + ' failing' : '')
+    + (st.warned ? ' — ' + st.warned + ' h/b warning' : '')
+    + (st.issues ? ' — ' + st.issues + ' load path issue' + (st.issues !== 1 ? 's' : '') : '')
+    + (st.drift === 'NG' ? ' — drift NG' : '')
+    + (!bad && !st.warned ? ' — all passing' : '');
+  return el('span', { className: 'badge ' + (bad ? 'badge-fail' : st.warned ? 'badge-stale' : 'badge-pass') }, text);
+}
+
+const subHead = (text) => el('div', { style: { fontWeight: '500', fontSize: '0.85rem', marginTop: '0.5rem', marginBottom: '0.25rem' } }, text);
+const emptyNote = (text) => el('div', { style: { fontSize: '0.85rem', color: 'var(--ink-tertiary)', fontStyle: 'italic', padding: '0.5rem 0' } }, text);
+
+function wallScheduleTable(pl) {
+  const tbl = el('table', { className: 'data-table' });
+  tbl.appendChild(el('tr', null,
+    el('th', null, 'Mark'), el('th', null, 'Level'), el('th', null, 'Nailing'),
+    el('th', { className: 'num' }, 'v (plf)'), el('th', { className: 'num' }, 'Cap (plf)'), el('th', { className: 'num' }, 'D/C'),
+    el('th', { className: 'num' }, 'T (k)'), el('th', { className: 'num' }, 'C (k)'),
+    el('th', null, 'HD/Strap L'), el('th', null, 'HD/Strap R'),
+    el('th', null, 'Post L'), el('th', null, 'Post R'),
+    el('th', null, 'Status'),
+  ));
+  for (const w of pl.walls) {
+    const dcBadge = el('span', { className: 'badge ' + (w.dcRatio > 1.0 ? 'badge-fail' : 'badge-pass') }, w.dcRatio.toFixed(2));
+    const govT = Math.max(w.governingTensionLeft, w.governingTensionRight);
+    const govC = Math.max(w.governingComprLeft, w.governingComprRight);
+    const fmtHW = (hw, dc) => hw ? hw.id + (dc != null ? ' (' + dc.toFixed(2) + ')' : '') : el('span', { style: { color: 'var(--fail)' } }, 'OVER');
+    const fmtPost = (p, dc) => p ? p.postLabel + (dc != null ? ' (' + dc.toFixed(2) + ')' : '') : el('span', { style: { color: 'var(--fail)' } }, 'OVER');
+    const allPass = w.dcRatio <= 1.0 && w.anchorageLeft && w.anchorageRight && w.postLeft && w.postRight;
+    const small = { className: 'mono', style: { fontSize: '0.8rem' } };
+    tbl.appendChild(el('tr', null,
+      el('td', { className: 'mono' }, w.mark + (w.method === 'ftao' ? ' (FTAO)' : '')), el('td', null, pl.levelName),
+      el('td', small, w.nailing ? w.nailing.label : '?'),
+      el('td', { className: 'num mono' }, w.unitShear_ASD.toFixed(0)),
+      el('td', { className: 'num mono' }, w.effectiveCapacity != null ? w.effectiveCapacity.toFixed(0) : '—'),
+      el('td', { className: 'num' }, dcBadge),
+      el('td', { className: 'num mono' }, govT.toFixed(2)), el('td', { className: 'num mono' }, govC.toFixed(2)),
+      el('td', small, fmtHW(w.anchorageLeft, w.anchorageDCLeft)), el('td', small, fmtHW(w.anchorageRight, w.anchorageDCRight)),
+      el('td', small, fmtPost(w.postLeft, w.postDCLeft)), el('td', small, fmtPost(w.postRight, w.postDCRight)),
+      el('td', null, !allPass || wallFails(w) ? el('span', { className: 'badge badge-fail' }, 'NG')
+        : w.hOverBFlag ? el('span', { className: 'badge badge-stale' }, 'WARN') : el('span', { className: 'badge badge-pass' }, 'OK')),
+    ));
+  }
+  return el('div', { className: 'table-scroll', style: { marginBottom: '0.5rem' } }, tbl);
+}
+
+function lineTabWalls(ln, dirOut) {
+  const box = el('div');
+  let any = false;
+  for (const pl of ln.perLevel) {
+    if (!pl.walls.length) continue;
+    any = true;
+    box.appendChild(subHead(pl.levelName + ' — story shear ' + pl.storyShear_1E.toFixed(2) + ' k (1.0E)' + (pl.storyShear_1W ? ', ' + pl.storyShear_1W.toFixed(2) + ' k (1.0W)' : '')));
+    box.appendChild(wallScheduleTable(pl));
+    for (const w of pl.walls) {
+      if (w.method === 'ftao' && w.ftao) continue; // FTAO calc is in the FTAO tab
+      box.appendChild(renderWallCalcDetail(w, pl, dirOut, ln));
+    }
+  }
+  if (!any) box.appendChild(emptyNote('No walls in this line yet.'));
+  return box;
+}
+
+function lineTabFtao(ln) {
+  const box = el('div');
+  for (const pl of ln.perLevel) {
+    for (const w of pl.walls) {
+      if (w.method !== 'ftao' || !w.ftao) continue;
+      const d = renderFtaoDetail(w, pl);
+      d.open = true;
+      box.appendChild(d);
+    }
+  }
+  return box;
+}
+
+function lineTabLoadPath(ln) {
+  const box = el('div');
+  let any = false;
+  if (ln.wallDeliveries && ln.wallDeliveries.some(d => d.receiver.type !== 'foundation')) {
+    any = true;
+    box.appendChild(subHead('Wall end connections'));
+    box.appendChild(simpleTable(WALL_END_HEADERS, wallEndRows(ln), [3, 4]));
+  }
+  if (ln.beamTransfers && ln.beamTransfers.length) {
+    any = true;
+    box.appendChild(subHead('Transfer beams'));
+    box.appendChild(simpleTable(BEAM_HEADERS, beamSupportRows(ln), [2, 3, 5, 6]));
+  }
+  if (ln.postPaths && ln.postPaths.length) {
+    any = true;
+    box.appendChild(subHead('Posts'));
+    box.appendChild(simpleTable(POST_HEADERS, postRows(ln), [2, 3, 4]));
+  }
+  const audit = ln.loadPathAudit;
+  if (audit && audit.warnings.length) {
+    any = true;
+    box.appendChild(el('div', { style: { fontWeight: '500', fontSize: '0.85rem', marginTop: '0.5rem', marginBottom: '0.25rem' } },
+      el('span', { className: 'badge badge-fail', style: { marginRight: '0.5rem' } }, audit.warnings.length + ' load path issue' + (audit.warnings.length !== 1 ? 's' : ''))));
+    const atbl = el('table', { className: 'data-table', style: { fontSize: '0.85rem' } });
+    atbl.appendChild(el('tr', null, el('th', null, 'Element'), el('th', null, 'Level'), el('th', null, 'Issue')));
+    for (const w of audit.warnings) {
+      atbl.appendChild(el('tr', null, el('td', { className: 'mono' }, w.elementMark), el('td', null, w.levelName), el('td', { style: { color: 'var(--fail)' } }, w.message)));
+    }
+    box.appendChild(el('div', { className: 'table-scroll', style: { marginBottom: '0.75rem' } }, atbl));
+  } else if (audit && audit.allClear && any) {
+    box.appendChild(el('div', { style: { marginBottom: '0.5rem' } }, el('span', { className: 'badge badge-pass' }, 'All load paths verified')));
+  }
+  if (audit && audit.notes && audit.notes.length) {
+    any = true;
+    const nbox = el('div', { style: { fontSize: '0.8rem', color: 'var(--ink-secondary)', marginBottom: '0.75rem' } });
+    audit.notes.forEach(n => nbox.appendChild(el('div', null, 'ⓘ ' + n.message)));
+    box.appendChild(nbox);
+  }
+  if (!any) box.appendChild(emptyNote('Every wall end lands on the foundation or on an aligned wall end below its own holdown — no beams, posts or load path issues in this line.'));
+  return box;
+}
+
+function lineTabDrift(ln) {
+  const box = el('div');
+  const dr = driftRows(ln);
+  if (!dr.length) { box.appendChild(emptyNote('No deflection results (no walls carrying shear).')); return box; }
+  box.appendChild(subHead('Story drift'));
+  box.appendChild(simpleTable(DRIFT_HEADERS, dr, [1, 2, 4, 5, 6]));
+  if (ln.drift && ln.drift.missing) box.appendChild(el('div', { style: { fontSize: '0.8rem', color: 'var(--stale, #b7791f)', marginBottom: '0.5rem' } }, 'ⓘ ' + ln.drift.missing));
+  const wd = wallDeflectionRows(ln);
+  if (wd.length) {
+    box.appendChild(subHead('Wall deflections (SDPWS Eq. 4.3-1 terms)'));
+    box.appendChild(simpleTable(WALL_DEFL_HEADERS, wd, [2, 3, 4, 5, 6, 7, 8]));
+  }
+  const d = ln.distribution;
+  if (d && d.method === 'deflection' && d.spreadRows && d.spreadRows.length) {
+    box.appendChild(subHead('Deflection distribution — δ spread per level'));
+    box.appendChild(simpleTable(['Level', 'Case', 'δmax (in)', 'δmin (in)', 'Spread', 'Walls'],
+      d.spreadRows.map(r => [r.levelName, r.loadType === 'E' ? '1.0E' : '1.0W', r.deltaMax.toFixed(3), r.deltaMin.toFixed(3), (r.spread * 100).toFixed(1) + '%', r.maxMark + ' / ' + r.minMark]), [2, 3, 4]));
+  }
+  return box;
+}
+
+function lineTabLrfd(ln) {
+  const box = el('div');
+  const lr = lrfdRows(ln);
+  if (!lr.length) { box.appendChild(emptyNote('No LRFD forces.')); return box; }
+  box.appendChild(el('div', { style: { fontSize: '0.8rem', color: 'var(--ink-secondary)', marginBottom: '0.35rem' } },
+    'ASCE 7-22 §2.3.6 combinations, reported as forces only (e.g. for foundations); all design checks are ASD. HDUE LRFD cap = 1.4 × ASD.'));
+  box.appendChild(simpleTable(LRFD_HEADERS, lr, [2, 3, 4, 5]));
+  return box;
+}
+
+// Full results of one line with sub-tabs. state: { tab, onTab(tab) }
+export function renderLineResults(container, ln, dirOut, state) {
+  const st = lineStats(ln);
+  container.appendChild(el('div', { style: { display: 'flex', gap: '0.5rem', alignItems: 'center', flexWrap: 'wrap', marginBottom: '0.35rem' } },
+    lineStatusBadge(st),
+    el('span', { style: { fontSize: '0.8rem', color: 'var(--ink-secondary)' } }, distributionText(ln))));
+  if (ln.distribution && ln.distribution.note) container.appendChild(el('div', { style: { fontSize: '0.8rem', color: 'var(--stale, #b7791f)', marginBottom: '0.25rem' } }, 'ⓘ ' + ln.distribution.note));
+
+  const hasFtao = ln.perLevel.some(pl => pl.walls.some(w => w.method === 'ftao' && w.ftao));
+  const tabs = [['walls', 'Walls'], hasFtao && ['ftao', 'FTAO'], ['loadpath', 'Load path' + (st.issues ? ' (' + st.issues + ')' : '')],
+    ['drift', 'Drift' + (st.drift === 'NG' ? ' (NG)' : '')], ['lrfd', 'LRFD']].filter(Boolean);
+  const tab = tabs.some(t => t[0] === state.tab) ? state.tab : 'walls';
+  const bar = el('div', { style: { display: 'flex', gap: '2px', marginBottom: '0.5rem', borderBottom: '1px solid var(--border)', flexWrap: 'wrap' } });
+  for (const [key, label] of tabs) {
+    bar.appendChild(el('button', { className: 'btn btn-sm' + (key === tab ? ' btn-primary' : ' btn-ghost'), type: 'button',
+      style: { borderRadius: '4px 4px 0 0' }, onClick() { state.onTab(key); } }, label));
+  }
+  container.appendChild(bar);
+  const body = tab === 'ftao' ? lineTabFtao(ln) : tab === 'loadpath' ? lineTabLoadPath(ln)
+    : tab === 'drift' ? lineTabDrift(ln) : tab === 'lrfd' ? lineTabLrfd(ln) : lineTabWalls(ln, dirOut);
+  container.appendChild(body);
+}
 
 // "Distribution: …" label for a line's results
 function distributionText(ln) {

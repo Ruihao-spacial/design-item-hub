@@ -61,6 +61,8 @@ Branches: `shearwall-load-path` (pushed, merge to `master` by someone else), `re
 - Fixed: `migrateV4toV5` id regex (`'\d'` in a string), deferred elevation draw after destroy.
 - Tests: `test/ftao.test.js` (engine, 15), `tests/shearWallPhase4.test.mjs` (18).
 
+- **Results by wall line (2026-09-24):** each line tab (direction → line) shows that line's full results under the elevation, with sub-tabs Walls · FTAO · Load path · Drift · LRFD, recalculated from the current definition as it is edited. The bottom Results section is a one-row-per-line project summary. PDF: project summary table, then per line a summary block (new page) followed by schedule, T/C, FTAO, load path, drift, LRFD and elevation.
+
 ## Phase 4 roadmap
 | # | Item | Notes |
 |---|---|---|

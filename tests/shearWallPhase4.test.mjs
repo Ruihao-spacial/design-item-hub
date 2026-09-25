@@ -9,7 +9,7 @@ import { getNailingById } from '../src/modules/shearWallNailing.js';
 import { getGradeById } from '../src/modules/shearWallHardware.js';
 import { wallPiers, openingProblems } from '../src/modules/shearWallOpenings.js';
 import { checkShearWallItem } from '../scripts/lib/shearWallLoadCheck.mjs';
-import { shearWallDesign } from '../src/modules/shearWallDesign.js';
+import { shearWallDesign, renderLineResults } from '../src/modules/shearWallDesign.js';
 import { renderElevation, renderElevationForPdf } from '../src/modules/shearWallElevation.js';
 
 const near = (a, b, tol, msg) => assert.ok(Math.abs(a - b) <= tol, (msg || '') + ' expected ' + b + ' ± ' + tol + ', got ' + a);
@@ -231,7 +231,21 @@ test('Openings definition renders: form, results, PDF sections, elevations', () 
   const out = shearWallDesign.calc(inp);
   const c = document.createElement('div');
   shearWallDesign.renderOutputs(c, out);
-  for (const t of ['FTAO calc', 'LRFD Wall End Forces', 'Story Drift', 'SW-2a', 'SW-2b']) assert.ok(c.textContent.includes(t), 'results show ' + t);
+  assert.ok(c.textContent.includes('Full results for each wall line'), 'bottom section is a summary');
+  assert.ok(!c.textContent.includes('SW-2a'), 'no wall detail in the summary');
+  // Line results, one sub-tab at a time
+  const dirOut = out.perDirection[0], ln = dirOut.perLine[0];
+  const tabText = (tab) => { const b = document.createElement('div'); renderLineResults(b, ln, dirOut, { tab, onTab() {} }); return b.textContent; };
+  const expect = { walls: ['SW-2a', 'SW-2b', 'Calc detail'], ftao: ['FTAO calc', 'Jamb posts'], drift: ['Story drift', 'Wall deflections'], lrfd: ['forces only', 'HDUE LRFD cap'], loadpath: ['load path'] };
+  for (const [tab, words] of Object.entries(expect)) for (const w of words) assert.ok(tabText(tab).toLowerCase().includes(w.toLowerCase()), tab + ' tab shows ' + w);
+  assert.ok(!tabText('walls').includes('FTAO calc'), 'FTAO calc only in its tab');
+  // The line tab of the form shows the line results
+  const form = document.createElement('div');
+  shearWallDesign.renderForm(form, JSON.parse(JSON.stringify(inp)), () => {}, [], () => {});
+  [...form.querySelectorAll('button')].find(b => b.textContent === 'N-S').dispatchEvent(new window.Event('click'));
+  assert.ok(form.textContent.includes('Line Results — N-S / A'), 'line tab has its results');
+  [...form.querySelectorAll('button')].find(b => b.textContent.startsWith('Drift')).dispatchEvent(new window.Event('click'));
+  assert.ok(form.textContent.includes('Story drift'), 'sub-tab switches');
   const titles = shearWallDesign.pdfSections(inp).map(x => x.title).join(' | ');
   for (const t of ['FTAO SW-1', 'LRFD Forces', 'Story Drift', 'Wall Deflection']) assert.ok(titles.includes(t), 'PDF has ' + t);
 });
@@ -312,8 +326,11 @@ test('Distribution dropdowns render; results and PDF name the approach', () => {
   assert.ok(form.textContent.includes('Wall Distribution (default)'));
   const c = document.createElement('div');
   shearWallDesign.renderOutputs(c, shearWallDesign.calc(inp));
-  assert.ok(c.textContent.includes('distribution by deflection (wall δ within'));
-  assert.ok(shearWallDesign.pdfSections(inp).some(s => /distribution by deflection/.test(s.title)));
+  const b = document.createElement('div');
+  const o = shearWallDesign.calc(inp);
+  renderLineResults(b, o.perDirection[0].perLine[0], o.perDirection[0], { tab: 'walls', onTab() {} });
+  assert.ok(b.textContent.includes('distribution by deflection (wall δ within'));
+  assert.ok(shearWallDesign.pdfSections(inp).some(s => (s.rows || []).some(r => /distribution by deflection/.test(r[1]))), 'PDF line summary names the approach');
 });
 
 test('Base Shear link: changed Cd flagged, applyLinks copies Sds/Cd/Ie/RC', () => {
