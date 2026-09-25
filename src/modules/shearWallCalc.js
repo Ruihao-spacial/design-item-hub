@@ -558,12 +558,38 @@ export function lineDistribution(inputs, line) {
   return m === 'deflection' ? 'deflection' : 'capacity';
 }
 
-const DIST_TOL = 0.05;   // converged when no share changes by more than 5% of the story shear
+const DIST_TOL = 0.05;   // accepted when walls at every level deflect within 5%: (δmax − δmin) / δmax ≤ 0.05
 const DIST_MAX_PASSES = 20;
 
+// Deflection spread of a line result: per level and load type, (δmax − δmin) / δmax over the walls
+// carrying shear, with δ = V/k at the 1.0 level. Levels where a wall has no stiffness are skipped.
+function deflectionSpread(res, lts) {
+  const rows = [];
+  for (const pl of res.perLevel) {
+    for (const lt of lts) {
+      const ds = [];
+      let complete = true;
+      for (const w of pl.walls) {
+        const V = (lt === 'E' ? w.shareExact_1E : w.shareExact_1W) || 0;
+        if (w.hbNotPermitted || !(V > 0)) continue;
+        const k = w.stiffness && w.stiffness[lt];
+        if (!(k > 0)) { complete = false; continue; }
+        ds.push({ mark: w.mark, delta: V * 1000 / k });
+      }
+      if (!complete || ds.length < 2) continue;
+      const max = ds.reduce((a, d) => (d.delta > a.delta ? d : a));
+      const min = ds.reduce((a, d) => (d.delta < a.delta ? d : a));
+      rows.push({ levelName: pl.levelName, loadType: lt, spread: r4((max.delta - min.delta) / max.delta),
+        deltaMax: r4(max.delta), deltaMin: r4(min.delta), maxMark: max.mark, minMark: min.mark });
+    }
+  }
+  return { spread: rows.reduce((a, r) => Math.max(a, r.spread), 0), rows };
+}
+
 // Deflection approach: walls at a level in a line deflect equally, so shares ∝ stiffness k = V/δ
-// (SDPWS 2021 Eq. 4.3-1 at 1.0E / 1.0W). δ depends on the share (holdown slip, hardware, nailing),
-// so start from capacity shares and redistribute until the shares settle.
+// (SDPWS 2021 Eq. 4.3-1 at 1.0E / 1.0W). δ depends on the share (holdown slip, hardware, posts, nailing),
+// so start from capacity shares and redistribute until the walls' δ at every level are within 5%.
+// If that is not reached in 20 passes, the pass with the smallest spread is used and flagged.
 function solveDistribution(line, inputs, levels, runLine) {
   let res = runLine(line, null);
   if (lineDistribution(inputs, line) !== 'deflection') {
@@ -572,11 +598,12 @@ function solveDistribution(line, inputs, levels, runLine) {
   }
   const storyShears = accumulateStoryShear(line.levelLoads || {}, levels);
   const lts = inputs.loadType === 'wind' ? ['W'] : inputs.loadType === 'both' ? ['E', 'W'] : ['E'];
-  let passes = 0, change = Infinity;
   const kept = new Set();
-  while (passes < DIST_MAX_PASSES) {
+  let sp = deflectionSpread(res, lts);
+  let passes = 0;
+  let best = { res, sp, passes };
+  while (sp.spread > DIST_TOL && passes < DIST_MAX_PASSES) {
     const next = { E: {}, W: {} };
-    change = 0;
     for (const pl of res.perLevel) {
       const ss = storyShears[pl.levelId] || { seismic: 0, wind: 0 };
       for (const lt of lts) {
@@ -586,22 +613,22 @@ function solveDistribution(line, inputs, levels, runLine) {
         const sum = ks.reduce((a, k) => a + (k || 0), 0);
         const usable = V > 0 && sum > 0 && ks.every(k => k != null && k >= 0);
         if (V > 0 && !usable) kept.add(pl.levelName || pl.levelId);
-        pl.walls.forEach((w, i) => {
-          const share = usable ? V * ks[i] / sum : cur(w);
-          next[lt][w.wallId] = share;
-          if (V > 0) change = Math.max(change, Math.abs(share - cur(w)) / V);
-        });
+        pl.walls.forEach((w, i) => { next[lt][w.wallId] = usable ? V * ks[i] / sum : cur(w); });
       }
     }
     passes++;
     res = runLine(line, next);
-    if (change < DIST_TOL) break;
+    sp = deflectionSpread(res, lts);
+    if (sp.spread < best.sp.spread) best = { res, sp, passes };
   }
-  res.distribution = {
-    method: 'deflection', passes, converged: change < DIST_TOL, maxChange: r4(change),
+  const converged = sp.spread <= DIST_TOL;
+  const out = converged ? { res, sp, passes } : best;
+  out.res.distribution = {
+    method: 'deflection', passes, usedPass: out.passes, converged,
+    spread: out.sp.spread, spreadRows: out.sp.rows, tolerance: DIST_TOL,
     note: kept.size ? 'Capacity shares kept at ' + [...kept].join(', ') + ': a wall has no stiffness (no post / hardware selected or no load)' : null,
   };
-  return res;
+  return out.res;
 }
 
 // Story drift per level of a line: δxe = largest wall deflection at that level (1.0E, ρ = 1);

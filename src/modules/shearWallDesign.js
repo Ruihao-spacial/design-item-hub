@@ -831,7 +831,10 @@ export const shearWallDesign = {
 function distributionText(ln) {
   const d = ln.distribution;
   if (!d || d.method !== 'deflection') return 'distribution by wall capacity';
-  return 'distribution by deflection (equal δ, ' + d.passes + ' pass' + (d.passes !== 1 ? 'es' : '') + (d.converged ? '' : ', NOT converged — max change ' + (d.maxChange * 100).toFixed(1) + '%') + ')';
+  const pct = (v) => (v * 100).toFixed(1) + '%';
+  return d.converged
+    ? 'distribution by deflection (wall δ within ' + pct(d.spread) + ' at every level, limit ' + pct(d.tolerance) + ', ' + d.passes + ' pass' + (d.passes !== 1 ? 'es' : '') + ')'
+    : 'distribution by deflection — NOT within ' + pct(d.tolerance) + ' after ' + d.passes + ' passes; pass ' + d.usedPass + ' used (δ spread ' + pct(d.spread) + ')';
 }
 
 // A wall fails when sheathing D/C > 1, h/b > 3.5, or (FTAO) the strap or sill plate bearing fails
@@ -1048,7 +1051,7 @@ function simpleTable(headers, rows, numCols) {
 function renderMethodFootnotes() {
   const notes = el('div', { style: { fontSize: '0.8rem', color: 'var(--ink-secondary)', marginBottom: '1rem', lineHeight: '1.6' } });
   notes.appendChild(el('div', null,
-    el('strong', null, 'Distribution: '), 'Wall capacity approach (SDPWS 4.3.3.4.1): load proportional to wall ASD capacity × length (FTAO walls: engine V_cap,ASD). Deflection approach: walls at a level deflect equally — shares ∝ k = V/δ (SDPWS Eq. 4.3-1 at 1.0E / 1.0W), iterated until no share changes by more than 5% of the story shear (max 20 passes). ' + FOOTNOTE_10_NOTE));
+    el('strong', null, 'Distribution: '), 'Wall capacity approach (SDPWS 4.3.3.4.1): load proportional to wall ASD capacity × length (FTAO walls: engine V_cap,ASD). Deflection approach: walls at a level deflect equally — shares ∝ k = V/δ (SDPWS Eq. 4.3-1 at 1.0E / 1.0W), iterated until the walls’ δ at every level are within 5% ((δmax − δmin)/δmax, max 20 passes; otherwise the closest pass is used and flagged). ' + FOOTNOTE_10_NOTE));
   notes.appendChild(el('div', null,
     el('strong', null, 'Aspect ratio: '), 'SDPWS 2021 — h/b > 2: capacity × (1.25 − 0.125h/b); h/b > 3.5 is not a shear wall (carries no shear).'));
   notes.appendChild(el('div', null,

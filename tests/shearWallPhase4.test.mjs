@@ -265,7 +265,7 @@ test('Elevation: segmented piers drawn with their marks, FTAO strap label, pier 
   h.destroy();
 });
 
-test('Deflection approach: shares move toward equal δ; converges within the 5% threshold', () => {
+test('Deflection approach: wall δ at a level within 5% ((δmax − δmin)/δmax); converges', () => {
   const walls = [wall('w-1', 0, 8, { nailingPattern: '4' }), wall('w-2', 20, 4, { nailingPattern: '4' })];
   const cap = calcAll(oneStory(JSON.parse(JSON.stringify(walls)), { seismic: 6 }));
   const inp = oneStory(walls, { seismic: 6, extra: { distribution: 'deflection' } });
@@ -275,9 +275,9 @@ test('Deflection approach: shares move toward equal δ; converges within the 5% 
   assert.equal(dist.method, 'deflection'); assert.equal(dist.converged, true); assert.ok(dist.passes >= 2);
   near(a.share_1E + b.share_1E, 6, 0.011);
   assert.ok(b.share_1E < cb.share_1E, 'short (softer) wall takes less than its capacity share');
-  // 5% share-change threshold: δ moves toward equal but need not match exactly
-  const gap = (x, y) => Math.abs(x.deflection.E.delta / y.deflection.E.delta - 1);
-  assert.ok(gap(a, b) < gap(ca, cb), 'deflections closer than under the capacity approach');
+  const hi = Math.max(a.deflection.E.delta, b.deflection.E.delta), lo = Math.min(a.deflection.E.delta, b.deflection.E.delta);
+  assert.ok((hi - lo) / hi <= 0.05, 'wall δ within 5%: ' + a.deflection.E.delta + ' / ' + b.deflection.E.delta);
+  near(dist.spread, (hi - lo) / hi, 0.0002, 'reported spread');
   assert.equal(lineOf(cap).distribution.method, 'capacity');
   near(ca.share_1E / cb.share_1E, (470 * 8) / (470 * 0.9375 * 4), 0.02);
 });
@@ -312,7 +312,7 @@ test('Distribution dropdowns render; results and PDF name the approach', () => {
   assert.ok(form.textContent.includes('Wall Distribution (default)'));
   const c = document.createElement('div');
   shearWallDesign.renderOutputs(c, shearWallDesign.calc(inp));
-  assert.ok(c.textContent.includes('distribution by deflection (equal δ'));
+  assert.ok(c.textContent.includes('distribution by deflection (wall δ within'));
   assert.ok(shearWallDesign.pdfSections(inp).some(s => /distribution by deflection/.test(s.title)));
 });
 
