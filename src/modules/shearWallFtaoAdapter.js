@@ -141,11 +141,11 @@ export function ftaoDesign(wall, ctx, nailing, shares, hw) {
   for (const [lt, { V1 }] of Object.entries(perType)) {
     const el = createFTAO(engineInput(wall, ctx, lt, { nailing, endPosts: hw.endPosts, anchorage: hw.anchorage, strap, jambAreas }));
     const d = el.design(V1);
-    let defl = null;
-    if (lt === 'E' || num(ctx.alphaS) > 0) {
-      const df = el.deflection(V1);
-      defl = { Delta_in: df.Delta_in, V_defl: df.loads.V_defl, cases: df.cases, warnings: df.warnings };
-    }
+    // Deflection is always run: its stiffness V_defl/Δ drives the deflection approach; wind Δ is only
+    // reported when the service factor α_s is set
+    const df = el.deflection(V1);
+    const defl = lt === 'E' || num(ctx.alphaS) > 0
+      ? { Delta_in: df.Delta_in, V_defl: df.loads.V_defl, cases: df.cases, warnings: df.warnings } : null;
     result.perType[lt] = {
       V_1p0: V1, V_ASD: d.loads.V_ASD, kASD: d.loads.kASD,
       geometry: d.geometry,
@@ -154,6 +154,7 @@ export function ftaoDesign(wall, ctx, nailing, shares, hw) {
       sheathing: d.checks.sheathing, governing: d.checks.governing,
       plateBearing: d.checks.plateBearing, overall: d.checks.overall,
       deflection: defl,
+      stiffness: df.Delta_in > 0 ? df.loads.V_defl / df.Delta_in : null,
     };
     for (const w of d.warnings) if (!result.warnings.includes(w)) result.warnings.push(w);
   }

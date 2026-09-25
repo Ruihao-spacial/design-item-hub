@@ -98,7 +98,7 @@ export function newDirection(name) {
 export function newLine(name) {
   return {
     id: newLineId(), name: name || '', totalLength: 60,
-    wallThickness: '',
+    wallThickness: '', distribution: '', // '' = project default distribution
     levelLoads: {}, walls: [], beams: [], supportPosts: [], gravityLoads: {},
   };
 }
@@ -173,7 +173,7 @@ export function defaultInputs() {
 
 // Deflection / drift settings (schema v6). cd, ie, riskCategory are copied from a linked Base Shear item.
 export function deflectionDefaults() {
-  return { sheathing: 'ply', cd: '', ie: '', riskCategory: '', driftRow: 'other', alphaS: '' };
+  return { sheathing: 'ply', cd: '', ie: '', riskCategory: '', driftRow: 'other', alphaS: '', distribution: 'capacity' };
 }
 
 export function svgEl(tag, attrs, ...children) {

@@ -7,7 +7,7 @@ import { ftaoCapacityLbf, ftaoDesign, ftaoLoadTypes } from './shearWallFtaoAdapt
 import { wallDeflection, postArea, driftLimit } from './shearWallDeflection.js';
 
 // Records which calc produced a stored results snapshot (results are always regenerated for display)
-export const CALC_VERSION = 'v6';
+export const CALC_VERSION = 'v7';
 
 export function accumulateStoryShear(levelLoads, levels) {
   const result = {};
@@ -208,7 +208,9 @@ export function calcAll(inputs) {
   const perDirection = (inputs.directions || []).map(dir => {
     const rho = dir.rho;
     const rhoN = parseFloat(rho) || 1;
-    const perLine = (dir.lines || []).map(line => {
+    // One pass over a line. forced: { E: { wallId: kips }, W: {…} } replaces capacity-based shares
+    // (deflection approach); null = capacity-based distribution.
+    const runLine = (line, forced) => {
       const lineThickness = line.wallThickness || globalThickness;
       const storyShears = accumulateStoryShear(line.levelLoads || {}, levels);
       const ftaoCtx = (w) => ({ floorH: floorHOf(w.levelId), rho: rhoN, sds, grade, sheathing, cd: inputs.cd, ie: inputs.ie, alphaS, lineThickness, loadType });
@@ -262,6 +264,10 @@ export function calcAll(inputs) {
         return (lt === 'E' ? n.asdE : n.asdW) * wallARs[w.id].reductionFactor;
       };
 
+      const sharesAt = (walls, V, capMap, lt) => forced
+        ? walls.map(w => ({ wallId: w.id, share: (forced[lt] && forced[lt][w.id]) || 0 }))
+        : distributeByCapacity(walls, V, capMap);
+
       // Phase 1: Iterate nailing selection until stable
       const wallNailing = {};
       allWalls.forEach(w => {
@@ -282,8 +288,8 @@ export function calcAll(inputs) {
             windCapMap[w.id] = capOf(w, wallNailing[w.id], 'W');
           });
 
-          const eMap = {}; distributeByCapacity(wallsAtLevel, ss.seismic, seismicCapMap).forEach(s => { eMap[s.wallId] = s.share; });
-          const wMap = {}; distributeByCapacity(wallsAtLevel, ss.wind, windCapMap).forEach(s => { wMap[s.wallId] = s.share; });
+          const eMap = {}; sharesAt(wallsAtLevel, ss.seismic, seismicCapMap, 'E').forEach(s => { eMap[s.wallId] = s.share; });
+          const wMap = {}; sharesAt(wallsAtLevel, ss.wind, windCapMap, 'W').forEach(s => { wMap[s.wallId] = s.share; });
 
           for (const w of wallsAtLevel) {
             if (w.nailingPattern || wallARs[w.id].notPermitted) continue;
@@ -327,8 +333,8 @@ export function calcAll(inputs) {
           windCapMap[w.id] = capOf(w, wallNailing[w.id], 'W');
         });
 
-        const eShares = distributeByCapacity(wallsAtLevel, ss.seismic, seismicCapMap);
-        const wShares = distributeByCapacity(wallsAtLevel, ss.wind, windCapMap);
+        const eShares = sharesAt(wallsAtLevel, ss.seismic, seismicCapMap, 'E');
+        const wShares = sharesAt(wallsAtLevel, ss.wind, windCapMap, 'W');
         const shareMap = {};
         eShares.forEach(s => { shareMap[s.wallId] = { seismic: s.share, wind: 0 }; });
         wShares.forEach(s => {
@@ -348,7 +354,10 @@ export function calcAll(inputs) {
           const n = wallNailing[w.id];
           const effCapE = seismicCapMap[w.id] || 0;
           const effCapW = windCapMap[w.id] || 0;
-          const relStiffness = totalCapLenE > 0 ? r2(effCapE * wLen / totalCapLenE) : 0;
+          // Share fraction of the story shear: capacity × length (capacity approach) or k/Σk (deflection approach)
+          const relStiffness = forced
+            ? (ss.seismic > 0 ? r2(sh.seismic / ss.seismic) : ss.wind > 0 ? r2(sh.wind / ss.wind) : 0)
+            : totalCapLenE > 0 ? r2(effCapE * wLen / totalCapLenE) : 0;
 
           let seismicPlf = 0, windPlf = 0;
           let seismicDC, windDC, sheathCapE = effCapE, sheathCapW = effCapW;
@@ -427,6 +436,7 @@ export function calcAll(inputs) {
             hOverB: arInfo.hOverB, hOverBFlag: arInfo.flag, hbReductionFactor: arInfo.reductionFactor,
             hbNotPermitted: !!arInfo.notPermitted,
             share_1E: r2(sh.seismic), share_1W: r2(sh.wind),
+            shareExact_1E: sh.seismic, shareExact_1W: sh.wind,
             relStiffness, totalCapLen: r2(totalCapLenE),
             unitShear_seismic: r2(seismicPlf), unitShear_wind: r2(windPlf),
             unitShear_ASD: r2(unitShearASD),
@@ -507,6 +517,18 @@ export function calcAll(inputs) {
           if (wind && alphaS > 0) wr.deflection.W = wallDeflection(wr, 'W', alphaS, deflCtx);
         }
         wr.onBeam = loadPath.wallDeliveries.some(d => d.wallId === wr.wallId && d.receiver.type === 'beam');
+        // Stiffness k = V/δ (lb/in) at the 1.0 level — used by the deflection approach
+        wr.stiffness = {};
+        for (const lt of ftaoLoadTypes(loadType)) {
+          if (wr.method === 'ftao') {
+            const r = wr.ftao && wr.ftao.perType[lt];
+            if (r && r.stiffness > 0) wr.stiffness[lt] = r.stiffness;
+          } else {
+            const share = lt === 'E' ? wr.shareExact_1E : wr.shareExact_1W;
+            const d = lt === 'E' ? wr.deflection.E : wallDeflection(wr, 'W', 1.0, deflCtx);
+            if (d && d.delta > 0 && share > 0) wr.stiffness[lt] = share * 1000 / d.delta;
+          }
+        }
       }
       const drift = storyDrift(perLevel, inputs, { seismic, wind, alphaS });
 
@@ -517,12 +539,69 @@ export function calcAll(inputs) {
         loadPathAudit: loadPath.loadPathAudit,
         drift,
       };
-    });
+    };
+    const perLine = (dir.lines || []).map(line => solveDistribution(line, inputs, levels, runLine));
 
     return { dirId: dir.id, dirName: dir.name || '', rho: parseFloat(dir.rho) || 1, perLine };
   });
 
   return { calcVersion: CALC_VERSION, perDirection };
+}
+
+export const DISTRIBUTION_METHODS = [
+  { id: 'capacity', label: 'Wall capacity (SDPWS 4.3.3.4.1)' },
+  { id: 'deflection', label: 'Deflection — equal δ (relative stiffness)' },
+];
+// Line setting ('' = project default) over the project default; capacity when unset
+export function lineDistribution(inputs, line) {
+  const m = (line && line.distribution) || inputs.distribution;
+  return m === 'deflection' ? 'deflection' : 'capacity';
+}
+
+const DIST_TOL = 0.01;   // converged when no share changes by more than 1% of the story shear
+const DIST_MAX_PASSES = 20;
+
+// Deflection approach: walls at a level in a line deflect equally, so shares ∝ stiffness k = V/δ
+// (SDPWS 2021 Eq. 4.3-1 at 1.0E / 1.0W). δ depends on the share (holdown slip, hardware, nailing),
+// so start from capacity shares and redistribute until the shares settle.
+function solveDistribution(line, inputs, levels, runLine) {
+  let res = runLine(line, null);
+  if (lineDistribution(inputs, line) !== 'deflection') {
+    res.distribution = { method: 'capacity' };
+    return res;
+  }
+  const storyShears = accumulateStoryShear(line.levelLoads || {}, levels);
+  const lts = inputs.loadType === 'wind' ? ['W'] : inputs.loadType === 'both' ? ['E', 'W'] : ['E'];
+  let passes = 0, change = Infinity;
+  const kept = new Set();
+  while (passes < DIST_MAX_PASSES) {
+    const next = { E: {}, W: {} };
+    change = 0;
+    for (const pl of res.perLevel) {
+      const ss = storyShears[pl.levelId] || { seismic: 0, wind: 0 };
+      for (const lt of lts) {
+        const V = lt === 'E' ? ss.seismic : ss.wind;
+        const cur = (w) => (lt === 'E' ? w.shareExact_1E : w.shareExact_1W) || 0;
+        const ks = pl.walls.map(w => (w.hbNotPermitted ? 0 : w.stiffness && w.stiffness[lt]));
+        const sum = ks.reduce((a, k) => a + (k || 0), 0);
+        const usable = V > 0 && sum > 0 && ks.every(k => k != null && k >= 0);
+        if (V > 0 && !usable) kept.add(pl.levelName || pl.levelId);
+        pl.walls.forEach((w, i) => {
+          const share = usable ? V * ks[i] / sum : cur(w);
+          next[lt][w.wallId] = share;
+          if (V > 0) change = Math.max(change, Math.abs(share - cur(w)) / V);
+        });
+      }
+    }
+    passes++;
+    res = runLine(line, next);
+    if (change < DIST_TOL) break;
+  }
+  res.distribution = {
+    method: 'deflection', passes, converged: change < DIST_TOL, maxChange: r4(change),
+    note: kept.size ? 'Capacity shares kept at ' + [...kept].join(', ') + ': a wall has no stiffness (no post / hardware selected or no load)' : null,
+  };
+  return res;
 }
 
 // Story drift per level of a line: δxe = largest wall deflection at that level (1.0E, ρ = 1);

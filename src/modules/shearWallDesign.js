@@ -4,7 +4,7 @@ import {
   newLevel, newWallDLType, newLine, newWallId, nextWallMark,
   wallOpeningDefaults, deflectionDefaults, newOpeningId,
 } from './shearWallTypes.js';
-import { calcAll, CALC_VERSION } from './shearWallCalc.js';
+import { calcAll, CALC_VERSION, DISTRIBUTION_METHODS, lineDistribution } from './shearWallCalc.js';
 import { renderElevation, renderElevationForPdf, pdfElevationAspect } from './shearWallElevation.js';
 import { NAILING_TABLE, SHEATHING_TYPES, FOOTNOTE_10_NOTE, sheathingLabel } from './shearWallNailing.js';
 import { NDS_GRADES, HDUE_TABLE, MSTC_TABLE, POST_SIZES, computePostCapacity, FTAO_STRAP_TABLE, strapNailing, lrfdCap, getGradeById } from './shearWallHardware.js';
@@ -155,6 +155,15 @@ export const shearWallDesign = {
       });
       row1.appendChild(el('div', { className: 'form-group', style: { marginBottom: 0 } },
         el('label', { className: 'form-label' }, 'Wood Grade'), gradeSelect));
+      const distSelect = el('select', { className: 'form-select', style: { width: '270px' },
+        onChange(e) { inputs.distribution = e.target.value; notifyChange(); } });
+      DISTRIBUTION_METHODS.forEach(m => {
+        const opt = el('option', { value: m.id }, m.label);
+        if ((inputs.distribution || 'capacity') === m.id) opt.selected = true;
+        distSelect.appendChild(opt);
+      });
+      row1.appendChild(el('div', { className: 'form-group', style: { marginBottom: 0 } },
+        el('label', { className: 'form-label' }, 'Wall Distribution (default)'), distSelect));
       sec.appendChild(row1);
       sec.appendChild(renderDeflectionSettings());
 
@@ -470,6 +479,19 @@ export const shearWallDesign = {
       });
       hdr.appendChild(el('label', { className: 'form-label', style: { marginBottom: 0 } }, 'Wall:'));
       hdr.appendChild(ltSel);
+      const distSel = el('select', { className: 'form-select', style: { width: '170px', fontSize: '0.8rem' },
+        onChange(e) {
+          line.distribution = e.target.value; notifyChange();
+          if (elevationHandle && elevationHandle.hasResults) previewTC(line, dir);
+        } });
+      const projDefault = DISTRIBUTION_METHODS.find(m => m.id === lineDistribution(inputs, {})) || DISTRIBUTION_METHODS[0];
+      [['', 'Default (' + (projDefault.id === 'deflection' ? 'Deflection' : 'Capacity') + ')'], ['capacity', 'Wall capacity'], ['deflection', 'Deflection (equal δ)']].forEach(([v, label]) => {
+        const opt = el('option', { value: v }, label);
+        if ((line.distribution || '') === v) opt.selected = true;
+        distSel.appendChild(opt);
+      });
+      hdr.appendChild(el('label', { className: 'form-label', style: { marginBottom: 0 } }, 'Distribution:'));
+      hdr.appendChild(distSel);
       const previewBtn = el('button', { className: 'btn btn-sm', type: 'button',
         onClick() {
           if (elevationHandle && elevationHandle.hasResults) {
@@ -571,7 +593,9 @@ export const shearWallDesign = {
     for (const dir of outputs.perDirection) {
       container.appendChild(el('div', { className: 'section-header' }, dir.dirName + ' (ρ = ' + dir.rho + ')'));
       for (const ln of dir.perLine) {
-        container.appendChild(el('div', { style: { fontWeight: '500', marginBottom: '0.25rem' } }, ln.lineName));
+        container.appendChild(el('div', { style: { fontWeight: '500', marginBottom: '0.25rem' } }, ln.lineName,
+          el('span', { style: { fontWeight: 'normal', fontSize: '0.8rem', color: 'var(--ink-secondary)', marginLeft: '0.5rem' } }, distributionText(ln))));
+        if (ln.distribution && ln.distribution.note) container.appendChild(el('div', { style: { fontSize: '0.8rem', color: 'var(--stale, #b7791f)', marginBottom: '0.25rem' } }, 'ⓘ ' + ln.distribution.note));
         for (const pl of ln.perLevel) {
           if (!pl.walls.length) continue;
           const tbl = el('table', { className: 'data-table' });
@@ -615,7 +639,7 @@ export const shearWallDesign = {
           container.appendChild(el('div', { className: 'table-scroll', style: { marginBottom: '0.5rem' } }, tbl));
 
           for (const w of pl.walls) {
-            container.appendChild(w.method === 'ftao' && w.ftao ? renderFtaoDetail(w, pl) : renderWallCalcDetail(w, pl, dir));
+            container.appendChild(w.method === 'ftao' && w.ftao ? renderFtaoDetail(w, pl) : renderWallCalcDetail(w, pl, dir, ln));
           }
         }
 
@@ -700,6 +724,7 @@ export const shearWallDesign = {
       ['Cd / Ie / Risk Category', (inputs.cd || '—') + ' / ' + (inputs.ie || '—') + ' / ' + (inputs.riskCategory || '—') + ((inputs.refs || {}).baseShearSource ? ' (linked to Seismic Base Shear)' : '')],
       ['Drift limit', ((DRIFT_ROWS.find(r => r.id === inputs.driftRow) || DRIFT_ROWS[0]).label) + (driftLimit(inputs.driftRow, inputs.riskCategory) != null ? ' — ' + driftLimit(inputs.driftRow, inputs.riskCategory) + '·h_sx' : '')],
       ['Nailing capacities', FOOTNOTE_10_NOTE],
+      ['Wall distribution (default)', (DISTRIBUTION_METHODS.find(m => m.id === lineDistribution(inputs, {})) || {}).label],
     ];
     if (inputs.loadType !== 'seismic') configRows.push(['Service wind α_s', inputs.alphaS || '— (wind deflection not computed)']);
     (inputs.wallDLTypes || []).forEach(t => { configRows.push(['Wall DL: ' + (t.name || '?'), (t.psf || 0) + ' psf']); });
@@ -734,7 +759,7 @@ export const shearWallDesign = {
             wallRows.push([w.mark + (w.method === 'ftao' ? ' (FTAO)' : ''), pl.levelName, w.length.toFixed(1), star(nail, !!wIn.nailingPattern), w.unitShear_ASD.toFixed(0), cap, w.dcRatio.toFixed(2),
               star(ancL, !!wIn.anchorageLeftOverride), star(ancR, !!wIn.anchorageRightOverride), star(postL, !!wIn.postLeftOverride), star(postR, !!wIn.postRightOverride)]);
           } }
-          if (wallRows.length) sections.push({ title: dir.dirName + ' / ' + ln.lineName + ' — Wall Schedule' + (anyManual ? ' (* = manual override)' : ''), pageBreakBefore: true, table: { headers: ['Mark', 'Level', 'Len', 'Nailing', 'v', 'Cap', 'D/C', 'HD/S L', 'HD/S R', 'Post L', 'Post R'], rows: wallRows, colWidths: [0.06, 0.08, 0.05, 0.1, 0.06, 0.06, 0.06, 0.1, 0.1, 0.08, 0.08] } });
+          if (wallRows.length) sections.push({ title: dir.dirName + ' / ' + ln.lineName + ' — Wall Schedule, ' + distributionText(ln) + (anyManual ? ' (* = manual override)' : ''), pageBreakBefore: true, table: { headers: ['Mark', 'Level', 'Len', 'Nailing', 'v', 'Cap', 'D/C', 'HD/S L', 'HD/S R', 'Post L', 'Post R'], rows: wallRows, colWidths: [0.06, 0.08, 0.05, 0.1, 0.06, 0.06, 0.06, 0.1, 0.1, 0.08, 0.08] } });
           const tcRows = [];
           for (const pl of ln.perLevel) { for (const w of pl.walls) { tcRows.push([w.mark, pl.levelName, w.dlTotal.toFixed(2), w.governingTensionLeft.toFixed(2), w.governingTensionRight.toFixed(2), w.governingComprLeft.toFixed(2), w.governingComprRight.toFixed(2)]); } }
           if (tcRows.length) sections.push({ title: dir.dirName + ' / ' + ln.lineName + ' — T/C Results (ASD)', table: { headers: ['Mark', 'Level', 'DL (k)', 'T Left (k)', 'T Right (k)', 'C Left (k)', 'C Right (k)'], rows: tcRows } });
@@ -801,6 +826,13 @@ export const shearWallDesign = {
     return sections;
   },
 };
+
+// "Distribution: …" label for a line's results
+function distributionText(ln) {
+  const d = ln.distribution;
+  if (!d || d.method !== 'deflection') return 'distribution by wall capacity';
+  return 'distribution by deflection (equal δ, ' + d.passes + ' pass' + (d.passes !== 1 ? 'es' : '') + (d.converged ? '' : ', NOT converged — max change ' + (d.maxChange * 100).toFixed(1) + '%') + ')';
+}
 
 // A wall fails when sheathing D/C > 1, h/b > 3.5, or (FTAO) the strap or sill plate bearing fails
 function wallFails(w) {
@@ -1016,7 +1048,7 @@ function simpleTable(headers, rows, numCols) {
 function renderMethodFootnotes() {
   const notes = el('div', { style: { fontSize: '0.8rem', color: 'var(--ink-secondary)', marginBottom: '1rem', lineHeight: '1.6' } });
   notes.appendChild(el('div', null,
-    el('strong', null, 'Distribution: '), 'SDPWS 4.3.3.4.1 Simplified Method — load proportional to wall ASD capacity × length (FTAO walls: engine V_cap,ASD). ' + FOOTNOTE_10_NOTE));
+    el('strong', null, 'Distribution: '), 'Wall capacity approach (SDPWS 4.3.3.4.1): load proportional to wall ASD capacity × length (FTAO walls: engine V_cap,ASD). Deflection approach: walls at a level deflect equally — shares ∝ k = V/δ (SDPWS Eq. 4.3-1 at 1.0E / 1.0W), iterated until shares change < 1%. ' + FOOTNOTE_10_NOTE));
   notes.appendChild(el('div', null,
     el('strong', null, 'Aspect ratio: '), 'SDPWS 2021 — h/b > 2: capacity × (1.25 − 0.125h/b); h/b > 3.5 is not a shear wall (carries no shear).'));
   notes.appendChild(el('div', null,
@@ -1035,7 +1067,7 @@ function renderMethodFootnotes() {
   return notes;
 }
 
-function renderWallCalcDetail(w, pl, dir) {
+function renderWallCalcDetail(w, pl, dir, ln) {
   const summary = el('summary', { style: { cursor: 'pointer', fontSize: '0.82rem', fontWeight: '500', color: 'var(--ink-secondary)' } },
     'Calc detail — ' + w.mark + ' (' + pl.levelName + ', L=' + w.length.toFixed(1) + ' ft, h=' + (w.floorH || 0).toFixed(1) + ' ft)');
   const body = el('div', { style: { fontFamily: 'var(--font-mono, monospace)', fontSize: '0.78rem', lineHeight: '1.7', padding: '0.5rem 0', whiteSpace: 'pre-wrap', color: 'var(--ink-secondary)' } });
@@ -1044,7 +1076,11 @@ function renderWallCalcDetail(w, pl, dir) {
 
   line('Story shear V_x:', pl.storyShear_1E.toFixed(2) + ' kips (1.0E, accumulated)');
   line('Nailing:', (w.nailing ? w.nailing.label : '?') + '  (E=' + (w.seismicCap || 0) + ', W=' + (w.windCap || 0) + ' plf)');
-  line('Rel. stiffness:', w.relStiffness.toFixed(2) + '  (' + w.effectiveCapacity + '×' + w.length.toFixed(1) + ' / ' + w.totalCapLen.toFixed(0) + ')');
+  if (ln && ln.distribution && ln.distribution.method === 'deflection') {
+    line('Share (deflection):', w.relStiffness.toFixed(2) + '  (k = V/δ = ' + (w.stiffness && w.stiffness.E ? Math.round(w.stiffness.E) : '—') + ' lb/in; walls at this level deflect equally)');
+  } else {
+    line('Rel. stiffness:', w.relStiffness.toFixed(2) + '  (' + w.effectiveCapacity + '×' + w.length.toFixed(1) + ' / ' + w.totalCapLen.toFixed(0) + ')');
+  }
   line('Wall share 1.0E:', w.share_1E.toFixed(2) + ' kips  =  ' + pl.storyShear_1E.toFixed(2) + ' × ' + w.relStiffness.toFixed(2));
   line('v_seismic (ASD):', w.unitShear_seismic.toFixed(0) + ' plf  =  0.7×' + dir.rho + '×' + w.share_1E.toFixed(2) + '×1000 / ' + w.length.toFixed(1));
   if (w.unitShear_wind > 0) line('v_wind (ASD):', w.unitShear_wind.toFixed(0) + ' plf  =  0.6×' + w.share_1W.toFixed(2) + '×1000 / ' + w.length.toFixed(1));

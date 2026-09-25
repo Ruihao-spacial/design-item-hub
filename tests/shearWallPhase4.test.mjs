@@ -265,6 +265,55 @@ test('Elevation: segmented piers drawn with their marks, FTAO strap label, pier 
   h.destroy();
 });
 
+test('Deflection approach: walls at a level end up with equal δ; converges', () => {
+  const walls = [wall('w-1', 0, 8, { nailingPattern: '4' }), wall('w-2', 20, 4, { nailingPattern: '4' })];
+  const cap = calcAll(oneStory(JSON.parse(JSON.stringify(walls)), { seismic: 6 }));
+  const inp = oneStory(walls, { seismic: 6, extra: { distribution: 'deflection' } });
+  const out = calcAll(inp);
+  const [a, b] = wallsOf(out), [ca, cb] = wallsOf(cap);
+  const dist = lineOf(out).distribution;
+  assert.equal(dist.method, 'deflection'); assert.equal(dist.converged, true); assert.ok(dist.passes >= 2);
+  near(a.share_1E + b.share_1E, 6, 0.011);
+  assert.ok(b.share_1E < cb.share_1E, 'short (softer) wall takes less than its capacity share');
+  near(a.deflection.E.delta / b.deflection.E.delta, 1, 0.03, 'equal deflection');
+  assert.equal(lineOf(cap).distribution.method, 'capacity');
+  near(ca.share_1E / cb.share_1E, (470 * 8) / (470 * 0.9375 * 4), 0.02);
+});
+
+test('Deflection approach: identical walls share equally; line setting overrides the project default', () => {
+  const inp = oneStory([wall('w-1', 0, 8), wall('w-2', 20, 8)], { seismic: 6, extra: { distribution: 'deflection' } });
+  const [a, b] = wallsOf(calcAll(inp));
+  near(a.share_1E, 3, 0.011); near(b.share_1E, 3, 0.011);
+  inp.directions[0].lines[0].distribution = 'capacity';
+  assert.equal(lineOf(calcAll(inp)).distribution.method, 'capacity');
+  const inp2 = oneStory([wall('w-1', 0, 8), wall('w-2', 20, 8)], { seismic: 6 });
+  inp2.directions[0].lines[0].distribution = 'deflection';
+  assert.equal(lineOf(calcAll(inp2)).distribution.method, 'deflection');
+});
+
+test('Deflection approach with an FTAO wall and wind', () => {
+  const inp = oneStory([t555Wall({ nailingPattern: '4' }), wall('w-2', 30, 8, { nailingPattern: '4' })],
+    { seismic: 4, wind: 3, floorH: 8, loadType: 'both', extra: { distribution: 'deflection' } });
+  const out = calcAll(inp);
+  const [f, r] = wallsOf(out);
+  assert.ok(f.stiffness.E > 0 && f.stiffness.W > 0 && r.stiffness.W > 0);
+  near(f.share_1E + r.share_1E, 4, 0.011); near(f.share_1W + r.share_1W, 3, 0.011);
+  assert.equal(lineOf(out).distribution.converged, true);
+});
+
+test('Distribution dropdowns render; results and PDF name the approach', () => {
+  const inp = oneStory([wall('w-1', 0, 8), wall('w-2', 20, 4)], { seismic: 6, extra: { distribution: 'deflection' } });
+  const r = checkShearWallItem({ schemaVersion: 6, inputs: inp });
+  assert.ok(r.ok, r.error);
+  const form = document.createElement('div');
+  shearWallDesign.renderForm(form, JSON.parse(JSON.stringify(inp)), () => {}, [], () => {});
+  assert.ok(form.textContent.includes('Wall Distribution (default)'));
+  const c = document.createElement('div');
+  shearWallDesign.renderOutputs(c, shearWallDesign.calc(inp));
+  assert.ok(c.textContent.includes('distribution by deflection (equal δ'));
+  assert.ok(shearWallDesign.pdfSections(inp).some(s => /distribution by deflection/.test(s.title)));
+});
+
 test('Base Shear link: changed Cd flagged, applyLinks copies Sds/Cd/Ie/RC', () => {
   const inp = { sds: '1.0', cd: '4', ie: '1.0', riskCategory: 'II' };
   const linked = { baseShearSource: { sds: 1.0, cd: 5, ie: 1.0, riskCategory: 'II' } };
