@@ -1,7 +1,7 @@
 # Shear Wall Design — Backlog
 
 Open items after the 2026-09-22 elevation review rounds and Phase 4 round 1 (R1–R3, 2026-09-24).
-Branches: `shearwall-load-path` (pushed, merge to `master` by someone else), `results-and-links` (G4, pushed 2026-09-24), `phase4-r1-r3` (local, not pushed; CALC_VERSION v6, schema v6).
+Branches: `shearwall-load-path` (pushed, merge to `master` by someone else), `results-and-links` (G4, pushed 2026-09-24), `phase4-r1-r3` (Phase 4 round 1 + distribution + results by line; pushed 2026-09-24; CALC_VERSION v7, schema v6).
 
 ## Pending approval / housekeeping
 | # | Item | Notes |
@@ -12,7 +12,7 @@ Branches: `shearwall-load-path` (pushed, merge to `master` by someone else), `re
 | H5 | App test of G4 on branch `results-and-links` — **passed and pushed 2026-09-24** | Flat Load edit → Mass Takeoff shows "Upstream changed" → Update + save → ELF flagged; Base Shear Cs → ELF notice; project-page PDF matches the form. |
 | H6 | Local Supabase project name changed by master | `supabase/config.toml` `project_id` is now `engineer-service-calculator`. Running `supabase start` from this code creates a new, empty local stack; existing local data lives in the `*_design-item-hub` containers. Plan a data move before restarting the local stack. After pulling master, apply new migrations with `npx supabase migration up --local` from the repo folder (2026-09-22: `20260917000000_user_management_audit` was needed for login). |
 
-| H7 | App test of Phase 4 round 1 on `phase4-r1-r3` — **passed 2026-09-24** | Add openings to a Test 123 wall, switch Segmented ↔ FTAO, link the Base Shear item (Cd / Ie / Risk Category), check elevation (cut-outs, piers, straps), results (FTAO calc, LRFD forces, story drift) and PDF. Push only when asked. |
+| H7 | App test of Phase 4 round 1 on `phase4-r1-r3` — **passed 2026-09-24, pushed** | Add openings to a Test 123 wall, switch Segmented ↔ FTAO, link the Base Shear item (Cd / Ie / Risk Category), check elevation (cut-outs, piers, straps), results (FTAO calc, LRFD forces, story drift) and PDF. Push only when asked. |
 
 ## Phase 4 round 1 — open items (2026-09-24)
 | # | Item | Notes |
@@ -25,6 +25,7 @@ Branches: `shearwall-load-path` (pushed, merge to `master` by someone else), `re
 | P6 | FTAO with unequal opening heights | Engine analyzes the whole wall at the governing opening (APA largest-opening rule); straps drawn at the highest head and lowest sill. |
 | P7 | Wind deflection | Only when the service factor α_s is entered; report only (no limit). |
 | P8 | FTAO hold-down | Wall-end T/C and hardware use the usual net formula with dead load over L_wall; the engine's gross H (no dead load) is shown as a reference. |
+| P9 | HDUE minimum post not enforced — **awaiting user decision** | HDUE catalog lists (2)2x4 / (2)2x6 minimum post for every HDUE, but post auto-select can pick a single 2x4 at a holdown end. Found 2026-09-24 while tracing the deflection distribution (single 2x4 roughly doubles the bending term and triples plate crushing, so δ jumps). Proposed: holdown ends never below the HDUE minPost. |
 
 ## Known gaps (found in review, not fixed)
 | # | Item | Where | Notes |
