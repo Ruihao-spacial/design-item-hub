@@ -1,7 +1,7 @@
 import { el, clearEl, numOrBlank } from '../utils.js';
 import { svgEl, newWall, newUniformLoad, newPointLoad, newBeam, newBeamSupport, newSupportPost, newOpening } from './shearWallTypes.js';
 import { NAILING_TABLE } from './shearWallNailing.js';
-import { HDUE_TABLE, MSTC_TABLE, POST_SIZES, getGradeById, FTAO_STRAP_TABLE, jambPostOptions } from './shearWallHardware.js';
+import { HDUE_TABLE, MSTC_TABLE, POST_SIZES, getGradeById, FTAO_STRAP_TABLE, jambPostOptions, hdueMinPost, meetsMinPost } from './shearWallHardware.js';
 import { openingProblems, wallPiers, expandWalls, sortedOpenings, hasOpenings, wallMethod } from './shearWallOpenings.js';
 import { findAnchorage, findPost } from './shearWallCalc.js';
 
@@ -925,10 +925,13 @@ export function renderElevation(container, line, levels, wallDLTypes, callbacks)
     const st = { label: 'Straps (' + span + '" span)', items: (MSTC_TABLE[span] || MSTC_TABLE['16']).map(opt) };
     return holdownFirst ? [hd, st] : [st, hd];
   }
-  function postGroups(lvl, C) {
+  // Posts below the HDUE minimum post at a holdown end are not offered (P9)
+  function postGroups(lvl, C, anchorage) {
     const { thickness, grade } = designCtx();
     const floorH = parseFloat(lvl && lvl.floorToFloor) || 10;
-    return [{ label: 'Posts (' + (thickness === '6' ? '2x6' : '2x4') + ' wall)', items: (POST_SIZES[thickness] || POST_SIZES['4']).map(ps => {
+    const min = hdueMinPost(anchorage, thickness);
+    return [{ label: 'Posts (' + (thickness === '6' ? '2x6' : '2x4') + ' wall)' + (min ? ' — HDUE min ' + min.label : ''),
+      items: (POST_SIZES[thickness] || POST_SIZES['4']).filter(ps => meetsMinPost(ps, min)).map(ps => {
       const p = findPost(ps.id, thickness, grade, floorH);
       const dc = p && p.capacityKips > 0 ? C / p.capacityKips : null;
       return { id: ps.id, text: ps.label + ' — ' + (C || 0).toFixed(2) + 'k / ' + (p ? p.capacityKips.toFixed(2) : '?') + 'k → ' + dcTxt(dc), dc };
@@ -999,7 +1002,7 @@ export function renderElevation(container, line, levels, wallDLTypes, callbacks)
         body.push(side + ': ' + d.ancText + ' · ' + d.postText);
         if (!outer(side)) { body.push('Pier end at an opening — hardware is auto-selected'); continue; }
         fields.push(qeField(side[0].toUpperCase() + side.slice(1) + ' HD/Strap', pw, 'anchorage' + d.S1 + 'Override', anchorageGroups(lvl, li, d.T), d.anc ? d.anc.id : 'OVER'));
-        fields.push(qeField(side[0].toUpperCase() + side.slice(1) + ' post', pw, 'post' + d.S1 + 'Override', postGroups(lvl, d.C), d.post ? d.post.postLabel : 'OVER'));
+        fields.push(qeField(side[0].toUpperCase() + side.slice(1) + ' post', pw, 'post' + d.S1 + 'Override', postGroups(lvl, d.C, d.anc), d.post ? d.post.postLabel : 'OVER'));
         resetKeys.push('anchorage' + d.S1 + 'Override', 'post' + d.S1 + 'Override');
       }
     } else if (kind === 'post') {
@@ -1010,7 +1013,7 @@ export function renderElevation(container, line, levels, wallDLTypes, callbacks)
       target = p;
       title = (p.mark || p.id) + ' · post';
       fields.push(qeField('Base HD/Strap', p, 'anchorageOverride', anchorageGroups(lvl, li, pp.envelopeT || 0), pp.anchorage ? pp.anchorage.id : '—'));
-      fields.push(qeField('Post size', p, 'postOverride', postGroups(lvl, pp.envelopeC || 0), pp.post ? pp.post.postLabel : 'OVER'));
+      fields.push(qeField('Post size', p, 'postOverride', postGroups(lvl, pp.envelopeC || 0, pp.anchorage), pp.post ? pp.post.postLabel : 'OVER'));
       body.push('T ' + (pp.envelopeT || 0).toFixed(2) + 'k → ' + (pp.anchorage ? pp.anchorage.id + ' D/C ' + dcTxt(pp.anchorageDC) : '—')
         + ' · C ' + (pp.envelopeC || 0).toFixed(2) + 'k → ' + (pp.post ? pp.post.postLabel + ' D/C ' + dcTxt(pp.postDC) : 'OVER'));
       resetKeys = ['anchorageOverride', 'postOverride'];
@@ -1737,6 +1740,12 @@ export function renderElevation(container, line, levels, wallDLTypes, callbacks)
   }
   const ancLabelFn = (it) => it.id + ' (' + (it.cap / 1000).toFixed(1) + 'k)';
   const postItems = [...(POST_SIZES['4'] || []), ...(POST_SIZES['6'] || [])];
+  // Override list without posts below the HDUE minimum post of the current anchorage (P9)
+  const ppOf = (sp) => wallResults && (wallResults.postPaths || []).find(p => p.postId === sp.id);
+  const postItemsFor = (anchorage) => {
+    const min = hdueMinPost(anchorage, designCtx().thickness);
+    return min ? postItems.filter(p => meetsMinPost(p, min)) : postItems;
+  };
   const postLabelFn = (it) => it.label;
 
   function renderPropPanel() {
@@ -1781,9 +1790,16 @@ export function renderElevation(container, line, levels, wallDLTypes, callbacks)
       panelField('HD/Strap Left', hwSelect(w, 'anchorageLeftOverride', ancItems, ancLabelFn)),
       panelField('HD/Strap Right', hwSelect(w, 'anchorageRightOverride', ancItems, ancLabelFn)),
     ));
+    // Outer end anchorage of the wall (first / last pier of a segmented wall)
+    const endAnc = (S1) => {
+      const own = findWallResult(w.id);
+      const piers = own ? [own] : (wallResults ? (wallResults.perLevel || []).flatMap(pl => pl.walls || []).filter(r => r.parentWallId === w.id) : []);
+      const r = S1 === 'Left' ? piers[0] : piers[piers.length - 1];
+      return r ? r['anchorage' + S1] : null;
+    };
     propPanel.appendChild(panelRow(
-      panelField('Post Left', hwSelect(w, 'postLeftOverride', postItems, postLabelFn)),
-      panelField('Post Right', hwSelect(w, 'postRightOverride', postItems, postLabelFn)),
+      panelField('Post Left', hwSelect(w, 'postLeftOverride', postItemsFor(endAnc('Left')), postLabelFn)),
+      panelField('Post Right', hwSelect(w, 'postRightOverride', postItemsFor(endAnc('Right')), postLabelFn)),
     ));
     renderOpeningsEditor(w);
 
@@ -1960,10 +1976,10 @@ export function renderElevation(container, line, levels, wallDLTypes, callbacks)
     propPanel.appendChild(panelSub('Hardware Overrides (blank = auto-select)'));
     propPanel.appendChild(panelRow(
       panelField('Base HD/Strap', hwSelect(sp, 'anchorageOverride', hwOptionsFor(lvl), ancLabelFn)),
-      panelField('Post Size', hwSelect(sp, 'postOverride', postItems, postLabelFn)),
+      panelField('Post Size', hwSelect(sp, 'postOverride', postItemsFor(ppOf(sp) && ppOf(sp).anchorage), postLabelFn)),
     ));
 
-    const pp = wallResults && (wallResults.postPaths || []).find(p => p.postId === sp.id);
+    const pp = ppOf(sp);
     if (pp) {
       propPanel.appendChild(panelSub('Load path — loads received (' + comboLabel() + ')'));
       if (pp.sources.length) {

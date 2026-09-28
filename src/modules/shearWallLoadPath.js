@@ -1,5 +1,5 @@
-import { pointInWallEnd, findAnchorage, findPost } from './shearWallCalc.js';
-import { autoSelectHoldown, autoSelectStrap, autoSelectPost } from './shearWallHardware.js';
+import { pointInWallEnd, findAnchorage, selectEndPost } from './shearWallCalc.js';
+import { autoSelectHoldown, autoSelectStrap } from './shearWallHardware.js';
 
 // Vertical load path: wall ends, posts at any story, transfer beams with user-defined supports.
 // Per-combo force maps are signed: + = compression (down), − = uplift. Each wall end contributes
@@ -187,7 +187,8 @@ export function resolveVerticalLoadPath(ctx) {
       const e = env(st.load);
       const floorH = num(lvl.floorToFloor) || 10;
       const hw = hasConnection(rec) ? selectAnchorage(li, e.T, p.anchorageOverride) : noHardware;
-      const post = p.postOverride ? findPost(p.postOverride, lineThickness, grade, floorH) : autoSelectPost(e.C, lineThickness, grade, floorH);
+      const ps = selectEndPost(p.postOverride, e.C, lineThickness, grade, floorH, hw.anchorage);
+      const post = ps.post;
       const postDC = post && post.capacityKips > 0 ? r2(e.C / post.capacityKips) : null;
       if (rec.type === 'none' || rec.type === 'wall_mid') {
         warnings.push({ type: 'unsupported_post', elementId: p.id, elementMark: markOf(p), levelName: levelName(li),
@@ -206,7 +207,7 @@ export function resolveVerticalLoadPath(ctx) {
         levelLoad: roundMap(levelLoad), levelLoadEnv: env(levelLoad),
         hasPostAbove: st.sources.some(s => s.type === 'post'),
         sources: st.sources, receiver: rec,
-        ...hw, post, postDC,
+        ...hw, post, postDC, postRaised: ps.raised ? ps : null,
       });
     }
 
@@ -306,11 +307,13 @@ export function resolveVerticalLoadPath(ctx) {
     const floorSpan = (lvl && lvl.floorClearSpan) || '16';
     const pickAnc = (ov, T) => ov ? findAnchorage(ov, floorSpan)
       : wr.anchorageType === 'holdown' ? autoSelectHoldown(T) : autoSelectStrap(T, floorSpan);
-    const pickPost = (ov, C) => ov ? findPost(ov, lineThickness, grade, wr.floorH) : autoSelectPost(C, lineThickness, grade, wr.floorH);
     wr.anchorageLeft = pickAnc(w.anchorageLeftOverride, demand.tL);
     wr.anchorageRight = pickAnc(w.anchorageRightOverride, demand.tR);
-    wr.postLeft = pickPost(w.postLeftOverride, demand.cL);
-    wr.postRight = pickPost(w.postRightOverride, demand.cR);
+    const selL = selectEndPost(w.postLeftOverride, demand.cL, lineThickness, grade, wr.floorH, wr.anchorageLeft);
+    const selR = selectEndPost(w.postRightOverride, demand.cR, lineThickness, grade, wr.floorH, wr.anchorageRight);
+    wr.postLeft = selL.post;
+    wr.postRight = selR.post;
+    wr.postRaised = { left: selL.raised ? selL : null, right: selR.raised ? selR : null };
     wr.anchorageDCLeft = wr.anchorageLeft && wr.anchorageLeft.cap > 0 ? r2(demand.tL * 1000 / wr.anchorageLeft.cap) : null;
     wr.anchorageDCRight = wr.anchorageRight && wr.anchorageRight.cap > 0 ? r2(demand.tR * 1000 / wr.anchorageRight.cap) : null;
     wr.postDCLeft = wr.postLeft && wr.postLeft.capacityKips > 0 ? r2(demand.cL / wr.postLeft.capacityKips) : null;

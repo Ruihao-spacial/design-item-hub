@@ -1,5 +1,5 @@
 import { NAILING_TABLE, autoSelectNailing, getNailingById } from './shearWallNailing.js';
-import { autoSelectHoldown, autoSelectStrap, autoSelectPost, getGradeById, HDUE_TABLE, MSTC_TABLE, POST_SIZES, computePostCapacity, lrfdCap } from './shearWallHardware.js';
+import { autoSelectHoldown, autoSelectStrap, autoSelectPost, hdueMinPost, meetsMinPost, getGradeById, HDUE_TABLE, MSTC_TABLE, POST_SIZES, computePostCapacity, lrfdCap } from './shearWallHardware.js';
 import { resolveVerticalLoadPath } from './shearWallLoadPath.js';
 import { aspectFactor } from './shearWallFtao.js';
 import { expandWalls, hasOpenings, wallMethod, wallPiers, sortedOpenings } from './shearWallOpenings.js';
@@ -7,7 +7,7 @@ import { ftaoCapacityLbf, ftaoDesign, ftaoLoadTypes } from './shearWallFtaoAdapt
 import { wallDeflection, postArea, driftLimit } from './shearWallDeflection.js';
 
 // Records which calc produced a stored results snapshot (results are always regenerated for display)
-export const CALC_VERSION = 'v7';
+export const CALC_VERSION = 'v8';
 
 export function accumulateStoryShear(levelLoads, levels) {
   const result = {};
@@ -421,12 +421,9 @@ export function calcAll(inputs) {
             anchorageRight = autoSelectStrap(tc.governingTensionRight, floorSpan);
           }
 
-          const postLeft = w.postLeftOverride
-            ? findPost(w.postLeftOverride, lineThickness, grade, floorH)
-            : autoSelectPost(tc.governingComprLeft, lineThickness, grade, floorH);
-          const postRight = w.postRightOverride
-            ? findPost(w.postRightOverride, lineThickness, grade, floorH)
-            : autoSelectPost(tc.governingComprRight, lineThickness, grade, floorH);
+          const selL = selectEndPost(w.postLeftOverride, tc.governingComprLeft, lineThickness, grade, floorH, anchorageLeft);
+          const selR = selectEndPost(w.postRightOverride, tc.governingComprRight, lineThickness, grade, floorH, anchorageRight);
+          const postLeft = selL.post, postRight = selR.post;
 
           const wallResult = {
             wallId: w.id, mark: w.mark || '', position: parseFloat(w.position) || 0, length: wLen,
@@ -451,6 +448,7 @@ export function calcAll(inputs) {
             anchorageType: useHoldown ? 'holdown' : 'strap',
             anchorageLeft, anchorageRight,
             postLeft, postRight,
+            postRaised: { left: selL.raised ? selL : null, right: selR.raised ? selR : null },
             ftao,
             ...tc,
           };
@@ -484,6 +482,22 @@ export function calcAll(inputs) {
           loadPath.loadPathAudit.warnings.push({ type: 'aspect_ratio', elementId: wr.wallId, elementMark: wr.mark, levelName: levelNameOf((allWalls.find(w => w.id === wr.wallId) || {}).levelId),
             message: 'h/b = ' + wr.hOverB + ' > 3.5 — not permitted as a shear wall (SDPWS 2021 §4.3.4); carries no shear' });
         }
+      }
+      // P9: a post override below the HDUE minimum post is not used
+      const raisedMsg = (r, what) => what + ' override ' + r.requested + ' is below the HDUE minimum post ' + r.minPost
+        + ' — ' + (r.post ? r.post.postLabel : 'OVER') + ' used; change or clear the override';
+      for (const wr of Object.values(wallResultsMap)) {
+        for (const side of ['left', 'right']) {
+          const r = wr.postRaised && wr.postRaised[side];
+          if (!r) continue;
+          loadPath.loadPathAudit.warnings.push({ type: 'post_below_hdue_min', elementId: wr.wallId, elementMark: wr.mark,
+            levelName: levelNameOf((allWalls.find(w => w.id === wr.wallId) || {}).levelId),
+            message: raisedMsg(r, side[0].toUpperCase() + side.slice(1) + ' post') });
+        }
+      }
+      for (const pp of loadPath.postPaths) {
+        if (pp.postRaised) loadPath.loadPathAudit.warnings.push({ type: 'post_below_hdue_min', elementId: pp.postId, elementMark: pp.mark,
+          levelName: pp.levelName, message: raisedMsg(pp.postRaised, 'Post') });
       }
       loadPath.loadPathAudit.allClear = loadPath.loadPathAudit.warnings.length === 0;
 
@@ -685,6 +699,18 @@ export function findAnchorage(id, floorSpan) {
     if (s) return s;
   }
   return null;
+}
+
+// Post at a holdown end / post base: the override if it meets the HDUE minimum post (P9), else auto.
+// An override below the minimum is not used: the auto post (≥ minimum) is, with raised = true.
+export function selectEndPost(overrideId, C, wallThickness, grade, floorH, anchorage) {
+  const min = hdueMinPost(anchorage, wallThickness);
+  if (overrideId) {
+    const p = findPost(overrideId, wallThickness, grade, floorH);
+    if (p && meetsMinPost(p, min)) return { post: p, raised: false };
+    if (p) return { post: autoSelectPost(C, wallThickness, grade, floorH, min), raised: true, requested: overrideId, minPost: min.label };
+  }
+  return { post: autoSelectPost(C, wallThickness, grade, floorH, min), raised: false };
 }
 
 export function findPost(id, wallThickness, grade, floorH) {

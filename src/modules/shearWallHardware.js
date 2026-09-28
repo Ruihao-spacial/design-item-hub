@@ -182,8 +182,24 @@ export function computePostCapacity(post, grade, floorHeightFt) {
   };
 }
 
-export function autoSelectPost(compressionKips, wallThickness, grade, floorHeightFt) {
-  const posts = POST_SIZES[wallThickness] || POST_SIZES['4'];
+// HDUE minimum post (catalog minPost). At a holdown end the post is never narrower along the
+// wall (d2) than this, in the line's wall thickness. Straps (no minPost) → null.
+export function hdueMinPost(anchorage, wallThickness) {
+  if (!anchorage || !anchorage.minPost) return null;
+  const t = POST_SIZES[wallThickness] ? wallThickness : '4';
+  return POST_SIZES[t].find(p => p.id === anchorage.minPost[t]) || null;
+}
+
+// true when a post (catalog entry or capacity result) is at least the minimum post
+export function meetsMinPost(post, minPost) {
+  if (!minPost || !post) return true;
+  const id = post.postId || post.id;
+  const ps = [...POST_SIZES['4'], ...POST_SIZES['6']].find(p => p.id === id);
+  return !!ps && ps.d2 >= minPost.d2 - 1e-9;
+}
+
+export function autoSelectPost(compressionKips, wallThickness, grade, floorHeightFt, minPost = null) {
+  const posts = (POST_SIZES[wallThickness] || POST_SIZES['4']).filter(p => meetsMinPost(p, minPost));
   if (compressionKips <= 0) return computePostCapacity(posts[0], grade, floorHeightFt);
   for (const post of posts) {
     const result = computePostCapacity(post, grade, floorHeightFt);
