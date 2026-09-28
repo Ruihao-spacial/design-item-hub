@@ -2,7 +2,7 @@
 // Run: node tests/shearWallRound2.test.mjs
 import assert from 'assert/strict';
 import { checkShearWallItem } from '../scripts/lib/shearWallLoadCheck.mjs'; // sets up the stand-in DOM
-import { calcAll, computeWallTC } from '../src/modules/shearWallCalc.js';
+import { calcAll, computeWallTC, resolveGravityAtWall } from '../src/modules/shearWallCalc.js';
 import { shearWallDesign, renderLineResults, migrateV6toV7, designBasisRows } from '../src/modules/shearWallDesign.js';
 import { HDUE_TABLE, MSTC_TABLE, hdueMinPost, meetsMinPost, autoSelectPost, getGradeById } from '../src/modules/shearWallHardware.js';
 
@@ -147,6 +147,43 @@ test('R4: Ω₀ tab, design-basis line and PDF sections render', () => {
   const form = document.createElement('div');
   shearWallDesign.renderForm(form, JSON.parse(JSON.stringify(inp)), () => {}, [], () => {});
   assert.ok(form.textContent.includes('Load Combinations & Design Basis'));
+});
+
+// === R6: dead load end reactions by statics ===
+
+test('R6: point load at one end goes to that end; partial uniform splits by its centroid', () => {
+  const w = { position: 10, length: 10, wallDLTypeId: 'dl-1', _floorToFloor: 10 };
+  const types = [{ id: 'dl-1', psf: 10 }]; // self-weight 10 psf × 100 ft² = 1.0 k, ½ each end
+  const g = resolveGravityAtWall(w, { uniform: [], point: [{ position: 10, dlKips: 4 }] }, types);
+  near(g.rL, 4.5, 1e-6); near(g.rR, 0.5, 1e-6); near(g.dlTotal, 5, 1e-6);
+  // 200 plf from 5 to 14 → overlap 10..14 = 0.8 k at x = 12 → R_R = 0.8·2/10 = 0.16
+  const u = resolveGravityAtWall({ ...w, wallDLTypeId: '' }, { uniform: [{ start: 5, end: 14, dlPlf: 200 }], point: [] }, types);
+  near(u.rR, 0.16, 1e-6); near(u.rL, 0.64, 1e-6);
+  // Full-length uniform load → D/2 each end (unchanged from the old rule)
+  const f = resolveGravityAtWall({ ...w, wallDLTypeId: '' }, { uniform: [{ start: 0, end: 40, dlPlf: 100 }], point: [] }, types);
+  near(f.rL, 0.5, 1e-6); near(f.rR, 0.5, 1e-6);
+});
+
+test('R6: T/C use fD·R_end at each end (net = fD·R_end ∓ OTM/L)', () => {
+  // 10 ft wall, point load 4 k at the left end, V = 5 k, h = 10, SDS 1.0, ρ 1
+  const out = calcAll(oneStory([wall('w-1', 0, 10)], { seismic: 5, gravity: { 'lvl-1': { uniform: [], point: [{ id: 'pl-1', position: 0, dlKips: 4 }] } } }));
+  const w = wallsOf(out)[0];
+  assert.equal(w.dlRL, 4); assert.equal(w.dlRR, 0);
+  const m = 0.7 * 5 * 10 / 10; // 3.5 k
+  // 0.6D+0.7ρE_pos: left net = 0.46·4 − 3.5 → T_L = 1.66; right end has no dead load → T_R (neg) = 3.5
+  near(w.combos['0.6D+0.7ρE_pos'].tensionLeft, 3.5 - 0.46 * 4, 0.005);
+  near(w.combos['0.6D+0.7ρE_neg'].tensionRight, 3.5, 0.005);
+  near(w.combos['D+0.7ρE_neg'].comprLeft, 3.5 + 1.14 * 4, 0.005);
+  near(w.combos['1.0D'].comprLeft, 4, 0.005);
+  assert.equal(w.combos['1.0D'].comprRight, 0);
+});
+
+test('R6: segmented pier takes only the loads over the pier, split by position', () => {
+  const out = calcAll(oneStory([wall('w-1', 0, 10, { openings: [{ id: 'op-1', offset: 4, width: 2, sill: 3, head: 7 }] })],
+    { seismic: 5, gravity: { 'lvl-1': { uniform: [], point: [{ id: 'pl-1', position: 1, dlKips: 4 }] } } }));
+  const [p1, p2] = wallsOf(out);
+  near(p1.dlRL, 3, 0.005); near(p1.dlRR, 1, 0.005); // 4 k at 1 ft on a 4 ft pier
+  assert.equal(p2.dlTotal, 0);
 });
 
 console.log(passed + ' passed' + (process.exitCode ? ', some FAILED' : ''));

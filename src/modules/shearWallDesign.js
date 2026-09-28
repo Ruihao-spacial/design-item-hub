@@ -748,17 +748,17 @@ export const shearWallDesign = {
       sections.push({ title: 'Design basis note', text: DESIGN_BASIS_NOTE });
       const omVal = String(omega0Of(inputs));
       sections.push({ title: 'Load Combination Equations (ASD = design; LRFD and Ω₀ = forces only)', equations: [
-        { desc: 'Seismic Uplift (ASCE 7 Combo 8)', parts: [{ t: 'T = [0.7ρV·h - (0.6-0.14' }, { t: sdsVal, bold: true }, { t: ')DL·L/2] / L' }] },
-        { desc: 'Seismic Compression (ASCE 7 Combo 5)', parts: [{ t: 'C = [0.7ρV·h + (1.0+0.14' }, { t: sdsVal, bold: true }, { t: ')DL·L/2] / L' }] },
-        { desc: 'Wind Uplift (ASCE 7 Combo 7)', parts: [{ t: 'T = [0.6V' }, { t: 'w', sub: true }, { t: '·h - 0.6DL·L/2] / L' }] },
-        { desc: 'Wind Compression (ASCE 7 Combo 4)', parts: [{ t: 'C = [0.6V' }, { t: 'w', sub: true }, { t: '·h + DL·L/2] / L' }] },
-        { desc: 'LRFD Seismic Uplift (ASCE 7 §2.3.6)', parts: [{ t: 'T = [ρV·h - (0.9-0.2' }, { t: sdsVal, bold: true }, { t: ')DL·L/2] / L' }] },
-        { desc: 'LRFD Seismic Compression (ASCE 7 §2.3.6)', parts: [{ t: 'C = [ρV·h + (1.2+0.2' }, { t: sdsVal, bold: true }, { t: ')DL·L/2] / L' }] },
-        { desc: 'LRFD Wind (ASCE 7 §2.3.1)', parts: [{ t: 'T = [V' }, { t: 'w', sub: true }, { t: '·h - 0.9DL·L/2] / L,  C = [V' }, { t: 'w', sub: true }, { t: '·h + 1.2DL·L/2] / L' }] },
+        { desc: 'Seismic Uplift (ASCE 7 Combo 8)', parts: [{ t: 'T = [0.7ρV·h - (0.6-0.14' }, { t: sdsVal, bold: true }, { t: ')R_end·L] / L' }] },
+        { desc: 'Seismic Compression (ASCE 7 Combo 5)', parts: [{ t: 'C = [0.7ρV·h + (1.0+0.14' }, { t: sdsVal, bold: true }, { t: ')R_end·L] / L' }] },
+        { desc: 'Wind Uplift (ASCE 7 Combo 7)', parts: [{ t: 'T = [0.6V' }, { t: 'w', sub: true }, { t: '·h - 0.6R_end·L] / L' }] },
+        { desc: 'Wind Compression (ASCE 7 Combo 4)', parts: [{ t: 'C = [0.6V' }, { t: 'w', sub: true }, { t: '·h + R_end·L] / L' }] },
+        { desc: 'LRFD Seismic Uplift (ASCE 7 §2.3.6)', parts: [{ t: 'T = [ρV·h - (0.9-0.2' }, { t: sdsVal, bold: true }, { t: ')R_end·L] / L' }] },
+        { desc: 'LRFD Seismic Compression (ASCE 7 §2.3.6)', parts: [{ t: 'C = [ρV·h + (1.2+0.2' }, { t: sdsVal, bold: true }, { t: ')R_end·L] / L' }] },
+        { desc: 'LRFD Wind (ASCE 7 §2.3.1)', parts: [{ t: 'T = [V' }, { t: 'w', sub: true }, { t: '·h - 0.9R_end·L] / L,  C = [V' }, { t: 'w', sub: true }, { t: '·h + 1.2R_end·L] / L' }] },
         ...((inputs.loadType || 'seismic') !== 'wind' ? [
-          { desc: 'Ω₀ ASD Uplift (§2.4.5, forces only)', parts: [{ t: 'T = [0.7·' }, { t: omVal, bold: true }, { t: '·V·h - (0.6-0.14' }, { t: sdsVal, bold: true }, { t: ')DL·L/2] / L' }] },
-          { desc: 'Ω₀ ASD Compression (§2.4.5, forces only)', parts: [{ t: 'C = [0.7·' }, { t: omVal, bold: true }, { t: '·V·h + (1.0+0.14' }, { t: sdsVal, bold: true }, { t: ')DL·L/2] / L' }] },
-          { desc: 'Ω₀ LRFD (§2.3.6, forces only)', parts: [{ t: 'T = [' }, { t: omVal, bold: true }, { t: '·V·h - (0.9-0.2' }, { t: sdsVal, bold: true }, { t: ')DL·L/2] / L,  C = [' }, { t: omVal, bold: true }, { t: '·V·h + (1.2+0.2' }, { t: sdsVal, bold: true }, { t: ')DL·L/2] / L' }] },
+          { desc: 'Ω₀ ASD Uplift (§2.4.5, forces only)', parts: [{ t: 'T = [0.7·' }, { t: omVal, bold: true }, { t: '·V·h - (0.6-0.14' }, { t: sdsVal, bold: true }, { t: ')R_end·L] / L' }] },
+          { desc: 'Ω₀ ASD Compression (§2.4.5, forces only)', parts: [{ t: 'C = [0.7·' }, { t: omVal, bold: true }, { t: '·V·h + (1.0+0.14' }, { t: sdsVal, bold: true }, { t: ')R_end·L] / L' }] },
+          { desc: 'Ω₀ LRFD (§2.3.6, forces only)', parts: [{ t: 'T = [' }, { t: omVal, bold: true }, { t: '·V·h - (0.9-0.2' }, { t: sdsVal, bold: true }, { t: ')R_end·L] / L,  C = [' }, { t: omVal, bold: true }, { t: '·V·h + (1.2+0.2' }, { t: sdsVal, bold: true }, { t: ')R_end·L] / L' }] },
         ] : []),
       ] });
     }
@@ -1299,23 +1299,26 @@ function renderWallCalcDetail(w, pl, dir, ln) {
   line('DL_total:', w.dlTotal.toFixed(2) + ' kips');
 
   if (w.steps) {
-    line('DL_RTM:', w.steps.dlRTM.toFixed(2) + ' kip-ft  =  ' + w.dlTotal.toFixed(2) + ' × ' + w.length.toFixed(1) + '/2');
+    const RL = w.steps.rL, RR = w.steps.rR, L = w.length;
+    line('DL reactions:', 'R_L = ' + RL.toFixed(2) + ' k, R_R = ' + RR.toFixed(2) + ' k  (statics: self-weight ½ each end, loads by position)');
+    // T = max(0, OTM/L − gf·R_end), C = OTM/L + gf·R_end, at each end
+    const ends = (otm, gU, gC) => {
+      const m = L > 0 ? otm / L : 0;
+      const t = (R) => Math.max(0, m - gU * R), c = (R) => m + gC * R;
+      line('T L / R (uplift):', t(RL).toFixed(2) + ' / ' + t(RR).toFixed(2) + ' kips  =  max(0, ' + otm.toFixed(2) + '/' + L.toFixed(1) + ' − ' + gU.toFixed(4) + '×R)');
+      line('C L / R (compr):', c(RL).toFixed(2) + ' / ' + c(RR).toFixed(2) + ' kips  =  ' + otm.toFixed(2) + '/' + L.toFixed(1) + ' + ' + gC.toFixed(4) + '×R');
+    };
     if (w.steps.seismic) {
       body.appendChild(el('div', { style: { borderTop: '1px solid var(--border-light)', margin: '0.25rem 0' } }));
       line('OTM_ASD (seismic):', w.steps.seismic.otm.toFixed(2) + ' kip-ft  =  0.7×' + dir.rho + '×' + w.share_1E.toFixed(2) + '×' + (w.floorH || 0).toFixed(1));
       line('gf_uplift:', w.steps.seismic.gfUplift.toFixed(4) + '  =  0.6 - 0.14×S_DS');
       line('gf_comp:', w.steps.seismic.gfComp.toFixed(4) + '  =  1.0 + 0.14×S_DS');
-      line('T (uplift):', w.governingTensionLeft.toFixed(2) + ' kips  =  max(0, (' + w.steps.seismic.otm.toFixed(2) + ' - ' + w.steps.seismic.gfUplift.toFixed(4) + '×' + w.steps.dlRTM.toFixed(2) + ') / ' + w.length.toFixed(1) + ')');
-      line('C (compr):', w.governingComprRight.toFixed(2) + ' kips  =  (' + w.steps.seismic.otm.toFixed(2) + ' + ' + w.steps.seismic.gfComp.toFixed(4) + '×' + w.steps.dlRTM.toFixed(2) + ') / ' + w.length.toFixed(1));
+      ends(w.steps.seismic.otm, w.steps.seismic.gfUplift, w.steps.seismic.gfComp);
     }
     if (w.steps.wind) {
       body.appendChild(el('div', { style: { borderTop: '1px solid var(--border-light)', margin: '0.25rem 0' } }));
       line('OTM_ASD (wind):', w.steps.wind.otm.toFixed(2) + ' kip-ft  =  0.6×' + w.share_1W.toFixed(2) + '×' + (w.floorH || 0).toFixed(1));
-      const wCombo = w.combos && w.combos['0.6D+0.6W_pos'];
-      if (wCombo) {
-        line('T_wind (uplift):', (wCombo.tensionLeft || 0).toFixed(2) + ' kips  =  max(0, (' + w.steps.wind.otm.toFixed(2) + ' - 0.6×' + w.steps.dlRTM.toFixed(2) + ') / ' + w.length.toFixed(1) + ')');
-        line('C_wind (compr):', (wCombo.comprRight || 0).toFixed(2) + ' kips  =  (' + w.steps.wind.otm.toFixed(2) + ' + 1.0×' + w.steps.dlRTM.toFixed(2) + ') / ' + w.length.toFixed(1));
-      }
+      ends(w.steps.wind.otm, 0.6, 1.0);
     }
   }
 

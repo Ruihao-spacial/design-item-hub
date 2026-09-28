@@ -249,10 +249,11 @@ test('Duplicate posts at the same position are flagged', () => {
 test('S9: 0.6D combos use their own gravity factor for compression', () => {
   const ln = lineOut(calcAll(fixture()), 'Line A');
   const w = wallRes(ln, 'SW-1');
-  const s = w.steps.seismic, L = w.length, rtm = w.steps.dlRTM;
-  assert.ok(near(w.combos['0.6D+0.7ρE_pos'].comprRight, (s.otm + s.gfUplift * rtm) / L));
-  assert.ok(near(w.combos['D+0.7ρE_pos'].comprRight, (s.otm + s.gfComp * rtm) / L));
-  assert.ok(near(w.combos['0.6D+0.6W_pos'].comprRight, (w.steps.wind.otm + 0.6 * rtm) / L));
+  // net = fD·R_end ± OTM/L with the dead-load end reaction by statics (R6)
+  const s = w.steps.seismic, L = w.length, rR = w.steps.rR;
+  assert.ok(near(w.combos['0.6D+0.7ρE_pos'].comprRight, s.otm / L + s.gfUplift * rR));
+  assert.ok(near(w.combos['D+0.7ρE_pos'].comprRight, s.otm / L + s.gfComp * rR));
+  assert.ok(near(w.combos['0.6D+0.6W_pos'].comprRight, w.steps.wind.otm / L + 0.6 * rR));
 });
 
 test('Load cases 1.0E / 1.0W are lateral only: equal and opposite end forces, no dead load', () => {

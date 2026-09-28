@@ -1527,12 +1527,13 @@ export function renderElevation(container, line, levels, wallDLTypes, callbacks)
       const sY = lv.forceStripY;
       const midY = sY + lv.forceStripH / 2;
       const dlColor = '#78716c';
-      const wLen = wr.length || 1;
-      const dlKlf = wr.dlTotal / wLen;
+      // Dead-load end reactions by statics (R_L / R_R), total in between
+      const rl = wr.dlRL != null ? wr.dlRL : wr.dlTotal / 2, rr = wr.dlRR != null ? wr.dlRR : wr.dlTotal / 2;
       svg.appendChild(svgEl('rect', { x: wx + 1, y: sY + 2, width: ww - 2, height: lv.forceStripH - 4, fill: 'rgba(120,113,108,0.1)', rx: 2, 'pointer-events': 'none' }));
       const a = { x: wx + ww / 2, y: midY, 'text-anchor': 'middle', fill: dlColor, 'font-size': '9', 'font-weight': '600' };
-      svg.appendChild(haloText(a, 'DL ' + dlKlf.toFixed(2) + ' klf'));
-      placer.reserveText(a, 'DL ' + dlKlf.toFixed(2) + ' klf');
+      const txt = 'DL ' + wr.dlTotal.toFixed(2) + 'k · R ' + rl.toFixed(2) + ' / ' + rr.toFixed(2);
+      svg.appendChild(haloText(a, txt));
+      placer.reserveText(a, txt);
       return;
     }
 

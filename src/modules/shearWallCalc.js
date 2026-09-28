@@ -50,7 +50,9 @@ export function resolveGravityAtWall(wall, gravityLoadsAtLevel, wallDLTypes) {
     if (wdt) wallSelfDL = (parseFloat(wdt.psf) || 0) * Math.max(0, len * h - (wall._openingArea || 0)) / 1000;
   }
 
-  let diagramDL = 0;
+  // End reactions by statics (R6): self-weight ½ each end; each load split by its position on the wall
+  let diagramDL = 0, rR = wallSelfDL / 2;
+  const toRight = (P, x) => (len > 0 ? P * (x - pos) / len : P / 2);
   if (gravityLoadsAtLevel) {
     for (const u of (gravityLoadsAtLevel.uniform || [])) {
       const uStart = parseFloat(u.start) || 0;
@@ -58,15 +60,24 @@ export function resolveGravityAtWall(wall, gravityLoadsAtLevel, wallDLTypes) {
       const plf = parseFloat(u.dlPlf) || 0;
       const overlapStart = Math.max(pos, uStart);
       const overlapEnd = Math.min(wallEnd, uEnd);
-      if (overlapEnd > overlapStart) diagramDL += plf * (overlapEnd - overlapStart) / 1000;
+      if (overlapEnd > overlapStart) {
+        const F = plf * (overlapEnd - overlapStart) / 1000;
+        diagramDL += F;
+        rR += toRight(F, (overlapStart + overlapEnd) / 2);
+      }
     }
     for (const p of (gravityLoadsAtLevel.point || [])) {
       const pPos = parseFloat(p.position) || 0;
-      if (pPos >= pos && pPos <= wallEnd) diagramDL += parseFloat(p.dlKips) || 0;
+      if (pPos >= pos && pPos <= wallEnd) {
+        const P = parseFloat(p.dlKips) || 0;
+        diagramDL += P;
+        rR += toRight(P, pPos);
+      }
     }
   }
+  const total = wallSelfDL + diagramDL;
 
-  return { wallSelfDL: r2(wallSelfDL), diagramDL: r2(diagramDL), dlTotal: r2(wallSelfDL + diagramDL) };
+  return { wallSelfDL: r2(wallSelfDL), diagramDL: r2(diagramDL), dlTotal: r2(total), rL: r4(total - rR), rR: r4(rR) };
 }
 
 // Ω₀ used for the amplified seismic combos when none is entered or linked
@@ -74,6 +85,7 @@ export const DEFAULT_OMEGA0 = 2.5;
 export function omega0Of(inputs) { return parseFloat(inputs && inputs.omega0) || DEFAULT_OMEGA0; }
 
 // opts.omega0 — overstrength factor for the Ω₀ combos (forces only, never used for design)
+// opts.rL / opts.rR — dead-load end reactions by statics (default dlTotal / 2 each)
 export function computeWallTC(share1E, share1W, dlTotal, wallLength, floorH, rho, sds, loadType, opts = {}) {
   const L = parseFloat(wallLength) || 0;
   const h = parseFloat(floorH) || 0;
@@ -81,17 +93,18 @@ export function computeWallTC(share1E, share1W, dlTotal, wallLength, floorH, rho
   const _sds = parseFloat(sds) || 0;
   const om = parseFloat(opts.omega0) || DEFAULT_OMEGA0;
   const dl = parseFloat(dlTotal) || 0;
-  const dlRTM = dl * L / 2;
+  const hasR = opts.rL != null && opts.rR != null;
+  const rL = L > 0 ? (hasR ? parseFloat(opts.rL) || 0 : dl / 2) : 0;
+  const rR = L > 0 ? (hasR ? parseFloat(opts.rR) || 0 : dl / 2) : 0;
 
   const combos = {};
-  const steps = { dlRTM: r2(dlRTM) };
+  const steps = { rL: r2(rL), rR: r2(rR) };
 
-  // Both ends from one formula: net end force = fD·DL/2 ∓ OTM/L (+ = compression).
-  // m > 0 overturns toward the right end (_pos): left end uplift side, right end compression side.
-  const half = L > 0 ? dl / 2 : 0;
+  // Both ends from one formula: net end force = fD·R_end ∓ OTM/L (+ = compression), R_end = dead-load
+  // end reaction by statics. m > 0 overturns toward the right end (_pos): left end uplift side.
   const endPair = (group, fD, m) => {
-    const netL = fD * half - m;
-    const netR = fD * half + m;
+    const netL = fD * rL - m;
+    const netR = fD * rR + m;
     return {
       group,
       tensionLeft: r2(Math.max(0, -netL)), comprLeft: r2(Math.max(0, netL)),
@@ -423,7 +436,7 @@ export function calcAll(inputs) {
 
           const wWithH = { ...w, _floorToFloor: floorH, _openingArea: isFtao(w) ? sortedOpenings(w).reduce((a, o) => a + o.width * (o.head - o.sill), 0) : 0 };
           const grav = resolveGravityAtWall(wWithH, (line.gravityLoads || {})[lvl.id], wallDLTypes);
-          const tc = computeWallTC(sh.seismic, sh.wind, grav.dlTotal, wLen, floorH, rho, sds, loadType, { omega0 });
+          const tc = computeWallTC(sh.seismic, sh.wind, grav.dlTotal, wLen, floorH, rho, sds, loadType, { omega0, rL: grav.rL, rR: grav.rR });
 
           let anchorageLeft = null, anchorageRight = null;
           if (w.anchorageLeftOverride) {
@@ -463,7 +476,7 @@ export function calcAll(inputs) {
             seismicCap: n.asdE, windCap: n.asdW,
             effectiveSeismicCap: r2(sheathCapE), effectiveWindCap: r2(sheathCapW),
             seismicDC, windDC, dcRatio, dcGoverning,
-            dlWallSelf: grav.wallSelfDL, dlFromDiagram: grav.diagramDL, dlTotal: grav.dlTotal,
+            dlWallSelf: grav.wallSelfDL, dlFromDiagram: grav.diagramDL, dlTotal: grav.dlTotal, dlRL: r2(grav.rL), dlRR: r2(grav.rR),
             floorH,
             anchorageType: useHoldown ? 'holdown' : 'strap',
             anchorageLeft, anchorageRight,
