@@ -4,7 +4,7 @@ import assert from 'assert/strict';
 import { checkShearWallItem } from '../scripts/lib/shearWallLoadCheck.mjs'; // sets up the stand-in DOM
 import { calcAll, computeWallTC, resolveGravityAtWall } from '../src/modules/shearWallCalc.js';
 import { shearWallDesign, renderLineResults, migrateV6toV7, designBasisRows } from '../src/modules/shearWallDesign.js';
-import { renderElevation } from '../src/modules/shearWallElevation.js';
+import { renderElevation, renderElevationForPdf } from '../src/modules/shearWallElevation.js';
 import { HDUE_TABLE, MSTC_TABLE, hdueMinPost, meetsMinPost, autoSelectPost, getGradeById } from '../src/modules/shearWallHardware.js';
 import { lookupWswh, selectWswhAnchor, permittedCriteria, WSWH_ROD } from '../src/modules/shearWallWswh.js';
 import { validateEngineeringInputs } from '../src/validation.js';
@@ -331,6 +331,25 @@ test('WSWH UI: Strong-Wall tab, PDF section, Summary settings and wall panel ren
   pick(typeSel, 'sheathed');
   assert.equal(ln.walls.find(w => w.id === 'w-2').systemType, 'sheathed');
   assert.equal(ln.walls.find(w => w.id === 'w-2').length, 4);
+  h.destroy();
+});
+
+test('WSWH elevation: panel label, stacked kit and anchor W / d_e drawn (PDF + live)', () => {
+  const inp = twoStory([panel('w-1', 20, { levelId: 'lvl-2', wswhCondition: 'stackedUpper' }), panel('w-2', 20, { levelId: 'lvl-1' }), wall('w-3', 0, 10, { levelId: 'lvl-1' }), wall('w-4', 0, 10, { levelId: 'lvl-2' })],
+    { 'lvl-2': { seismic: 2, wind: 0 }, 'lvl-1': { seismic: 3, wind: 0 } }, { seismicDesignCategory: 'D' });
+  const o = calcAll(inp);
+  const ln = inp.directions[0].lines[0];
+  const pdf = renderElevationForPdf(ln, inp.levels, inp.wallDLTypes, lineOf(o), 700);
+  const svg = typeof pdf === 'string' ? pdf : pdf.outerHTML;
+  assert.ok(svg.includes('SW-2 · WSWH18x9'), 'vertical mark · model');
+  assert.ok(svg.includes('WSWH-TSS18KT (two-story stacked kit)'), 'stacked kit named at the floor line');
+  const base = wallsOf(o).find(w => w.wallId === 'w-2');
+  const an = base.anchorageLeft;
+  assert.ok(svg.includes('AB ' + an.grade + ' (' + an.criteria + ') · W ' + an.W + '" · d_e ' + an.de + '"'), 'anchor with min W and d_e');
+  const c = document.createElement('div');
+  const h = renderElevation(c, JSON.parse(JSON.stringify(ln)), inp.levels, inp.wallDLTypes, {});
+  h.showResults(lineOf(o));
+  assert.ok([...c.querySelectorAll('text')].some(t => t.textContent === 'SW-1 · WSWH18x9'));
   h.destroy();
 });
 

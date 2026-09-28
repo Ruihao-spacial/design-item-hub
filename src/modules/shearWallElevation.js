@@ -235,6 +235,60 @@ function beamLabelBand(layout, li) {
 
 // Walls as drawn: a segmented wall with valid openings is drawn pier by pier, with the same ids as the
 // calc results (w-5#p1 …). parent = the wall in the definition (selection, drag, overrides).
+// Strong-Wall WSWH panel (live + PDF): dark panel with an X brace, mark · model written vertically,
+// D/C pill beside the base, anchor ticks at the rod spacing B, kit name at a stacked floor line and the
+// anchor (Table 06 row: min footing width W and embedment d_e) in the bottom band. o.tips = live hover tips.
+export const WSWH_FILL = '#334155';
+function drawWswhPanel(svg, o) {
+  const { w, r, body, lv, wr, pxPerFt, placer, C, tips, showHW } = o;
+  const x = r.x, wd = Math.max(r.w, 4), y = r.y, h = Math.max(r.h, 8);
+  const brace = svgEl('g', { 'pointer-events': 'none' });
+  brace.appendChild(svgEl('line', { x1: x + 1.5, y1: y + 2, x2: x + wd - 1.5, y2: y + h - 2, stroke: '#cbd5e1', 'stroke-width': 0.8 }));
+  brace.appendChild(svgEl('line', { x1: x + wd - 1.5, y1: y + 2, x2: x + 1.5, y2: y + h - 2, stroke: '#cbd5e1', 'stroke-width': 0.8 }));
+  svg.appendChild(brace);
+  const info = wr && wr.wswh;
+  const cx = x + wd / 2, cy = body.y + body.h / 2 - 4;
+  const model = info && info.ok ? info.evalModel.replace(' (interp.)', '*') : 'WSWH' + (w.wswhWidth || '18');
+  const txt = (w.mark || w.id) + ' · ' + model;
+  svg.appendChild(svgEl('text', { x: cx, y: cy, 'text-anchor': 'middle', 'dominant-baseline': 'middle', fill: '#fff', 'font-size': '8', 'font-weight': '600',
+    transform: 'rotate(-90 ' + cx + ' ' + cy + ')', stroke: 'rgba(0,0,0,0.55)', 'stroke-width': '3', 'paint-order': 'stroke', 'stroke-linejoin': 'round', 'pointer-events': 'none' }, txt));
+  const len = textW(txt, 8);
+  placer.reserve({ x: cx - 6, y: cy - len / 2, w: 12, h: len });
+  if (!wr) return;
+  // D/C pill to the right of the panel base
+  const pill = dcPill(0, 0, wr.dcRatio, 7);
+  const pcx = x + wd + 2 + pill.box.w / 2, pcy = body.y + body.h - pill.box.h / 2 - 1;
+  const placed = dcPill(pcx, pcy, wr.dcRatio, 7);
+  svg.appendChild(placed.g);
+  placer.reserve(placed.box);
+  if (!info || !info.ok) return;
+  // Anchor / rod ticks at B (panel centre ± B/2) across the floor line under the panel
+  const half = (info.B / 12) * pxPerFt / 2;
+  const fy = r.bottom;
+  for (const tx of [cx - half, cx + half]) {
+    svg.appendChild(svgEl('line', { x1: tx, y1: fy - 5, x2: tx, y2: fy + 4, stroke: C.ink, 'stroke-width': 1.4, 'pointer-events': 'none' }));
+  }
+  // Stacked 2nd-story panel: the two-story stacked connection kit at the floor line below it
+  if (info.role === 'stackedUpper' && info.kit) {
+    const a = { x: x + wd + 3, y: fy + 2, 'text-anchor': 'start', 'dominant-baseline': 'middle', fill: C.inkSecondary, 'font-size': '7', 'font-weight': '600' };
+    const kitTxt = info.kit + ' (two-story stacked kit)';
+    if (placer.place([[{ attrs: a, text: kitTxt }]])) svg.appendChild(haloText(a, kitTxt, C.surface, tips ? kitTxt + ' — shear transfer plate, (2) WSWH-MSKHD holdowns, (2) 1"×30" A193 B7 rods; rod T checked vs ' + (wr.anchorageLeft ? wr.anchorageLeft.cap : '—') + ' lb' : null));
+  }
+  if (!showHW) return;
+  // Anchor label (bottom story): Table 06 row with the minimum footing width W and embedment d_e
+  const an = [wr.anchorageLeft, wr.anchorageRight].filter(Boolean).sort((a, b) => (b.cap || 0) - (a.cap || 0))[0];
+  if (info.role === 'stackedUpper') return;
+  const aTxt = !an ? 'Anchor OVER — by RDP' : an.byRDP ? 'Anchorage by RDP' : an.id.replace('WSWH-AB ', 'AB ') + ' · W ' + an.W + '" · d_e ' + an.de + '"';
+  const ay = lv.postHwH ? lv.postHwY + lv.postHwH / 2 : fy - 8;
+  const base = { y: ay, 'dominant-baseline': 'middle', fill: an ? C.ink : C.fail, 'font-size': '7', 'font-weight': '600' };
+  const cands = [{ ...base, x: cx, 'text-anchor': 'middle' }, { ...base, x: x, 'text-anchor': 'end' }, { ...base, x: x + wd + 2, 'text-anchor': 'start' }].map(a => [{ attrs: a, text: aTxt }]);
+  const got = placer.place(cands);
+  if (!got) return;
+  const tip = tips && an ? (w.mark || w.id) + ' anchors: ' + an.id + (an.cap ? ' — ' + an.cap + ' lb ASD' : '') + (an.W ? ', min footing width W ' + an.W + '", embedment d_e ' + an.de + '", footing length ' + an.Lftg + '"' : '')
+    + ' · T L ' + (wr.governingTensionLeft || 0).toFixed(2) + 'k / R ' + (wr.governingTensionRight || 0).toFixed(2) + 'k (bolt length l_e: Table 07, not checked)' : null;
+  svg.appendChild(haloText(got[0].attrs, aTxt, C.surface, tip));
+}
+
 function drawParts(line, levels) {
   const walls = line.walls || [];
   return expandWalls(walls, levels).walls.map(part => ({
@@ -1296,9 +1350,10 @@ export function renderElevation(container, line, levels, wallDLTypes, callbacks)
       const relHas = (set) => set.has('wall:' + w.id) || set.has('wall:' + pw.id);
       const related = isSel || relHas(rel.sources) || relHas(rel.receivers);
 
-      let fill = WALL_COLOR;
+      const panelWall = isWswh(pw);
+      let fill = panelWall ? WSWH_FILL : WALL_COLOR;
       const wr = (wallResults && (showForcesOn || showHardwareOn)) ? findWallResult(w.id) : null;
-      if (wr) {
+      if (wr && !panelWall) {
         if (showHW) {
           const allPass = wr.dcRatio <= 1.0 && wr.anchorageLeft && wr.anchorageRight && wr.postLeft && wr.postRight;
           fill = allPass ? 'var(--pass)' : 'var(--fail)';
@@ -1311,7 +1366,7 @@ export function renderElevation(container, line, levels, wallDLTypes, callbacks)
 
       const wallRect = svgEl('rect', {
         x: wx, y: r.y, width: Math.max(ww, 2), height: Math.max(r.h, 8),
-        fill, opacity: highlightActive && !related ? 0.3 : 0.7, stroke: isSel ? WALL_SELECTED : 'var(--ink)', 'stroke-width': isSel ? 2.5 : 1, rx: 2,
+        fill, opacity: highlightActive && !related ? 0.3 : panelWall ? 0.92 : 0.7, stroke: isSel ? WALL_SELECTED : 'var(--ink)', 'stroke-width': isSel ? 2.5 : 1, rx: panelWall ? 1 : 2,
         style: { cursor: placementMode === 'none' ? 'grab' : 'crosshair' },
         onMousedown(e) {
           if (placementMode !== 'none') return;
@@ -1336,7 +1391,7 @@ export function renderElevation(container, line, levels, wallDLTypes, callbacks)
           tip: fr && fr.strap ? (pw.mark || pw.id) + ' FTAO strap ' + fr.strap.id + ' · F_max ' + fr.strapDemand + ' lb / ' + fr.strap.cap + ' lb → D/C ' + (fr.strapDC != null ? fr.strapDC.toFixed(2) : '—') : null });
       }
 
-      if (ar > 2.0 && !isFtaoWall) {
+      if (ar > 2.0 && !isFtaoWall && !panelWall) {
         const a = { x: wx + ww / 2, y: r.y + 10, 'text-anchor': 'middle', fill: 'var(--fail)', 'font-size': '8', 'font-weight': '700' };
         svg.appendChild(haloText(a, 'h/b=' + ar.toFixed(1)));
         placer.reserveText(a, 'h/b=' + ar.toFixed(1));
@@ -1344,7 +1399,15 @@ export function renderElevation(container, line, levels, wallDLTypes, callbacks)
 
       const markLabel = w.mark || w.id;
       const put = (attrs, text) => { svg.appendChild(wallText(attrs, text)); placer.reserveText(attrs, text); };
-      if (showHW && wr) {
+      if (panelWall) {
+        const pr = wallResults ? findWallResult(w.id) : null;
+        drawWswhPanel(svg, { w: pw, r, body, lv, wr: pr, pxPerFt, placer, C: LIVE_PALETTE, tips: true, showHW: showHW && !!wr });
+        if (pr) {
+          const x = pr.wswh, lt = pr.dcGoverning === 'wind' ? 'W' : 'E';
+          svg.appendChild(svgEl('rect', { x: wx, y: body.y, width: Math.max(ww, 4), height: body.h, fill: 'transparent', 'data-edit': 'nailing:' + w.id, style: { cursor: 'pointer' },
+            'data-tip': markLabel + ' Strong-Wall ' + (x.ok ? x.evalModel + ' (' + x.orderModel + '), H_e ' + x.He.toFixed(2) + '" · V ' + x.Vd[lt] + ' / ' + x.Vcap[lt] + ' lb → D/C ' + pr.dcRatio.toFixed(2) : x.errors.join('; ')) + ' · click for details' }));
+        }
+      } else if (showHW && wr) {
         put({ x: wx + ww / 2, y: body.y + 16, 'text-anchor': 'middle', fill: '#fff', 'font-size': '9', 'font-weight': '600' }, markLabel);
         const nailFS = ww > 50 ? 10 : 8;
         const nailAttrs = { x: wx + ww / 2, y: body.y + body.h / 2 - 7, 'text-anchor': 'middle', 'dominant-baseline': 'middle', fill: '#fff', 'font-size': String(nailFS), 'font-weight': '600' };
@@ -2378,22 +2441,27 @@ export function renderElevationForPdf(line, levels, wallDLTypes, lineResults, wi
     const wx = r.x, ww = r.w;
     const wr = wrMap[w.id];
 
-    let fill = C.accent;
-    if (wr) {
+    const panelWall = isWswh(pw);
+    let fill = panelWall ? WSWH_FILL : C.accent;
+    if (wr && !panelWall) {
       if (wr.dcRatio > 1.0) fill = C.fail;
       else if (wr.dcRatio > 0.8) fill = C.stale;
       else fill = C.pass;
     }
 
-    svg.appendChild(svgEl('rect', { x: wx, y: r.y, width: Math.max(ww, 2), height: Math.max(r.h, 8), fill, opacity: 0.7, stroke: C.ink, 'stroke-width': 1, rx: 2 }));
+    svg.appendChild(svgEl('rect', { x: wx, y: r.y, width: Math.max(ww, 2), height: Math.max(r.h, 8), fill, opacity: panelWall ? 0.92 : 0.7, stroke: C.ink, 'stroke-width': 1, rx: panelWall ? 1 : 2 }));
     if (lineResults) drawWallBandScrim(svg, r, lv, C.surface);
     if (hasOpenings(pw) && !openingsDrawn.has(pw.id)) {
       openingsDrawn.add(pw.id);
       drawWallOpenings(svg, pw, lv, beams, pxPerFt, PDF_PALETTE, { placer, ftao: wr && wr.ftao, pdf: true });
     }
-    const markAttrs = { x: wx + ww / 2, y: body.y + body.h / 2, 'text-anchor': 'middle', 'dominant-baseline': 'middle', fill: '#fff', 'font-size': ww > 40 ? '10' : '8', 'font-weight': '600' };
-    svg.appendChild(wallText(markAttrs, w.mark || w.id));
-    placer.reserveText(markAttrs, w.mark || w.id);
+    if (panelWall) {
+      drawWswhPanel(svg, { w: pw, r, body, lv, wr, pxPerFt, placer, C: { ...PDF_PALETTE, fail: C.fail }, tips: false, showHW: !!wr });
+    } else {
+      const markAttrs = { x: wx + ww / 2, y: body.y + body.h / 2, 'text-anchor': 'middle', 'dominant-baseline': 'middle', fill: '#fff', 'font-size': ww > 40 ? '10' : '8', 'font-weight': '600' };
+      svg.appendChild(wallText(markAttrs, w.mark || w.id));
+      placer.reserveText(markAttrs, w.mark || w.id);
+    }
 
     // Governing T/C at each end, in the T/C strip (one centred column when the pair would not fit)
     if (wr && lv.forceStripH) {
