@@ -163,6 +163,7 @@ export function defaultInputs() {
     sds: '', loadType: 'seismic',
     wallThickness: '4',
     ...deflectionDefaults(),
+    ...projectV7Defaults(),
     woodGrade: 'dfir_no1',
     wallDLTypes: [wdt1, wdt2],
     levels: [lvl1, lvl2],
@@ -174,6 +175,11 @@ export function defaultInputs() {
 // Deflection / drift settings (schema v6). cd, ie, riskCategory are copied from a linked Base Shear item.
 export function deflectionDefaults() {
   return { sheathing: 'ply', cd: '', ie: '', riskCategory: '', driftRow: 'other', alphaS: '', distribution: 'capacity' };
+}
+
+// Project settings added in schema v7: Ω₀ (forces-only combos; copied from a linked Base Shear item)
+export function projectV7Defaults() {
+  return { omega0: '' };
 }
 
 export function svgEl(tag, attrs, ...children) {

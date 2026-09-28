@@ -2092,26 +2092,22 @@ export function renderElevation(container, line, levels, wallDLTypes, callbacks)
       const comboKeys = sampleWall && sampleWall.combos ? Object.keys(sampleWall.combos) : [];
       const asdKeys = comboKeys.filter(k => { const c = sampleWall.combos[k]; return !c.group || c.group === 'asd'; });
       const caseKeys = comboKeys.filter(k => { const c = sampleWall.combos[k]; return c.group === 'load_case'; });
-      const lrfdKeys = comboKeys.filter(k => sampleWall.combos[k].group === 'lrfd');
+      const keysOf = (g) => comboKeys.filter(k => sampleWall.combos[k].group === g);
 
-      const envGroup = el('optgroup', { label: 'Envelope' });
+      const envGroup = el('optgroup', { label: 'Envelope — used for design' });
       envGroup.appendChild(el('option', { value: 'governing' }, 'ASD Governing'));
       sel.appendChild(envGroup);
-      if (asdKeys.length) {
-        const asdGroup = el('optgroup', { label: 'ASD Combos' });
-        for (const key of asdKeys) asdGroup.appendChild(el('option', { value: key }, key));
-        sel.appendChild(asdGroup);
-      }
-      if (caseKeys.length) {
-        const lcGroup = el('optgroup', { label: 'Load Cases' });
-        for (const key of caseKeys) lcGroup.appendChild(el('option', { value: key }, key));
-        sel.appendChild(lcGroup);
-      }
-      if (lrfdKeys.length) {
-        const lrGroup = el('optgroup', { label: 'LRFD Combos (forces only)' });
-        for (const key of lrfdKeys) lrGroup.appendChild(el('option', { value: key }, key));
-        sel.appendChild(lrGroup);
-      }
+      const addGroup = (label, keys) => {
+        if (!keys.length) return;
+        const og = el('optgroup', { label });
+        for (const key of keys) og.appendChild(el('option', { value: key }, key));
+        sel.appendChild(og);
+      };
+      addGroup('ASD Combos — used for design', asdKeys);
+      addGroup('Load Cases — deflection', caseKeys);
+      addGroup('LRFD Combos — forces only', keysOf('lrfd'));
+      addGroup('Ω₀ ASD Combos — forces only', keysOf('asd_omega'));
+      addGroup('Ω₀ LRFD Combos — forces only', keysOf('lrfd_omega'));
       if (currentCombo) {
         const opt = sel.querySelector('option[value="' + currentCombo + '"]');
         if (opt) opt.selected = true;

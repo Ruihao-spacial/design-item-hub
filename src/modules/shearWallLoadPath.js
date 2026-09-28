@@ -30,6 +30,17 @@ export function envelope(map, comboGroups, group = 'asd') {
   return { T: r2(T), C: r2(C) };
 }
 
+// Per-end envelope of accumulated wall combos over one group
+function endEnvelope(accum, comboGroups, group) {
+  const o = { tL: 0, tR: 0, cL: 0, cR: 0 };
+  for (const [k, c] of Object.entries(accum)) {
+    if (comboGroups[k] !== group) continue;
+    o.tL = Math.max(o.tL, c.tensionLeft); o.tR = Math.max(o.tR, c.tensionRight);
+    o.cL = Math.max(o.cL, c.comprLeft); o.cR = Math.max(o.cR, c.comprRight);
+  }
+  return o;
+}
+
 export function resolveVerticalLoadPath(ctx) {
   const { levels, walls, beams, posts, wallResultsMap, lineThickness, grade } = ctx;
   const warnings = [];
@@ -42,6 +53,8 @@ export function resolveVerticalLoadPath(ctx) {
   comboKeys.forEach(k => { comboGroups[k] = sample.combos[k].group; });
   const env = (m) => envelope(m, comboGroups);
   const envL = (m) => envelope(m, comboGroups, 'lrfd');
+  // Ω₀ envelopes (ASD §2.4.5 / LRFD §2.3.6) — reported forces only
+  const envO = (m) => ({ asd: envelope(m, comboGroups, 'asd_omega'), lrfd: envelope(m, comboGroups, 'lrfd_omega') });
 
   const levelName = (li) => (levels[li] && levels[li].name) || '';
   const levelIdx = {};
@@ -203,7 +216,7 @@ export function resolveVerticalLoadPath(ctx) {
       st.sources.filter(s => s.type !== 'post').forEach(s => addInto(levelLoad, s.map));
       postPaths.push({
         postId: p.id, mark: markOf(p), levelId: lvl.id, levelName: levelName(li), position: x, floorH,
-        perCombo: roundMap(st.load), envelopeT: e.T, envelopeC: e.C, lrfd: envL(st.load),
+        perCombo: roundMap(st.load), envelopeT: e.T, envelopeC: e.C, lrfd: envL(st.load), omega: envO(st.load),
         levelLoad: roundMap(levelLoad), levelLoadEnv: env(levelLoad),
         hasPostAbove: st.sources.some(s => s.type === 'post'),
         sources: st.sources, receiver: rec,
@@ -258,7 +271,7 @@ export function resolveVerticalLoadPath(ctx) {
               + ': reaction T ' + e.T.toFixed(2) + 'k / C ' + e.C.toFixed(2) + 'k — design support externally' });
         }
         const hw = hasConnection(rec) ? selectAnchorage(li, e.T, s.anchorageOverride) : noHardware;
-        return { supportId: s.id, position: x, type, perCombo: roundMap(R), envelopeT: e.T, envelopeC: e.C, lrfd: envL(R), receiver: rec, ...hw };
+        return { supportId: s.id, position: x, type, perCombo: roundMap(R), envelopeT: e.T, envelopeC: e.C, lrfd: envL(R), omega: envO(R), receiver: rec, ...hw };
       });
 
       beamTransfers.push({
@@ -302,6 +315,7 @@ export function resolveVerticalLoadPath(ctx) {
     wr.injections = inc.sources;
     wr.hwDemand = demand;
     wr.accumLRFD = { tL: r2(lr.tL), tR: r2(lr.tR), cL: r2(lr.cL), cR: r2(lr.cR) };
+    wr.accumOmega = { asd: endEnvelope(accum, comboGroups, 'asd_omega'), lrfd: endEnvelope(accum, comboGroups, 'lrfd_omega') };
 
     const lvl = levels[levelIdx[w.levelId]];
     const floorSpan = (lvl && lvl.floorClearSpan) || '16';

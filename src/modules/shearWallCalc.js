@@ -69,11 +69,17 @@ export function resolveGravityAtWall(wall, gravityLoadsAtLevel, wallDLTypes) {
   return { wallSelfDL: r2(wallSelfDL), diagramDL: r2(diagramDL), dlTotal: r2(wallSelfDL + diagramDL) };
 }
 
-export function computeWallTC(share1E, share1W, dlTotal, wallLength, floorH, rho, sds, loadType) {
+// Ω₀ used for the amplified seismic combos when none is entered or linked
+export const DEFAULT_OMEGA0 = 2.5;
+export function omega0Of(inputs) { return parseFloat(inputs && inputs.omega0) || DEFAULT_OMEGA0; }
+
+// opts.omega0 — overstrength factor for the Ω₀ combos (forces only, never used for design)
+export function computeWallTC(share1E, share1W, dlTotal, wallLength, floorH, rho, sds, loadType, opts = {}) {
   const L = parseFloat(wallLength) || 0;
   const h = parseFloat(floorH) || 0;
   const _rho = parseFloat(rho) || 1.0;
   const _sds = parseFloat(sds) || 0;
+  const om = parseFloat(opts.omega0) || DEFAULT_OMEGA0;
   const dl = parseFloat(dlTotal) || 0;
   const dlRTM = dl * L / 2;
 
@@ -116,6 +122,18 @@ export function computeWallTC(share1E, share1W, dlTotal, wallLength, floorH, rho
     combos['(0.9-0.2SDS)D+ρE_neg'] = endPair('lrfd', fUp, -mL);
     combos['(1.2+0.2SDS)D+ρE_pos'] = endPair('lrfd', fComp, mL);
     combos['(1.2+0.2SDS)D+ρE_neg'] = endPair('lrfd', fComp, -mL);
+    // Ω₀ (overstrength, Ω₀ replaces ρ) — ASD §2.4.5 and LRFD §2.3.6, reported forces only
+    const mO = L > 0 ? 0.7 * om * V * h / L : 0;
+    const mOL = L > 0 ? om * V * h / L : 0;
+    steps.omega = { omega0: om, otmASD: r2(0.7 * om * V * h), otmLRFD: r2(om * V * h) };
+    combos['0.6D+0.7Ω₀E_pos'] = endPair('asd_omega', gfUplift, mO);
+    combos['0.6D+0.7Ω₀E_neg'] = endPair('asd_omega', gfUplift, -mO);
+    combos['D+0.7Ω₀E_pos'] = endPair('asd_omega', gfComp, mO);
+    combos['D+0.7Ω₀E_neg'] = endPair('asd_omega', gfComp, -mO);
+    combos['(0.9-0.2SDS)D+Ω₀E_pos'] = endPair('lrfd_omega', fUp, mOL);
+    combos['(0.9-0.2SDS)D+Ω₀E_neg'] = endPair('lrfd_omega', fUp, -mOL);
+    combos['(1.2+0.2SDS)D+Ω₀E_pos'] = endPair('lrfd_omega', fComp, mOL);
+    combos['(1.2+0.2SDS)D+Ω₀E_neg'] = endPair('lrfd_omega', fComp, -mOL);
   }
 
   if (loadType === 'wind' || loadType === 'both') {
@@ -140,6 +158,7 @@ export function computeWallTC(share1E, share1W, dlTotal, wallLength, floorH, rho
   const lrfd = governingOf(combos, 'lrfd');
   return {
     combos, steps,
+    omegaASD: governingOf(combos, 'asd_omega'), omegaLRFD: governingOf(combos, 'lrfd_omega'),
     governingTensionLeft: gov.tL,
     governingTensionRight: gov.tR,
     governingComprLeft: gov.cL,
@@ -193,6 +212,7 @@ const isFtao = (w) => hasOpenings(w) && wallMethod(w) === 'ftao';
 export function calcAll(inputs) {
   const levels = inputs.levels || [];
   const sds = inputs.sds;
+  const omega0 = omega0Of(inputs);
   const loadType = inputs.loadType || 'seismic';
   const seismic = loadType === 'seismic' || loadType === 'both';
   const wind = loadType === 'wind' || loadType === 'both';
@@ -403,7 +423,7 @@ export function calcAll(inputs) {
 
           const wWithH = { ...w, _floorToFloor: floorH, _openingArea: isFtao(w) ? sortedOpenings(w).reduce((a, o) => a + o.width * (o.head - o.sill), 0) : 0 };
           const grav = resolveGravityAtWall(wWithH, (line.gravityLoads || {})[lvl.id], wallDLTypes);
-          const tc = computeWallTC(sh.seismic, sh.wind, grav.dlTotal, wLen, floorH, rho, sds, loadType);
+          const tc = computeWallTC(sh.seismic, sh.wind, grav.dlTotal, wLen, floorH, rho, sds, loadType, { omega0 });
 
           let anchorageLeft = null, anchorageRight = null;
           if (w.anchorageLeftOverride) {
@@ -518,6 +538,7 @@ export function calcAll(inputs) {
       const deflCtx = { sheathing, lineThickness, grade };
       for (const wr of Object.values(wallResultsMap)) {
         wr.lrfd = wr.accumLRFD || { tL: wr.lrfdTensionLeft, tR: wr.lrfdTensionRight, cL: wr.lrfdComprLeft, cR: wr.lrfdComprRight };
+        wr.omega = wr.accumOmega || { asd: wr.omegaASD, lrfd: wr.omegaLRFD };
         wr.lrfdCapLeft = lrfdCap(wr.anchorageLeft);
         wr.lrfdCapRight = lrfdCap(wr.anchorageRight);
         wr.deflection = {};

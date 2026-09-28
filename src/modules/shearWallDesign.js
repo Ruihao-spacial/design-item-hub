@@ -2,29 +2,29 @@ import { el, clearEl, numOrBlank, sameNumber } from '../utils.js';
 import {
   resetIds, resetWallNum, resetElementNums, defaultInputs,
   newLevel, newWallDLType, newLine, newWallId, nextWallMark,
-  wallOpeningDefaults, deflectionDefaults, newOpeningId,
+  wallOpeningDefaults, deflectionDefaults, projectV7Defaults, newOpeningId,
 } from './shearWallTypes.js';
-import { calcAll, CALC_VERSION, DISTRIBUTION_METHODS, lineDistribution } from './shearWallCalc.js';
+import { calcAll, CALC_VERSION, DISTRIBUTION_METHODS, lineDistribution, DEFAULT_OMEGA0, omega0Of } from './shearWallCalc.js';
 import { renderElevation, renderElevationForPdf, pdfElevationAspect } from './shearWallElevation.js';
 import { NAILING_TABLE, SHEATHING_TYPES, FOOTNOTE_10_NOTE, sheathingLabel } from './shearWallNailing.js';
 import { NDS_GRADES, HDUE_TABLE, MSTC_TABLE, POST_SIZES, computePostCapacity, FTAO_STRAP_TABLE, strapNailing, lrfdCap, getGradeById } from './shearWallHardware.js';
 import { DRIFT_ROWS, driftLimit } from './shearWallDeflection.js';
 
 // Values copied from a linked Seismic Base Shear item
-const BASE_SHEAR_FIELDS = [['sds', 'Sds'], ['cd', 'Cd'], ['ie', 'Ie'], ['riskCategory', 'Risk Category']];
+const BASE_SHEAR_FIELDS = [['sds', 'Sds'], ['cd', 'Cd'], ['ie', 'Ie'], ['riskCategory', 'Risk Category'], ['omega0', 'Ω₀']];
 const sameValue = (a, b) => (typeof b === 'number' ? sameNumber(a, b, 0.0005) : String(a || '') === String(b || ''));
 
 export const shearWallDesign = {
   id: 'shear_wall_design',
   label: 'Shear Wall Design',
-  schemaVersion: 6,
+  schemaVersion: 7,
   calcVersion: CALC_VERSION,
   noNewPrefix: true,
   noOutputSection: false,
 
   refs: [
     { key: 'baseShearSource', label: 'Seismic Base Shear', sourceType: 'seismic_base_shear',
-      extract: (outputs) => ({ sds: outputs.sds, cd: outputs.cd, ie: outputs.ie, riskCategory: outputs.riskCategory }) },
+      extract: (outputs) => ({ sds: outputs.sds, cd: outputs.cd, ie: outputs.ie, riskCategory: outputs.riskCategory, omega0: outputs.omega0 }) },
   ],
   fields: [],
   outputFields: [],
@@ -173,6 +173,8 @@ export const shearWallDesign = {
         el('label', { className: 'form-label' }, 'Wall Distribution (default)'), distSelect));
       sec.appendChild(row1);
       sec.appendChild(renderDeflectionSettings());
+      sec.appendChild(el('div', { className: 'section-header' }, 'Load Combinations & Design Basis'));
+      sec.appendChild(designBasisTable(inputs));
 
       sec.appendChild(el('div', { style: { fontWeight: '500', fontSize: '0.85rem', marginBottom: '0.25rem' } }, 'Wall Dead Load Types'));
       const wdtTbl = el('table', { className: 'dynamic-table', style: { fontSize: '0.85rem', maxWidth: '360px' } });
@@ -276,6 +278,7 @@ export const shearWallDesign = {
       row.appendChild(field('Link to Seismic Base Shear', linkSel));
       row.appendChild(field(['C', el('sub', null, 'd')], numInput('cd', '60px')));
       row.appendChild(field(['I', el('sub', null, 'e')], numInput('ie', '60px')));
+      row.appendChild(field(['Ω', el('sub', null, '0'), ' (forces only)'], numInput('omega0', '60px', String(DEFAULT_OMEGA0))));
       row.appendChild(field('Risk Cat.', select('riskCategory', [['', '—'], ['I', 'I'], ['II', 'II'], ['III', 'III'], ['IV', 'IV']], '70px')));
       row.appendChild(field('Drift limit (Table 12.12-1)', select('driftRow', DRIFT_ROWS.map(r => [r.id, r.label]), '260px')));
       if (inputs.loadType === 'wind' || inputs.loadType === 'both') {
@@ -724,6 +727,8 @@ export const shearWallDesign = {
           if (wdRows.length) sections.push({ title: dir.dirName + ' / ' + ln.lineName + ' — Wall Deflection (SDPWS Eq. 4.3-1)', table: { headers: WALL_DEFL_HEADERS, rows: wdRows, colWidths: [0.08, 0.26, 0.07, 0.07, 0.1, 0.1, 0.1, 0.1, 0.08] } });
           const lrRows = lrfdRows(ln);
           if (lrRows.length) sections.push({ title: dir.dirName + ' / ' + ln.lineName + ' — LRFD Forces (reported only)', table: { headers: LRFD_HEADERS, rows: lrRows } });
+          const omRows = omegaRows(ln);
+          if (omRows.length) sections.push({ title: dir.dirName + ' / ' + ln.lineName + ' — Ω₀ Forces (reported only, not used for design)', table: { headers: OMEGA_HEADERS, rows: omRows } });
           // Elevation diagram
           const inputLine = (inputs.directions || []).flatMap(d => d.lines || []).find(l => l.id === ln.lineId);
           if (inputLine) {
@@ -739,7 +744,10 @@ export const shearWallDesign = {
         }
       }
       const sdsVal = inputs.sds || 'SDS';
-      sections.push({ title: 'Load Combinations (ASD design, LRFD reported)', equations: [
+      sections.push({ title: 'Load Combinations & Design Basis', table: { headers: DESIGN_BASIS_HEADERS, rows: designBasisRows(inputs), colWidths: [0.16, 0.34, 0.1, 0.4] } });
+      sections.push({ title: 'Design basis note', text: DESIGN_BASIS_NOTE });
+      const omVal = String(omega0Of(inputs));
+      sections.push({ title: 'Load Combination Equations (ASD = design; LRFD and Ω₀ = forces only)', equations: [
         { desc: 'Seismic Uplift (ASCE 7 Combo 8)', parts: [{ t: 'T = [0.7ρV·h - (0.6-0.14' }, { t: sdsVal, bold: true }, { t: ')DL·L/2] / L' }] },
         { desc: 'Seismic Compression (ASCE 7 Combo 5)', parts: [{ t: 'C = [0.7ρV·h + (1.0+0.14' }, { t: sdsVal, bold: true }, { t: ')DL·L/2] / L' }] },
         { desc: 'Wind Uplift (ASCE 7 Combo 7)', parts: [{ t: 'T = [0.6V' }, { t: 'w', sub: true }, { t: '·h - 0.6DL·L/2] / L' }] },
@@ -747,6 +755,11 @@ export const shearWallDesign = {
         { desc: 'LRFD Seismic Uplift (ASCE 7 §2.3.6)', parts: [{ t: 'T = [ρV·h - (0.9-0.2' }, { t: sdsVal, bold: true }, { t: ')DL·L/2] / L' }] },
         { desc: 'LRFD Seismic Compression (ASCE 7 §2.3.6)', parts: [{ t: 'C = [ρV·h + (1.2+0.2' }, { t: sdsVal, bold: true }, { t: ')DL·L/2] / L' }] },
         { desc: 'LRFD Wind (ASCE 7 §2.3.1)', parts: [{ t: 'T = [V' }, { t: 'w', sub: true }, { t: '·h - 0.9DL·L/2] / L,  C = [V' }, { t: 'w', sub: true }, { t: '·h + 1.2DL·L/2] / L' }] },
+        ...((inputs.loadType || 'seismic') !== 'wind' ? [
+          { desc: 'Ω₀ ASD Uplift (§2.4.5, forces only)', parts: [{ t: 'T = [0.7·' }, { t: omVal, bold: true }, { t: '·V·h - (0.6-0.14' }, { t: sdsVal, bold: true }, { t: ')DL·L/2] / L' }] },
+          { desc: 'Ω₀ ASD Compression (§2.4.5, forces only)', parts: [{ t: 'C = [0.7·' }, { t: omVal, bold: true }, { t: '·V·h + (1.0+0.14' }, { t: sdsVal, bold: true }, { t: ')DL·L/2] / L' }] },
+          { desc: 'Ω₀ LRFD (§2.3.6, forces only)', parts: [{ t: 'T = [' }, { t: omVal, bold: true }, { t: '·V·h - (0.9-0.2' }, { t: sdsVal, bold: true }, { t: ')DL·L/2] / L,  C = [' }, { t: omVal, bold: true }, { t: '·V·h + (1.2+0.2' }, { t: sdsVal, bold: true }, { t: ')DL·L/2] / L' }] },
+        ] : []),
       ] });
     }
     return sections;
@@ -922,6 +935,15 @@ function lineTabLrfd(ln) {
   return box;
 }
 
+function lineTabOmega(ln) {
+  const box = el('div');
+  const rows = omegaRows(ln);
+  if (!rows.length) { box.appendChild(emptyNote('No Ω₀ forces (seismic load type only).')); return box; }
+  box.appendChild(el('div', { style: { fontSize: '0.8rem', color: 'var(--ink-secondary)', marginBottom: '0.35rem' } }, OMEGA_NOTE));
+  box.appendChild(simpleTable(OMEGA_HEADERS, rows, []));
+  return box;
+}
+
 // Full results of one line with sub-tabs. state: { tab, onTab(tab) }
 export function renderLineResults(container, ln, dirOut, state) {
   const st = lineStats(ln);
@@ -929,10 +951,11 @@ export function renderLineResults(container, ln, dirOut, state) {
     lineStatusBadge(st),
     el('span', { style: { fontSize: '0.8rem', color: 'var(--ink-secondary)' } }, distributionText(ln))));
   if (ln.distribution && ln.distribution.note) container.appendChild(el('div', { style: { fontSize: '0.8rem', color: 'var(--stale, #b7791f)', marginBottom: '0.25rem' } }, 'ⓘ ' + ln.distribution.note));
+  container.appendChild(designBasisLine(ln));
 
   const hasFtao = ln.perLevel.some(pl => pl.walls.some(w => w.method === 'ftao' && w.ftao));
   const tabs = [['walls', 'Walls'], hasFtao && ['ftao', 'FTAO'], ['loadpath', 'Load path' + (st.issues ? ' (' + st.issues + ')' : '')],
-    ['drift', 'Drift' + (st.drift === 'NG' ? ' (NG)' : '')], ['lrfd', 'LRFD']].filter(Boolean);
+    ['drift', 'Drift' + (st.drift === 'NG' ? ' (NG)' : '')], ['lrfd', 'LRFD'], omegaRows(ln).length && ['omega', 'Ω₀']].filter(Boolean);
   const tab = tabs.some(t => t[0] === state.tab) ? state.tab : 'walls';
   const bar = el('div', { style: { display: 'flex', gap: '2px', marginBottom: '0.5rem', borderBottom: '1px solid var(--border)', flexWrap: 'wrap' } });
   for (const [key, label] of tabs) {
@@ -941,7 +964,7 @@ export function renderLineResults(container, ln, dirOut, state) {
   }
   container.appendChild(bar);
   const body = tab === 'ftao' ? lineTabFtao(ln) : tab === 'loadpath' ? lineTabLoadPath(ln)
-    : tab === 'drift' ? lineTabDrift(ln) : tab === 'lrfd' ? lineTabLrfd(ln) : lineTabWalls(ln, dirOut);
+    : tab === 'drift' ? lineTabDrift(ln) : tab === 'lrfd' ? lineTabLrfd(ln) : tab === 'omega' ? lineTabOmega(ln) : lineTabWalls(ln, dirOut);
   container.appendChild(body);
 }
 
@@ -1070,6 +1093,32 @@ function lrfdRows(ln) {
   return rows;
 }
 
+const OMEGA_HEADERS = ['Element', 'Level', 'Ω₀ ASD T L / R (k)', 'Ω₀ ASD C L / R (k)', 'Ω₀ LRFD T L / R (k)', 'Ω₀ LRFD C L / R (k)'];
+
+// Ω₀ envelopes (accumulated through the load path) — reported forces only
+function omegaRows(ln) {
+  const rows = [];
+  const pair = (a, b) => f2(a) + ' / ' + f2(b);
+  for (const pl of ln.perLevel) {
+    for (const w of pl.walls) {
+      const o = w.omega;
+      if (!o || !o.asd || !w.combos || !Object.values(w.combos).some(c => c.group === 'asd_omega')) continue;
+      rows.push([w.mark, pl.levelName, pair(o.asd.tL, o.asd.tR), pair(o.asd.cL, o.asd.cR), pair(o.lrfd.tL, o.lrfd.tR), pair(o.lrfd.cL, o.lrfd.cR)]);
+    }
+  }
+  if (!rows.length) return rows;
+  for (const pp of ln.postPaths || []) {
+    if (pp.omega) rows.push([pp.mark + ' base', pp.levelName, f2(pp.omega.asd.T), f2(pp.omega.asd.C), f2(pp.omega.lrfd.T), f2(pp.omega.lrfd.C)]);
+  }
+  for (const bt of ln.beamTransfers || []) {
+    (bt.supports || []).forEach((s, i) => {
+      if (s.omega) rows.push([bt.mark + (i === 0 ? ' L' : ' R') + ' support', bt.levelName, f2(s.omega.asd.T), f2(s.omega.asd.C), f2(s.omega.lrfd.T), f2(s.omega.lrfd.C)]);
+    });
+  }
+  return rows;
+}
+const OMEGA_NOTE = 'Amplified seismic (Ω₀) combinations, ASCE 7-22 §2.4.5 (ASD) and §2.3.6 (LRFD) with Ω₀ in place of ρ — reported forces only, not used for design.';
+
 const DRIFT_HEADERS = ['Level', 'h_sx (ft)', 'δxe (in)', 'Governing wall', 'δx = Cd·δxe/Ie (in)', 'δx / h_sx', 'Allowable Δa (in)', 'Status'];
 
 function driftRows(ln) {
@@ -1156,6 +1205,41 @@ function postRows(ln) {
     fmtConnection(pp), pp.post ? pp.post.postLabel + (pp.postDC != null ? ' (' + pp.postDC.toFixed(2) + ')' : '') : 'OVER',
     fmtReceiver(pp.receiver),
   ]);
+}
+
+// === Load combinations and their role (design / deflection / forces only) ===
+export const DESIGN_BASIS_HEADERS = ['Group', 'Combinations', 'Role', 'Used for'];
+export function designBasisRows(inputs) {
+  const lt = inputs.loadType || 'seismic';
+  const E = lt === 'seismic' || lt === 'both', W = lt === 'wind' || lt === 'both';
+  const om = omega0Of(inputs);
+  const list = (a, b) => [E && a, W && b].filter(Boolean).join('; ');
+  const rows = [
+    ['ASD (ASCE 7-22 §2.4)', list('(0.6−0.14SDS)D+0.7ρE, (1.0+0.14SDS)D+0.7ρE', '0.6D+0.6W, D+0.6W'), 'DESIGN',
+      'Sizes sheathing nailing, HDUE / MSTC, posts and beam-support / post-base hardware (governing = ASD envelope)'],
+    ['Load cases', ['1.0D', E && '1.0E', W && '1.0W'].filter(Boolean).join(', '), 'Deflection',
+      'Wall deflection and story drift (1.0E, ρ = 1' + (W ? '; wind drift with α_s' : '') + '); 1.0D dead-load display'],
+    ['LRFD (ASCE 7-22 §2.3)', list('(0.9−0.2SDS)D+ρE, (1.2+0.2SDS)D+ρE', '0.9D+1.0W, 1.2D+1.0W'), 'Forces only',
+      'Reported (e.g. for foundations); no design check'],
+  ];
+  if (E) {
+    rows.push(['Ω₀ ASD (§2.4.5)', '(0.6−0.14SDS)D+0.7Ω₀E, (1.0+0.14SDS)D+0.7Ω₀E; Ω₀ = ' + om, 'Forces only', 'Reported for information; not used for design']);
+    rows.push(['Ω₀ LRFD (§2.3.6)', '(0.9−0.2SDS)D+Ω₀E, (1.2+0.2SDS)D+Ω₀E; Ω₀ = ' + om, 'Forces only', 'Reported for information; not used for design']);
+  }
+  return rows;
+}
+export const DESIGN_BASIS_NOTE = 'Combinations with live load (e.g. 0.75L) are not included: the tool tracks dead load only.';
+function designBasisTable(inputs) {
+  const box = el('div', { style: { marginBottom: '1rem' } });
+  box.appendChild(simpleTable(DESIGN_BASIS_HEADERS, designBasisRows(inputs), []));
+  box.appendChild(el('div', { style: { fontSize: '0.8rem', color: 'var(--ink-secondary)', marginTop: '-0.5rem' } }, DESIGN_BASIS_NOTE));
+  return box;
+}
+function designBasisLine(ln) {
+  const hasOmega = omegaRows(ln).length > 0;
+  return el('div', { style: { fontSize: '0.8rem', color: 'var(--ink-secondary)', marginBottom: '0.35rem' } },
+    el('strong', null, 'Design: '), 'ASD combinations · ', el('strong', null, 'Deflection: '), '1.0 load cases · ',
+    el('strong', null, 'Forces only: '), 'LRFD' + (hasOmega ? ', Ω₀ ASD, Ω₀ LRFD' : ''));
 }
 
 function simpleTable(headers, rows, numCols) {
@@ -1285,10 +1369,18 @@ export function migrateV5toV6(inp) {
   return inp;
 }
 
+// Schema v7: Ω₀ for the forces-only amplified seismic combos
+export function migrateV6toV7(inp) {
+  if (!inp) return inp;
+  for (const [k, v] of Object.entries(projectV7Defaults())) if (inp[k] === undefined) inp[k] = v;
+  return inp;
+}
+
 const DEFINITION_MIGRATIONS = [
   { to: 4, up: migrateToV4 },
   { to: 5, up: migrateV4toV5 },
   { to: 6, up: migrateV5toV6 },
+  { to: 7, up: migrateV6toV7 },
 ];
 const CURRENT_SCHEMA = DEFINITION_MIGRATIONS[DEFINITION_MIGRATIONS.length - 1].to;
 
