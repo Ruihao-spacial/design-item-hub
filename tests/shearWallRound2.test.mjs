@@ -4,7 +4,10 @@ import assert from 'assert/strict';
 import { checkShearWallItem } from '../scripts/lib/shearWallLoadCheck.mjs'; // sets up the stand-in DOM
 import { calcAll, computeWallTC, resolveGravityAtWall } from '../src/modules/shearWallCalc.js';
 import { shearWallDesign, renderLineResults, migrateV6toV7, designBasisRows } from '../src/modules/shearWallDesign.js';
+import { renderElevation } from '../src/modules/shearWallElevation.js';
 import { HDUE_TABLE, MSTC_TABLE, hdueMinPost, meetsMinPost, autoSelectPost, getGradeById } from '../src/modules/shearWallHardware.js';
+import { lookupWswh, selectWswhAnchor, permittedCriteria, WSWH_ROD } from '../src/modules/shearWallWswh.js';
+import { validateEngineeringInputs } from '../src/validation.js';
 
 const near = (a, b, tol, msg) => assert.ok(Math.abs(a - b) <= tol, (msg || '') + ' expected ' + b + ' ± ' + tol + ', got ' + a);
 let passed = 0;
@@ -184,6 +187,151 @@ test('R6: segmented pier takes only the loads over the pier, split by position',
   const [p1, p2] = wallsOf(out);
   near(p1.dlRL, 3, 0.005); near(p1.dlRR, 1, 0.005); // 4 k at 1 ft on a 4 ft pier
   assert.equal(p2.dlTotal, 0);
+});
+
+// === WSWH Strong-Wall ===
+const panel = (id, position, more = {}) => wall(id, position, 1.5, { systemType: 'wswh', wswhWidth: '18', wswhCondition: 'concrete', wswhJoist: '12', wswhFloorDepth: '12', wswhAnchorOverride: '', ...more });
+const twoStory = (walls, loads, extra = {}) => {
+  const inp = oneStory(walls, { floorH: 9, extra });
+  inp.levels = [
+    { id: 'lvl-2', name: '2nd', floorToFloor: 9, floorClearSpan: '16', anchorageType: 'auto' },
+    { id: 'lvl-1', name: '1st', floorToFloor: 9, floorClearSpan: '16', anchorageType: 'auto' },
+  ];
+  inp.directions[0].lines[0].levelLoads = loads;
+  return inp;
+};
+
+test('WSWH lookup: table rows, height and P interpolation, raised-floor joist factor, limits', () => {
+  const a = lookupWswh({ width: 18, condition: 'concrete', ftfFt: 9, P_lb: 4000, fc: 2500 });
+  assert.equal(a.evalModel, 'WSWH18x9'); assert.equal(a.He, 105.25);
+  assert.equal(a.V.E, 2575); assert.equal(a.D.E, 0.45); assert.equal(a.V.W, 3235); assert.equal(a.B, 12.5);
+  // 9.5 ft, P midway 4,000–7,500: wind V = mean of x9 (3235/3005) and x10 (2755/2695)
+  const b = lookupWswh({ width: 18, condition: 'concrete', ftfFt: 9.5, P_lb: 5750, fc: 2500 });
+  near(b.He, 111.25, 1e-9); near(b.V.W, (3120 + 2725) / 2, 1e-9); near(b.V.E, (2575 + 2140) / 2, 1e-9);
+  assert.equal(b.orderModel, 'WSWH18x10');
+  // P below 1,000 lb uses the 1,000 row; f'c 4,500 uses the 3,000 table
+  assert.equal(lookupWswh({ width: 24, condition: 'concrete', ftfFt: 8, P_lb: 0, fc: 4500 }).V.W, 6910);
+  // Raised floor, 12"–16" joists: V × 0.92 (WSWH18x8 T02: 1680 S / 2135 W)
+  near(lookupWswh({ width: 18, condition: 'raised', ftfFt: 8, P_lb: 1000, joist: '16' }).V.E, 1680 * 0.92, 1e-9);
+  assert.match(lookupWswh({ width: 18, condition: 'raised', ftfFt: 8, P_lb: 2500 }).error, /exceeds 2,000 lb/);
+  assert.match(lookupWswh({ width: 12, condition: 'concrete', ftfFt: 15, P_lb: 0 }).error, /outside the tabulated WSWH12 heights/);
+  assert.match(lookupWswh({ width: 24, condition: 'concrete', ftfFt: 15, P_lb: 5000 }).error, /exceeds the tabulated 4000 lb/);
+});
+
+test('WSWH anchors (Table 06): smallest footing width then embedment; SDC filters E vs W/E; rod at stacked 2nd story', () => {
+  const d = selectWswhAnchor(15000, { fc: 2500, sdc: 'D', width: 18 });
+  assert.equal(d.rowId, 'E STD 16000'); assert.equal(d.W, 33); assert.equal(d.de, 11); assert.equal(d.Lftg, 47);
+  assert.equal(selectWswhAnchor(15000, { fc: 2500, sdc: 'B', width: 18 }).rowId, 'W/E STD 17100');
+  assert.equal(selectWswhAnchor(15000, { fc: 2500, sdc: 'C', detached: true, width: 18 }).rowId, 'W/E STD 17100');
+  assert.equal(selectWswhAnchor(15000, { fc: 2500, sdc: 'C', detached: false, width: 18 }).rowId, 'E STD 16000');
+  assert.equal(selectWswhAnchor(40000, { fc: 2500, sdc: 'D', width: 18 }), null);
+  assert.equal(selectWswhAnchor(1000, { fc: 3500, sdc: 'D', width: 18 }).fc, 3000);
+  assert.equal(permittedCriteria('', false).join(), 'E');
+});
+
+test('WSWH on concrete: D/C = V_ASD / V_allow; T = 0.7ρV·H_e/B − (0.6−0.14SDS)·P/2; Table 06 anchor', () => {
+  const out = calcAll(oneStory([panel('w-1', 0)], { seismic: 2, floorH: 9 }));
+  const w = wallsOf(out)[0];
+  assert.equal(w.method, 'wswh'); assert.equal(w.length, 1.5); assert.equal(w.nailing.label, 'WSWH18x9');
+  near(w.dcRatio, 0.7 * 2000 / 2575, 0.005);
+  near(w.governingTensionLeft, 0.7 * 2 * 105.25 / 12.5, 0.01);
+  assert.equal(w.anchorageLeft.rowId, 'E STD 16000');
+  assert.equal(w.postLeft.postLabel, 'WSWH panel');
+  near(w.deflection.E.delta, 0.45 * 2000 / 2575, 1e-3); // 1.0E, linear in V
+  // with 1 k of dead load: P = (1+0.14)·1000 for the lookup; uplift uses (0.6−0.14)·D/2
+  const g = { 'lvl-1': { uniform: [], point: [{ id: 'pl-1', position: 0.75, dlKips: 1 }] } };
+  const w2 = wallsOf(calcAll(oneStory([panel('w-1', 0)], { seismic: 2, floorH: 9, gravity: g })))[0];
+  assert.equal(w2.wswh.P.E, 1140);
+  near(w2.governingTensionLeft, 0.7 * 2 * 105.25 / 12.5 - 0.46 * 0.5, 0.01);
+});
+
+test('WSWH mixed with a sheathed wall: capacity weights V_allow vs v_cap × L; deflection distribution converges', () => {
+  const inp = oneStory([wall('w-1', 10, 10), panel('w-2', 0)], { seismic: 8, floorH: 9 });
+  const [sw, ws] = wallsOf(calcAll(inp));
+  const wSw = sw.effectiveSeismicCap * 10, wWs = 2575;
+  near(ws.share_1E, 8 * wWs / (wSw + wWs), 0.01);
+  inp.distribution = 'deflection';
+  const out = calcAll(inp);
+  assert.equal(lineOf(out).distribution.method, 'deflection');
+  assert.ok(lineOf(out).distribution.converged, 'deflection distribution converges with a WSWH panel');
+});
+
+test('WSWH two-story stack: base moment check, upper panel absorbed into the base, rod at the 2nd story', () => {
+  const inp = twoStory([panel('w-1', 0, { levelId: 'lvl-2', wswhCondition: 'stackedUpper' }), panel('w-2', 0, { levelId: 'lvl-1' })],
+    { 'lvl-2': { seismic: 1, wind: 0 }, 'lvl-1': { seismic: 1, wind: 0 } });
+  const out = calcAll(inp);
+  const up = wallsOf(out).find(w => w.wallId === 'w-1'), lo = wallsOf(out).find(w => w.wallId === 'w-2');
+  assert.equal(up.wswh.table, 'T03'); assert.equal(up.anchorageLeft.id, WSWH_ROD.id);
+  assert.equal(lo.wswh.role, 'stackedLower');
+  // V₀ = WSWH18x9 at P = 4,000 lb, f'c 2,500 = 2575; V1 = 0.7·2 k, V2 = 0.7·1 k (ASD)
+  const s = lo.wswh.stacked.E;
+  near(s.Mallow, 2575 * 105.25 / 12, 0.01);
+  near(s.Md, (1400 * 105.25 + 700 * (105.25 + 12 + up.wswh.He)) / 12, 0.01);
+  near(lo.dcRatio, s.Md / s.Mallow, 0.005);
+  // T₁ = 0.7·[V1·H1 + V2(H1+d+H2)]/12 / B (no dead load)
+  near(lo.governingTensionLeft, 0.7 * (2 * 105.25 + 1 * (105.25 + 12 + up.wswh.He)) / 12 / (12.5 / 12), 0.01);
+  const dlv = lineOf(out).wallDeliveries.filter(d => d.wallId === 'w-1');
+  assert.ok(dlv.every(d => d.receiver.type === 'wswh_stack'));
+  assert.ok(!lo.injections, 'upper end forces are not added again to the base panel');
+});
+
+test('WSWH problems: not tabulated / upper story without a stack → warning, no shear; openings blocked', () => {
+  const out = calcAll(oneStory([panel('w-1', 0, { wswhWidth: '12' }), wall('w-2', 10, 10)], { seismic: 4, floorH: 15 }));
+  const w = wallsOf(out).find(x => x.wallId === 'w-1');
+  assert.equal(w.share_1E, 0); assert.ok(w.dcRatio > 1);
+  assert.ok(lineOf(out).loadPathAudit.warnings.some(x => x.type === 'wswh' && /outside the tabulated/.test(x.message)));
+  const out2 = calcAll(twoStory([panel('w-1', 0, { levelId: 'lvl-2' }), wall('w-3', 10, 10, { levelId: 'lvl-2' }), wall('w-2', 10, 10, { levelId: 'lvl-1' })],
+    { 'lvl-2': { seismic: 1, wind: 0 }, 'lvl-1': { seismic: 1, wind: 0 } }));
+  assert.ok(lineOf(out2).loadPathAudit.warnings.some(x => x.type === 'wswh' && /bottom story only/.test(x.message)));
+  const errs = validateEngineeringInputs('shear_wall_design', oneStory([panel('w-1', 0, { openings: [{ offset: 0, width: 1, sill: 3, head: 7 }] })]));
+  assert.ok(errs.some(e => /cannot have openings/.test(e)));
+});
+
+test('WSWH v6 → v7 migration adds wall system fields; results, PDF and form render', () => {
+  const m = migrateV6toV7({ directions: [{ lines: [{ walls: [{ id: 'w-1' }] }] }] });
+  assert.equal(m.directions[0].lines[0].walls[0].systemType, 'sheathed');
+  assert.equal(m.wswhFc, '2500');
+  const inp = oneStory([panel('w-1', 0), wall('w-2', 10, 10)], { seismic: 4, floorH: 9 });
+  const r = checkShearWallItem({ schemaVersion: 7, inputs: inp });
+  assert.ok(r.ok, r.error);
+});
+
+test('WSWH UI: Strong-Wall tab, PDF section, Summary settings and wall panel render', () => {
+  const inp = twoStory([panel('w-1', 0, { levelId: 'lvl-2', wswhCondition: 'stackedUpper' }), panel('w-2', 0, { levelId: 'lvl-1' }), wall('w-3', 10, 10, { levelId: 'lvl-1' })],
+    { 'lvl-2': { seismic: 1, wind: 0 }, 'lvl-1': { seismic: 2, wind: 0 } }, { seismicDesignCategory: 'D', wswhFc: '2500' });
+  const o = calcAll(inp);
+  const b = document.createElement('div');
+  renderLineResults(b, lineOf(o), o.perDirection[0], { tab: 'wswh', onTab() {} });
+  assert.ok(b.textContent.includes('Strong-Wall WSWH panels'));
+  assert.ok(b.textContent.includes('base moment check'));
+  assert.ok(b.textContent.includes('WSWH-AB'));
+  const secs = shearWallDesign.pdfSections(inp);
+  assert.ok(secs.some(s => /Strong-Wall WSWH$/.test(s.title)));
+  assert.ok(secs.some(s => /two-story stack/.test(s.title)));
+  const form = document.createElement('div');
+  shearWallDesign.renderForm(form, JSON.parse(JSON.stringify(inp)), () => {}, [], () => {});
+  assert.ok(form.textContent.includes('Strong-Wall WSWH (Simpson)'));
+  // Wall panel of a WSWH wall: type / width / condition, no nailing field
+  const c = document.createElement('div');
+  const ln = JSON.parse(JSON.stringify(inp.directions[0].lines[0]));
+  const h = renderElevation(c, ln, inp.levels, inp.wallDLTypes, { designContext: () => ({ sdc: 'D', wswhFc: '2500', bottomLevelId: 'lvl-1' }) });
+  h.showResults(lineOf(o));
+  const pick = (sel, value) => {
+    [...sel.querySelectorAll('option')].forEach(x => x.removeAttribute('selected'));
+    [...sel.querySelectorAll('option')].find(x => x.getAttribute('value') === value).setAttribute('selected', '');
+    sel.dispatchEvent(new window.Event('change'));
+  };
+  const findSel = [...c.querySelectorAll('select')].find(s => (s.getAttribute('title') || '').includes('mark or ID'));
+  pick(findSel, [...findSel.querySelectorAll('option')].find(x => /w-2/.test(x.getAttribute('value') || '')).getAttribute('value'));
+  const txt = c.textContent;
+  assert.ok(txt.includes('Strong-Wall WSWH (panel height = floor-to-floor'), 'WSWH editor shown');
+  assert.ok(txt.includes('Anchor (Table 06'), 'anchor override offered for the concrete panel');
+  assert.ok(!txt.includes('Hardware Overrides'), 'no HD / post overrides for a panel');
+  const typeSel = [...c.querySelectorAll('select')].find(s => [...s.querySelectorAll('option')].some(x => x.getAttribute('value') === 'wswh'));
+  pick(typeSel, 'sheathed');
+  assert.equal(ln.walls.find(w => w.id === 'w-2').systemType, 'sheathed');
+  assert.equal(ln.walls.find(w => w.id === 'w-2').length, 4);
+  h.destroy();
 });
 
 console.log(passed + ' passed' + (process.exitCode ? ', some FAILED' : ''));

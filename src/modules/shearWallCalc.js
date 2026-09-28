@@ -5,6 +5,7 @@ import { aspectFactor } from './shearWallFtao.js';
 import { expandWalls, hasOpenings, wallMethod, wallPiers, sortedOpenings } from './shearWallOpenings.js';
 import { ftaoCapacityLbf, ftaoDesign, ftaoLoadTypes } from './shearWallFtaoAdapter.js';
 import { wallDeflection, postArea, driftLimit } from './shearWallDeflection.js';
+import { isWswh, wswhWidthIn, wswhWidthFt, lookupWswh, stackedBaseCheck, selectWswhAnchor, RAISED_ANCHOR, WSWH_ROD, WSWH_PANEL_POST, conditionLabel } from './shearWallWswh.js';
 
 // Records which calc produced a stored results snapshot (results are always regenerated for display)
 export const CALC_VERSION = 'v8';
@@ -86,6 +87,9 @@ export function omega0Of(inputs) { return parseFloat(inputs && inputs.omega0) ||
 
 // opts.omega0 — overstrength factor for the Ω₀ combos (forces only, never used for design)
 // opts.rL / opts.rR — dead-load end reactions by statics (default dlTotal / 2 each)
+// opts.arm (ft) — lever arm between the end forces (default L; WSWH: anchor spacing B)
+// opts.h (ft) — height of the shear (default floorH; WSWH: panel H_e)
+// opts.otm1E / otm1W (k·ft) — 1.0-level overturning moment in place of V·h (stacked WSWH base)
 export function computeWallTC(share1E, share1W, dlTotal, wallLength, floorH, rho, sds, loadType, opts = {}) {
   const L = parseFloat(wallLength) || 0;
   const h = parseFloat(floorH) || 0;
@@ -96,6 +100,8 @@ export function computeWallTC(share1E, share1W, dlTotal, wallLength, floorH, rho
   const hasR = opts.rL != null && opts.rR != null;
   const rL = L > 0 ? (hasR ? parseFloat(opts.rL) || 0 : dl / 2) : 0;
   const rR = L > 0 ? (hasR ? parseFloat(opts.rR) || 0 : dl / 2) : 0;
+  const arm = opts.arm != null ? parseFloat(opts.arm) || 0 : L;
+  const hE = opts.h != null ? parseFloat(opts.h) || 0 : h;
 
   const combos = {};
   const steps = { rL: r2(rL), rR: r2(rR) };
@@ -116,29 +122,30 @@ export function computeWallTC(share1E, share1W, dlTotal, wallLength, floorH, rho
 
   if (loadType === 'seismic' || loadType === 'both') {
     const V = parseFloat(share1E) || 0;
-    const otm = 0.7 * _rho * V * h;
+    const Vh = opts.otm1E != null ? opts.otm1E : V * hE; // 1.0-level overturning moment (k·ft)
+    const otm = 0.7 * _rho * Vh;
     const gfUplift = 0.6 - 0.14 * _sds;
     const gfComp = 1.0 + 0.14 * _sds;
     steps.seismic = { otm: r2(otm), gfUplift: r4(gfUplift), gfComp: r4(gfComp) };
-    const m = L > 0 ? otm / L : 0;
+    const m = arm > 0 ? otm / arm : 0;
     combos['0.6D+0.7ρE_pos'] = endPair('asd', gfUplift, m);
     combos['0.6D+0.7ρE_neg'] = endPair('asd', gfUplift, -m);
     combos['D+0.7ρE_pos'] = endPair('asd', gfComp, m);
     combos['D+0.7ρE_neg'] = endPair('asd', gfComp, -m);
     // Load case: lateral only (no dead load) — equal and opposite end forces
-    combos['1.0E'] = endPair('load_case', 0, L > 0 ? V * h / L : 0);
+    combos['1.0E'] = endPair('load_case', 0, arm > 0 ? Vh / arm : 0);
     // LRFD (ASCE 7-22 §2.3.6, Ev = 0.2SDS·D) — reported forces only, design stays ASD
-    const mL = L > 0 ? _rho * V * h / L : 0;
+    const mL = arm > 0 ? _rho * Vh / arm : 0;
     const fUp = 0.9 - 0.2 * _sds, fComp = 1.2 + 0.2 * _sds;
-    steps.lrfdSeismic = { otm: r2(_rho * V * h), fUplift: r4(fUp), fComp: r4(fComp) };
+    steps.lrfdSeismic = { otm: r2(_rho * Vh), fUplift: r4(fUp), fComp: r4(fComp) };
     combos['(0.9-0.2SDS)D+ρE_pos'] = endPair('lrfd', fUp, mL);
     combos['(0.9-0.2SDS)D+ρE_neg'] = endPair('lrfd', fUp, -mL);
     combos['(1.2+0.2SDS)D+ρE_pos'] = endPair('lrfd', fComp, mL);
     combos['(1.2+0.2SDS)D+ρE_neg'] = endPair('lrfd', fComp, -mL);
     // Ω₀ (overstrength, Ω₀ replaces ρ) — ASD §2.4.5 and LRFD §2.3.6, reported forces only
-    const mO = L > 0 ? 0.7 * om * V * h / L : 0;
-    const mOL = L > 0 ? om * V * h / L : 0;
-    steps.omega = { omega0: om, otmASD: r2(0.7 * om * V * h), otmLRFD: r2(om * V * h) };
+    const mO = arm > 0 ? 0.7 * om * Vh / arm : 0;
+    const mOL = arm > 0 ? om * Vh / arm : 0;
+    steps.omega = { omega0: om, otmASD: r2(0.7 * om * Vh), otmLRFD: r2(om * Vh) };
     combos['0.6D+0.7Ω₀E_pos'] = endPair('asd_omega', gfUplift, mO);
     combos['0.6D+0.7Ω₀E_neg'] = endPair('asd_omega', gfUplift, -mO);
     combos['D+0.7Ω₀E_pos'] = endPair('asd_omega', gfComp, mO);
@@ -151,16 +158,17 @@ export function computeWallTC(share1E, share1W, dlTotal, wallLength, floorH, rho
 
   if (loadType === 'wind' || loadType === 'both') {
     const Vw = parseFloat(share1W) || 0;
-    const otmW = 0.6 * Vw * h;
+    const VwH = opts.otm1W != null ? opts.otm1W : Vw * hE;
+    const otmW = 0.6 * VwH;
     steps.wind = { otm: r2(otmW) };
-    const m = L > 0 ? otmW / L : 0;
+    const m = arm > 0 ? otmW / arm : 0;
     combos['0.6D+0.6W_pos'] = endPair('asd', 0.6, m);
     combos['0.6D+0.6W_neg'] = endPair('asd', 0.6, -m);
     combos['D+0.6W_pos'] = endPair('asd', 1.0, m);
     combos['D+0.6W_neg'] = endPair('asd', 1.0, -m);
-    combos['1.0W'] = endPair('load_case', 0, L > 0 ? Vw * h / L : 0);
-    const mW = L > 0 ? Vw * h / L : 0;
-    steps.lrfdWind = { otm: r2(Vw * h) };
+    combos['1.0W'] = endPair('load_case', 0, arm > 0 ? VwH / arm : 0);
+    const mW = arm > 0 ? VwH / arm : 0;
+    steps.lrfdWind = { otm: r2(VwH) };
     combos['0.9D+1.0W_pos'] = endPair('lrfd', 0.9, mW);
     combos['0.9D+1.0W_neg'] = endPair('lrfd', 0.9, -mW);
     combos['1.2D+1.0W_pos'] = endPair('lrfd', 1.2, mW);
@@ -222,6 +230,50 @@ export function pointInWallEnd(pos, wall, tolerance) {
 
 const isFtao = (w) => hasOpenings(w) && wallMethod(w) === 'ftao';
 
+// === Strong-Wall WSWH panels ===
+// Role of each panel (stacked pairs found by position), dead load, and table values per load type with
+// P = combo-factored D ((1.0+0.14SDS)·D seismic, 1.0·D wind). A panel with a lookup error carries no shear.
+function prepareWswh(allWalls, levels, line, wallDLTypes, inputs) {
+  const out = {};
+  const sds = parseFloat(inputs.sds) || 0;
+  const liOf = (id) => levels.findIndex(l => l.id === id);
+  const bottom = levels.length - 1;
+  const panels = allWalls.filter(isWswh);
+  for (const w of panels) {
+    const li = liOf(w.levelId);
+    const floorH = parseFloat((levels[li] || {}).floorToFloor) || 0;
+    const grav = resolveGravityAtWall({ ...w, _floorToFloor: floorH }, (line.gravityLoads || {})[w.levelId], wallDLTypes);
+    const cond = w.wswhCondition || 'concrete';
+    out[w.id] = { wall: w, li, floorH, grav, condition: cond, role: cond, width: wswhWidthIn(w), errors: [] };
+  }
+  for (const info of Object.values(out)) {
+    const { wall: w, li, condition } = info;
+    if (condition === 'stackedUpper') {
+      const below = panels.find(o => liOf(o.levelId) === li + 1 && wswhWidthIn(o) === info.width
+        && Math.abs((parseFloat(o.position) || 0) - (parseFloat(w.position) || 0)) <= 0.1);
+      if (!below) info.errors.push('Stacked 2nd-story WSWH needs an equal-width WSWH directly below (±0.1 ft)');
+      else if (liOf(below.levelId) !== bottom) info.errors.push('The WSWH below must be at the bottom story (two stories max)');
+      else if ((below.wswhCondition || 'concrete') !== 'concrete') info.errors.push('The WSWH below must use the concrete foundation condition');
+      else { info.lowerId = below.id; out[below.id].role = 'stackedLower'; out[below.id].upperId = w.id; }
+      if ((parseFloat(w.wswhFloorDepth) || 0) > 18) info.errors.push('Floor depth ' + w.wswhFloorDepth + '" exceeds 18" (Table 03 n.6)');
+    } else if (li !== bottom) {
+      info.errors.push(conditionLabel(condition) + ' is for the bottom story only — use "Two-story stacked" at the 2nd story');
+    }
+  }
+  const fc = inputs.wswhFc || '2500';
+  for (const info of Object.values(out)) {
+    const D = info.grav.dlTotal * 1000;
+    info.P = { E: (1.0 + 0.14 * sds) * D, W: D };
+    info.look = {};
+    for (const lt of ['E', 'W']) {
+      info.look[lt] = lookupWswh({ width: info.width, condition: info.role, ftfFt: info.floorH, P_lb: info.P[lt], fc, joist: info.wall.wswhJoist || '12' });
+    }
+    const err = info.look.E.error || info.look.W.error;
+    if (err) info.errors.push(err);
+  }
+  return out;
+}
+
 export function calcAll(inputs) {
   const levels = inputs.levels || [];
   const sds = inputs.sds;
@@ -268,6 +320,7 @@ export function calcAll(inputs) {
       const expanded = expandWalls(line.walls || [], levels);
       const openingIssues = { ...expanded.problems };
       const allWalls = expanded.walls.map(w => {
+        if (isWswh(w)) return { ...w, length: wswhWidthFt(w), openings: [] };
         if (!isFtao(w)) return w;
         try { ftaoCapacityLbf(w, ftaoCtx(w), NAILING_TABLE[0], ftaoLoadTypes(loadType)[0]); return w; }
         catch (e) { openingIssues[w.id] = e.errors || [e.message]; return { ...w, openings: [], _openingsIgnored: true }; }
@@ -281,15 +334,19 @@ export function calcAll(inputs) {
         return capCache[k];
       };
 
+      const wswh = prepareWswh(allWalls, levels, line, wallDLTypes, inputs);
+      const wswhCapLb = (w, lt) => { const i = wswh[w.id]; return i && !i.errors.length ? i.look[lt].V[lt] : 0; };
+
       // Aspect ratios (fixed per wall). FTAO piers are checked by the engine at the opening height.
       const wallARs = {};
       for (const w of allWalls) {
-        wallARs[w.id] = isFtao(w)
+        wallARs[w.id] = isFtao(w) || isWswh(w)
           ? { hOverB: null, flag: false, reductionFactor: 1, notPermitted: false }
           : checkAspectRatio(parseFloat(w.length) || 0, floorHOf(w.levelId));
       }
       // Capacity weight (plf-equivalent) for capacity-based distribution
       const capOf = (w, n, lt) => {
+        if (isWswh(w)) return wswhCapLb(w, lt) / wswhWidthFt(w); // panel V_allow (lb) over its width
         if (isFtao(w)) {
           const len = parseFloat(w.length) || 0;
           return len > 0 ? ftaoCap(w, n, lt) / len : 0;
@@ -325,7 +382,7 @@ export function calcAll(inputs) {
           const wMap = {}; sharesAt(wallsAtLevel, ss.wind, windCapMap, 'W').forEach(s => { wMap[s.wallId] = s.share; });
 
           for (const w of wallsAtLevel) {
-            if (w.nailingPattern || wallARs[w.id].notPermitted) continue;
+            if (w.nailingPattern || wallARs[w.id].notPermitted || isWswh(w)) continue;
             const wLen = parseFloat(w.length) || 0;
             if (wLen <= 0) continue;
             let selected;
@@ -382,6 +439,13 @@ export function calcAll(inputs) {
         const wallResults = wallsAtLevel.map(w => {
           const sh = shareMap[w.id] || { seismic: 0, wind: 0 };
           exactShares[w.id] = sh;
+          if (isWswh(w)) {
+            const relStiffness = forced
+              ? (ss.seismic > 0 ? r2(sh.seismic / ss.seismic) : ss.wind > 0 ? r2(sh.wind / ss.wind) : 0)
+              : totalCapLenE > 0 ? r2((seismicCapMap[w.id] || 0) * (parseFloat(w.length) || 0) / totalCapLenE) : 0;
+            return wswhWallResult(w, wswh[w.id], sh, { floorH, rho, rhoN, sds, loadType, seismic, wind, omega0, relStiffness, totalCapLenE,
+              upperShare: wswh[w.id].upperId ? exactShares[wswh[w.id].upperId] : null, upper: wswh[w.id].upperId ? wswh[wswh[w.id].upperId] : null, inputs });
+          }
           const wLen = parseFloat(w.length) || 0;
           const ar = wallARs[w.id];
           const n = wallNailing[w.id];
@@ -499,10 +563,18 @@ export function calcAll(inputs) {
       // Phase 3: Vertical load path — wall ends, posts at any story, transfer beams (user supports)
       const wallResultsMap = {};
       perLevel.forEach(pl => pl.walls.forEach(wr => { wallResultsMap[wr.wallId] = wr; }));
+      const absorbedInto = {};
+      for (const [id, i] of Object.entries(wswh)) if (i.lowerId) absorbedInto[id] = i.lowerId;
       const loadPath = resolveVerticalLoadPath({
         levels, walls: allWalls, beams: line.beams || [], posts: line.supportPosts || [],
-        wallResultsMap, lineThickness, grade,
+        wallResultsMap, lineThickness, grade, absorbedInto,
+        wallHardware: (w, T) => (isWswh(w) ? wswhAnchorFor(w, wswh[w.id], T, inputs) : undefined),
       });
+      for (const [id, i] of Object.entries(wswh)) {
+        if (!i.errors.length) continue;
+        loadPath.loadPathAudit.warnings.push({ type: 'wswh', elementId: id, elementMark: i.wall.mark || id, levelName: levelNameOf(i.wall.levelId),
+          message: 'Strong-Wall: ' + i.errors.join('; ') + ' — panel carries no shear' });
+      }
 
       // Opening / aspect-ratio problems go in the audit with the load path warnings
       for (const [wallId, msgs] of Object.entries(openingIssues)) {
@@ -555,7 +627,10 @@ export function calcAll(inputs) {
         wr.lrfdCapLeft = lrfdCap(wr.anchorageLeft);
         wr.lrfdCapRight = lrfdCap(wr.anchorageRight);
         wr.deflection = {};
-        if (wr.method === 'ftao') {
+        if (wr.method === 'wswh') {
+          if (seismic && wr.wswh.delta1.E != null) wr.deflection.E = { method: 'WSWH table', label: 'WSWH table Δ (linear in V)', delta: r4(wr.wswh.delta1.E) };
+          if (wind && alphaS > 0 && wr.wswh.delta1.W != null) wr.deflection.W = { method: 'WSWH table', label: 'WSWH table Δ (linear in V)', delta: r4(alphaS * wr.wswh.delta1.W) };
+        } else if (wr.method === 'ftao') {
           for (const lt of ['E', 'W']) {
             const d = wr.ftao && wr.ftao.perType[lt] && wr.ftao.perType[lt].deflection;
             if (d) wr.deflection[lt] = { method: 'FTAO — APA T555 pier cases, SDPWS Eq. 4.3-1', delta: r4(d.Delta_in), cases: d.cases };
@@ -568,7 +643,9 @@ export function calcAll(inputs) {
         // Stiffness k = V/δ (lb/in) at the 1.0 level — used by the deflection approach
         wr.stiffness = {};
         for (const lt of ftaoLoadTypes(loadType)) {
-          if (wr.method === 'ftao') {
+          if (wr.method === 'wswh') {
+            if (wr.wswh.k[lt] > 0) wr.stiffness[lt] = wr.wswh.k[lt];
+          } else if (wr.method === 'ftao') {
             const r = wr.ftao && wr.ftao.perType[lt];
             if (r && r.stiffness > 0) wr.stiffness[lt] = r.stiffness;
           } else {
@@ -595,6 +672,97 @@ export function calcAll(inputs) {
 
   return { calcVersion: CALC_VERSION, perDirection };
 }
+
+// Anchorage at a WSWH end for ASD tension T (kips): Table 06 row (concrete / stacked base),
+// TSS rod (stacked 2nd story), or "by RDP" (raised floor)
+function wswhAnchorFor(w, info, T, inputs) {
+  if (!info) return null;
+  if (info.role === 'raised') return RAISED_ANCHOR;
+  if (info.role === 'stackedUpper') return T * 1000 <= WSWH_ROD.cap + 1e-6 ? WSWH_ROD : null;
+  return selectWswhAnchor(T * 1000, { fc: inputs.wswhFc || '2500', sdc: inputs.seismicDesignCategory, detached: !!inputs.detachedOneTwoFamily,
+    width: info.width, override: w.wswhAnchorOverride || '' });
+}
+
+// Wall result of a WSWH panel, in the shape the rest of the calc / UI uses (plf fields = lb over the panel width)
+function wswhWallResult(w, info, sh, c) {
+  const widthFt = wswhWidthFt(w);
+  const ok = !info.errors.length;
+  const lk = info.look;
+  const f = { E: 0.7 * c.rhoN, W: 0.6 };
+  const V1 = { E: sh.seismic, W: sh.wind };                    // 1.0-level shares (k)
+  const Vd = { E: f.E * V1.E * 1000, W: f.W * V1.W * 1000 };   // ASD demand (lb)
+  const Vcap = { E: ok ? lk.E.V.E : 0, W: ok ? lk.W.V.W : 0 };
+  const He = ok ? lk.E.He : 0, B = ok ? lk.E.B : 0;
+  const dc = {}, stacked = {}, otm1 = {}, delta1 = {}, k = {};
+  for (const lt of ['E', 'W']) {
+    const Heft = He / 12;
+    otm1[lt] = V1[lt] * Heft;
+    if (ok && info.role === 'stackedLower' && c.upper && !c.upper.errors.length) {
+      const up = c.upper, uSh = c.upperShare || { seismic: 0, wind: 0 };
+      const V2 = lt === 'E' ? uSh.seismic : uSh.wind;
+      const H2 = up.look[lt].He, dfl = parseFloat(up.wall.wswhFloorDepth) || 0;
+      // Moment check at the ASD level; 1.0-level OTM (k·ft) for the end forces of every combo
+      stacked[lt] = stackedBaseCheck({ V0: Vcap[lt], H1: He, H2, dfl, V1: Vd[lt], V2: f[lt] * V2 * 1000 });
+      stacked[lt].H2 = H2; stacked[lt].dfl = dfl;
+      otm1[lt] = (V1[lt] * He + V2 * (He + dfl + H2)) / 12;
+      dc[lt] = stacked[lt].dc;
+      // Δ₁ = Δ₀·M_d/M_allow at the 1.0 level
+      const M1 = (V1[lt] * 1000 * He + V2 * 1000 * (He + dfl + H2)) / 12;
+      delta1[lt] = stacked[lt].Mallow > 0 ? lk[lt].D[lt] * M1 / stacked[lt].Mallow : null;
+    } else {
+      dc[lt] = Vcap[lt] > 0 ? Vd[lt] / Vcap[lt] : (Vd[lt] > 0 ? 9.99 : 0);
+      delta1[lt] = Vcap[lt] > 0 ? lk[lt].D[lt] * V1[lt] * 1000 / Vcap[lt] : null; // strength level: linear extrapolation
+    }
+    // Panel stiffness from the table (V_cap / Δ_cap, lb/in)
+    k[lt] = ok && lk[lt].D[lt] > 0 ? Vcap[lt] / lk[lt].D[lt] : 0;
+  }
+  const seismicDC = c.seismic ? r2(dc.E) : 0, windDC = c.wind ? r2(dc.W) : 0;
+  let dcRatio, dcGoverning;
+  if (c.loadType === 'seismic') { dcRatio = seismicDC; dcGoverning = 'seismic'; }
+  else if (c.loadType === 'wind') { dcRatio = windDC; dcGoverning = 'wind'; }
+  else { dcGoverning = seismicDC >= windDC ? 'seismic' : 'wind'; dcRatio = Math.max(seismicDC, windDC); }
+  if (!ok) dcRatio = Math.max(dcRatio, 9.99);
+
+  const D = info.grav.dlTotal;
+  const tc = computeWallTC(sh.seismic, sh.wind, D, widthFt, c.floorH, c.rho, c.sds, c.loadType, {
+    omega0: c.omega0, rL: D / 2, rR: D / 2, arm: B / 12, h: He / 12,
+    ...(info.role === 'stackedLower' && stacked.E ? { otm1E: otm1.E } : {}),
+    ...(info.role === 'stackedLower' && stacked.W ? { otm1W: otm1.W } : {}),
+  });
+  const anchorageLeft = wswhAnchorFor(w, info, tc.governingTensionLeft, c.inputs);
+  const anchorageRight = wswhAnchorFor(w, info, tc.governingTensionRight, c.inputs);
+  const plf = (lb) => r2(lb / widthFt);
+  const ev = lk.E && !lk.E.error ? lk.E : lk.W;
+  const wr = {
+    wallId: w.id, mark: w.mark || '', position: parseFloat(w.position) || 0, length: widthFt,
+    method: 'wswh', parentWallId: null, pierIndex: null, openingsIgnored: false,
+    hOverB: null, hOverBFlag: false, hbReductionFactor: 1, hbNotPermitted: false,
+    share_1E: r2(sh.seismic), share_1W: r2(sh.wind), shareExact_1E: sh.seismic, shareExact_1W: sh.wind,
+    relStiffness: c.relStiffness, totalCapLen: r2(c.totalCapLenE),
+    unitShear_seismic: plf(Vd.E), unitShear_wind: plf(Vd.W), unitShear_ASD: plf(dcGoverning === 'wind' ? Vd.W : Vd.E),
+    nailing: { id: 'wswh', label: ok ? ev.evalModel : 'WSWH' + info.width + ' (not tabulated)', sides: 0 },
+    capacity: plf(dcGoverning === 'wind' ? Vcap.W : Vcap.E), effectiveCapacity: plf(dcGoverning === 'wind' ? Vcap.W : Vcap.E),
+    seismicCap: plf(Vcap.E), windCap: plf(Vcap.W), effectiveSeismicCap: plf(Vcap.E), effectiveWindCap: plf(Vcap.W),
+    seismicDC, windDC, dcRatio: r2(dcRatio), dcGoverning,
+    dlWallSelf: info.grav.wallSelfDL, dlFromDiagram: info.grav.diagramDL, dlTotal: info.grav.dlTotal, dlRL: r2(D / 2), dlRR: r2(D / 2),
+    floorH: c.floorH, anchorageType: 'wswh', anchorageLeft, anchorageRight,
+    postLeft: WSWH_PANEL_POST, postRight: WSWH_PANEL_POST, postRaised: { left: null, right: null },
+    ftao: null,
+    wswh: {
+      ok, errors: info.errors, condition: info.condition, role: info.role, width: info.width,
+      evalModel: ok ? ev.evalModel : null, orderModel: ok ? ev.orderModel : null, kit: ok ? ev.kit : '', table: ev.table,
+      He, B, P: { E: r0(info.P.E), W: r0(info.P.W) }, Vd: { E: r0(Vd.E), W: r0(Vd.W) }, Vcap: { E: r0(Vcap.E), W: r0(Vcap.W) },
+      Dcap: { E: ok ? lk.E.D.E : null, W: ok ? lk.W.D.W : null }, dc: { E: r2(dc.E), W: r2(dc.W) }, stacked, delta1, k,
+      notes: ok ? [...new Set([...lk.E.notes, ...lk.W.notes])] : [], upperId: info.upperId || null, lowerId: info.lowerId || null,
+      floorDepth: parseFloat(w.wswhFloorDepth) || 0,
+    },
+    ...tc,
+  };
+  computeHardwareDC(wr);
+  wr.postDCLeft = null; wr.postDCRight = null;
+  return wr;
+}
+function r0(v) { return Math.round(v); }
 
 export const DISTRIBUTION_METHODS = [
   { id: 'capacity', label: 'Wall capacity (SDPWS 4.3.3.4.1)' },

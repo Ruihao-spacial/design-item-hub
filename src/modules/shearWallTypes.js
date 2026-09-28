@@ -112,7 +112,15 @@ export function newWall(levelId, position, wallDLTypeId) {
     anchorageLeftOverride: '', anchorageRightOverride: '',
     postLeftOverride: '', postRightOverride: '',
     ...wallOpeningDefaults(),
+    ...wallSystemDefaults(),
   };
+}
+
+// Wall system (schema v7): 'sheathed' wood shear wall or a Simpson Strong-Wall WSWH panel.
+// WSWH: width 12 / 18 / 24 in (wall length = width), condition concrete | raised | stackedUpper,
+// joist depth (raised floor: '12' ≤ 12", '16' 12"–16"), floor depth d_fl (in, stacked), anchor override (Table 06 row)
+export function wallSystemDefaults() {
+  return { systemType: 'sheathed', wswhWidth: '18', wswhCondition: 'concrete', wswhJoist: '12', wswhFloorDepth: '12', wswhAnchorOverride: '' };
 }
 
 // Openings and wall-with-openings settings (schema v6). method: 'segmented' | 'ftao'
@@ -177,9 +185,10 @@ export function deflectionDefaults() {
   return { sheathing: 'ply', cd: '', ie: '', riskCategory: '', driftRow: 'other', alphaS: '', distribution: 'capacity' };
 }
 
-// Project settings added in schema v7: Ω₀ (forces-only combos; copied from a linked Base Shear item)
+// Project settings added in schema v7: Ω₀ (forces-only combos) and SDC (WSWH anchor criteria), both copied
+// from a linked Base Shear item; foundation f'c and detached one-/two-family dwelling for the WSWH tables
 export function projectV7Defaults() {
-  return { omega0: '' };
+  return { omega0: '', seismicDesignCategory: '', wswhFc: '2500', detachedOneTwoFamily: false };
 }
 
 export function svgEl(tag, attrs, ...children) {

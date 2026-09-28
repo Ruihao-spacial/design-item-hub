@@ -2,16 +2,17 @@ import { el, clearEl, numOrBlank, sameNumber } from '../utils.js';
 import {
   resetIds, resetWallNum, resetElementNums, defaultInputs,
   newLevel, newWallDLType, newLine, newWallId, nextWallMark,
-  wallOpeningDefaults, deflectionDefaults, projectV7Defaults, newOpeningId,
+  wallOpeningDefaults, wallSystemDefaults, deflectionDefaults, projectV7Defaults, newOpeningId,
 } from './shearWallTypes.js';
 import { calcAll, CALC_VERSION, DISTRIBUTION_METHODS, lineDistribution, DEFAULT_OMEGA0, omega0Of } from './shearWallCalc.js';
 import { renderElevation, renderElevationForPdf, pdfElevationAspect } from './shearWallElevation.js';
 import { NAILING_TABLE, SHEATHING_TYPES, FOOTNOTE_10_NOTE, sheathingLabel } from './shearWallNailing.js';
 import { NDS_GRADES, HDUE_TABLE, MSTC_TABLE, POST_SIZES, computePostCapacity, FTAO_STRAP_TABLE, strapNailing, lrfdCap, getGradeById } from './shearWallHardware.js';
 import { DRIFT_ROWS, driftLimit } from './shearWallDeflection.js';
+import { WSWH_NOTES, WSWH_FC, conditionLabel } from './shearWallWswh.js';
 
 // Values copied from a linked Seismic Base Shear item
-const BASE_SHEAR_FIELDS = [['sds', 'Sds'], ['cd', 'Cd'], ['ie', 'Ie'], ['riskCategory', 'Risk Category'], ['omega0', 'Ω₀']];
+const BASE_SHEAR_FIELDS = [['sds', 'Sds'], ['cd', 'Cd'], ['ie', 'Ie'], ['riskCategory', 'Risk Category'], ['omega0', 'Ω₀'], ['seismicDesignCategory', 'SDC']];
 const sameValue = (a, b) => (typeof b === 'number' ? sameNumber(a, b, 0.0005) : String(a || '') === String(b || ''));
 
 export const shearWallDesign = {
@@ -24,7 +25,7 @@ export const shearWallDesign = {
 
   refs: [
     { key: 'baseShearSource', label: 'Seismic Base Shear', sourceType: 'seismic_base_shear',
-      extract: (outputs) => ({ sds: outputs.sds, cd: outputs.cd, ie: outputs.ie, riskCategory: outputs.riskCategory, omega0: outputs.omega0 }) },
+      extract: (outputs) => ({ sds: outputs.sds, cd: outputs.cd, ie: outputs.ie, riskCategory: outputs.riskCategory, omega0: outputs.omega0, seismicDesignCategory: outputs.seismicDesignCategory }) },
   ],
   fields: [],
   outputFields: [],
@@ -175,6 +176,7 @@ export const shearWallDesign = {
       sec.appendChild(renderDeflectionSettings());
       sec.appendChild(el('div', { className: 'section-header' }, 'Load Combinations & Design Basis'));
       sec.appendChild(designBasisTable(inputs));
+      sec.appendChild(renderWswhSettings());
 
       sec.appendChild(el('div', { style: { fontWeight: '500', fontSize: '0.85rem', marginBottom: '0.25rem' } }, 'Wall Dead Load Types'));
       const wdtTbl = el('table', { className: 'dynamic-table', style: { fontSize: '0.85rem', maxWidth: '360px' } });
@@ -240,6 +242,26 @@ export const shearWallDesign = {
       sec.appendChild(renderMasterLoadingTable());
 
       return sec;
+    }
+
+    // Strong-Wall WSWH project settings: foundation f'c (panel + anchor tables), SDC and dwelling type (anchor criteria)
+    function renderWswhSettings() {
+      const box = el('div', { style: { marginBottom: '1rem' } });
+      box.appendChild(el('div', { className: 'section-header' }, 'Strong-Wall WSWH (Simpson)'));
+      const row = el('div', { style: { display: 'flex', gap: '1rem', flexWrap: 'wrap', alignItems: 'flex-end' } });
+      const field = (label, input) => el('div', { className: 'form-group', style: { marginBottom: 0 } }, el('label', { className: 'form-label' }, label), input);
+      const fcSel = el('select', { className: 'form-select', style: { width: '110px' }, onChange(e) { inputs.wswhFc = e.target.value; notifyChange(); } });
+      WSWH_FC.forEach(v => fcSel.appendChild(el('option', { value: v, selected: String(inputs.wswhFc || '2500') === v }, v + ' psi')));
+      const sdcSel = el('select', { className: 'form-select', style: { width: '80px' }, onChange(e) { inputs.seismicDesignCategory = e.target.value; notifyChange(); } });
+      ['', 'A', 'B', 'C', 'D', 'E', 'F'].forEach(v => sdcSel.appendChild(el('option', { value: v, selected: String(inputs.seismicDesignCategory || '') === v }, v || '—')));
+      const det = el('input', { type: 'checkbox', checked: !!inputs.detachedOneTwoFamily, onChange(e) { inputs.detachedOneTwoFamily = e.target.checked; notifyChange(); } });
+      row.appendChild(field("Foundation f'c", fcSel));
+      row.appendChild(field('SDC (anchor criteria)', sdcSel));
+      row.appendChild(el('label', { style: { display: 'flex', alignItems: 'center', gap: '4px', fontSize: '0.85rem', paddingBottom: '0.4rem' } }, det, 'Detached one- / two-family dwelling'));
+      box.appendChild(row);
+      box.appendChild(el('div', { style: { fontSize: '0.8rem', color: 'var(--ink-secondary)', marginTop: '0.35rem' } },
+        'Used by WSWH walls only. SDC is copied from the linked Base Shear item. Anchors (Table 06, cracked concrete): SDC A–B any row; SDC C seismic (E) rows unless a detached one- / two-family dwelling; SDC D–F (or blank) E rows. The lightest footing (smallest W, then embedment) that carries T is used.'));
+      return box;
     }
 
     // Sheathing (Ga), Base Shear link (Sds, Cd, Ie, Risk Category), drift limit row, service wind factor
@@ -537,6 +559,11 @@ export const shearWallDesign = {
             ...wallOpeningDefaults(),
             method: sw.method || 'segmented', narrowPier: !!sw.narrowPier,
             openings: (sw.openings || []).map(o => ({ ...o, id: newOpeningId() })),
+            ...wallSystemDefaults(),
+            systemType: sw.systemType || 'sheathed', wswhWidth: sw.wswhWidth || '18', wswhJoist: sw.wswhJoist || '12',
+            wswhFloorDepth: sw.wswhFloorDepth || '12',
+            // a WSWH copied to an upper story becomes the 2nd-story panel of a stack
+            wswhCondition: toId === inputs.levels[inputs.levels.length - 1].id ? (sw.wswhCondition === 'stackedUpper' ? 'concrete' : sw.wswhCondition || 'concrete') : 'stackedUpper',
           });
         }
         notifyChange(); renderAll();
@@ -554,7 +581,8 @@ export const shearWallDesign = {
       if (elevationHandle) { elevationHandle.destroy(); elevationHandle = null; }
       elevationHandle = renderElevation(elevContainer, line, inputs.levels, inputs.wallDLTypes, {
         onWallChange() {}, onGravityChange() {},
-        designContext: () => ({ wallThickness: inputs.wallThickness, woodGrade: inputs.woodGrade, loadType: inputs.loadType }),
+        designContext: () => ({ wallThickness: inputs.wallThickness, woodGrade: inputs.woodGrade, loadType: inputs.loadType,
+          wswhFc: inputs.wswhFc, sdc: inputs.seismicDesignCategory, detached: !!inputs.detachedOneTwoFamily, bottomLevelId: (inputs.levels[inputs.levels.length - 1] || {}).id }),
         onInputChange() {
           notifyChange();
           // Preview results go stale on every edit — recompute while the preview is shown
@@ -680,18 +708,27 @@ export const shearWallDesign = {
           for (const pl of ln.perLevel) { for (const w of pl.walls) {
             const wIn = (inLine.walls || []).find(x => x.id === (w.parentWallId || w.wallId)) || {};
             const nail = w.nailing ? w.nailing.label : '?';
-            const cap = w.effectiveCapacity != null ? w.effectiveCapacity.toFixed(0) : '—';
+            const isPanel = w.method === 'wswh';
+            const cap = isPanel ? f0(w.wswh.Vcap[w.dcGoverning === 'wind' ? 'W' : 'E']) + ' lb' : w.effectiveCapacity != null ? w.effectiveCapacity.toFixed(0) : '—';
             const ancL = w.anchorageLeft ? w.anchorageLeft.id + (w.anchorageDCLeft != null ? ' (' + w.anchorageDCLeft.toFixed(2) + ')' : '') : 'OVER';
             const ancR = w.anchorageRight ? w.anchorageRight.id + (w.anchorageDCRight != null ? ' (' + w.anchorageDCRight.toFixed(2) + ')' : '') : 'OVER';
             const postL = w.postLeft ? w.postLeft.postLabel + (w.postDCLeft != null ? ' (' + w.postDCLeft.toFixed(2) + ')' : '') : 'OVER';
             const postR = w.postRight ? w.postRight.postLabel + (w.postDCRight != null ? ' (' + w.postDCRight.toFixed(2) + ')' : '') : 'OVER';
-            wallRows.push([w.mark + (w.method === 'ftao' ? ' (FTAO)' : ''), pl.levelName, w.length.toFixed(1), star(nail, !!wIn.nailingPattern), w.unitShear_ASD.toFixed(0), cap, w.dcRatio.toFixed(2),
+            wallRows.push([w.mark + (w.method === 'ftao' ? ' (FTAO)' : ''), pl.levelName, w.length.toFixed(1), star(nail, !!wIn.nailingPattern),
+              isPanel ? f0(w.wswh.Vd[w.dcGoverning === 'wind' ? 'W' : 'E']) + ' lb' : w.unitShear_ASD.toFixed(0), cap, w.dcRatio.toFixed(2),
               star(ancL, !!wIn.anchorageLeftOverride), star(ancR, !!wIn.anchorageRightOverride), star(postL, !!wIn.postLeftOverride), star(postR, !!wIn.postRightOverride)]);
           } }
           if (wallRows.length) sections.push({ title: T('Wall Schedule') + (anyManual ? ' (* = manual override)' : ''), table: { headers: ['Mark', 'Level', 'Len', 'Nailing', 'v', 'Cap', 'D/C', 'HD/S L', 'HD/S R', 'Post L', 'Post R'], rows: wallRows, colWidths: [0.06, 0.08, 0.05, 0.1, 0.06, 0.06, 0.06, 0.1, 0.1, 0.08, 0.08] } });
           const tcRows = [];
           for (const pl of ln.perLevel) { for (const w of pl.walls) { tcRows.push([w.mark, pl.levelName, w.dlTotal.toFixed(2), w.governingTensionLeft.toFixed(2), w.governingTensionRight.toFixed(2), w.governingComprLeft.toFixed(2), w.governingComprRight.toFixed(2)]); } }
           if (tcRows.length) sections.push({ title: dir.dirName + ' / ' + ln.lineName + ' — T/C Results (ASD)', table: { headers: ['Mark', 'Level', 'DL (k)', 'T Left (k)', 'T Right (k)', 'C Left (k)', 'C Right (k)'], rows: tcRows } });
+          const wsRows = wswhRows(ln);
+          if (wsRows.length) {
+            sections.push({ title: dir.dirName + ' / ' + ln.lineName + ' — Strong-Wall WSWH', table: { headers: WSWH_HEADERS, rows: wsRows, colWidths: [0.06, 0.07, 0.13, 0.12, 0.07, 0.1, 0.12, 0.06, 0.07, 0.2] } });
+            const stRows = wswhStackRows(ln);
+            if (stRows.length) sections.push({ title: dir.dirName + ' / ' + ln.lineName + ' — WSWH two-story stack (base moment)', table: { headers: WSWH_STACK_HEADERS, rows: stRows } });
+            sections.push({ title: dir.dirName + ' / ' + ln.lineName + ' — Strong-Wall notes', text: wswhNoteLines(ln).join('\n') });
+          }
           for (const pl of ln.perLevel) { for (const w of pl.walls) {
             if (w.method !== 'ftao' || !w.ftao) continue;
             const t = dir.dirName + ' / ' + ln.lineName + ' — FTAO ' + w.mark + ' (' + pl.levelName + ')';
@@ -817,10 +854,10 @@ function wallScheduleTable(pl) {
     const allPass = w.dcRatio <= 1.0 && w.anchorageLeft && w.anchorageRight && w.postLeft && w.postRight;
     const small = { className: 'mono', style: { fontSize: '0.8rem' } };
     tbl.appendChild(el('tr', null,
-      el('td', { className: 'mono' }, w.mark + (w.method === 'ftao' ? ' (FTAO)' : '')), el('td', null, pl.levelName),
+      el('td', { className: 'mono' }, w.mark + (w.method === 'ftao' ? ' (FTAO)' : w.method === 'wswh' ? ' (WSWH)' : '')), el('td', null, pl.levelName),
       el('td', small, w.nailing ? w.nailing.label : '?'),
-      el('td', { className: 'num mono' }, w.unitShear_ASD.toFixed(0)),
-      el('td', { className: 'num mono' }, w.effectiveCapacity != null ? w.effectiveCapacity.toFixed(0) : '—'),
+      el('td', { className: 'num mono' }, w.method === 'wswh' ? f0(w.wswh.Vd[w.dcGoverning === 'wind' ? 'W' : 'E']) + ' lb' : w.unitShear_ASD.toFixed(0)),
+      el('td', { className: 'num mono' }, w.method === 'wswh' ? f0(w.wswh.Vcap[w.dcGoverning === 'wind' ? 'W' : 'E']) + ' lb' : w.effectiveCapacity != null ? w.effectiveCapacity.toFixed(0) : '—'),
       el('td', { className: 'num' }, dcBadge),
       el('td', { className: 'num mono' }, govT.toFixed(2)), el('td', { className: 'num mono' }, govC.toFixed(2)),
       el('td', small, fmtHW(w.anchorageLeft, w.anchorageDCLeft)), el('td', small, fmtHW(w.anchorageRight, w.anchorageDCRight)),
@@ -841,7 +878,7 @@ function lineTabWalls(ln, dirOut) {
     box.appendChild(subHead(pl.levelName + ' — story shear ' + pl.storyShear_1E.toFixed(2) + ' k (1.0E)' + (pl.storyShear_1W ? ', ' + pl.storyShear_1W.toFixed(2) + ' k (1.0W)' : '')));
     box.appendChild(wallScheduleTable(pl));
     for (const w of pl.walls) {
-      if (w.method === 'ftao' && w.ftao) continue; // FTAO calc is in the FTAO tab
+      if ((w.method === 'ftao' && w.ftao) || w.method === 'wswh') continue; // FTAO / Strong-Wall calcs have their own tabs
       box.appendChild(renderWallCalcDetail(w, pl, dirOut, ln));
     }
   }
@@ -944,6 +981,21 @@ function lineTabOmega(ln) {
   return box;
 }
 
+function lineTabWswh(ln) {
+  const box = el('div');
+  box.appendChild(subHead('Strong-Wall WSWH panels'));
+  box.appendChild(simpleTable(WSWH_HEADERS, wswhRows(ln), [4, 5, 6, 7, 8]));
+  const st = wswhStackRows(ln);
+  if (st.length) {
+    box.appendChild(subHead('Two-story stack — base moment check (C-L-SW26 p. 50 n.8)'));
+    box.appendChild(simpleTable(WSWH_STACK_HEADERS, st, [2, 3, 4, 5]));
+  }
+  const nb = el('div', { style: { fontSize: '0.8rem', color: 'var(--ink-secondary)', marginBottom: '0.5rem', lineHeight: '1.6' } });
+  wswhNoteLines(ln).forEach(n => nb.appendChild(el('div', null, 'ⓘ ' + n)));
+  box.appendChild(nb);
+  return box;
+}
+
 // Full results of one line with sub-tabs. state: { tab, onTab(tab) }
 export function renderLineResults(container, ln, dirOut, state) {
   const st = lineStats(ln);
@@ -954,7 +1006,8 @@ export function renderLineResults(container, ln, dirOut, state) {
   container.appendChild(designBasisLine(ln));
 
   const hasFtao = ln.perLevel.some(pl => pl.walls.some(w => w.method === 'ftao' && w.ftao));
-  const tabs = [['walls', 'Walls'], hasFtao && ['ftao', 'FTAO'], ['loadpath', 'Load path' + (st.issues ? ' (' + st.issues + ')' : '')],
+  const hasWswh = ln.perLevel.some(pl => pl.walls.some(w => w.method === 'wswh'));
+  const tabs = [['walls', 'Walls'], hasFtao && ['ftao', 'FTAO'], hasWswh && ['wswh', 'Strong-Wall'], ['loadpath', 'Load path' + (st.issues ? ' (' + st.issues + ')' : '')],
     ['drift', 'Drift' + (st.drift === 'NG' ? ' (NG)' : '')], ['lrfd', 'LRFD'], omegaRows(ln).length && ['omega', 'Ω₀']].filter(Boolean);
   const tab = tabs.some(t => t[0] === state.tab) ? state.tab : 'walls';
   const bar = el('div', { style: { display: 'flex', gap: '2px', marginBottom: '0.5rem', borderBottom: '1px solid var(--border)', flexWrap: 'wrap' } });
@@ -963,7 +1016,7 @@ export function renderLineResults(container, ln, dirOut, state) {
       style: { borderRadius: '4px 4px 0 0' }, onClick() { state.onTab(key); } }, label));
   }
   container.appendChild(bar);
-  const body = tab === 'ftao' ? lineTabFtao(ln) : tab === 'loadpath' ? lineTabLoadPath(ln)
+  const body = tab === 'ftao' ? lineTabFtao(ln) : tab === 'wswh' ? lineTabWswh(ln) : tab === 'loadpath' ? lineTabLoadPath(ln)
     : tab === 'drift' ? lineTabDrift(ln) : tab === 'lrfd' ? lineTabLrfd(ln) : tab === 'omega' ? lineTabOmega(ln) : lineTabWalls(ln, dirOut);
   container.appendChild(body);
 }
@@ -981,6 +1034,7 @@ function distributionText(ln) {
 // A wall fails when sheathing D/C > 1, h/b > 3.5, or (FTAO) the strap or sill plate bearing fails
 function wallFails(w) {
   if (w.dcRatio > 1.0 || w.hbNotPermitted) return true;
+  if (w.method === 'wswh' && !w.wswh.ok) return true;
   if (w.method === 'ftao' && w.ftao) {
     if (w.ftao.strapDC == null || w.ftao.strapDC > 1.0) return true;
     if ((w.ftao.jambs || []).some(j => !j.post || j.dc > 1.0)) return true;
@@ -1093,6 +1147,55 @@ function lrfdRows(ln) {
   return rows;
 }
 
+const WSWH_HEADERS = ['Mark', 'Level', 'Model (order)', 'Condition', 'H_e (in)', 'P E / W (lb)', 'V_ASD / V_allow (lb)', 'D/C', 'Δ 1.0E (in)', 'Anchor L / R'];
+const WSWH_STACK_HEADERS = ['Base panel', 'Case', 'M_allow (lb-ft)', 'M_d (lb-ft)', 'D/C', 'V₁ avail (lb)'];
+
+function wswhRows(ln) {
+  const rows = [];
+  for (const pl of ln.perLevel) {
+    for (const w of pl.walls) {
+      if (w.method !== 'wswh') continue;
+      const x = w.wswh;
+      const lt = w.dcGoverning === 'wind' ? 'W' : 'E';
+      const anc = (a, dc) => !a ? 'OVER' : a.byRDP ? a.id : a.id + (a.W ? ', W ' + a.W + '" d_e ' + a.de + '" L ' + a.Lftg + '"' : '') + (dc != null ? ' (' + dc.toFixed(2) + ')' : '') + (a.override ? ' *' : '');
+      rows.push([
+        w.mark, pl.levelName,
+        x.ok ? x.evalModel + (x.orderModel && x.orderModel !== x.evalModel ? ' (' + x.orderModel + ')' : '') : 'not tabulated',
+        conditionLabel(x.role === 'stackedLower' ? 'concrete' : x.condition) + (x.role === 'stackedLower' ? ' — stack base' : '') + (x.kit ? ', ' + x.kit : ''),
+        x.ok ? x.He.toFixed(2) : '—', f0(x.P.E) + ' / ' + f0(x.P.W),
+        f0(x.Vd[lt]) + ' / ' + f0(x.Vcap[lt]) + (x.role === 'stackedLower' ? ' (M check)' : ''), f2(w.dcRatio),
+        w.deflection && w.deflection.E ? f3(w.deflection.E.delta) : '—',
+        anc(w.anchorageLeft, w.anchorageDCLeft) + ' / ' + anc(w.anchorageRight, w.anchorageDCRight),
+      ]);
+    }
+  }
+  return rows;
+}
+
+function wswhStackRows(ln) {
+  const rows = [];
+  for (const pl of ln.perLevel) {
+    for (const w of pl.walls) {
+      if (w.method !== 'wswh' || w.wswh.role !== 'stackedLower') continue;
+      for (const [lt, st] of Object.entries(w.wswh.stacked || {})) {
+        if (!st || (lt === 'W' && !(w.share_1W > 0)) || (lt === 'E' && !(w.share_1E > 0))) continue;
+        rows.push([w.mark, lt === 'E' ? 'Seismic (0.7ρE)' : 'Wind (0.6W)', f0(st.Mallow), f0(st.Md), f2(st.dc), f0(st.V1avail)]);
+      }
+    }
+  }
+  return rows;
+}
+
+function wswhNoteLines(ln) {
+  const lines = ['M_allow = V₀·H₁/12 with V₀ at P = 4,000 lb, f\'c 2,500 psi; M_d = [V₁·H₁ + V₂·(H₁ + d_fl + H₂)]/12; T = V·H_e/B − P/2 with combo-factored D.'];
+  for (const pl of ln.perLevel) for (const w of pl.walls) {
+    if (w.method !== 'wswh') continue;
+    (w.wswh.notes || []).forEach(n => lines.push(w.mark + ': ' + n));
+    (w.wswh.errors || []).forEach(n => lines.push(w.mark + ': ' + n + ' — panel carries no shear'));
+  }
+  return [...lines, ...WSWH_NOTES];
+}
+
 const OMEGA_HEADERS = ['Element', 'Level', 'Ω₀ ASD T L / R (k)', 'Ω₀ ASD C L / R (k)', 'Ω₀ LRFD T L / R (k)', 'Ω₀ LRFD C L / R (k)'];
 
 // Ω₀ envelopes (accumulated through the load path) — reported forces only
@@ -1151,7 +1254,7 @@ function wallDeflectionRows(ln) {
           const g = d.dirs.reduce((a, b) => (b.delta > a.delta ? b : a));
           rows.push([w.mark, (lt === 'E' ? '1.0E ' : 'α_s·W ') + g.dir + note, f0(d.v), d.Ga, f4(g.t1), f4(g.t2), f4(g.dHD + g.dC), f4(g.t3), f3(d.delta)]);
         } else {
-          rows.push([w.mark, (lt === 'E' ? '1.0E' : 'α_s·W') + ' FTAO pier average' + note, '—', '—', '—', '—', '—', '—', f3(d.delta)]);
+          rows.push([w.mark, (lt === 'E' ? '1.0E' : 'α_s·W') + ' ' + (d.label || 'FTAO pier average') + note, '—', '—', '—', '—', '—', '—', f3(d.delta)]);
         }
       }
     }
@@ -1372,10 +1475,13 @@ export function migrateV5toV6(inp) {
   return inp;
 }
 
-// Schema v7: Ω₀ for the forces-only amplified seismic combos
+// Schema v7: Ω₀ (forces-only combos), SDC / f'c / detached dwelling, wall system type (sheathed | WSWH)
 export function migrateV6toV7(inp) {
   if (!inp) return inp;
   for (const [k, v] of Object.entries(projectV7Defaults())) if (inp[k] === undefined) inp[k] = v;
+  (inp.directions || []).forEach(d => (d.lines || []).forEach(ln => (ln.walls || []).forEach(w => {
+    for (const [k, v] of Object.entries(wallSystemDefaults())) if (w[k] === undefined) w[k] = v;
+  })));
   return inp;
 }
 

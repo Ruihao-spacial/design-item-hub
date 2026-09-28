@@ -4,6 +4,7 @@ import { NAILING_TABLE } from './shearWallNailing.js';
 import { HDUE_TABLE, MSTC_TABLE, POST_SIZES, getGradeById, FTAO_STRAP_TABLE, jambPostOptions, hdueMinPost, meetsMinPost } from './shearWallHardware.js';
 import { openingProblems, wallPiers, expandWalls, sortedOpenings, hasOpenings, wallMethod } from './shearWallOpenings.js';
 import { findAnchorage, findPost } from './shearWallCalc.js';
+import { WSWH_WIDTHS, WSWH_CONDITIONS, WSWH_JOISTS, anchorRows, anchorId, isWswh, wswhWidthFt } from './shearWallWswh.js';
 
 const GUTTER = 80;
 const RULER_H = 24;
@@ -909,7 +910,8 @@ export function renderElevation(container, line, levels, wallDLTypes, callbacks)
   }
   function designCtx() {
     const c = (callbacks && callbacks.designContext && callbacks.designContext()) || {};
-    return { thickness: line.wallThickness || c.wallThickness || '4', grade: getGradeById(c.woodGrade || 'dfir_no1'), loadType: c.loadType || 'both' };
+    return { thickness: line.wallThickness || c.wallThickness || '4', grade: getGradeById(c.woodGrade || 'dfir_no1'), loadType: c.loadType || 'both',
+      wswhFc: c.wswhFc || '2500', sdc: c.sdc || '', detached: !!c.detached, bottomLevelId: c.bottomLevelId || (levels[levels.length - 1] || {}).id };
   }
   const dcTxt = (dc) => dc == null ? '—' : dc.toFixed(2) + (dc > 1 ? ' ✗' : '');
   // Anchorage choices for a level, auto-mode group first, with D/C at demand T (kips)
@@ -985,25 +987,34 @@ export function renderElevation(container, line, levels, wallDLTypes, callbacks)
       if (!w || !wr) { hideQuickEdit(); return; }
       const li = levelIndexOf(w.levelId), lvl = levels[li];
       target = pw;
-      // Pier ends at an opening have no override of their own (auto-selected)
-      const nPiers = found.isPier ? drawParts(line, levels).filter(p => p.parent.id === pw.id).length : 1;
-      const outer = (side) => !found.isPier || (side === 'left' ? w.pierIndex === 0 : w.pierIndex === nPiers - 1);
-      if (kind === 'nailing') {
-        title = (w.mark || w.id) + ' · nailing' + (found.isPier ? ' (all piers of ' + (pw.mark || pw.id) + ')' : '');
-        fields.push(qeField('Nailing', pw, 'nailingPattern', nailingGroups(wr), wr.nailing ? wr.nailing.label : '?'));
-        body.push('v ' + (wr.unitShear_ASD || 0).toFixed(0) + ' plf / cap ' + (wr.effectiveCapacity || 0).toFixed(0) + ' plf → D/C ' + dcTxt(wr.dcRatio)
-          + (wr.hbReductionFactor < 1 ? ' (h/b factor ' + wr.hbReductionFactor.toFixed(2) + ')' : ''));
-        resetKeys = ['nailingPattern'];
-      }
-      const sides = kind === 'wallEnd' ? [sub] : ((num(w.length) * (lastS ? lastS.layout.pxPerFt : 10)) < HW_MIN_WIDTH ? ['left', 'right'] : []);
-      for (const side of sides) {
-        const d = wallEndData(w, wr, side);
-        if (kind === 'wallEnd') title = (w.mark || w.id) + ' · ' + side + ' end';
-        body.push(side + ': ' + d.ancText + ' · ' + d.postText);
-        if (!outer(side)) { body.push('Pier end at an opening — hardware is auto-selected'); continue; }
-        fields.push(qeField(side[0].toUpperCase() + side.slice(1) + ' HD/Strap', pw, 'anchorage' + d.S1 + 'Override', anchorageGroups(lvl, li, d.T), d.anc ? d.anc.id : 'OVER'));
-        fields.push(qeField(side[0].toUpperCase() + side.slice(1) + ' post', pw, 'post' + d.S1 + 'Override', postGroups(lvl, d.C, d.anc), d.post ? d.post.postLabel : 'OVER'));
-        resetKeys.push('anchorage' + d.S1 + 'Override', 'post' + d.S1 + 'Override');
+      if (isWswh(pw)) {
+        // Strong-Wall panel: no nailing / HD / post overrides — width, condition and anchor are set in the wall panel
+        const x = wr.wswh, lt = wr.dcGoverning === 'wind' ? 'W' : 'E';
+        title = (w.mark || w.id) + ' · Strong-Wall';
+        body.push(x.ok ? x.evalModel + ' · V ' + x.Vd[lt] + ' / ' + x.Vcap[lt] + ' lb → D/C ' + dcTxt(wr.dcRatio) : x.errors.join('; '));
+        body.push('Anchors: ' + [wr.anchorageLeft, wr.anchorageRight].map(an => (an ? an.id + (an.cap ? ' ' + an.cap + ' lb' : '') : 'OVER')).join(' / '));
+        body.push('Change width, condition or anchor in the Wall Properties panel');
+      } else {
+        // Pier ends at an opening have no override of their own (auto-selected)
+        const nPiers = found.isPier ? drawParts(line, levels).filter(p => p.parent.id === pw.id).length : 1;
+        const outer = (side) => !found.isPier || (side === 'left' ? w.pierIndex === 0 : w.pierIndex === nPiers - 1);
+        if (kind === 'nailing') {
+          title = (w.mark || w.id) + ' · nailing' + (found.isPier ? ' (all piers of ' + (pw.mark || pw.id) + ')' : '');
+          fields.push(qeField('Nailing', pw, 'nailingPattern', nailingGroups(wr), wr.nailing ? wr.nailing.label : '?'));
+          body.push('v ' + (wr.unitShear_ASD || 0).toFixed(0) + ' plf / cap ' + (wr.effectiveCapacity || 0).toFixed(0) + ' plf → D/C ' + dcTxt(wr.dcRatio)
+            + (wr.hbReductionFactor < 1 ? ' (h/b factor ' + wr.hbReductionFactor.toFixed(2) + ')' : ''));
+          resetKeys = ['nailingPattern'];
+        }
+        const sides = kind === 'wallEnd' ? [sub] : ((num(w.length) * (lastS ? lastS.layout.pxPerFt : 10)) < HW_MIN_WIDTH ? ['left', 'right'] : []);
+        for (const side of sides) {
+          const d = wallEndData(w, wr, side);
+          if (kind === 'wallEnd') title = (w.mark || w.id) + ' · ' + side + ' end';
+          body.push(side + ': ' + d.ancText + ' · ' + d.postText);
+          if (!outer(side)) { body.push('Pier end at an opening — hardware is auto-selected'); continue; }
+          fields.push(qeField(side[0].toUpperCase() + side.slice(1) + ' HD/Strap', pw, 'anchorage' + d.S1 + 'Override', anchorageGroups(lvl, li, d.T), d.anc ? d.anc.id : 'OVER'));
+          fields.push(qeField(side[0].toUpperCase() + side.slice(1) + ' post', pw, 'post' + d.S1 + 'Override', postGroups(lvl, d.C, d.anc), d.post ? d.post.postLabel : 'OVER'));
+          resetKeys.push('anchorage' + d.S1 + 'Override', 'post' + d.S1 + 'Override');
+        }
       }
     } else if (kind === 'post') {
       const p = (line.supportPosts || []).find(x => x.id === id);
@@ -1761,6 +1772,7 @@ export function renderElevation(container, line, levels, wallDLTypes, callbacks)
     const markInput = el('input', { className: 'form-input mono', type: 'text', value: w.mark || '', style: { width: '90px' }, onChange(e) { w.mark = e.target.value; markChanged(); drawSVG(); } });
     const posInput = el('input', { className: 'form-input mono', type: 'number', step: 'any', value: numOrBlank(w.position), style: { width: '70px' }, onChange(e) { w.position = e.target.value; markChanged(); drawSVG(); } });
     const lenInput = el('input', { className: 'form-input mono', type: 'number', step: 'any', value: numOrBlank(w.length), style: { width: '70px' }, onChange(e) { w.length = e.target.value; markChanged(); drawSVG(); } });
+    if (isWswh(w)) { lenInput.disabled = true; lenInput.title = 'Strong-Wall: length = panel width'; }
 
     const dlTypeSelect = el('select', { className: 'form-select', style: { width: '120px' }, onChange(e) { w.wallDLTypeId = e.target.value; markChanged(); } });
     dlTypeSelect.appendChild(el('option', { value: '' }, '— None —'));
@@ -1775,34 +1787,52 @@ export function renderElevation(container, line, levels, wallDLTypes, callbacks)
     propPanel.appendChild(panelTitle('Wall Properties — ' + (w.mark || w.id)));
     propPanel.appendChild(panelRow(panelField('Mark', markInput), panelField('Position (ft)', posInput), panelField('Length (ft)', lenInput), panelField('Wall DL Type', dlTypeSelect)));
 
-    const nailSel = el('select', { className: 'form-select', style: { width: '130px' }, onChange(e) { w.nailingPattern = e.target.value; markChanged(); } });
-    nailSel.appendChild(el('option', { value: '' }, 'Auto'));
-    NAILING_TABLE.forEach(n => {
-      const opt = el('option', { value: n.id }, n.label + ' (' + n.asdE + '/' + n.asdW + ')');
-      if (w.nailingPattern === n.id) opt.selected = true;
-      nailSel.appendChild(opt);
-    });
+    // Wall type: sheathed wood shear wall or Simpson Strong-Wall WSWH panel (length locked to the panel width)
+    const typeSel = el('select', { className: 'form-select', style: { width: '230px' }, onChange(e) {
+      w.systemType = e.target.value;
+      if (w.systemType === 'wswh') {
+        if (!w.wswhWidth) w.wswhWidth = '18';
+        if (!w.wswhCondition) w.wswhCondition = w.levelId === designCtx().bottomLevelId ? 'concrete' : 'stackedUpper';
+        w.length = wswhWidthFt(w); w.openings = [];
+      } else {
+        w.length = Math.max(num(w.length), 4);
+      }
+      markChanged(); renderPropPanel(); drawSVG();
+    } });
+    [['sheathed', 'Sheathed wood shear wall'], ['wswh', 'Simpson Strong-Wall WSWH']].forEach(([v, label]) =>
+      typeSel.appendChild(el('option', { value: v, selected: (w.systemType || 'sheathed') === v }, label)));
+    propPanel.appendChild(panelRow(panelField('Wall type', typeSel)));
+    if (isWswh(w)) renderWswhEditor(w);
+    else {
+      const nailSel = el('select', { className: 'form-select', style: { width: '130px' }, onChange(e) { w.nailingPattern = e.target.value; markChanged(); } });
+      nailSel.appendChild(el('option', { value: '' }, 'Auto'));
+      NAILING_TABLE.forEach(n => {
+        const opt = el('option', { value: n.id }, n.label + ' (' + n.asdE + '/' + n.asdW + ')');
+        if (w.nailingPattern === n.id) opt.selected = true;
+        nailSel.appendChild(opt);
+      });
 
-    const ancItems = hwOptionsFor(levels[levelIndexOf(w.levelId)]);
+      const ancItems = hwOptionsFor(levels[levelIndexOf(w.levelId)]);
 
-    propPanel.appendChild(panelRow(panelField('Nailing', nailSel)));
-    propPanel.appendChild(panelSub('Hardware Overrides (blank = auto-select)'));
-    propPanel.appendChild(panelRow(
-      panelField('HD/Strap Left', hwSelect(w, 'anchorageLeftOverride', ancItems, ancLabelFn)),
-      panelField('HD/Strap Right', hwSelect(w, 'anchorageRightOverride', ancItems, ancLabelFn)),
-    ));
-    // Outer end anchorage of the wall (first / last pier of a segmented wall)
-    const endAnc = (S1) => {
-      const own = findWallResult(w.id);
-      const piers = own ? [own] : (wallResults ? (wallResults.perLevel || []).flatMap(pl => pl.walls || []).filter(r => r.parentWallId === w.id) : []);
-      const r = S1 === 'Left' ? piers[0] : piers[piers.length - 1];
-      return r ? r['anchorage' + S1] : null;
-    };
-    propPanel.appendChild(panelRow(
-      panelField('Post Left', hwSelect(w, 'postLeftOverride', postItemsFor(endAnc('Left')), postLabelFn)),
-      panelField('Post Right', hwSelect(w, 'postRightOverride', postItemsFor(endAnc('Right')), postLabelFn)),
-    ));
-    renderOpeningsEditor(w);
+      propPanel.appendChild(panelRow(panelField('Nailing', nailSel)));
+      propPanel.appendChild(panelSub('Hardware Overrides (blank = auto-select)'));
+      propPanel.appendChild(panelRow(
+        panelField('HD/Strap Left', hwSelect(w, 'anchorageLeftOverride', ancItems, ancLabelFn)),
+        panelField('HD/Strap Right', hwSelect(w, 'anchorageRightOverride', ancItems, ancLabelFn)),
+      ));
+      // Outer end anchorage of the wall (first / last pier of a segmented wall)
+      const endAnc = (S1) => {
+        const own = findWallResult(w.id);
+        const piers = own ? [own] : (wallResults ? (wallResults.perLevel || []).flatMap(pl => pl.walls || []).filter(r => r.parentWallId === w.id) : []);
+        const r = S1 === 'Left' ? piers[0] : piers[piers.length - 1];
+        return r ? r['anchorage' + S1] : null;
+      };
+      propPanel.appendChild(panelRow(
+        panelField('Post Left', hwSelect(w, 'postLeftOverride', postItemsFor(endAnc('Left')), postLabelFn)),
+        panelField('Post Right', hwSelect(w, 'postRightOverride', postItemsFor(endAnc('Right')), postLabelFn)),
+      ));
+      renderOpeningsEditor(w);
+    }
 
     if (wallResults) {
       const wr = findWallResult(w.id);
@@ -1824,6 +1854,41 @@ export function renderElevation(container, line, levels, wallDLTypes, callbacks)
       }
     }
     propPanel.appendChild(panelRow(deleteBtn));
+  }
+
+  // Strong-Wall WSWH settings of the selected wall: width, installation condition, joist / floor depth, anchor
+  function renderWswhEditor(w) {
+    const refresh = () => { markChanged(); renderPropPanel(); drawSVG(); };
+    const sel = (key, options, width, after) => {
+      const s = el('select', { className: 'form-select', style: { width }, onChange(e) { w[key] = e.target.value; if (after) after(); refresh(); } });
+      options.forEach(([v, label]) => s.appendChild(el('option', { value: v, selected: String(w[key] || '') === v }, label)));
+      return s;
+    };
+    propPanel.appendChild(panelSub('Strong-Wall WSWH (panel height = floor-to-floor, interpolated)'));
+    const widthSel = sel('wswhWidth', WSWH_WIDTHS.map(v => [v, v + '" (' + (Number(v) / 12).toFixed(1) + ' ft)']), '110px', () => { w.length = wswhWidthFt(w); });
+    const condSel = sel('wswhCondition', WSWH_CONDITIONS.map(c => [c.id, c.label]), '250px');
+    const fields = [panelField('Width', widthSel), panelField('Condition', condSel)];
+    if (w.wswhCondition === 'raised') fields.push(panelField('Floor joist', sel('wswhJoist', WSWH_JOISTS.map(j => [j.id, j.label]), '170px')));
+    if (w.wswhCondition === 'stackedUpper') {
+      fields.push(panelField('Floor depth d_fl (in, ≤ 18)', el('input', { className: 'form-input mono', type: 'number', step: 'any', value: numOrBlank(w.wswhFloorDepth), style: { width: '70px' },
+        onChange(e) { w.wswhFloorDepth = e.target.value; refresh(); } })));
+    }
+    propPanel.appendChild(panelRow(...fields));
+    if (w.wswhCondition === 'concrete') {
+      const c = designCtx();
+      const rows = anchorRows({ fc: c.wswhFc, sdc: c.sdc, detached: c.detached });
+      const ancSel = sel('wswhAnchorOverride', [['', 'Auto (smallest footing W, then d_e)'],
+        ...rows.map(r => [anchorId(r), r.criteria + ' ' + r.grade + ' — ' + r.T_ASDallow + ' lb, W ' + r.W_in + '" d_e ' + r.de_in + '"'])], '320px');
+      propPanel.appendChild(panelRow(panelField('Anchor (Table 06, cracked, f\'c ' + c.wswhFc + ', SDC ' + (c.sdc || '—') + ')', ancSel)));
+    }
+    const wr = findWallResult(w.id);
+    if (wr && wr.wswh) {
+      const x = wr.wswh;
+      const lt = wr.dcGoverning === 'wind' ? 'W' : 'E';
+      propPanel.appendChild(el('div', { style: { fontSize: '0.8rem', color: x.ok ? 'var(--ink-secondary)' : 'var(--fail)', marginBottom: '0.5rem' } },
+        x.ok ? (x.evalModel + (x.orderModel !== x.evalModel ? ' (order ' + x.orderModel + ')' : '') + ' · H_e ' + x.He.toFixed(2) + '" · V ' + x.Vd[lt] + ' / ' + x.Vcap[lt] + ' lb → D/C ' + wr.dcRatio.toFixed(2)
+          + (x.kit ? ' · ' + x.kit : '')) : x.errors.join('; ')));
+    }
   }
 
   // Openings (windows) in the selected wall: method, list of offset / width / sill / head, FTAO options

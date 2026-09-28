@@ -43,6 +43,8 @@ function endEnvelope(accum, comboGroups, group) {
 
 export function resolveVerticalLoadPath(ctx) {
   const { levels, walls, beams, posts, wallResultsMap, lineThickness, grade } = ctx;
+  // absorbedInto: stacked WSWH 2nd-story panel id → the panel below, whose base moment check already includes it
+  const absorbedInto = ctx.absorbedInto || {};
   const warnings = [];
   const notes = [];
   const nLv = levels.length;
@@ -123,7 +125,10 @@ export function resolveVerticalLoadPath(ctx) {
   }
 
   function deliver(li, x, map, source, kind) {
-    const rec = findReceiver(li, x, kind);
+    let rec = findReceiver(li, x, kind);
+    if (rec.type === 'wall_end' && source.type === 'wall' && absorbedInto[source.id] === rec.id) {
+      return { type: 'wswh_stack', id: rec.id, side: rec.side, label: rec.label + ' (WSWH stack — in the base moment check)' };
+    }
     const rounded = roundMap(map);
     if (rec.type === 'beam') beamLoads[rec.id].push({ x, map, source });
     else if (rec.type === 'post') {
@@ -319,12 +324,14 @@ export function resolveVerticalLoadPath(ctx) {
 
     const lvl = levels[levelIdx[w.levelId]];
     const floorSpan = (lvl && lvl.floorClearSpan) || '16';
-    const pickAnc = (ov, T) => ov ? findAnchorage(ov, floorSpan)
-      : wr.anchorageType === 'holdown' ? autoSelectHoldown(T) : autoSelectStrap(T, floorSpan);
+    const hook = ctx.wallHardware ? (T) => ctx.wallHardware(w, T) : () => undefined;
+    const pickAnc = (ov, T) => { const h = hook(T); if (h !== undefined) return h; return ov ? findAnchorage(ov, floorSpan)
+      : wr.anchorageType === 'holdown' ? autoSelectHoldown(T) : autoSelectStrap(T, floorSpan); };
     wr.anchorageLeft = pickAnc(w.anchorageLeftOverride, demand.tL);
     wr.anchorageRight = pickAnc(w.anchorageRightOverride, demand.tR);
-    const selL = selectEndPost(w.postLeftOverride, demand.cL, lineThickness, grade, wr.floorH, wr.anchorageLeft);
-    const selR = selectEndPost(w.postRightOverride, demand.cR, lineThickness, grade, wr.floorH, wr.anchorageRight);
+    const panel = wr.method === 'wswh'; // WSWH: no separate end posts
+    const selL = panel ? { post: wr.postLeft } : selectEndPost(w.postLeftOverride, demand.cL, lineThickness, grade, wr.floorH, wr.anchorageLeft);
+    const selR = panel ? { post: wr.postRight } : selectEndPost(w.postRightOverride, demand.cR, lineThickness, grade, wr.floorH, wr.anchorageRight);
     wr.postLeft = selL.post;
     wr.postRight = selR.post;
     wr.postRaised = { left: selL.raised ? selL : null, right: selR.raised ? selR : null };

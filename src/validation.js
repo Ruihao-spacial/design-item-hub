@@ -162,7 +162,13 @@ function validateShearWall(inputs, errors) {
         if (Number.isFinite(lineLength) && Number.isFinite(end) && end > lineLength) {
           errors.push(`${wallLabel} extends beyond ${lineLabel}.`);
         }
-        validateWallOpenings(errors, wall, wallLabel, levels.find(l => l.id === wall.levelId));
+        if (wall.systemType === 'wswh') {
+          // Strong-Wall WSWH: a prefabricated panel (length = panel width); table limits are checked in the results
+          if ((wall.openings || []).length) errors.push(`${wallLabel}: a Strong-Wall WSWH panel cannot have openings.`);
+          if (!['12', '18', '24'].includes(String(wall.wswhWidth))) errors.push(`${wallLabel}: pick a WSWH width (12, 18 or 24 in).`);
+        } else {
+          validateWallOpenings(errors, wall, wallLabel, levels.find(l => l.id === wall.levelId));
+        }
       });
     });
   });
