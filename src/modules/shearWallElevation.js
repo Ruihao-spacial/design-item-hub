@@ -1,5 +1,6 @@
 import { el, clearEl, numOrBlank } from '../utils.js';
-import { svgEl, newWall, newUniformLoad, newPointLoad, newBeam, newBeamSupport, newSupportPost, newOpening } from './shearWallTypes.js';
+import { svgEl, newWall, newGravityLoad, newBeam, newBeamSupport, newSupportPost, newOpening } from './shearWallTypes.js';
+import { gravityRows, LOAD_SHAPES, LOAD_CASES, assemblyLoads } from './shearWallGravity.js';
 import { NAILING_TABLE } from './shearWallNailing.js';
 import { HDUE_TABLE, MSTC_TABLE, POST_SIZES, getGradeById, FTAO_STRAP_TABLE, jambPostOptions, hdueMinPost, meetsMinPost } from './shearWallHardware.js';
 import { openingProblems, wallPiers, expandWalls, sortedOpenings, hasOpenings, wallMethod } from './shearWallOpenings.js';
@@ -1270,23 +1271,27 @@ export function renderElevation(container, line, levels, wallDLTypes, callbacks)
       svg.appendChild(svgEl('text', { x: 4, y: midY, 'dominant-baseline': 'middle', fill: 'var(--ink-secondary)', 'font-size': '11', 'font-weight': '600' }, lv.name || '?'));
       svg.appendChild(svgEl('text', { x: 4, y: midY + 14, 'dominant-baseline': 'middle', fill: 'var(--ink-tertiary)', 'font-size': '9' }, lv.ftH + "'"));
 
-      const gl = (line.gravityLoads || {})[lv.id];
-      if (gl) {
-        for (const u of (gl.uniform || [])) {
-          const sx = GUTTER + num(u.start) * pxPerFt;
-          const ex = GUTTER + num(u.end) * pxPerFt;
-          if (ex > sx) {
-            svg.appendChild(svgEl('rect', { x: sx, y: lv.y + 2, width: ex - sx, height: 5, fill: '#f59e0b', opacity: 0.4, rx: 1, stroke: '#b45309', 'stroke-width': 0.5 }));
-            const a = { x: (sx + ex) / 2, y: lv.y + 14, 'text-anchor': 'middle', fill: '#92400e', 'font-size': '7' };
-            svg.appendChild(haloText(a, num(u.dlPlf) + ' plf'));
-            placer.reserveText(a, num(u.dlPlf) + ' plf');
-          }
-        }
-        for (const p of (gl.point || [])) {
-          const px2 = GUTTER + num(p.position) * pxPerFt;
-          svg.appendChild(svgEl('line', { x1: px2, y1: lv.y + 2, x2: px2, y2: lv.y + 12, stroke: '#f59e0b', 'stroke-width': 1.5, 'pointer-events': 'none' }));
-          svg.appendChild(svgEl('polygon', { points: `${px2 - 2.5},${lv.y + 10} ${px2 + 2.5},${lv.y + 10} ${px2},${lv.y + 13}`, fill: '#f59e0b', 'pointer-events': 'none' }));
-        }
+      // Gravity loads at the top of the story: uniform band + "D 200 / L 400 plf", point arrow + "D 2 / Lr 1 k"
+      const gRows = gravityRows((line.gravityLoads || {})[lv.id], line.totalLength);
+      const magText = (g, unit) => LOAD_CASES.filter(c => num(g[c])).map(c => c + ' ' + num(g[c])).join(' / ') + ' ' + unit;
+      for (const u of gRows.uniform) {
+        if (!LOAD_CASES.some(c => u[c])) continue;
+        const sx = GUTTER + u.x0 * pxPerFt, ex = GUTTER + u.x1 * pxPerFt;
+        svg.appendChild(svgEl('rect', { x: sx, y: lv.y + 2, width: ex - sx, height: 5, fill: '#f59e0b', opacity: 0.4, rx: 1, stroke: '#b45309', 'stroke-width': 0.5 }));
+        const t = '#' + u.index + ' ' + magText(u, 'plf');
+        const a = { x: (sx + ex) / 2, y: lv.y + 14, 'text-anchor': 'middle', fill: '#92400e', 'font-size': '7' };
+        const got = placer.place([[{ attrs: a, text: t }], [{ attrs: { ...a, y: lv.y + 22 }, text: t }]]);
+        if (got) svg.appendChild(haloText(got[0].attrs, t));
+      }
+      for (const pt of gRows.point) {
+        if (!LOAD_CASES.some(c => pt[c])) continue;
+        const px2 = GUTTER + pt.x * pxPerFt;
+        svg.appendChild(svgEl('line', { x1: px2, y1: lv.y + 2, x2: px2, y2: lv.y + 12, stroke: '#f59e0b', 'stroke-width': 1.5, 'pointer-events': 'none' }));
+        svg.appendChild(svgEl('polygon', { points: `${px2 - 2.5},${lv.y + 10} ${px2 + 2.5},${lv.y + 10} ${px2},${lv.y + 13}`, fill: '#f59e0b', 'pointer-events': 'none' }));
+        const t = '#' + pt.index + ' ' + magText(pt, 'k');
+        const a = { x: px2 + 4, y: lv.y + 9, 'text-anchor': 'start', fill: '#92400e', 'font-size': '7' };
+        const got = placer.place([[{ attrs: a, text: t }], [{ attrs: { ...a, x: px2 - 4, 'text-anchor': 'end' }, text: t }], [{ attrs: { ...a, y: lv.y + 18 }, text: t }]]);
+        if (got) svg.appendChild(haloText(got[0].attrs, t));
       }
 
       svg.appendChild(svgEl('rect', {
@@ -1597,15 +1602,18 @@ export function renderElevation(container, line, levels, wallDLTypes, callbacks)
     const wr = findWallResult(wallId);
     if (!wr || !lv.forceStripH) return;
 
-    if (currentCombo === '1.0D') {
+    if (currentCombo === '1.0D' || currentCombo === '1.0L' || currentCombo === '1.0Lr') {
       const sY = lv.forceStripY;
       const midY = sY + lv.forceStripH / 2;
       const dlColor = '#78716c';
       // Dead-load end reactions by statics (R_L / R_R), total in between
-      const rl = wr.dlRL != null ? wr.dlRL : wr.dlTotal / 2, rr = wr.dlRR != null ? wr.dlRR : wr.dlTotal / 2;
+      const cs = currentCombo.slice(3); // D | L | Lr
+      const lv = cs === 'D' ? null : (wr.live && wr.live[cs]) || { total: 0, rL: 0, rR: 0 };
+      const total = lv ? lv.total : wr.dlTotal;
+      const rl = lv ? lv.rL : wr.dlRL != null ? wr.dlRL : wr.dlTotal / 2, rr = lv ? lv.rR : wr.dlRR != null ? wr.dlRR : wr.dlTotal / 2;
       svg.appendChild(svgEl('rect', { x: wx + 1, y: sY + 2, width: ww - 2, height: lv.forceStripH - 4, fill: 'rgba(120,113,108,0.1)', rx: 2, 'pointer-events': 'none' }));
       const a = { x: wx + ww / 2, y: midY, 'text-anchor': 'middle', fill: dlColor, 'font-size': '9', 'font-weight': '600' };
-      const txt = 'DL ' + wr.dlTotal.toFixed(2) + 'k · R ' + rl.toFixed(2) + ' / ' + rr.toFixed(2);
+      const txt = cs + ' ' + (+total).toFixed(2) + 'k · R ' + (+rl).toFixed(2) + ' / ' + (+rr).toFixed(2);
       svg.appendChild(haloText(a, txt));
       placer.reserveText(a, txt);
       return;
@@ -2126,45 +2134,78 @@ export function renderElevation(container, line, levels, wallDLTypes, callbacks)
     propPanel.appendChild(panelRow(extendBtn, deleteBtn));
   }
 
+  // Gravity loads per level (at the top of that story): one row per load — shape, position, D / L / Lr.
+  // Uniform rows can take D and L (or Lr for a roof) from a Flat Load assembly × tributary width.
   function renderGravitySection() {
     clearEl(gravSection);
-    gravSection.appendChild(el('div', { style: { fontWeight: '600', marginBottom: '0.5rem', fontSize: '0.9rem' } }, 'Gravity Loads (Floor/Roof DL)'));
+    const assemblies = (callbacks && callbacks.flatLoadAssemblies && callbacks.flatLoadAssemblies()) || [];
+    const changed = (redraw) => { if (onGravityChange) onGravityChange(); markChanged(); drawSVG(); if (redraw) renderGravitySection(); };
+    gravSection.appendChild(el('div', { style: { fontWeight: '600', marginBottom: '0.25rem', fontSize: '0.9rem' } }, 'Gravity Loads (D / L / Lr)'));
+    gravSection.appendChild(el('div', { style: { fontSize: '0.78rem', color: 'var(--ink-secondary)', marginBottom: '0.5rem' } },
+      'Loads at the top of each story (its floor / roof). Point: kips; uniform: plf. Full = the whole line length. Walls take the part directly above them; a transfer beam on that floor line takes what is over it; a point load on a post top goes to the post.'
+      + (assemblies.length ? ' Uniform rows can link a Flat Load assembly × trib width (dead → D; live → Lr for a roof, L otherwise).' : ' Link a Flat Load item in Summary / Config to take psf from its assemblies.')));
 
     for (const lvl of levels) {
       if (!line.gravityLoads) line.gravityLoads = {};
-      if (!line.gravityLoads[lvl.id]) line.gravityLoads[lvl.id] = { uniform: [], point: [] };
+      const old = line.gravityLoads[lvl.id];
+      if (!old || !Array.isArray(old.loads)) {
+        // older definition (uniform / point lists): convert in place, dead load only
+        const loads = [];
+        ((old && old.uniform) || []).forEach(u => loads.push({ ...newGravityLoad('partial', u.start, u.end), id: u.id || newGravityLoad().id, D: u.dlPlf ?? '' }));
+        ((old && old.point) || []).forEach(q => loads.push({ ...newGravityLoad('point', q.position, q.position), id: q.id || newGravityLoad().id, D: q.dlKips ?? '' }));
+        line.gravityLoads[lvl.id] = { loads };
+      }
       const gl = line.gravityLoads[lvl.id];
 
       const lvlPanel = el('div', { style: { marginBottom: '0.75rem', padding: '0.5rem', border: '1px solid var(--border-light)', borderRadius: '4px' } });
       lvlPanel.appendChild(el('div', { style: { fontWeight: '500', fontSize: '0.85rem', marginBottom: '0.25rem' } }, lvl.name || lvl.id));
-
-      const uTable = el('table', { className: 'dynamic-table', style: { fontSize: '0.85rem' } });
-      uTable.appendChild(el('tr', null, el('th', null, 'Start (ft)'), el('th', null, 'End (ft)'), el('th', null, 'DL (plf)'), el('th', { className: 'row-actions' }, '')));
-      gl.uniform.forEach((u, i) => {
-        uTable.appendChild(el('tr', null,
-          el('td', null, el('input', { type: 'number', step: 'any', value: numOrBlank(u.start), style: { width: '60px' }, onChange(e) { u.start = e.target.value; if (onGravityChange) onGravityChange(); markChanged(); drawSVG(); } })),
-          el('td', null, el('input', { type: 'number', step: 'any', value: numOrBlank(u.end), style: { width: '60px' }, onChange(e) { u.end = e.target.value; if (onGravityChange) onGravityChange(); markChanged(); drawSVG(); } })),
-          el('td', null, el('input', { type: 'number', step: 'any', value: numOrBlank(u.dlPlf), style: { width: '70px' }, onChange(e) { u.dlPlf = e.target.value; if (onGravityChange) onGravityChange(); markChanged(); drawSVG(); } })),
-          el('td', { className: 'row-actions' }, el('button', { className: 'btn btn-ghost btn-sm', type: 'button', onClick() { gl.uniform.splice(i, 1); renderGravitySection(); if (onGravityChange) onGravityChange(); markChanged(); drawSVG(); } }, '×')),
-        ));
-      });
-      lvlPanel.appendChild(uTable);
-      lvlPanel.appendChild(el('button', { className: 'btn btn-sm', type: 'button', style: { marginRight: '0.5rem', marginTop: '0.25rem' }, onClick() { gl.uniform.push(newUniformLoad(0, parseFloat(line.totalLength) || 60)); renderGravitySection(); markChanged(); drawSVG(); } }, '+ Uniform'));
-
-      const pTable = el('table', { className: 'dynamic-table', style: { fontSize: '0.85rem', marginTop: '0.5rem' } });
-      if (gl.point.length > 0) {
-        pTable.appendChild(el('tr', null, el('th', null, 'Position (ft)'), el('th', null, 'DL (kips)'), el('th', { className: 'row-actions' }, '')));
-        gl.point.forEach((p, i) => {
-          pTable.appendChild(el('tr', null,
-            el('td', null, el('input', { type: 'number', step: 'any', value: numOrBlank(p.position), style: { width: '60px' }, onChange(e) { p.position = e.target.value; if (onGravityChange) onGravityChange(); markChanged(); drawSVG(); } })),
-            el('td', null, el('input', { type: 'number', step: 'any', value: numOrBlank(p.dlKips), style: { width: '70px' }, onChange(e) { p.dlKips = e.target.value; if (onGravityChange) onGravityChange(); markChanged(); drawSVG(); } })),
-            el('td', { className: 'row-actions' }, el('button', { className: 'btn btn-ghost btn-sm', type: 'button', onClick() { gl.point.splice(i, 1); renderGravitySection(); if (onGravityChange) onGravityChange(); markChanged(); drawSVG(); } }, '×')),
+      if (gl.loads.length) {
+        const tbl = el('table', { className: 'dynamic-table', style: { fontSize: '0.82rem' } });
+        tbl.appendChild(el('tr', null, ...['#', 'Shape', 'Position / start (ft)', 'End (ft)', 'Flat Load assembly', 'Trib (ft)', 'D', 'L', 'Lr', ''].map(h => el('th', null, h))));
+        gl.loads.forEach((ld, i) => {
+          const inp = (key, width, disabled, after) => el('input', { type: 'number', step: 'any', value: numOrBlank(ld[key]), disabled: !!disabled, style: { width },
+            onChange(e) { ld[key] = e.target.value; if (after) after(); changed(!!after); } });
+          const relink = () => {
+            const asm = assemblies.find(x => x.id === ld.assemblyId);
+            if (!asm) return;
+            const v = assemblyLoads(asm, ld.trib);
+            ld.D = String(v.D); ld.L = v.L ? String(v.L) : ''; ld.Lr = v.Lr ? String(v.Lr) : '';
+          };
+          const shapeSel = el('select', { className: 'form-select', style: { width: '170px', fontSize: '0.8rem' }, onChange(e) {
+            ld.shape = e.target.value;
+            if (ld.shape === 'point') { ld.assemblyId = ''; ld.trib = ''; }
+            changed(true);
+          } });
+          LOAD_SHAPES.forEach(sh => shapeSel.appendChild(el('option', { value: sh.id, selected: (ld.shape || 'partial') === sh.id }, sh.label)));
+          const isPoint = ld.shape === 'point', isFull = ld.shape === 'full';
+          let asmCell = '—';
+          if (!isPoint) {
+            const asmSel = el('select', { className: 'form-select', style: { width: '170px', fontSize: '0.8rem' }, disabled: !assemblies.length, onChange(e) { ld.assemblyId = e.target.value; relink(); changed(true); } });
+            asmSel.appendChild(el('option', { value: '' }, assemblies.length ? '— manual —' : 'No Flat Load link'));
+            assemblies.forEach(x => asmSel.appendChild(el('option', { value: x.id, selected: ld.assemblyId === x.id }, (x.name || x.id) + ' (' + x.dl + ' / ' + x.llGravity + ' psf ' + (x.llSymbol || 'L') + ')')));
+            asmCell = asmSel;
+          }
+          // Typing a magnitude by hand unlinks the row from the Flat Load assembly
+          const mag = (key) => el('input', { type: 'number', step: 'any', value: numOrBlank(ld[key]), style: { width: '62px' }, title: isPoint ? 'kips' : 'plf',
+            onChange(e) { ld[key] = e.target.value; if (ld.assemblyId) { ld.assemblyId = ''; changed(true); } else changed(false); } });
+          tbl.appendChild(el('tr', null,
+            el('td', { className: 'mono' }, String(i + 1)),
+            el('td', null, shapeSel),
+            el('td', null, isFull ? el('span', { style: { color: 'var(--ink-tertiary)' } }, '0 (full line)') : inp(isPoint ? 'position' : 'start', '62px')),
+            el('td', null, isPoint ? '—' : isFull ? el('span', { style: { color: 'var(--ink-tertiary)' } }, String(num(line.totalLength))) : inp('end', '62px')),
+            el('td', null, asmCell),
+            el('td', null, isPoint ? '—' : inp('trib', '55px', false, relink)),
+            el('td', null, mag('D')), el('td', null, mag('L')), el('td', null, mag('Lr')),
+            el('td', { className: 'row-actions' }, el('button', { className: 'btn btn-ghost btn-sm', type: 'button', onClick() { gl.loads.splice(i, 1); changed(true); } }, '×')),
           ));
         });
-        lvlPanel.appendChild(pTable);
+        lvlPanel.appendChild(el('div', { className: 'table-scroll' }, tbl));
       }
-      lvlPanel.appendChild(el('button', { className: 'btn btn-sm', type: 'button', style: { marginTop: '0.25rem' }, onClick() { gl.point.push(newPointLoad(0)); renderGravitySection(); markChanged(); drawSVG(); } }, '+ Point Load'));
-
+      const addBtn = (shape, label) => el('button', { className: 'btn btn-sm', type: 'button', style: { marginRight: '0.5rem', marginTop: '0.25rem' },
+        onClick() { gl.loads.push(newGravityLoad(shape, 0, parseFloat(line.totalLength) || 60)); changed(true); } }, label);
+      lvlPanel.appendChild(addBtn('point', '+ Point'));
+      lvlPanel.appendChild(addBtn('full', '+ Uniform (full line)'));
+      lvlPanel.appendChild(addBtn('partial', '+ Uniform (partial)'));
       gravSection.appendChild(lvlPanel);
     }
   }

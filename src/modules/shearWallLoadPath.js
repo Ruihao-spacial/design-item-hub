@@ -1,5 +1,6 @@
 import { pointInWallEnd, findAnchorage, selectEndPost } from './shearWallCalc.js';
 import { autoSelectHoldown, autoSelectStrap } from './shearWallHardware.js';
+import { gravityValue } from './shearWallCombos.js';
 
 // Vertical load path: wall ends, posts at any story, transfer beams with user-defined supports.
 // Per-combo force maps are signed: + = compression (down), − = uplift. Each wall end contributes
@@ -68,6 +69,25 @@ export function resolveVerticalLoadPath(ctx) {
   posts.forEach(p => { postState[p.id] = { load: zeroMap(comboKeys), sources: [] }; });
   const beamLoads = {};  // beamId → [{ x, map, source }]
   beams.forEach(b => { beamLoads[b.id] = []; });
+
+  // Gravity loads on top of beams and posts (ctx.beamGravity / postGravity from shearWallGravity.js),
+  // per combo from the combo factors on D / L / Lr (+ = compression)
+  const comboF = {};
+  comboKeys.forEach(k => { comboF[k] = sample.combos[k].f || { d: 0, l: 0, lr: 0 }; });
+  const gravMap = (g) => { const m = zeroMap(comboKeys); for (const k of comboKeys) m[k] = gravityValue(comboF[k], g); return m; };
+  for (const [bid, list] of Object.entries(ctx.beamGravity || {})) {
+    if (!beamLoads[bid]) continue;
+    list.forEach((ld, i) => beamLoads[bid].push({ x: ld.x, map: gravMap(ld.g), source: { type: 'gravity', id: bid + '#g' + i, label: ld.label }, gravity: ld }));
+  }
+  for (const [pid, list] of Object.entries(ctx.postGravity || {})) {
+    const st = postState[pid];
+    if (!st) continue;
+    for (const ld of list) {
+      const m = gravMap(ld.g);
+      addInto(st.load, m);
+      st.sources.push({ type: 'gravity', id: pid, label: ld.label, map: roundMap(m), env: env(m), gravity: ld.g });
+    }
+  }
 
   const wallDeliveries = [];
   const beamTransfers = [];
@@ -205,9 +225,12 @@ export function resolveVerticalLoadPath(ctx) {
       const e = env(st.load);
       const floorH = num(lvl.floorToFloor) || 10;
       const hw = hasConnection(rec) ? selectAnchorage(li, e.T, p.anchorageOverride) : noHardware;
-      const ps = selectEndPost(p.postOverride, e.C, lineThickness, grade, floorH, hw.anchorage);
+      // Support post member: max(ASD, Ω₀ ASD) compression (it supports a discontinued element, §12.3.3.3)
+      const eO = envelope(st.load, comboGroups, 'asd_omega');
+      const Cd = Math.max(e.C, eO.C);
+      const ps = selectEndPost(p.postOverride, Cd, lineThickness, grade, floorH, hw.anchorage);
       const post = ps.post;
-      const postDC = post && post.capacityKips > 0 ? r2(e.C / post.capacityKips) : null;
+      const postDC = post && post.capacityKips > 0 ? r2(Cd / post.capacityKips) : null;
       if (rec.type === 'none' || rec.type === 'wall_mid') {
         warnings.push({ type: 'unsupported_post', elementId: p.id, elementMark: markOf(p), levelName: levelName(li),
           message: rec.type === 'wall_mid' ? 'Post base lands ' + rec.label.toLowerCase() + ' — add a post below (no load transferred)'
@@ -226,6 +249,7 @@ export function resolveVerticalLoadPath(ctx) {
         hasPostAbove: st.sources.some(s => s.type === 'post'),
         sources: st.sources, receiver: rec,
         ...hw, post, postDC, postRaised: ps.raised ? ps : null,
+        postDesignC: r2(Cd), postGoverns: eO.C > e.C + 1e-9 ? 'Ω₀ ASD' : 'ASD',
       });
     }
 
@@ -283,7 +307,7 @@ export function resolveVerticalLoadPath(ctx) {
         beamId: b.id, mark, levelId: lvl.id, levelName: levelName(li),
         position: bs, length: r2(be - bs), valid: !problem,
         loads: loads.map(ld => ({ x: r2(ld.x), label: ld.source.label, sourceType: ld.source.type, sourceId: ld.source.id,
-          map: roundMap(ld.map), env: env(ld.map) })),
+          map: roundMap(ld.map), env: env(ld.map), gravity: ld.gravity ? { ...ld.gravity.g, uniform: ld.gravity.uniform || null } : null })),
         supports: supportResults,
       });
     }

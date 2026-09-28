@@ -1,9 +1,9 @@
 const SVG_NS = 'http://www.w3.org/2000/svg';
 
-let _id = { lvl: 1, dir: 1, ln: 1, w: 1, gu: 1, gp: 1, wdt: 1, bm: 1, sp: 1, bs: 1, op: 1 };
+let _id = { lvl: 1, dir: 1, ln: 1, w: 1, gu: 1, gp: 1, gl: 1, wdt: 1, bm: 1, sp: 1, bs: 1, op: 1 };
 
 export function resetIds(inputs) {
-  const max = { lvl: 0, dir: 0, ln: 0, w: 0, gu: 0, gp: 0, wdt: 0, bm: 0, sp: 0, bs: 0, op: 0 };
+  const max = { lvl: 0, dir: 0, ln: 0, w: 0, gu: 0, gp: 0, gl: 0, wdt: 0, bm: 0, sp: 0, bs: 0, op: 0 };
   const extract = (id) => {
     if (!id) return;
     const m = id.match(/^([a-z]+)-(\d+)$/);
@@ -28,6 +28,7 @@ export function resetIds(inputs) {
       Object.values(ln.gravityLoads || {}).forEach(gl => {
         (gl.uniform || []).forEach(u => extract(u.id));
         (gl.point || []).forEach(p => extract(p.id));
+        (gl.loads || []).forEach(p => extract(p.id));
       });
     });
   });
@@ -40,6 +41,7 @@ export function newLineId() { return 'ln-' + (_id.ln++); }
 export function newWallId() { return 'w-' + (_id.w++); }
 export function newUniformId() { return 'gu-' + (_id.gu++); }
 export function newPointId() { return 'gp-' + (_id.gp++); }
+export function newGravityLoadId() { return 'gl-' + (_id.gl++); }
 export function newWDTId() { return 'wdt-' + (_id.wdt++); }
 export function newBeamId() { return 'bm-' + (_id.bm++); }
 export function newSupportPostId() { return 'sp-' + (_id.sp++); }
@@ -137,6 +139,12 @@ export function newUniformLoad(start, end) {
   return { id: newUniformId(), start: start ?? 0, end: end ?? 30, dlPlf: '' };
 }
 
+// Gravity load row (schema v8): shape point | full | partial; D / L / Lr (kips for a point, plf for uniform);
+// uniform rows may link a Flat Load assembly (assemblyId) × tributary width (trib, ft)
+export function newGravityLoad(shape, start, end) {
+  return { id: newGravityLoadId(), shape: shape || 'partial', position: start ?? 0, start: start ?? 0, end: end ?? 30, D: '', L: '', Lr: '', assemblyId: '', trib: '' };
+}
+
 export function newPointLoad(position) {
   return { id: newPointId(), position: position ?? 0, dlKips: '' };
 }
@@ -172,6 +180,7 @@ export function defaultInputs() {
     wallThickness: '4',
     ...deflectionDefaults(),
     ...projectV7Defaults(),
+    ...projectV8Defaults(),
     woodGrade: 'dfir_no1',
     wallDLTypes: [wdt1, wdt2],
     levels: [lvl1, lvl2],
@@ -189,6 +198,11 @@ export function deflectionDefaults() {
 // from a linked Base Shear item; foundation f'c and detached one-/two-family dwelling for the WSWH tables
 export function projectV7Defaults() {
   return { omega0: '', seismicDesignCategory: '', wswhFc: '2500', detachedOneTwoFamily: false };
+}
+
+// Schema v8: LRFD live-load factor 0.5 (ASCE 7-22 §2.3.1 exc. 1 / §2.3.6; Lo ≤ 100 psf, not garages or assembly)
+export function projectV8Defaults() {
+  return { lrfdHalfL: false };
 }
 
 export function svgEl(tag, attrs, ...children) {

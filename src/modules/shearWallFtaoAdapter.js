@@ -67,10 +67,10 @@ export function ftaoCapacityLbf(wall, ctx, nailing, lt) {
   return createFTAO(engineInput(wall, ctx, lt, { nailing })).capacity().Vcap_ASD;
 }
 
-// Jamb posts (opening edges), sized for the Diekmann pier chord force (ASD):
-//   C = fD·DL_jamb + v_i·h_o   (v_i = ASD pier shear beside the opening, h_o = governing opening height)
-// fD = 1.0 + 0.14·SDS (D + 0.7ρE) or 1.0 (D + 0.6W). DL_jamb (kips) = half the pier's dead load +
-// half the header load above the opening, from the caller (hw.jambDL, jamb order: opening 1 left, right, …).
+// Jamb posts (opening edges), sized for the Diekmann pier chord force (ASD), governing ASD compression combo:
+//   C = d·D + l·L + lr·Lr + k·v_i·h_o   (v_i = ASD pier shear beside the opening at 0.7ρE / 0.6W,
+//   k = 1 or 0.75 for the combos with 0.75L; h_o = governing opening height). Gravity D / L / Lr (kips) =
+// half the pier's load + half the header load above the opening, from the caller (hw.jambDL, jamb order: opening 1 left, right, …).
 // Engine edge index of opening j's jambs: left = 2j + 1 (pier j right side), right = 2j + 2 (pier j+1 left side).
 function sizeJambs(wall, ctx, perType, hw) {
   const opts = jambPostOptions(ctx.lineThickness);
@@ -81,13 +81,28 @@ function sizeJambs(wall, ctx, perType, hw) {
     for (const side of ['left', 'right']) {
       const k = 2 * j + (side === 'left' ? 0 : 1);
       const pierIdx = side === 'left' ? j : j + 1;
-      const dl = (hw.jambDL && hw.jambDL[k]) || 0;
-      let C = 0, ho = 0, v = 0, lt = null;
-      for (const [t, { d0 }] of Object.entries(perType)) {
-        const fD = t === 'E' ? 1.0 + 0.14 * num(ctx.sds) : 1.0;
-        const vi = d0.forces.piers[pierIdx].v;
-        const c = (fD * dl * 1000 + vi * d0.geometry.ho) / 1000;
-        if (c > C) { C = c; ho = d0.geometry.ho; v = vi; lt = t; }
+      const raw = (hw.jambDL && hw.jambDL[k]) || 0;
+      const g = typeof raw === 'number' ? { D: raw, L: 0, Lr: 0 } : { D: num(raw.D), L: num(raw.L), Lr: num(raw.Lr) };
+      const dl = g.D;
+      let C = 0, ho = 0, v = 0, lt = null, combo = '';
+      const S = num(ctx.sds);
+      // ASD compression combos: gravity part + (lateral fraction)·v_i·h_o; v_i is at 0.7ρE / 0.6W
+      const cands = [
+        { t: null, d: 1, l: 1, lr: 0, k: 0, name: 'D + L' },
+        { t: null, d: 1, l: 0, lr: 1, k: 0, name: 'D + Lr' },
+        { t: null, d: 1, l: 0.75, lr: 0.75, k: 0, name: 'D + 0.75L + 0.75Lr' },
+        { t: 'E', d: 1 + 0.14 * S, l: 0, lr: 0, k: 1, name: '(1.0+0.14SDS)D + 0.7ρE' },
+        { t: 'E', d: 1 + 0.105 * S, l: 0.75, lr: 0, k: 0.75, name: '(1.0+0.105SDS)D + 0.525ρE + 0.75L' },
+        { t: 'W', d: 1, l: 0, lr: 0, k: 1, name: 'D + 0.6W' },
+        { t: 'W', d: 1, l: 0.75, lr: 0.75, k: 0.75, name: 'D + 0.75L + 0.75(0.6W) + 0.75Lr' },
+      ];
+      for (const cd of cands) {
+        const pt = cd.t ? perType[cd.t] : Object.values(perType)[0];
+        if (!pt) continue;
+        const d0 = pt.d0;
+        const vi = cd.k ? d0.forces.piers[pierIdx].v : 0;
+        const c = (cd.d * g.D + cd.l * g.L + cd.lr * g.Lr) + cd.k * vi * d0.geometry.ho / 1000;
+        if (c > C) { C = c; ho = d0.geometry.ho; v = cd.k * vi; lt = cd.t; combo = cd.name; }
       }
       const capOf = (p) => computePostCapacity(p, ctx.grade, ctx.floorH);
       let post = override ? capOf(override) : null;
@@ -97,7 +112,7 @@ function sizeJambs(wall, ctx, perType, hw) {
       }
       jambs.push({
         opening: j + 1, side, edge: 2 * j + (side === 'left' ? 1 : 2), loadType: lt,
-        dl: r2(dl), v: Math.round(v), ho: r2(ho), C: r2(C),
+        dl: r2(dl), ll: r2(g.L), lr: r2(g.Lr), combo, v: Math.round(v), ho: r2(ho), C: r2(C),
         post: post ? { id: size.id, label: size.label, area: size.area, capacityKips: post.capacityKips } : null,
         dc: post && post.capacityKips > 0 ? r2(C / post.capacityKips) : null,
         override: !!override,

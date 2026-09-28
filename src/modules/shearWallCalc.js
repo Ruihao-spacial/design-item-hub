@@ -1,6 +1,8 @@
 import { NAILING_TABLE, autoSelectNailing, getNailingById } from './shearWallNailing.js';
 import { autoSelectHoldown, autoSelectStrap, autoSelectPost, hdueMinPost, meetsMinPost, getGradeById, HDUE_TABLE, MSTC_TABLE, POST_SIZES, computePostCapacity, lrfdCap } from './shearWallHardware.js';
 import { resolveVerticalLoadPath } from './shearWallLoadPath.js';
+import { comboDefs } from './shearWallCombos.js';
+import { gravityRows, wallGravity, gravityToElements } from './shearWallGravity.js';
 import { aspectFactor } from './shearWallFtao.js';
 import { expandWalls, hasOpenings, wallMethod, wallPiers, sortedOpenings } from './shearWallOpenings.js';
 import { ftaoCapacityLbf, ftaoDesign, ftaoLoadTypes } from './shearWallFtaoAdapter.js';
@@ -8,7 +10,7 @@ import { wallDeflection, postArea, driftLimit } from './shearWallDeflection.js';
 import { isWswh, wswhWidthIn, wswhWidthFt, lookupWswh, stackedBaseCheck, selectWswhAnchor, RAISED_ANCHOR, WSWH_ROD, WSWH_PANEL_POST, conditionLabel } from './shearWallWswh.js';
 
 // Records which calc produced a stored results snapshot (results are always regenerated for display)
-export const CALC_VERSION = 'v8';
+export const CALC_VERSION = 'v9';
 
 export function accumulateStoryShear(levelLoads, levels) {
   const result = {};
@@ -38,10 +40,14 @@ export function distributeByCapacity(walls, storyShear, capMap) {
   }));
 }
 
-export function resolveGravityAtWall(wall, gravityLoadsAtLevel, wallDLTypes) {
+// Gravity at one wall: self-weight (wall DL type × area, ½ to each end) plus the line loads directly
+// above it (shearWallGravity.js), each split to the ends by statics. opts.lineLength (full-line loads),
+// opts.exclude (spans taken by a transfer beam on that floor line).
+// Returns dead load (wallSelfDL, diagramDL, dlTotal, rL, rR), live { L, Lr: { total, rL, rR } } and
+// loadRows (one documentation row per load piece).
+export function resolveGravityAtWall(wall, gravityLoadsAtLevel, wallDLTypes, opts = {}) {
   const pos = parseFloat(wall.position) || 0;
   const len = parseFloat(wall.length) || 0;
-  const wallEnd = pos + len;
   const h = parseFloat(wall._floorToFloor) || 0;
 
   let wallSelfDL = 0;
@@ -50,43 +56,25 @@ export function resolveGravityAtWall(wall, gravityLoadsAtLevel, wallDLTypes) {
     // FTAO walls: no wall weight where the openings are (_openingArea, ft²)
     if (wdt) wallSelfDL = (parseFloat(wdt.psf) || 0) * Math.max(0, len * h - (wall._openingArea || 0)) / 1000;
   }
-
-  // End reactions by statics (R6): self-weight ½ each end; each load split by its position on the wall
-  let diagramDL = 0, rR = wallSelfDL / 2;
-  const toRight = (P, x) => (len > 0 ? P * (x - pos) / len : P / 2);
-  if (gravityLoadsAtLevel) {
-    for (const u of (gravityLoadsAtLevel.uniform || [])) {
-      const uStart = parseFloat(u.start) || 0;
-      const uEnd = parseFloat(u.end) || 0;
-      const plf = parseFloat(u.dlPlf) || 0;
-      const overlapStart = Math.max(pos, uStart);
-      const overlapEnd = Math.min(wallEnd, uEnd);
-      if (overlapEnd > overlapStart) {
-        const F = plf * (overlapEnd - overlapStart) / 1000;
-        diagramDL += F;
-        rR += toRight(F, (overlapStart + overlapEnd) / 2);
-      }
-    }
-    for (const p of (gravityLoadsAtLevel.point || [])) {
-      const pPos = parseFloat(p.position) || 0;
-      if (pPos >= pos && pPos <= wallEnd) {
-        const P = parseFloat(p.dlKips) || 0;
-        diagramDL += P;
-        rR += toRight(P, pPos);
-      }
-    }
-  }
-  const total = wallSelfDL + diagramDL;
-
-  return { wallSelfDL: r2(wallSelfDL), diagramDL: r2(diagramDL), dlTotal: r2(total), rL: r4(total - rR), rR: r4(rR) };
+  const g = wallGravity(pos, len, gravityRows(gravityLoadsAtLevel, opts.lineLength), opts.exclude);
+  const total = wallSelfDL + g.D.total;
+  const rR = wallSelfDL / 2 + g.D.rR;
+  return {
+    wallSelfDL: r2(wallSelfDL), diagramDL: r2(g.D.total), dlTotal: r2(total), rL: r4(total - rR), rR: r4(rR),
+    live: { L: g.L, Lr: g.Lr }, loadRows: g.rows,
+  };
 }
 
 // Ω₀ used for the amplified seismic combos when none is entered or linked
 export const DEFAULT_OMEGA0 = 2.5;
 export function omega0Of(inputs) { return parseFloat(inputs && inputs.omega0) || DEFAULT_OMEGA0; }
 
-// opts.omega0 — overstrength factor for the Ω₀ combos (forces only, never used for design)
-// opts.rL / opts.rR — dead-load end reactions by statics (default dlTotal / 2 each)
+// End forces of a wall for every ASCE 7-22 combination (shearWallCombos.js), + = compression:
+//   net end = d·R_D + l·R_L + lr·R_Lr ∓ (e·OTM_1.0E + w·OTM_1.0W) / arm
+// share1E / share1W: 1.0-level shears (k); dlTotal: dead load (k); floorH: shear height (ft).
+// opts.rL / rR — dead-load end reactions by statics (default dlTotal / 2 each)
+// opts.live = { L: { rL, rR }, Lr: { rL, rR } } — live / roof live end reactions (default none)
+// opts.omega0 — Ω₀ for the amplified seismic combos; opts.lrfdHalfL — 0.5L in LRFD combos
 // opts.arm (ft) — lever arm between the end forces (default L; WSWH: anchor spacing B)
 // opts.h (ft) — height of the shear (default floorH; WSWH: panel H_e)
 // opts.otm1E / otm1W (k·ft) — 1.0-level overturning moment in place of V·h (stacked WSWH base)
@@ -98,81 +86,51 @@ export function computeWallTC(share1E, share1W, dlTotal, wallLength, floorH, rho
   const om = parseFloat(opts.omega0) || DEFAULT_OMEGA0;
   const dl = parseFloat(dlTotal) || 0;
   const hasR = opts.rL != null && opts.rR != null;
-  const rL = L > 0 ? (hasR ? parseFloat(opts.rL) || 0 : dl / 2) : 0;
-  const rR = L > 0 ? (hasR ? parseFloat(opts.rR) || 0 : dl / 2) : 0;
+  const R = {
+    D: L > 0 ? [hasR ? parseFloat(opts.rL) || 0 : dl / 2, hasR ? parseFloat(opts.rR) || 0 : dl / 2] : [0, 0],
+    L: L > 0 && opts.live && opts.live.L ? [opts.live.L.rL || 0, opts.live.L.rR || 0] : [0, 0],
+    Lr: L > 0 && opts.live && opts.live.Lr ? [opts.live.Lr.rL || 0, opts.live.Lr.rR || 0] : [0, 0],
+  };
   const arm = opts.arm != null ? parseFloat(opts.arm) || 0 : L;
   const hE = opts.h != null ? parseFloat(opts.h) || 0 : h;
+  const V = parseFloat(share1E) || 0, Vw = parseFloat(share1W) || 0;
+  const VhE = opts.otm1E != null ? opts.otm1E : V * hE;   // 1.0-level overturning moments (k·ft)
+  const VhW = opts.otm1W != null ? opts.otm1W : Vw * hE;
 
+  const defs = comboDefs({ loadType, sds: _sds, rho: _rho, omega0: om, lrfdHalfL: !!opts.lrfdHalfL });
   const combos = {};
-  const steps = { rL: r2(rL), rR: r2(rR) };
-
-  // Both ends from one formula: net end force = fD·R_end ∓ OTM/L (+ = compression), R_end = dead-load
-  // end reaction by statics. m > 0 overturns toward the right end (_pos): left end uplift side.
-  const endPair = (group, fD, m) => {
-    const netL = fD * rL - m;
-    const netR = fD * rR + m;
+  const steps = {
+    rL: r2(R.D[0]), rR: r2(R.D[1]), live: { L: R.L.map(r2), Lr: R.Lr.map(r2) },
+    otm1E: r2(VhE), otm1W: r2(VhW), arm: r4(arm),
+  };
+  // m > 0 overturns toward the right end (_pos): left end is the uplift side
+  const endPair = (f, m) => {
+    const g = (i) => f.d * R.D[i] + f.l * R.L[i] + f.lr * R.Lr[i];
+    const netL = g(0) - m, netR = g(1) + m;
     return {
-      group,
+      group: f.group, f: { d: f.d, l: f.l, lr: f.lr, e: f.e, w: f.w }, text: f.text, ref: f.ref,
       tensionLeft: r2(Math.max(0, -netL)), comprLeft: r2(Math.max(0, netL)),
       tensionRight: r2(Math.max(0, -netR)), comprRight: r2(Math.max(0, netR)),
     };
   };
-
-  combos['1.0D'] = endPair('load_case', 1.0, 0);
-
-  if (loadType === 'seismic' || loadType === 'both') {
-    const V = parseFloat(share1E) || 0;
-    const Vh = opts.otm1E != null ? opts.otm1E : V * hE; // 1.0-level overturning moment (k·ft)
-    const otm = 0.7 * _rho * Vh;
-    const gfUplift = 0.6 - 0.14 * _sds;
-    const gfComp = 1.0 + 0.14 * _sds;
-    steps.seismic = { otm: r2(otm), gfUplift: r4(gfUplift), gfComp: r4(gfComp) };
-    const m = arm > 0 ? otm / arm : 0;
-    combos['0.6D+0.7ρE_pos'] = endPair('asd', gfUplift, m);
-    combos['0.6D+0.7ρE_neg'] = endPair('asd', gfUplift, -m);
-    combos['D+0.7ρE_pos'] = endPair('asd', gfComp, m);
-    combos['D+0.7ρE_neg'] = endPair('asd', gfComp, -m);
-    // Load case: lateral only (no dead load) — equal and opposite end forces
-    combos['1.0E'] = endPair('load_case', 0, arm > 0 ? Vh / arm : 0);
-    // LRFD (ASCE 7-22 §2.3.6, Ev = 0.2SDS·D) — reported forces only, design stays ASD
-    const mL = arm > 0 ? _rho * Vh / arm : 0;
-    const fUp = 0.9 - 0.2 * _sds, fComp = 1.2 + 0.2 * _sds;
-    steps.lrfdSeismic = { otm: r2(_rho * Vh), fUplift: r4(fUp), fComp: r4(fComp) };
-    combos['(0.9-0.2SDS)D+ρE_pos'] = endPair('lrfd', fUp, mL);
-    combos['(0.9-0.2SDS)D+ρE_neg'] = endPair('lrfd', fUp, -mL);
-    combos['(1.2+0.2SDS)D+ρE_pos'] = endPair('lrfd', fComp, mL);
-    combos['(1.2+0.2SDS)D+ρE_neg'] = endPair('lrfd', fComp, -mL);
-    // Ω₀ (overstrength, Ω₀ replaces ρ) — ASD §2.4.5 and LRFD §2.3.6, reported forces only
-    const mO = arm > 0 ? 0.7 * om * Vh / arm : 0;
-    const mOL = arm > 0 ? om * Vh / arm : 0;
-    steps.omega = { omega0: om, otmASD: r2(0.7 * om * Vh), otmLRFD: r2(om * Vh) };
-    combos['0.6D+0.7Ω₀E_pos'] = endPair('asd_omega', gfUplift, mO);
-    combos['0.6D+0.7Ω₀E_neg'] = endPair('asd_omega', gfUplift, -mO);
-    combos['D+0.7Ω₀E_pos'] = endPair('asd_omega', gfComp, mO);
-    combos['D+0.7Ω₀E_neg'] = endPair('asd_omega', gfComp, -mO);
-    combos['(0.9-0.2SDS)D+Ω₀E_pos'] = endPair('lrfd_omega', fUp, mOL);
-    combos['(0.9-0.2SDS)D+Ω₀E_neg'] = endPair('lrfd_omega', fUp, -mOL);
-    combos['(1.2+0.2SDS)D+Ω₀E_pos'] = endPair('lrfd_omega', fComp, mOL);
-    combos['(1.2+0.2SDS)D+Ω₀E_neg'] = endPair('lrfd_omega', fComp, -mOL);
+  for (const f of defs) {
+    const m = arm > 0 ? (f.e * VhE + f.w * VhW) / arm : 0;
+    if (f.signed) {
+      combos[f.key + '_pos'] = endPair(f, m);
+      combos[f.key + '_neg'] = endPair(f, -m);
+    } else {
+      combos[f.key] = endPair(f, m);
+    }
   }
-
+  // Summary steps (calc detail): ASD seismic / wind overturning and gravity factors
+  if (loadType === 'seismic' || loadType === 'both') {
+    steps.seismic = { otm: r2(0.7 * _rho * VhE), gfUplift: r4(0.6 - 0.14 * _sds), gfComp: r4(1.0 + 0.14 * _sds) };
+    steps.lrfdSeismic = { otm: r2(_rho * VhE), fUplift: r4(0.9 - 0.2 * _sds), fComp: r4(1.2 + 0.2 * _sds) };
+    steps.omega = { omega0: om, otmASD: r2(0.7 * om * VhE), otmLRFD: r2(om * VhE) };
+  }
   if (loadType === 'wind' || loadType === 'both') {
-    const Vw = parseFloat(share1W) || 0;
-    const VwH = opts.otm1W != null ? opts.otm1W : Vw * hE;
-    const otmW = 0.6 * VwH;
-    steps.wind = { otm: r2(otmW) };
-    const m = arm > 0 ? otmW / arm : 0;
-    combos['0.6D+0.6W_pos'] = endPair('asd', 0.6, m);
-    combos['0.6D+0.6W_neg'] = endPair('asd', 0.6, -m);
-    combos['D+0.6W_pos'] = endPair('asd', 1.0, m);
-    combos['D+0.6W_neg'] = endPair('asd', 1.0, -m);
-    combos['1.0W'] = endPair('load_case', 0, arm > 0 ? VwH / arm : 0);
-    const mW = arm > 0 ? VwH / arm : 0;
-    steps.lrfdWind = { otm: r2(VwH) };
-    combos['0.9D+1.0W_pos'] = endPair('lrfd', 0.9, mW);
-    combos['0.9D+1.0W_neg'] = endPair('lrfd', 0.9, -mW);
-    combos['1.2D+1.0W_pos'] = endPair('lrfd', 1.2, mW);
-    combos['1.2D+1.0W_neg'] = endPair('lrfd', 1.2, -mW);
+    steps.wind = { otm: r2(0.6 * VhW) };
+    steps.lrfdWind = { otm: r2(VhW) };
   }
 
   const gov = governingOf(combos, 'asd');
@@ -232,8 +190,9 @@ const isFtao = (w) => hasOpenings(w) && wallMethod(w) === 'ftao';
 
 // === Strong-Wall WSWH panels ===
 // Role of each panel (stacked pairs found by position), dead load, and table values per load type with
-// P = combo-factored D ((1.0+0.14SDS)·D seismic, 1.0·D wind). A panel with a lookup error carries no shear.
-function prepareWswh(allWalls, levels, line, wallDLTypes, inputs) {
+// P = largest ASD compression-combo vertical load acting with the shear: seismic max((1.0+0.14SDS)D,
+// (1.0+0.105SDS)D + 0.75L); wind max(D, D + 0.75L + 0.75Lr). A panel with a lookup error carries no shear.
+function prepareWswh(allWalls, levels, line, wallDLTypes, inputs, gOpts) {
   const out = {};
   const sds = parseFloat(inputs.sds) || 0;
   const liOf = (id) => levels.findIndex(l => l.id === id);
@@ -242,7 +201,7 @@ function prepareWswh(allWalls, levels, line, wallDLTypes, inputs) {
   for (const w of panels) {
     const li = liOf(w.levelId);
     const floorH = parseFloat((levels[li] || {}).floorToFloor) || 0;
-    const grav = resolveGravityAtWall({ ...w, _floorToFloor: floorH }, (line.gravityLoads || {})[w.levelId], wallDLTypes);
+    const grav = resolveGravityAtWall({ ...w, _floorToFloor: floorH }, (line.gravityLoads || {})[w.levelId], wallDLTypes, gOpts(w.levelId));
     const cond = w.wswhCondition || 'concrete';
     out[w.id] = { wall: w, li, floorH, grav, condition: cond, role: cond, width: wswhWidthIn(w), errors: [] };
   }
@@ -262,8 +221,9 @@ function prepareWswh(allWalls, levels, line, wallDLTypes, inputs) {
   }
   const fc = inputs.wswhFc || '2500';
   for (const info of Object.values(out)) {
-    const D = info.grav.dlTotal * 1000;
-    info.P = { E: (1.0 + 0.14 * sds) * D, W: D };
+    // ASD vertical load acting with the shear: largest compression combo of that load type
+    const D = info.grav.dlTotal * 1000, Lv = info.grav.live.L.total * 1000, Lr = info.grav.live.Lr.total * 1000;
+    info.P = { E: Math.max((1.0 + 0.14 * sds) * D, (1.0 + 0.105 * sds) * D + 0.75 * Lv), W: Math.max(D, D + 0.75 * Lv + 0.75 * Lr) };
     info.look = {};
     for (const lt of ['E', 'W']) {
       info.look[lt] = lookupWswh({ width: info.width, condition: info.role, ftfFt: info.floorH, P_lb: info.P[lt], fc, joist: info.wall.wswhJoist || '12' });
@@ -299,18 +259,27 @@ export function calcAll(inputs) {
       const lineThickness = line.wallThickness || globalThickness;
       const storyShears = accumulateStoryShear(line.levelLoads || {}, levels);
       const ftaoCtx = (w) => ({ floorH: floorHOf(w.levelId), rho: rhoN, sds, grade, sheathing, cd: inputs.cd, ie: inputs.ie, alphaS, lineThickness, loadType });
-      // Dead load (kips) at each FTAO jamb: half the adjacent pier's load + half the header load above the opening
+      // Gravity loads: parts over a transfer beam go to the beam, point loads on a post top to the post,
+      // loads over nothing are noted; walls take the rest (gOpts: full-line length + beam spans)
+      const gdist = gravityToElements({ line, levels, coverWalls: (line.walls || []).map(w => (isWswh(w) ? { ...w, length: wswhWidthFt(w) } : w)) });
+      const gOpts = (levelId) => ({ lineLength: line.totalLength, exclude: gdist.excludeByLevel[levelId] });
+      const lrfdHalfL = !!inputs.lrfdHalfL;
+      // Gravity (kips, D / L / Lr) at each FTAO jamb: half the adjacent pier's load + half the header load above the opening
       const jambDL = (w) => {
         const h = floorHOf(w.levelId);
         const gl = (line.gravityLoads || {})[w.levelId];
-        const dlOver = (position, length, height) => resolveGravityAtWall({ position, length, wallDLTypeId: w.wallDLTypeId, _floorToFloor: height }, gl, wallDLTypes).dlTotal;
+        const over = (position, length, height) => {
+          const g = resolveGravityAtWall({ position, length, wallDLTypeId: w.wallDLTypeId, _floorToFloor: height }, gl, wallDLTypes, gOpts(w.levelId));
+          return { D: g.dlTotal, L: g.live.L.total, Lr: g.live.Lr.total };
+        };
+        const half = (a, b) => ({ D: a.D / 2 + b.D / 2, L: a.L / 2 + b.L / 2, Lr: a.Lr / 2 + b.Lr / 2 });
         const piers = wallPiers(w);
         const x0 = parseFloat(w.position) || 0;
         const out = [];
         sortedOpenings(w).forEach((o, j) => {
-          const header = dlOver(x0 + o.offset, o.width, h - o.head);
-          out.push(dlOver(piers[j].start, piers[j].length, h) / 2 + header / 2);
-          out.push(dlOver(piers[j + 1].start, piers[j + 1].length, h) / 2 + header / 2);
+          const header = over(x0 + o.offset, o.width, h - o.head);
+          out.push(half(over(piers[j].start, piers[j].length, h), header));
+          out.push(half(over(piers[j + 1].start, piers[j + 1].length, h), header));
         });
         return out;
       };
@@ -334,7 +303,7 @@ export function calcAll(inputs) {
         return capCache[k];
       };
 
-      const wswh = prepareWswh(allWalls, levels, line, wallDLTypes, inputs);
+      const wswh = prepareWswh(allWalls, levels, line, wallDLTypes, inputs, gOpts);
       const wswhCapLb = (w, lt) => { const i = wswh[w.id]; return i && !i.errors.length ? i.look[lt].V[lt] : 0; };
 
       // Aspect ratios (fixed per wall). FTAO piers are checked by the engine at the opening height.
@@ -443,7 +412,7 @@ export function calcAll(inputs) {
             const relStiffness = forced
               ? (ss.seismic > 0 ? r2(sh.seismic / ss.seismic) : ss.wind > 0 ? r2(sh.wind / ss.wind) : 0)
               : totalCapLenE > 0 ? r2((seismicCapMap[w.id] || 0) * (parseFloat(w.length) || 0) / totalCapLenE) : 0;
-            return wswhWallResult(w, wswh[w.id], sh, { floorH, rho, rhoN, sds, loadType, seismic, wind, omega0, relStiffness, totalCapLenE,
+            return wswhWallResult(w, wswh[w.id], sh, { floorH, rho, rhoN, sds, loadType, seismic, wind, omega0, lrfdHalfL, relStiffness, totalCapLenE,
               upperShare: wswh[w.id].upperId ? exactShares[wswh[w.id].upperId] : null, upper: wswh[w.id].upperId ? wswh[wswh[w.id].upperId] : null, inputs });
           }
           const wLen = parseFloat(w.length) || 0;
@@ -499,8 +468,8 @@ export function calcAll(inputs) {
           const effCap = dcGoverning === 'wind' ? sheathCapW : sheathCapE;
 
           const wWithH = { ...w, _floorToFloor: floorH, _openingArea: isFtao(w) ? sortedOpenings(w).reduce((a, o) => a + o.width * (o.head - o.sill), 0) : 0 };
-          const grav = resolveGravityAtWall(wWithH, (line.gravityLoads || {})[lvl.id], wallDLTypes);
-          const tc = computeWallTC(sh.seismic, sh.wind, grav.dlTotal, wLen, floorH, rho, sds, loadType, { omega0, rL: grav.rL, rR: grav.rR });
+          const grav = resolveGravityAtWall(wWithH, (line.gravityLoads || {})[lvl.id], wallDLTypes, gOpts(lvl.id));
+          const tc = computeWallTC(sh.seismic, sh.wind, grav.dlTotal, wLen, floorH, rho, sds, loadType, { omega0, rL: grav.rL, rR: grav.rR, live: grav.live, lrfdHalfL });
 
           let anchorageLeft = null, anchorageRight = null;
           if (w.anchorageLeftOverride) {
@@ -541,6 +510,7 @@ export function calcAll(inputs) {
             effectiveSeismicCap: r2(sheathCapE), effectiveWindCap: r2(sheathCapW),
             seismicDC, windDC, dcRatio, dcGoverning,
             dlWallSelf: grav.wallSelfDL, dlFromDiagram: grav.diagramDL, dlTotal: grav.dlTotal, dlRL: r2(grav.rL), dlRR: r2(grav.rR),
+            live: grav.live, gravRows: grav.loadRows,
             floorH,
             anchorageType: useHoldown ? 'holdown' : 'strap',
             anchorageLeft, anchorageRight,
@@ -567,9 +537,10 @@ export function calcAll(inputs) {
       for (const [id, i] of Object.entries(wswh)) if (i.lowerId) absorbedInto[id] = i.lowerId;
       const loadPath = resolveVerticalLoadPath({
         levels, walls: allWalls, beams: line.beams || [], posts: line.supportPosts || [],
-        wallResultsMap, lineThickness, grade, absorbedInto,
+        wallResultsMap, lineThickness, grade, absorbedInto, beamGravity: gdist.beamGravity, postGravity: gdist.postGravity,
         wallHardware: (w, T) => (isWswh(w) ? wswhAnchorFor(w, wswh[w.id], T, inputs) : undefined),
       });
+      loadPath.loadPathAudit.notes.push(...gdist.notes);
       for (const [id, i] of Object.entries(wswh)) {
         if (!i.errors.length) continue;
         loadPath.loadPathAudit.warnings.push({ type: 'wswh', elementId: id, elementMark: i.wall.mark || id, levelName: levelNameOf(i.wall.levelId),
@@ -724,8 +695,10 @@ function wswhWallResult(w, info, sh, c) {
   if (!ok) dcRatio = Math.max(dcRatio, 9.99);
 
   const D = info.grav.dlTotal;
+  const half = (x) => ({ total: x.total, rL: x.total / 2, rR: x.total / 2 }); // concentric on the panel (Simpson T = V·H/B − P/2)
+  const live = { L: half(info.grav.live.L), Lr: half(info.grav.live.Lr) };
   const tc = computeWallTC(sh.seismic, sh.wind, D, widthFt, c.floorH, c.rho, c.sds, c.loadType, {
-    omega0: c.omega0, rL: D / 2, rR: D / 2, arm: B / 12, h: He / 12,
+    omega0: c.omega0, rL: D / 2, rR: D / 2, live, lrfdHalfL: c.lrfdHalfL, arm: B / 12, h: He / 12,
     ...(info.role === 'stackedLower' && stacked.E ? { otm1E: otm1.E } : {}),
     ...(info.role === 'stackedLower' && stacked.W ? { otm1W: otm1.W } : {}),
   });
@@ -745,6 +718,7 @@ function wswhWallResult(w, info, sh, c) {
     seismicCap: plf(Vcap.E), windCap: plf(Vcap.W), effectiveSeismicCap: plf(Vcap.E), effectiveWindCap: plf(Vcap.W),
     seismicDC, windDC, dcRatio: r2(dcRatio), dcGoverning,
     dlWallSelf: info.grav.wallSelfDL, dlFromDiagram: info.grav.diagramDL, dlTotal: info.grav.dlTotal, dlRL: r2(D / 2), dlRR: r2(D / 2),
+    live, gravRows: info.grav.loadRows,
     floorH: c.floorH, anchorageType: 'wswh', anchorageLeft, anchorageRight,
     postLeft: WSWH_PANEL_POST, postRight: WSWH_PANEL_POST, postRaised: { left: null, right: null },
     ftao: null,

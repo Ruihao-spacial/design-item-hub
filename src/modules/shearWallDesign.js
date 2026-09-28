@@ -2,7 +2,7 @@ import { el, clearEl, numOrBlank, sameNumber } from '../utils.js';
 import {
   resetIds, resetWallNum, resetElementNums, defaultInputs,
   newLevel, newWallDLType, newLine, newWallId, nextWallMark,
-  wallOpeningDefaults, wallSystemDefaults, deflectionDefaults, projectV7Defaults, newOpeningId,
+  wallOpeningDefaults, wallSystemDefaults, deflectionDefaults, projectV7Defaults, projectV8Defaults, newOpeningId,
 } from './shearWallTypes.js';
 import { calcAll, CALC_VERSION, DISTRIBUTION_METHODS, lineDistribution, DEFAULT_OMEGA0, omega0Of } from './shearWallCalc.js';
 import { renderElevation, renderElevationForPdf, pdfElevationAspect } from './shearWallElevation.js';
@@ -10,15 +10,31 @@ import { NAILING_TABLE, SHEATHING_TYPES, FOOTNOTE_10_NOTE, sheathingLabel } from
 import { NDS_GRADES, HDUE_TABLE, MSTC_TABLE, POST_SIZES, computePostCapacity, FTAO_STRAP_TABLE, strapNailing, lrfdCap, getGradeById } from './shearWallHardware.js';
 import { DRIFT_ROWS, driftLimit } from './shearWallDeflection.js';
 import { WSWH_NOTES, WSWH_FC, conditionLabel } from './shearWallWswh.js';
+import { assemblyLoads } from './shearWallGravity.js';
+import { comboDefs } from './shearWallCombos.js';
 
 // Values copied from a linked Seismic Base Shear item
 const BASE_SHEAR_FIELDS = [['sds', 'Sds'], ['cd', 'Cd'], ['ie', 'Ie'], ['riskCategory', 'Risk Category'], ['omega0', 'Ω₀'], ['seismicDesignCategory', 'SDC']];
 const sameValue = (a, b) => (typeof b === 'number' ? sameNumber(a, b, 0.0005) : String(a || '') === String(b || ''));
+// Gravity rows linked to a Flat Load assembly: { where: 'Line · Level · load n', ld }
+function linkedGravityRows(inputs) {
+  const out = [];
+  for (const d of inputs.directions || []) for (const ln of d.lines || []) {
+    for (const [lvlId, gl] of Object.entries(ln.gravityLoads || {})) {
+      ((gl && gl.loads) || []).forEach((ld, i) => {
+        if (!ld.assemblyId || ld.shape === 'point') return;
+        const lvl = (inputs.levels || []).find(l => l.id === lvlId) || {};
+        out.push({ where: (ln.name || 'Line') + ' · ' + (lvl.name || 'Level') + ' · load ' + (i + 1), ld });
+      });
+    }
+  }
+  return out;
+}
 
 export const shearWallDesign = {
   id: 'shear_wall_design',
   label: 'Shear Wall Design',
-  schemaVersion: 7,
+  schemaVersion: 8,
   calcVersion: CALC_VERSION,
   noNewPrefix: true,
   noOutputSection: false,
@@ -26,6 +42,8 @@ export const shearWallDesign = {
   refs: [
     { key: 'baseShearSource', label: 'Seismic Base Shear', sourceType: 'seismic_base_shear',
       extract: (outputs) => ({ sds: outputs.sds, cd: outputs.cd, ie: outputs.ie, riskCategory: outputs.riskCategory, omega0: outputs.omega0, seismicDesignCategory: outputs.seismicDesignCategory }) },
+    { key: 'flatLoadSource', label: 'Flat Load Calculator', sourceType: 'flat_load_calculator',
+      extract: (outputs) => ({ perTab: outputs.perTab }) },
   ],
   fields: [],
   outputFields: [],
@@ -37,16 +55,37 @@ export const shearWallDesign = {
   migrate(item) { return migrateDefinition(item); },
 
   // Sds / Cd / Ie / Risk Category copied from the Base Shear item that no longer match it
+  // Flat Load: uniform gravity rows linked to an assembly whose D / L / Lr (psf × trib) changed
   linkDiff(inputs, linked) {
     const bs = linked.baseShearSource;
-    if (!bs) return [];
-    return BASE_SHEAR_FIELDS.filter(([k]) => bs[k] != null && !sameValue(inputs[k], bs[k]))
-      .map(([k, label]) => ({ refKey: 'baseShearSource', label, from: inputs[k], to: bs[k] }));
+    const out = bs ? BASE_SHEAR_FIELDS.filter(([k]) => bs[k] != null && !sameValue(inputs[k], bs[k]))
+      .map(([k, label]) => ({ refKey: 'baseShearSource', label, from: inputs[k], to: bs[k] })) : [];
+    const tabs = linked.flatLoadSource && linked.flatLoadSource.perTab;
+    if (tabs) {
+      for (const { where, ld } of linkedGravityRows(inputs)) {
+        const asm = tabs.find(t => t.id === ld.assemblyId);
+        if (!asm) { out.push({ refKey: 'flatLoadSource', label: where + ' — assembly no longer in Flat Load', from: ld.D, to: null, missing: true }); continue; }
+        const v = assemblyLoads(asm, ld.trib);
+        for (const c of ['D', 'L', 'Lr']) {
+          if (!sameNumber(parseFloat(ld[c]) || 0, v[c], 0.005)) out.push({ refKey: 'flatLoadSource', label: where + ' (' + (asm.name || 'assembly') + ') ' + c + ' plf', from: ld[c] || 0, to: v[c] });
+        }
+      }
+    }
+    return out;
   },
 
   applyLinks(inputs, linked) {
     const bs = linked.baseShearSource;
     if (bs) for (const [k] of BASE_SHEAR_FIELDS) if (bs[k] != null) inputs[k] = String(bs[k]);
+    const tabs = linked.flatLoadSource && linked.flatLoadSource.perTab;
+    if (tabs) {
+      for (const { ld } of linkedGravityRows(inputs)) {
+        const asm = tabs.find(t => t.id === ld.assemblyId);
+        if (!asm) continue; // missing assemblies are left for the engineer
+        const v = assemblyLoads(asm, ld.trib);
+        ld.D = String(v.D); ld.L = v.L ? String(v.L) : ''; ld.Lr = v.Lr ? String(v.Lr) : '';
+      }
+    }
     return inputs;
   },
 
@@ -176,6 +215,7 @@ export const shearWallDesign = {
       sec.appendChild(renderDeflectionSettings());
       sec.appendChild(el('div', { className: 'section-header' }, 'Load Combinations & Design Basis'));
       sec.appendChild(designBasisTable(inputs));
+      sec.appendChild(renderGravitySettings());
       sec.appendChild(renderWswhSettings());
 
       sec.appendChild(el('div', { style: { fontWeight: '500', fontSize: '0.85rem', marginBottom: '0.25rem' } }, 'Wall Dead Load Types'));
@@ -242,6 +282,34 @@ export const shearWallDesign = {
       sec.appendChild(renderMasterLoadingTable());
 
       return sec;
+    }
+
+    // Assemblies (perTab) of the linked Flat Load item, for the gravity load rows
+    function flatLoadAssemblies() {
+      const it = (projectItems || []).find(x => x.id === (inputs.refs || {}).flatLoadSource);
+      return (it && it.outputs && it.outputs.perTab) || [];
+    }
+
+    // Gravity loads: Flat Load link (assembly psf × trib for uniform rows) and the LRFD live-load factor
+    function renderGravitySettings() {
+      const box = el('div', { style: { marginBottom: '1rem' } });
+      box.appendChild(el('div', { className: 'section-header' }, 'Gravity Loads (D / L / Lr)'));
+      const row = el('div', { style: { display: 'flex', gap: '1rem', flexWrap: 'wrap', alignItems: 'flex-end' } });
+      const flItems = (projectItems || []).filter(it => it.type === 'flat_load_calculator' && !it.archived);
+      const flSel = el('select', { className: 'form-select', style: { maxWidth: '260px' }, onChange(e) {
+        if (e.target.value) inputs.refs.flatLoadSource = e.target.value; else delete inputs.refs.flatLoadSource;
+        notifyChange(); renderAll();
+      } });
+      flSel.appendChild(el('option', { value: '' }, flItems.length ? '— None —' : 'No Flat Load item in project'));
+      flItems.forEach(it => flSel.appendChild(el('option', { value: it.id, selected: inputs.refs.flatLoadSource === it.id }, it.custom_name || it.customName || it.label || 'Flat Load Calculator')));
+      row.appendChild(el('div', { className: 'form-group', style: { marginBottom: 0 } }, el('label', { className: 'form-label' }, 'Link to Flat Load Calculator'), flSel));
+      const half = el('input', { type: 'checkbox', checked: !!inputs.lrfdHalfL, onChange(e) { inputs.lrfdHalfL = e.target.checked; notifyChange(); renderAll(); } });
+      row.appendChild(el('label', { style: { display: 'flex', alignItems: 'center', gap: '4px', fontSize: '0.85rem', paddingBottom: '0.4rem' } }, half,
+        'LRFD: 0.5L in combos §2.3.1 (3), (4) and §2.3.6 (6) (Lo ≤ 100 psf; not garages or places of public assembly)'));
+      box.appendChild(row);
+      box.appendChild(el('div', { style: { fontSize: '0.8rem', color: 'var(--ink-secondary)', marginTop: '0.35rem' } },
+        'Loads are entered per line and level in each line tab (Gravity Loads, below the elevation). A linked uniform row uses the assembly dead psf (D) and live psf (Lr for a roof assembly, L otherwise) × its trib width; changes in the Flat Load item show an update notice.'));
+      return box;
     }
 
     // Strong-Wall WSWH project settings: foundation f'c (panel + anchor tables), SDC and dwelling type (anchor criteria)
@@ -581,6 +649,7 @@ export const shearWallDesign = {
       if (elevationHandle) { elevationHandle.destroy(); elevationHandle = null; }
       elevationHandle = renderElevation(elevContainer, line, inputs.levels, inputs.wallDLTypes, {
         onWallChange() {}, onGravityChange() {},
+        flatLoadAssemblies: () => flatLoadAssemblies(),
         designContext: () => ({ wallThickness: inputs.wallThickness, woodGrade: inputs.woodGrade, loadType: inputs.loadType,
           wswhFc: inputs.wswhFc, sdc: inputs.seismicDesignCategory, detached: !!inputs.detachedOneTwoFamily, bottomLevelId: (inputs.levels[inputs.levels.length - 1] || {}).id }),
         onInputChange() {
@@ -745,6 +814,8 @@ export const shearWallDesign = {
 
           if (ln.beamTransfers && ln.beamTransfers.length) {
             sections.push({ title: dir.dirName + ' / ' + ln.lineName + ' — Transfer Beams', table: { headers: BEAM_HEADERS, rows: beamSupportRows(ln), colWidths: [0.07, 0.08, 0.06, 0.08, 0.07, 0.08, 0.08, 0.14, 0.2] } });
+            const bl = beamLoadRows(ln);
+            if (bl.length) sections.push({ title: dir.dirName + ' / ' + ln.lineName + ' — Loads on Transfer Beams', table: { headers: BEAM_LOAD_HEADERS, rows: bl, colWidths: [0.08, 0.08, 0.5, 0.18, 0.16] } });
           }
           if (ln.postPaths && ln.postPaths.length) {
             sections.push({ title: dir.dirName + ' / ' + ln.lineName + ' — Posts', table: { headers: POST_HEADERS, rows: postRows(ln), colWidths: [0.07, 0.09, 0.07, 0.08, 0.08, 0.16, 0.16, 0.2] } });
@@ -780,23 +851,14 @@ export const shearWallDesign = {
           }
         }
       }
-      const sdsVal = inputs.sds || 'SDS';
       sections.push({ title: 'Load Combinations & Design Basis', table: { headers: DESIGN_BASIS_HEADERS, rows: designBasisRows(inputs), colWidths: [0.16, 0.34, 0.1, 0.4] } });
-      sections.push({ title: 'Design basis note', text: DESIGN_BASIS_NOTE });
-      const omVal = String(omega0Of(inputs));
-      sections.push({ title: 'Load Combination Equations (ASD = design; LRFD and Ω₀ = forces only)', equations: [
-        { desc: 'Seismic Uplift (ASCE 7 Combo 8)', parts: [{ t: 'T = [0.7ρV·h - (0.6-0.14' }, { t: sdsVal, bold: true }, { t: ')R_end·L] / L' }] },
-        { desc: 'Seismic Compression (ASCE 7 Combo 5)', parts: [{ t: 'C = [0.7ρV·h + (1.0+0.14' }, { t: sdsVal, bold: true }, { t: ')R_end·L] / L' }] },
-        { desc: 'Wind Uplift (ASCE 7 Combo 7)', parts: [{ t: 'T = [0.6V' }, { t: 'w', sub: true }, { t: '·h - 0.6R_end·L] / L' }] },
-        { desc: 'Wind Compression (ASCE 7 Combo 4)', parts: [{ t: 'C = [0.6V' }, { t: 'w', sub: true }, { t: '·h + R_end·L] / L' }] },
-        { desc: 'LRFD Seismic Uplift (ASCE 7 §2.3.6)', parts: [{ t: 'T = [ρV·h - (0.9-0.2' }, { t: sdsVal, bold: true }, { t: ')R_end·L] / L' }] },
-        { desc: 'LRFD Seismic Compression (ASCE 7 §2.3.6)', parts: [{ t: 'C = [ρV·h + (1.2+0.2' }, { t: sdsVal, bold: true }, { t: ')R_end·L] / L' }] },
-        { desc: 'LRFD Wind (ASCE 7 §2.3.1)', parts: [{ t: 'T = [V' }, { t: 'w', sub: true }, { t: '·h - 0.9R_end·L] / L,  C = [V' }, { t: 'w', sub: true }, { t: '·h + 1.2R_end·L] / L' }] },
-        ...((inputs.loadType || 'seismic') !== 'wind' ? [
-          { desc: 'Ω₀ ASD Uplift (§2.4.5, forces only)', parts: [{ t: 'T = [0.7·' }, { t: omVal, bold: true }, { t: '·V·h - (0.6-0.14' }, { t: sdsVal, bold: true }, { t: ')R_end·L] / L' }] },
-          { desc: 'Ω₀ ASD Compression (§2.4.5, forces only)', parts: [{ t: 'C = [0.7·' }, { t: omVal, bold: true }, { t: '·V·h + (1.0+0.14' }, { t: sdsVal, bold: true }, { t: ')R_end·L] / L' }] },
-          { desc: 'Ω₀ LRFD (§2.3.6, forces only)', parts: [{ t: 'T = [' }, { t: omVal, bold: true }, { t: '·V·h - (0.9-0.2' }, { t: sdsVal, bold: true }, { t: ')R_end·L] / L,  C = [' }, { t: omVal, bold: true }, { t: '·V·h + (1.2+0.2' }, { t: sdsVal, bold: true }, { t: ')R_end·L] / L' }] },
-        ] : []),
+      sections.push({ title: 'Design basis note', text: designBasisNote(inputs) });
+      sections.push({ title: 'End Force Equations (every combination in the table above)', equations: [
+        { desc: 'Net end force (+ = compression)', parts: [{ t: 'N = d·R' }, { t: 'D', sub: true }, { t: ' + l·R' }, { t: 'L', sub: true }, { t: ' + lr·R' }, { t: 'Lr', sub: true }, { t: ' ∓ (e·V' }, { t: 'E', sub: true }, { t: '·h + w·V' }, { t: 'W', sub: true }, { t: '·h) / L' }] },
+        { desc: 'Tension / compression at the end', parts: [{ t: 'T = max(0, −N),  C = max(0, N)' }] },
+        { desc: 'End reactions by statics (each load case)', parts: [{ t: 'R' }, { t: 'R', sub: true }, { t: ' = Σ P·x / L,  R' }, { t: 'L', sub: true }, { t: ' = Σ P − R' }, { t: 'R', sub: true }, { t: '  (wall self-weight ½ each end)' }] },
+        { desc: 'Factors d, l, lr, e, w', parts: [{ t: 'from the combination, e.g. (1.0+0.105·' }, { t: inputs.sds || 'SDS', bold: true }, { t: ')D + 0.525ρE + 0.75L → d = 1+0.105SDS, e = 0.525ρ, l = 0.75' }] },
+        { desc: 'Strong-Wall WSWH', parts: [{ t: 'L → B (anchor spacing), h → H' }, { t: 'e', sub: true }, { t: ' (panel height); R = P/2 each end' }] },
       ] });
     }
     return sections;
@@ -911,6 +973,11 @@ function lineTabLoadPath(ln) {
     any = true;
     box.appendChild(subHead('Transfer beams'));
     box.appendChild(simpleTable(BEAM_HEADERS, beamSupportRows(ln), [2, 3, 5, 6]));
+    const bl = beamLoadRows(ln);
+    if (bl.length) {
+      box.appendChild(subHead('Loads on the transfer beams (reactions by statics at the 2 supports; member design deferred)'));
+      box.appendChild(simpleTable(BEAM_LOAD_HEADERS, bl, [1]));
+    }
   }
   if (ln.postPaths && ln.postPaths.length) {
     any = true;
@@ -989,6 +1056,12 @@ function lineTabWswh(ln) {
   if (st.length) {
     box.appendChild(subHead('Two-story stack — base moment check (C-L-SW26 p. 50 n.8)'));
     box.appendChild(simpleTable(WSWH_STACK_HEADERS, st, [2, 3, 4, 5]));
+  }
+  for (const pl of ln.perLevel) for (const w of pl.walls) {
+    if (w.method !== 'wswh') continue;
+    const body = el('div', { style: { fontSize: '0.8rem', padding: '0.5rem 0', color: 'var(--ink-secondary)' } }, gravityDetail(w), endForceDetail(w));
+    box.appendChild(el('details', { style: { marginBottom: '0.5rem', borderLeft: '3px solid var(--border-light)', paddingLeft: '0.75rem' } },
+      el('summary', { style: { cursor: 'pointer', fontSize: '0.82rem', fontWeight: '500', color: 'var(--ink-secondary)' } }, 'Loads and end forces — ' + w.mark + ' (' + pl.levelName + '; arm = B, h = H_e)'), body));
   }
   const nb = el('div', { style: { fontSize: '0.8rem', color: 'var(--ink-secondary)', marginBottom: '0.5rem', lineHeight: '1.6' } });
   wswhNoteLines(ln).forEach(n => nb.appendChild(el('div', null, 'ⓘ ' + n)));
@@ -1093,11 +1166,11 @@ const FTAO_CHECK_HEADERS = ['Zone', 'Demand', 'Capacity', 'DCR', 'Status'];
 // Jamb posts at the opening edges: C = fD·DL + v_i·h_o (Diekmann pier chord), NDS post capacity
 function ftaoJambRows(w) {
   return (w.ftao.jambs || []).map(j => [
-    'Opening ' + j.opening + ' ' + j.side, f2(j.dl), f0(j.v) + ' × ' + f2(j.ho), f2(j.C),
+    'Opening ' + j.opening + ' ' + j.side, f2(j.dl) + ' / ' + f2(j.ll || 0) + ' / ' + f2(j.lr || 0) + (j.combo ? ' — ' + j.combo : ''), f0(j.v) + ' × ' + f2(j.ho), f2(j.C),
     j.post ? j.post.label + (j.override ? ' *' : '') : 'OVER', j.post ? f2(j.post.capacityKips) : '—', f2(j.dc),
   ]);
 }
-const FTAO_JAMB_HEADERS = ['Jamb', 'DL (k)', 'v_i × h_o (plf × ft)', 'C (k)', 'Post', 'Cap (k)', 'D/C'];
+const FTAO_JAMB_HEADERS = ['Jamb', 'D / L / Lr (k) — governing ASD combo', 'v_i × h_o (plf × ft)', 'C (k)', 'Post', 'Cap (k)', 'D/C'];
 
 function renderFtaoDetail(w, pl) {
   const body = el('div', { style: { fontSize: '0.8rem', padding: '0.5rem 0', color: 'var(--ink-secondary)' } });
@@ -1111,9 +1184,11 @@ function renderFtaoDetail(w, pl) {
     body.appendChild(simpleTable(FTAO_CHECK_HEADERS, ftaoCheckRows(w, lt), [1, 2, 3]));
   }
   if ((w.ftao.jambs || []).length) {
-    body.appendChild(el('div', { style: { fontWeight: '500', margin: '0.4rem 0 0.2rem' } }, 'Jamb posts — C = f_D·DL + v_i·h_o (ASD)'));
+    body.appendChild(el('div', { style: { fontWeight: '500', margin: '0.4rem 0 0.2rem' } }, 'Jamb posts — C = d·D + l·L + lr·Lr + k·v_i·h_o (governing ASD combo)'));
     body.appendChild(simpleTable(FTAO_JAMB_HEADERS, ftaoJambRows(w), [1, 3, 5, 6]));
   }
+  body.appendChild(gravityDetail(w));
+  body.appendChild(endForceDetail(w));
   if (w.ftao.warnings.length) {
     const wb = el('div', { style: { color: 'var(--stale, #b7791f)' } });
     w.ftao.warnings.forEach(m => wb.appendChild(el('div', null, '⚠ ' + m)));
@@ -1302,10 +1377,26 @@ function beamSupportRows(ln) {
   });
 }
 
+const BEAM_LOAD_HEADERS = ['Beam', 'x (ft)', 'Load on the beam', 'D / L / Lr (k)', 'ASD T / C (k)'];
+// Every load on a transfer beam: wall ends / posts above and gravity loads on the beam (uniform at its centroid)
+function beamLoadRows(ln) {
+  const rows = [];
+  for (const bt of ln.beamTransfers || []) {
+    (bt.loads || []).forEach((ld, i) => {
+      const g = ld.gravity;
+      const what = ld.label + (g && g.uniform ? ' (' + ['D', 'L', 'Lr'].filter(c => g.uniform.w[c]).map(c => c + ' ' + g.uniform.w[c]).join(' / ') + ' plf, at its centroid)' : '');
+      rows.push([i === 0 ? bt.mark : '', ld.x.toFixed(2), what, g ? ['D', 'L', 'Lr'].map(c => (g[c] || 0).toFixed(2)).join(' / ') : '—',
+        (ld.env ? ld.env.T.toFixed(2) + ' / ' + ld.env.C.toFixed(2) : '—')]);
+    });
+  }
+  return rows;
+}
+
 function postRows(ln) {
   return ln.postPaths.map(pp => [
     pp.mark, pp.levelName, pp.position.toFixed(1), pp.envelopeT.toFixed(2), pp.envelopeC.toFixed(2),
-    fmtConnection(pp), pp.post ? pp.post.postLabel + (pp.postDC != null ? ' (' + pp.postDC.toFixed(2) + ')' : '') : 'OVER',
+    fmtConnection(pp), (pp.post ? pp.post.postLabel + (pp.postDC != null ? ' (' + pp.postDC.toFixed(2) + ')' : '') : 'OVER')
+      + (pp.postDesignC != null ? ' · C ' + pp.postDesignC.toFixed(2) + 'k ' + pp.postGoverns : ''),
     fmtReceiver(pp.receiver),
   ]);
 }
@@ -1313,29 +1404,30 @@ function postRows(ln) {
 // === Load combinations and their role (design / deflection / forces only) ===
 export const DESIGN_BASIS_HEADERS = ['Group', 'Combinations', 'Role', 'Used for'];
 export function designBasisRows(inputs) {
-  const lt = inputs.loadType || 'seismic';
-  const E = lt === 'seismic' || lt === 'both', W = lt === 'wind' || lt === 'both';
+  const defs = comboDefs({ loadType: inputs.loadType || 'seismic', sds: inputs.sds, rho: 1, omega0: omega0Of(inputs), lrfdHalfL: !!inputs.lrfdHalfL });
+  const list = (g) => defs.filter(d => d.group === g).map(d => d.text + ' ' + d.ref.replace(' with Ω₀', '')).join('; ');
   const om = omega0Of(inputs);
-  const list = (a, b) => [E && a, W && b].filter(Boolean).join('; ');
   const rows = [
-    ['ASD (ASCE 7-22 §2.4)', list('(0.6−0.14SDS)D+0.7ρE, (1.0+0.14SDS)D+0.7ρE', '0.6D+0.6W, D+0.6W'), 'DESIGN',
-      'Sizes sheathing nailing, HDUE / MSTC, posts and beam-support / post-base hardware (governing = ASD envelope)'],
-    ['Load cases', ['1.0D', E && '1.0E', W && '1.0W'].filter(Boolean).join(', '), 'Deflection',
-      'Wall deflection and story drift (1.0E, ρ = 1' + (W ? '; wind drift with α_s' : '') + '); 1.0D dead-load display'],
-    ['LRFD (ASCE 7-22 §2.3)', list('(0.9−0.2SDS)D+ρE, (1.2+0.2SDS)D+ρE', '0.9D+1.0W, 1.2D+1.0W'), 'Forces only',
-      'Reported (e.g. for foundations); no design check'],
+    ['ASD (ASCE 7-22 §2.4.1, §2.4.5)', list('asd'), 'DESIGN',
+      'Sizes sheathing nailing, HDUE / MSTC, wall end posts, WSWH and beam-support / post-base hardware (governing = ASD envelope)'],
+    ['Load cases', list('load_case').replace(/ load case/g, ''), 'Deflection',
+      'Wall deflection and story drift (1.0E, ρ = 1; wind drift with α_s); 1.0D / 1.0L / 1.0Lr display'],
+    ['LRFD (ASCE 7-22 §2.3.1, §2.3.6)', list('lrfd'), 'Forces only', 'Reported (e.g. for foundations); no design check'],
   ];
-  if (E) {
-    rows.push(['Ω₀ ASD (§2.4.5)', '(0.6−0.14SDS)D+0.7Ω₀E, (1.0+0.14SDS)D+0.7Ω₀E; Ω₀ = ' + om, 'Forces only', 'Reported for information; not used for design']);
-    rows.push(['Ω₀ LRFD (§2.3.6)', '(0.9−0.2SDS)D+Ω₀E, (1.2+0.2SDS)D+Ω₀E; Ω₀ = ' + om, 'Forces only', 'Reported for information; not used for design']);
+  if (defs.some(d => d.group === 'asd_omega')) {
+    rows.push(['Ω₀ ASD (§2.4.5, Ω₀ = ' + om + ')', list('asd_omega'), 'Forces only + support posts', 'Reported; support post members are sized for max(ASD, Ω₀ ASD) (§12.3.3.3). Base hardware stays ASD.']);
+    rows.push(['Ω₀ LRFD (§2.3.6, Ω₀ = ' + om + ')', list('lrfd_omega'), 'Forces only', 'Reported for information; not used for design']);
   }
   return rows;
 }
-export const DESIGN_BASIS_NOTE = 'Combinations with live load (e.g. 0.75L) are not included: the tool tracks dead load only.';
+export function designBasisNote(inputs) {
+  return 'D, L, Lr, W and E are tracked (S, R, H, F are not; ASCE 7-22 §2.4.5 (6) and §2.3.6 (6) carry S, not Lr). ρ from each direction. '
+    + (inputs.lrfdHalfL ? 'LRFD L factor 0.5 in §2.3.1 (3), (4) and §2.3.6 (6) (Lo ≤ 100 psf, not garages / places of public assembly).' : 'LRFD L factor 1.0.');
+}
 function designBasisTable(inputs) {
   const box = el('div', { style: { marginBottom: '1rem' } });
   box.appendChild(simpleTable(DESIGN_BASIS_HEADERS, designBasisRows(inputs), []));
-  box.appendChild(el('div', { style: { fontSize: '0.8rem', color: 'var(--ink-secondary)', marginTop: '-0.5rem' } }, DESIGN_BASIS_NOTE));
+  box.appendChild(el('div', { style: { fontSize: '0.8rem', color: 'var(--ink-secondary)', marginTop: '-0.5rem' } }, designBasisNote(inputs)));
   return box;
 }
 function designBasisLine(ln) {
@@ -1375,6 +1467,78 @@ function renderMethodFootnotes() {
   return notes;
 }
 
+// === Calc detail: gravity loads on a wall and the resisting (end) forces of every combination ===
+const CASES = ['D', 'L', 'Lr'];
+const nz = (v) => Math.abs(v || 0) > 1e-9;
+const caseText = (o, d = 2) => { const t = CASES.filter(c => o && nz(o[c])).map(c => c + ' ' + (+o[c]).toFixed(d)); return t.length ? t.join(' / ') : '—'; };
+const trimNum = (v) => String(+(+v).toFixed(4));
+const detailTable = (headers, rows) => {
+  const tbl = el('table', { className: 'data-table', style: { fontSize: '0.75rem', whiteSpace: 'normal', margin: '0.25rem 0 0.5rem' } });
+  tbl.appendChild(el('tr', null, ...headers.map(h => el('th', null, h))));
+  rows.forEach(r => tbl.appendChild(el('tr', r.style ? { style: r.style } : null, ...(r.cells || r).map(c => el('td', { className: 'mono' }, c)))));
+  return el('div', { className: 'table-scroll' }, tbl);
+};
+
+// Every load piece on the wall (shape, position, magnitude, resultant, centroid, share to each end) + self-weight
+export function gravityDetail(w) {
+  const box = el('div');
+  const L = w.length || 0;
+  box.appendChild(el('div', { style: { fontWeight: '600', marginTop: '0.35rem' } }, 'Gravity loads on this wall (x from its left end; R_R = P·x̄ / L, R_L = P − R_R)'));
+  const rows = (w.gravRows || []).map(r => {
+    const where = r.shape === 'point' ? 'x = ' + r.x.toFixed(2) : r.a.toFixed(2) + '–' + r.b.toFixed(2);
+    const mag = r.shape === 'point' ? caseText(r.mag) + ' k' : caseText(r.w, 0) + ' plf' + (r.assemblyId ? ' (Flat Load × ' + r.trib + ' ft)' : '');
+    return ['#' + r.index + ' ' + (r.shape === 'point' ? 'Point' : r.shape === 'full' ? 'Uniform (full line)' : 'Uniform'), where, mag,
+      r.shape === 'point' ? '—' : caseText(r.P), r.x.toFixed(2), caseText(r.rL), caseText(r.rR)];
+  });
+  if (nz(w.dlWallSelf)) rows.push(['Wall self-weight', '0–' + L.toFixed(2), 'wall DL type × area', 'D ' + w.dlWallSelf.toFixed(2), (L / 2).toFixed(2), 'D ' + (w.dlWallSelf / 2).toFixed(2), 'D ' + (w.dlWallSelf / 2).toFixed(2)]);
+  const lv = w.live || { L: {}, Lr: {} };
+  const tot = { D: w.dlTotal, L: lv.L.total, Lr: lv.Lr.total };
+  const rl = { D: w.dlRL, L: lv.L.rL, Lr: lv.Lr.rL }, rr = { D: w.dlRR, L: lv.L.rR, Lr: lv.Lr.rR };
+  rows.push({ cells: ['Σ end reactions', '', '', caseText(tot), '', caseText(rl), caseText(rr)], style: { fontWeight: '600' } });
+  if (!(w.gravRows || []).length && !nz(w.dlWallSelf)) box.appendChild(el('div', null, 'No gravity load on this wall.'));
+  else box.appendChild(detailTable(['Load', 'On wall (ft)', 'w or P', 'P (k)', 'x̄ (ft)', 'R_L (k)', 'R_R (k)'], rows));
+  return box;
+}
+
+const GROUP_TITLE = { asd: 'ASD — used for design', load_case: 'Load cases — deflection / display', lrfd: 'LRFD — forces only', asd_omega: 'Ω₀ ASD — forces only (support posts: max with ASD)', lrfd_omega: 'Ω₀ LRFD — forces only' };
+
+// Resisting / end forces of this wall for every combination, with the numbers substituted:
+// N = d·R_D + l·R_L + lr·R_Lr ∓ (e·V_E·h + w·V_W·h) / arm   (+ = compression; T = max(0, −N))
+export function endForceDetail(w, dir) {
+  const box = el('div');
+  const st = w.steps || {};
+  if (!w.combos) return box;
+  const R = { D: [st.rL || 0, st.rR || 0], L: (st.live && st.live.L) || [0, 0], Lr: (st.live && st.live.Lr) || [0, 0] };
+  const arm = st.arm || w.length || 0;
+  box.appendChild(el('div', { style: { fontWeight: '600', marginTop: '0.35rem' } },
+    'End forces by combination — N = d·R_D + l·R_L + lr·R_Lr ∓ (e·' + (st.otm1E || 0).toFixed(2) + ' + w·' + (st.otm1W || 0).toFixed(2) + ') / ' + trimNum(arm)
+    + '  (1.0-level V·h in k·ft; + = compression; this wall only — Σ with loads from above in the Load path tab)'));
+  const byGroup = {};
+  for (const [k, c] of Object.entries(w.combos)) (byGroup[c.group] = byGroup[c.group] || []).push([k, c]);
+  const rows = [];
+  for (const g of ['asd', 'load_case', 'lrfd', 'asd_omega', 'lrfd_omega']) {
+    if (!byGroup[g]) continue;
+    rows.push({ cells: [GROUP_TITLE[g], '', '', '', '', '', ''], style: { fontWeight: '600', background: 'var(--surface-2, rgba(0,0,0,0.03))' } });
+    for (const [k, c] of byGroup[g]) {
+      const f = c.f || {};
+      const m = arm > 0 ? ((f.e || 0) * (st.otm1E || 0) + (f.w || 0) * (st.otm1W || 0)) / arm : 0;
+      const sgn = k.endsWith('_neg') ? -1 : 1;
+      const expr = (i, mSign) => {
+        const t = [];
+        for (const [fac, key] of [[f.d, 'D'], [f.l, 'L'], [f.lr, 'Lr']]) if (nz(fac) && nz(R[key][i])) t.push(trimNum(fac) + '×' + (+R[key][i]).toFixed(2));
+        if (nz(m)) t.push((mSign * sgn < 0 ? '− ' : '+ ') + Math.abs(m).toFixed(2));
+        return (t.length ? t.join(' + ').replace(/\+ ([−+]) /g, '$1 ') : '0');
+      };
+      const name = (c.text || k) + (k.endsWith('_pos') ? ' →' : k.endsWith('_neg') ? ' ←' : '');
+      rows.push([name, c.ref || '', expr(0, -1), c.tensionLeft.toFixed(2) + ' / ' + c.comprLeft.toFixed(2), expr(1, 1), c.tensionRight.toFixed(2) + ' / ' + c.comprRight.toFixed(2), '']);
+    }
+  }
+  box.appendChild(detailTable(['Combination', 'ASCE 7-22', 'Left end N (k)', 'T / C left', 'Right end N (k)', 'T / C right', ''], rows.map(r => (r.cells ? { ...r, cells: r.cells.slice(0, 6) } : r.slice(0, 6)))));
+  box.appendChild(el('div', null, 'Governing ASD: T L / R ' + w.governingTensionLeft.toFixed(2) + ' / ' + w.governingTensionRight.toFixed(2)
+    + ' k, C L / R ' + w.governingComprLeft.toFixed(2) + ' / ' + w.governingComprRight.toFixed(2) + ' k (→ = shear toward the right end, left end uplift side)'));
+  return box;
+}
+
 function renderWallCalcDetail(w, pl, dir, ln) {
   const summary = el('summary', { style: { cursor: 'pointer', fontSize: '0.82rem', fontWeight: '500', color: 'var(--ink-secondary)' } },
     'Calc detail — ' + w.mark + ' (' + pl.levelName + ', L=' + w.length.toFixed(1) + ' ft, h=' + (w.floorH || 0).toFixed(1) + ' ft)');
@@ -1397,33 +1561,8 @@ function renderWallCalcDetail(w, pl, dir, ln) {
   line('D/C governing:', w.dcRatio.toFixed(2) + '  (' + (w.dcGoverning || '') + ')');
 
   body.appendChild(el('div', { style: { borderTop: '1px solid var(--border-light)', margin: '0.25rem 0' } }));
-  line('DL_wall:', w.dlWallSelf.toFixed(2) + ' kips (wall self-weight)');
-  line('DL_diagram:', w.dlFromDiagram.toFixed(2) + ' kips (floor/roof)');
-  line('DL_total:', w.dlTotal.toFixed(2) + ' kips');
-
-  if (w.steps) {
-    const RL = w.steps.rL, RR = w.steps.rR, L = w.length;
-    line('DL reactions:', 'R_L = ' + RL.toFixed(2) + ' k, R_R = ' + RR.toFixed(2) + ' k  (statics: self-weight ½ each end, loads by position)');
-    // T = max(0, OTM/L − gf·R_end), C = OTM/L + gf·R_end, at each end
-    const ends = (otm, gU, gC) => {
-      const m = L > 0 ? otm / L : 0;
-      const t = (R) => Math.max(0, m - gU * R), c = (R) => m + gC * R;
-      line('T L / R (uplift):', t(RL).toFixed(2) + ' / ' + t(RR).toFixed(2) + ' kips  =  max(0, ' + otm.toFixed(2) + '/' + L.toFixed(1) + ' − ' + gU.toFixed(4) + '×R)');
-      line('C L / R (compr):', c(RL).toFixed(2) + ' / ' + c(RR).toFixed(2) + ' kips  =  ' + otm.toFixed(2) + '/' + L.toFixed(1) + ' + ' + gC.toFixed(4) + '×R');
-    };
-    if (w.steps.seismic) {
-      body.appendChild(el('div', { style: { borderTop: '1px solid var(--border-light)', margin: '0.25rem 0' } }));
-      line('OTM_ASD (seismic):', w.steps.seismic.otm.toFixed(2) + ' kip-ft  =  0.7×' + dir.rho + '×' + w.share_1E.toFixed(2) + '×' + (w.floorH || 0).toFixed(1));
-      line('gf_uplift:', w.steps.seismic.gfUplift.toFixed(4) + '  =  0.6 - 0.14×S_DS');
-      line('gf_comp:', w.steps.seismic.gfComp.toFixed(4) + '  =  1.0 + 0.14×S_DS');
-      ends(w.steps.seismic.otm, w.steps.seismic.gfUplift, w.steps.seismic.gfComp);
-    }
-    if (w.steps.wind) {
-      body.appendChild(el('div', { style: { borderTop: '1px solid var(--border-light)', margin: '0.25rem 0' } }));
-      line('OTM_ASD (wind):', w.steps.wind.otm.toFixed(2) + ' kip-ft  =  0.6×' + w.share_1W.toFixed(2) + '×' + (w.floorH || 0).toFixed(1));
-      ends(w.steps.wind.otm, 0.6, 1.0);
-    }
-  }
+  body.appendChild(gravityDetail(w));
+  body.appendChild(endForceDetail(w, dir));
 
   if (w.anchorageLeft || w.anchorageRight || w.postLeft || w.postRight) {
     body.appendChild(el('div', { style: { borderTop: '1px solid var(--border-light)', margin: '0.25rem 0' } }));
@@ -1485,11 +1624,29 @@ export function migrateV6toV7(inp) {
   return inp;
 }
 
+// Schema v8: gravity loads become rows { shape, D, L, Lr } (uniform → partial, point → point, dead load only);
+// LRFD live-load factor setting
+export function migrateV7toV8(inp) {
+  if (!inp) return inp;
+  for (const [k, v] of Object.entries(projectV8Defaults())) if (inp[k] === undefined) inp[k] = v;
+  (inp.directions || []).forEach(d => (d.lines || []).forEach(ln => {
+    for (const [lvlId, gl] of Object.entries(ln.gravityLoads || {})) {
+      if (!gl || Array.isArray(gl.loads)) continue;
+      const loads = [];
+      (gl.uniform || []).forEach(u => loads.push({ id: u.id, shape: 'partial', position: u.start ?? 0, start: u.start ?? 0, end: u.end ?? 0, D: u.dlPlf ?? '', L: '', Lr: '', assemblyId: '', trib: '' }));
+      (gl.point || []).forEach(p => loads.push({ id: p.id, shape: 'point', position: p.position ?? 0, start: p.position ?? 0, end: p.position ?? 0, D: p.dlKips ?? '', L: '', Lr: '', assemblyId: '', trib: '' }));
+      ln.gravityLoads[lvlId] = { loads };
+    }
+  }));
+  return inp;
+}
+
 const DEFINITION_MIGRATIONS = [
   { to: 4, up: migrateToV4 },
   { to: 5, up: migrateV4toV5 },
   { to: 6, up: migrateV5toV6 },
   { to: 7, up: migrateV6toV7 },
+  { to: 8, up: migrateV7toV8 },
 ];
 const CURRENT_SCHEMA = DEFINITION_MIGRATIONS[DEFINITION_MIGRATIONS.length - 1].to;
 

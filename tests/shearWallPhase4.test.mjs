@@ -191,7 +191,7 @@ test('Drift limits by risk category and row', () => {
 
 test('LRFD combos by hand; ASD governing unchanged', () => {
   const tc = computeWallTC(5, 0, 4, 8, 10, 1.0, 1.0, 'seismic');
-  const lo = tc.combos['(0.9-0.2SDS)D+ρE_pos'], hi = tc.combos['(1.2+0.2SDS)D+ρE_pos'];
+  const lo = tc.combos['(0.9-0.2SDS)D+ρE_pos'], hi = tc.combos['(1.2+0.2SDS)D+ρE+L_pos'];
   assert.equal(lo.group, 'lrfd');
   near(lo.tensionLeft, 4.85, 0.005); near(lo.comprRight, 7.65, 0.005);
   near(hi.comprRight, 9.05, 0.005);
@@ -201,7 +201,7 @@ test('LRFD combos by hand; ASD governing unchanged', () => {
   near(tc.governingComprRight, 4.375 + 1.14 * 2, 0.006);
   const w = computeWallTC(0, 5, 4, 8, 10, 1.0, 0, 'wind');
   near(w.combos['0.9D+1.0W_pos'].tensionLeft, 6.25 - 1.8, 0.005);
-  near(w.combos['1.2D+1.0W_neg'].comprLeft, 6.25 + 2.4, 0.005);
+  near(w.combos['1.2D+1.0W+L+0.5Lr_neg'].comprLeft, 6.25 + 2.4, 0.005);
 });
 
 test('LRFD envelope and HDUE LRFD cap (1.4×) reported on walls', () => {

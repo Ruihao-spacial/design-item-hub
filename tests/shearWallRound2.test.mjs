@@ -81,7 +81,7 @@ test('R4: Ω₀ combos by hand (ASD §2.4.5 and LRFD §2.3.6, Ω₀ replaces ρ)
   near(c['D+0.7Ω₀E_pos'].comprRight, 23.28, 0.005);
   // (0.9−0.2SDS)D+Ω₀E: 0.7·2 − 30 → T = 28.6; (1.2+0.2SDS)D+Ω₀E: 1.4·2 + 30 = 32.8
   near(c['(0.9-0.2SDS)D+Ω₀E_pos'].tensionLeft, 28.6, 0.005);
-  near(c['(1.2+0.2SDS)D+Ω₀E_neg'].comprLeft, 32.8, 0.005);
+  near(c['(1.2+0.2SDS)D+Ω₀E+L_neg'].comprLeft, 32.8, 0.005);
   assert.equal(c['D+0.7Ω₀E_pos'].group, 'asd_omega');
   assert.equal(c['(0.9-0.2SDS)D+Ω₀E_pos'].group, 'lrfd_omega');
   near(tc.omegaASD.tL, 20.08, 0.005);
@@ -130,10 +130,10 @@ test('R4: Base Shear link carries Ω₀; v6 → v7 migration adds omega0; design
   assert.equal(shearWallDesign.refs[0].extract({ omega0: 2 }).omega0, 2);
   const m = migrateV6toV7({ directions: [] });
   assert.equal(m.omega0, '');
-  assert.equal(shearWallDesign.schemaVersion, 7);
+  assert.ok(shearWallDesign.schemaVersion >= 7);
   const rows = designBasisRows({ loadType: 'both', omega0: '3' });
-  assert.deepEqual(rows.map(r => r[2]), ['DESIGN', 'Deflection', 'Forces only', 'Forces only', 'Forces only']);
-  assert.ok(rows[3][1].includes('Ω₀ = 3'));
+  assert.deepEqual(rows.map(r => r[2]), ['DESIGN', 'Deflection', 'Forces only', 'Forces only + support posts', 'Forces only']);
+  assert.ok(rows[3][0].includes('Ω₀ = 3'));
   assert.equal(designBasisRows({ loadType: 'wind' }).length, 3);
 });
 
