@@ -10,7 +10,7 @@ import { NAILING_TABLE, SHEATHING_TYPES, FOOTNOTE_10_NOTE, sheathingLabel } from
 import { NDS_GRADES, HDUE_TABLE, MSTC_TABLE, POST_SIZES, computePostCapacity, FTAO_STRAP_TABLE, strapNailing, lrfdCap, getGradeById } from './shearWallHardware.js';
 import { DRIFT_ROWS, driftLimit } from './shearWallDeflection.js';
 import { WSWH_NOTES, WSWH_FC, conditionLabel } from './shearWallWswh.js';
-import { assemblyLoads } from './shearWallGravity.js';
+import { assemblyLoads, assemblyPsf } from './shearWallGravity.js';
 import { comboDefs } from './shearWallCombos.js';
 
 // Values copied from a linked Seismic Base Shear item
@@ -65,9 +65,10 @@ export const shearWallDesign = {
       for (const { where, ld } of linkedGravityRows(inputs)) {
         const asm = tabs.find(t => t.id === ld.assemblyId);
         if (!asm) { out.push({ refKey: 'flatLoadSource', label: where + ' — assembly no longer in Flat Load', from: ld.D, to: null, missing: true }); continue; }
-        const v = assemblyLoads(asm, ld.trib);
+        const v = ld.perArea ? assemblyPsf(asm) : assemblyLoads(asm, ld.trib);
+        const unit = ld.perArea ? ' psf' : ' plf';
         for (const c of ['D', 'L', 'Lr']) {
-          if (!sameNumber(parseFloat(ld[c]) || 0, v[c], 0.005)) out.push({ refKey: 'flatLoadSource', label: where + ' (' + (asm.name || 'assembly') + ') ' + c + ' plf', from: ld[c] || 0, to: v[c] });
+          if (!sameNumber(parseFloat(ld[c]) || 0, v[c], 0.005)) out.push({ refKey: 'flatLoadSource', label: where + ' (' + (asm.name || 'assembly') + ') ' + c + unit, from: ld[c] || 0, to: v[c] });
         }
       }
     }
@@ -82,7 +83,7 @@ export const shearWallDesign = {
       for (const { ld } of linkedGravityRows(inputs)) {
         const asm = tabs.find(t => t.id === ld.assemblyId);
         if (!asm) continue; // missing assemblies are left for the engineer
-        const v = assemblyLoads(asm, ld.trib);
+        const v = ld.perArea ? assemblyPsf(asm) : assemblyLoads(asm, ld.trib);
         ld.D = String(v.D); ld.L = v.L ? String(v.L) : ''; ld.Lr = v.Lr ? String(v.Lr) : '';
       }
     }
@@ -308,7 +309,7 @@ export const shearWallDesign = {
         'LRFD: 0.5L in combos §2.3.1 (3), (4) and §2.3.6 (6) (Lo ≤ 100 psf; not garages or places of public assembly)'));
       box.appendChild(row);
       box.appendChild(el('div', { style: { fontSize: '0.8rem', color: 'var(--ink-secondary)', marginTop: '0.35rem' } },
-        'Loads are entered per line and level in each line tab (Gravity Loads, below the elevation). A linked uniform row uses the assembly dead psf (D) and live psf (Lr for a roof assembly, L otherwise) × its trib width; changes in the Flat Load item show an update notice.'));
+        'Loads are entered per line and level in each line tab (Gravity Loads, below the elevation): point loads in kips, uniform loads in plf, or in psf × a trib width. A linked uniform row uses the assembly dead psf (D) and live psf (Lr for a roof assembly, L otherwise) × its trib width; changes in the Flat Load item show an update notice.'));
       return box;
     }
 
@@ -1486,7 +1487,8 @@ export function gravityDetail(w) {
   box.appendChild(el('div', { style: { fontWeight: '600', marginTop: '0.35rem' } }, 'Gravity loads on this wall (x from its left end; R_R = P·x̄ / L, R_L = P − R_R)'));
   const rows = (w.gravRows || []).map(r => {
     const where = r.shape === 'point' ? 'x = ' + r.x.toFixed(2) : r.a.toFixed(2) + '–' + r.b.toFixed(2);
-    const mag = r.shape === 'point' ? caseText(r.mag) + ' k' : caseText(r.w, 0) + ' plf' + (r.assemblyId ? ' (Flat Load × ' + r.trib + ' ft)' : '');
+    const mag = r.shape === 'point' ? caseText(r.mag) + ' k'
+      : (r.psf ? caseText(r.psf, 1) + ' psf × ' + r.trib + ' ft = ' : '') + caseText(r.w, 0) + ' plf' + (r.assemblyId ? ' (Flat Load)' : '');
     return ['#' + r.index + ' ' + (r.shape === 'point' ? 'Point' : r.shape === 'full' ? 'Uniform (full line)' : 'Uniform'), where, mag,
       r.shape === 'point' ? '—' : caseText(r.P), r.x.toFixed(2), caseText(r.rL), caseText(r.rR)];
   });
@@ -1633,8 +1635,8 @@ export function migrateV7toV8(inp) {
     for (const [lvlId, gl] of Object.entries(ln.gravityLoads || {})) {
       if (!gl || Array.isArray(gl.loads)) continue;
       const loads = [];
-      (gl.uniform || []).forEach(u => loads.push({ id: u.id, shape: 'partial', position: u.start ?? 0, start: u.start ?? 0, end: u.end ?? 0, D: u.dlPlf ?? '', L: '', Lr: '', assemblyId: '', trib: '' }));
-      (gl.point || []).forEach(p => loads.push({ id: p.id, shape: 'point', position: p.position ?? 0, start: p.position ?? 0, end: p.position ?? 0, D: p.dlKips ?? '', L: '', Lr: '', assemblyId: '', trib: '' }));
+      (gl.uniform || []).forEach(u => loads.push({ id: u.id, shape: 'partial', position: u.start ?? 0, start: u.start ?? 0, end: u.end ?? 0, D: u.dlPlf ?? '', L: '', Lr: '', perArea: false, trib: '', assemblyId: '' }));
+      (gl.point || []).forEach(p => loads.push({ id: p.id, shape: 'point', position: p.position ?? 0, start: p.position ?? 0, end: p.position ?? 0, D: p.dlKips ?? '', L: '', Lr: '', perArea: false, trib: '', assemblyId: '' }));
       ln.gravityLoads[lvlId] = { loads };
     }
   }));

@@ -2,8 +2,9 @@
 //   point   — position (ft); D, L, Lr in kips
 //   full    — uniform along the whole line at that level; D, L, Lr in plf
 //   partial — uniform from start to end (ft); D, L, Lr in plf
-// A uniform row may be linked to a Flat Load assembly × tributary width (assemblyId, trib):
-// D plf = dead psf × trib; live psf × trib goes to Lr for a roof assembly, else to L.
+// Uniform rows are entered in plf, or — with perArea on — in psf × a tributary width (trib, ft).
+// A row linked to a Flat Load assembly (assemblyId) is always psf × trib: D = dead psf; the live psf
+// goes to Lr for a roof assembly, else to L.
 // line.gravityLoads[levelId] = { loads: [...] } — the loads sit at the top of that story (its floor /
 // roof above). Each wall below takes the part directly above it (statics end reactions); where a
 // transfer beam sits on that floor line the beam takes it; a point load on a post top goes to the post.
@@ -27,8 +28,11 @@ export function gravityRows(gl, lineLength) {
   const len = num(lineLength);
   if (Array.isArray(gl.loads)) {
     gl.loads.forEach((ld, i) => {
-      const mag = { D: num(ld.D), L: num(ld.L), Lr: num(ld.Lr) };
+      const perArea = ld.shape !== 'point' && !!ld.perArea;
+      const k = perArea ? num(ld.trib) : 1; // psf × trib (ft) → plf
+      const mag = { D: num(ld.D) * k, L: num(ld.L) * k, Lr: num(ld.Lr) * k };
       const base = { id: ld.id || 'g' + i, index: i + 1, shape: ld.shape, assemblyId: ld.assemblyId || '', trib: num(ld.trib), ...mag };
+      if (perArea) base.psf = { D: num(ld.D), L: num(ld.L), Lr: num(ld.Lr) };
       if (ld.shape === 'point') out.point.push({ ...base, x: num(ld.position) });
       else {
         const x0 = ld.shape === 'full' ? 0 : Math.min(num(ld.start), num(ld.end));
@@ -84,7 +88,8 @@ export function wallGravity(pos, len, rows, exclude) {
       if (!LOAD_CASES.some(c => P[c])) continue;
       const doc = add(u, (a + b) / 2, P);
       doc.a = r4(a - pos); doc.b = r4(b - pos); doc.w = { D: u.D, L: u.L, Lr: u.Lr };
-      if (u.assemblyId) { doc.assemblyId = u.assemblyId; doc.trib = u.trib; }
+      if (u.psf) { doc.psf = u.psf; doc.trib = u.trib; }
+      if (u.assemblyId) doc.assemblyId = u.assemblyId;
       out.rows.push(doc);
     }
   }
@@ -148,7 +153,14 @@ export function gravityToElements({ line, levels, coverWalls }) {
   return { beamGravity, postGravity, notes, excludeByLevel };
 }
 
-// Flat Load link: plf values of a uniform row from an assembly (perTab entry) and a trib width (ft)
+// Flat Load link: psf of a uniform row from an assembly (perTab entry): dead → D, live → Lr (roof) or L
+export function assemblyPsf(asm) {
+  const roof = asm && (asm.type === 'roof' || asm.llSymbol === 'Lr');
+  const dead = asm ? num(asm.dl) : 0, live = asm ? num(asm.llGravity) : 0;
+  return { D: dead, L: roof ? 0 : live, Lr: roof ? live : 0 };
+}
+
+// plf values from an assembly and a trib width (ft)
 export function assemblyLoads(asm, trib) {
   const t = num(trib);
   const roof = asm && (asm.type === 'roof' || asm.llSymbol === 'Lr');

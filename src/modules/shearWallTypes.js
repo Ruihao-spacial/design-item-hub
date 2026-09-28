@@ -140,9 +140,9 @@ export function newUniformLoad(start, end) {
 }
 
 // Gravity load row (schema v8): shape point | full | partial; D / L / Lr (kips for a point, plf for uniform);
-// uniform rows may link a Flat Load assembly (assemblyId) × tributary width (trib, ft)
+// uniform rows are plf, or psf × tributary width (perArea, trib ft); a Flat Load assembly link (assemblyId) is psf × trib
 export function newGravityLoad(shape, start, end) {
-  return { id: newGravityLoadId(), shape: shape || 'partial', position: start ?? 0, start: start ?? 0, end: end ?? 30, D: '', L: '', Lr: '', assemblyId: '', trib: '' };
+  return { id: newGravityLoadId(), shape: shape || 'partial', position: start ?? 0, start: start ?? 0, end: end ?? 30, D: '', L: '', Lr: '', perArea: false, trib: '', assemblyId: '' };
 }
 
 export function newPointLoad(position) {

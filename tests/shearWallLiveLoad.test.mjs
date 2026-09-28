@@ -198,10 +198,34 @@ test('Gravity panel: add a full-line row, link a Flat Load assembly × trib, mar
   const trib = [...c.querySelectorAll('tr')].map(tr => tr.children[5] && tr.children[5].querySelector('input')).find(Boolean);
   trib.value = '5'; trib.dispatchEvent(new window.Event('change'));
   const row = ln.gravityLoads['lvl-1'].loads[0];
-  assert.equal(row.assemblyId, 'tab2'); assert.equal(row.D, '60'); assert.equal(row.L, '200');
+  // Linked row: psf × trib (12 / 40 psf × 5 ft = 60 / 200 plf)
+  assert.equal(row.assemblyId, 'tab2'); assert.equal(row.perArea, true); assert.equal(row.D, '12'); assert.equal(row.L, '40');
+  assert.ok(c.textContent.includes('psf → D 60 / L 200 plf'), 'unit and plf shown on the row');
   h.drawSVG();
   assert.ok([...c.querySelectorAll('text')].some(t => t.textContent === '#1 D 60 / L 200 plf'), 'marker label');
+  // Manual row: plf by default; "× trib" switches it to psf × trib
+  [...c.querySelectorAll('button')].find(b => b.textContent === '+ Uniform (partial)').dispatchEvent(new window.Event('click'));
+  const r2 = ln.gravityLoads['lvl-1'].loads[1];
+  assert.ok(!r2.perArea);
+  const rowEls = [...c.querySelectorAll('tr')].filter(tr => tr.children.length > 9);
+  assert.equal(rowEls[2].children[9].textContent, 'plf', 'default unit plf');
+  [...rowEls[2].querySelectorAll('button')].find(b => b.textContent === '× trib').dispatchEvent(new window.Event('click'));
+  assert.equal(r2.perArea, true);
+  const row2 = [...c.querySelectorAll('tr')].filter(tr => tr.children.length > 9)[2];
+  assert.ok(row2.children[9].textContent.startsWith('psf'));
   h.destroy();
+});
+
+test('Uniform psf × trib rows: calc uses psf × trib; calc detail shows the conversion; linked rows compare psf', () => {
+  const g = { 'lvl-1': { loads: [ld('partial', { start: 0, end: 10, perArea: true, trib: '4', D: '15', L: '40' })] } };
+  const inp = model({ levels: one, walls: [wall('w-1', 'lvl-1', 0, 10)], loads: { 'lvl-1': { seismic: 2, wind: 0 } }, gravity: g });
+  const w = wallsOf(calcAll(inp))[0];
+  near(w.dlTotal, 0.6, 1e-9); near(w.live.L.total, 1.6, 1e-9);
+  assert.ok(gravityDetail(w).textContent.includes('D 15.0 / L 40.0 psf × 4 ft = D 60 / L 160 plf'));
+  const floor = { id: 'tab2', name: 'Floor', type: 'floor', llSymbol: 'L', dl: 15, llGravity: 40 };
+  g['lvl-1'].loads[0].assemblyId = 'tab2';
+  assert.equal(shearWallDesign.linkDiff(inp, { flatLoadSource: { perTab: [floor] } }).length, 0);
+  assert.deepEqual(shearWallDesign.linkDiff(inp, { flatLoadSource: { perTab: [{ ...floor, dl: 18 }] } }).map(c => [c.to, /psf$/.test(c.label)]), [[18, true]]);
 });
 
 console.log(passed + ' passed' + (process.exitCode ? ', some FAILED' : ''));

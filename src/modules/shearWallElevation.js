@@ -1,6 +1,6 @@
 import { el, clearEl, numOrBlank } from '../utils.js';
 import { svgEl, newWall, newGravityLoad, newBeam, newBeamSupport, newSupportPost, newOpening } from './shearWallTypes.js';
-import { gravityRows, LOAD_SHAPES, LOAD_CASES, assemblyLoads } from './shearWallGravity.js';
+import { gravityRows, LOAD_SHAPES, LOAD_CASES, assemblyPsf } from './shearWallGravity.js';
 import { NAILING_TABLE } from './shearWallNailing.js';
 import { HDUE_TABLE, MSTC_TABLE, POST_SIZES, getGradeById, FTAO_STRAP_TABLE, jambPostOptions, hdueMinPost, meetsMinPost } from './shearWallHardware.js';
 import { openingProblems, wallPiers, expandWalls, sortedOpenings, hasOpenings, wallMethod } from './shearWallOpenings.js';
@@ -2142,8 +2142,8 @@ export function renderElevation(container, line, levels, wallDLTypes, callbacks)
     const changed = (redraw) => { if (onGravityChange) onGravityChange(); markChanged(); drawSVG(); if (redraw) renderGravitySection(); };
     gravSection.appendChild(el('div', { style: { fontWeight: '600', marginBottom: '0.25rem', fontSize: '0.9rem' } }, 'Gravity Loads (D / L / Lr)'));
     gravSection.appendChild(el('div', { style: { fontSize: '0.78rem', color: 'var(--ink-secondary)', marginBottom: '0.5rem' } },
-      'Loads at the top of each story (its floor / roof). Point: kips; uniform: plf. Full = the whole line length. Walls take the part directly above them; a transfer beam on that floor line takes what is over it; a point load on a post top goes to the post.'
-      + (assemblies.length ? ' Uniform rows can link a Flat Load assembly × trib width (dead → D; live → Lr for a roof, L otherwise).' : ' Link a Flat Load item in Summary / Config to take psf from its assemblies.')));
+      'Loads at the top of each story (its floor / roof). Point loads: kips. Uniform loads: plf, or press "× trib" to enter psf × a tributary width. Full = the whole line length. Walls take the part directly above them; a transfer beam on that floor line takes what is over it; a point load on a post top goes to the post.'
+      + (assemblies.length ? ' Uniform rows can link a Flat Load assembly (psf × trib; dead → D, live → Lr for a roof, L otherwise).' : ' Link a Flat Load item in Summary / Config to take psf from its assemblies.')));
 
     for (const lvl of levels) {
       if (!line.gravityLoads) line.gravityLoads = {};
@@ -2161,23 +2161,27 @@ export function renderElevation(container, line, levels, wallDLTypes, callbacks)
       lvlPanel.appendChild(el('div', { style: { fontWeight: '500', fontSize: '0.85rem', marginBottom: '0.25rem' } }, lvl.name || lvl.id));
       if (gl.loads.length) {
         const tbl = el('table', { className: 'dynamic-table', style: { fontSize: '0.82rem' } });
-        tbl.appendChild(el('tr', null, ...['#', 'Shape', 'Position / start (ft)', 'End (ft)', 'Flat Load assembly', 'Trib (ft)', 'D', 'L', 'Lr', ''].map(h => el('th', null, h))));
+        tbl.appendChild(el('tr', null, ...['#', 'Shape', 'Position / start (ft)', 'End (ft)', 'Flat Load assembly', 'Trib width', 'D', 'L', 'Lr', 'Unit', ''].map(h => el('th', null, h))));
         gl.loads.forEach((ld, i) => {
           const inp = (key, width, disabled, after) => el('input', { type: 'number', step: 'any', value: numOrBlank(ld[key]), disabled: !!disabled, style: { width },
             onChange(e) { ld[key] = e.target.value; if (after) after(); changed(!!after); } });
+          // Linking an assembly switches the row to psf × trib and copies its psf
           const relink = () => {
             const asm = assemblies.find(x => x.id === ld.assemblyId);
             if (!asm) return;
-            const v = assemblyLoads(asm, ld.trib);
+            const v = assemblyPsf(asm);
+            ld.perArea = true;
             ld.D = String(v.D); ld.L = v.L ? String(v.L) : ''; ld.Lr = v.Lr ? String(v.Lr) : '';
           };
           const shapeSel = el('select', { className: 'form-select', style: { width: '170px', fontSize: '0.8rem' }, onChange(e) {
             ld.shape = e.target.value;
-            if (ld.shape === 'point') { ld.assemblyId = ''; ld.trib = ''; }
+            if (ld.shape === 'point') { ld.assemblyId = ''; ld.trib = ''; ld.perArea = false; }
             changed(true);
           } });
           LOAD_SHAPES.forEach(sh => shapeSel.appendChild(el('option', { value: sh.id, selected: (ld.shape || 'partial') === sh.id }, sh.label)));
           const isPoint = ld.shape === 'point', isFull = ld.shape === 'full';
+          const perArea = !isPoint && !!ld.perArea;
+          const unit = isPoint ? 'k' : perArea ? 'psf' : 'plf';
           let asmCell = '—';
           if (!isPoint) {
             const asmSel = el('select', { className: 'form-select', style: { width: '170px', fontSize: '0.8rem' }, disabled: !assemblies.length, onChange(e) { ld.assemblyId = e.target.value; relink(); changed(true); } });
@@ -2185,8 +2189,19 @@ export function renderElevation(container, line, levels, wallDLTypes, callbacks)
             assemblies.forEach(x => asmSel.appendChild(el('option', { value: x.id, selected: ld.assemblyId === x.id }, (x.name || x.id) + ' (' + x.dl + ' / ' + x.llGravity + ' psf ' + (x.llSymbol || 'L') + ')')));
             asmCell = asmSel;
           }
+          // Trib width: "× trib" switches a plf row to psf × trib; "plf" switches back (unlinks an assembly)
+          const tribCell = () => {
+            if (!perArea) {
+              return el('button', { className: 'btn btn-sm', type: 'button', title: 'Enter D / L / Lr in psf × a tributary width',
+                onClick() { ld.perArea = true; ld.D = ''; ld.L = ''; ld.Lr = ''; changed(true); } }, '× trib');
+            }
+            return el('span', { style: { display: 'inline-flex', gap: '3px', alignItems: 'center' } },
+              inp('trib', '50px', false, relink), 'ft',
+              el('button', { className: 'btn btn-ghost btn-sm', type: 'button', title: 'Back to plf (unlinks the Flat Load assembly)',
+                onClick() { ld.perArea = false; ld.assemblyId = ''; ld.D = ''; ld.L = ''; ld.Lr = ''; changed(true); } }, 'plf'));
+          };
           // Typing a magnitude by hand unlinks the row from the Flat Load assembly
-          const mag = (key) => el('input', { type: 'number', step: 'any', value: numOrBlank(ld[key]), style: { width: '62px' }, title: isPoint ? 'kips' : 'plf',
+          const mag = (key) => el('input', { type: 'number', step: 'any', value: numOrBlank(ld[key]), style: { width: '62px' }, title: key + ' (' + unit + ')', placeholder: unit,
             onChange(e) { ld[key] = e.target.value; if (ld.assemblyId) { ld.assemblyId = ''; changed(true); } else changed(false); } });
           tbl.appendChild(el('tr', null,
             el('td', { className: 'mono' }, String(i + 1)),
@@ -2194,8 +2209,10 @@ export function renderElevation(container, line, levels, wallDLTypes, callbacks)
             el('td', null, isFull ? el('span', { style: { color: 'var(--ink-tertiary)' } }, '0 (full line)') : inp(isPoint ? 'position' : 'start', '62px')),
             el('td', null, isPoint ? '—' : isFull ? el('span', { style: { color: 'var(--ink-tertiary)' } }, String(num(line.totalLength))) : inp('end', '62px')),
             el('td', null, asmCell),
-            el('td', null, isPoint ? '—' : inp('trib', '55px', false, relink)),
+            el('td', null, isPoint ? '—' : tribCell()),
             el('td', null, mag('D')), el('td', null, mag('L')), el('td', null, mag('Lr')),
+            el('td', { style: { whiteSpace: 'nowrap', color: 'var(--ink-secondary)' } }, unit + (perArea && num(ld.trib) > 0
+              ? ' → ' + LOAD_CASES.filter(c => num(ld[c])).map(c => c + ' ' + +(num(ld[c]) * num(ld.trib)).toFixed(1)).join(' / ') + ' plf' : '')),
             el('td', { className: 'row-actions' }, el('button', { className: 'btn btn-ghost btn-sm', type: 'button', onClick() { gl.loads.splice(i, 1); changed(true); } }, '×')),
           ));
         });
