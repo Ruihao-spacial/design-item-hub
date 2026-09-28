@@ -1,7 +1,7 @@
 # Shear Wall Design — Backlog
 
 Open items after the 2026-09-22 elevation review rounds and Phase 4 round 1 (R1–R3, 2026-09-24).
-Branches: `shearwall-load-path` (pushed, merge to `master` by someone else), `results-and-links` (G4, pushed 2026-09-24), `phase4-r1-r3` (Phase 4 round 1 + distribution + results by line; pushed 2026-09-24; CALC_VERSION v7, schema v6).
+Branches: `shearwall-load-path` (pushed, merge to `master` by someone else), `results-and-links` (G4, pushed 2026-09-24), `phase4-r1-r3` (Phase 4 round 1 + distribution + results by line; pushed 2026-09-24; CALC_VERSION v7, schema v6), `phase4-round2` (P9, R4, R6, WSWH; local 2026-09-28; CALC_VERSION v8, schema v7).
 
 ## Pending approval / housekeeping
 | # | Item | Notes |
@@ -25,7 +25,7 @@ Branches: `shearwall-load-path` (pushed, merge to `master` by someone else), `re
 | P6 | FTAO with unequal opening heights | Engine analyzes the whole wall at the governing opening (APA largest-opening rule); straps drawn at the highest head and lowest sill. |
 | P7 | Wind deflection | Only when the service factor α_s is entered; report only (no limit). |
 | P8 | FTAO hold-down | Wall-end T/C and hardware use the usual net formula with dead load over L_wall; the engine's gross H (no dead load) is shown as a reference. |
-| P9 | HDUE minimum post not enforced — **awaiting user decision** | HDUE catalog lists (2)2x4 / (2)2x6 minimum post for every HDUE, but post auto-select can pick a single 2x4 at a holdown end. Found 2026-09-24 while tracing the deflection distribution (single 2x4 roughly doubles the bending term and triples plate crushing, so δ jumps). Proposed: holdown ends never below the HDUE minPost. |
+| P9 | HDUE minimum post — **done 2026-09-28 (`phase4-round2`)**: posts at holdown ends never below the catalog minPost; override lists hide smaller posts; a stored smaller override is replaced and flagged | HDUE catalog lists (2)2x4 / (2)2x6 minimum post for every HDUE, but post auto-select can pick a single 2x4 at a holdown end. Found 2026-09-24 while tracing the deflection distribution (single 2x4 roughly doubles the bending term and triples plate crushing, so δ jumps). Proposed: holdown ends never below the HDUE minPost. |
 
 ## Known gaps (found in review, not fixed)
 | # | Item | Where | Notes |
@@ -68,9 +68,11 @@ Branches: `shearwall-load-path` (pushed, merge to `master` by someone else), `re
 | # | Item | Notes |
 |---|---|---|
 | R1–R3 | Done 2026-09-24 | See above. |
-| R4 | Amplified (Ω₀) seismic forces for collectors and connections | |
-| R5 | Links to other modules | Seismic Mass Takeoff → W, ELF → Cs and story forces. |
-| R6 | Non-uniform dead load and point loads in the 1.0D display | |
+| R4 | Ω₀ combinations — **done 2026-09-28** | User: forces only, never used for design. Ω₀ ASD (§2.4.5) + Ω₀ LRFD (§2.3.6) groups, Ω₀ linked from Base Shear, Ω₀ line tab + PDF. 'Load Combinations & Design Basis' table (Design / Deflection / Forces only) in Summary + PDF; combo dropdown groups labelled. |
+| R5 | Links to other modules — **dropped 2026-09-28** | User: wall-line loading stays manual input (no ELF Fx link); no Mass Takeoff link needed. |
+| R6 | Dead load by statics — **done 2026-09-28** | End reactions R_L / R_R from each load's position (self-weight ½ each end); net = fD·R_end ∓ OTM/L for every combo, replacing fD·D/2. |
+| W1 | Simpson Strong-Wall WSWH wall type — **done 2026-09-28** | Tables from Shared Drive `Shearwall design reference/WSWH` (01–06; `nominal_ft` column added) via `scripts/buildWswhData.mjs`. Conditions concrete / raised floor / two-story stacked; width picked by user; nominal height = floor-to-floor (interpolated); P = combo-factored D; mixes with sheathed walls under either distribution; Table 06 anchors (smallest W, then d_e; SDC + detached dwelling); stacked 2nd story checked against the TSS rod. |
+| W2 | WSWH open items | Table 07 (bolt length l_e, HSR extension) and Table 08 (edge shear anchorage) not in the folder. Table 04 (out-of-plane / axial) skipped by user. Stacked 2nd-story rod arm uses the concrete B — confirm for the TSS kit. Stacked base capacity weight in the capacity distribution = V₀ (the moment check governs D/C). Confirm ESR-2652 lists the 2021 IBC (CBC 2022) and Simpson's α for concrete-governed LRFD anchor rows. Spot-check Tables 03 / 06 against the catalog. |
 | R7 | Optional beam sizing | Planned as a separate Beam Calculator module linked to the shear wall beam reactions (see G3). |
 
 ## Hub roadmap
