@@ -2142,7 +2142,7 @@ export function renderElevation(container, line, levels, wallDLTypes, callbacks)
     const changed = (redraw) => { if (onGravityChange) onGravityChange(); markChanged(); drawSVG(); if (redraw) renderGravitySection(); };
     gravSection.appendChild(el('div', { style: { fontWeight: '600', marginBottom: '0.25rem', fontSize: '0.9rem' } }, 'Gravity Loads (D / L / Lr)'));
     gravSection.appendChild(el('div', { style: { fontSize: '0.78rem', color: 'var(--ink-secondary)', marginBottom: '0.5rem' } },
-      'Loads at the top of each story (its floor / roof). Point loads: kips. Uniform loads: plf, or press "× trib" to enter psf × a tributary width. Full = the whole line length. Walls take the part directly above them; a transfer beam on that floor line takes what is over it; a point load on a post top goes to the post.'
+      'Loads at the top of each story (its floor / roof). Point loads: kips. Uniform loads: plf, or check "psf × trib" to enter psf × a tributary width. Full = the whole line length. Walls take the part directly above them; a transfer beam on that floor line takes what is over it; a point load on a post top goes to the post.'
       + (assemblies.length ? ' Uniform rows can link a Flat Load assembly (psf × trib; dead → D, live → Lr for a roof, L otherwise).' : ' Link a Flat Load item in Summary / Config to take psf from its assemblies.')));
 
     for (const lvl of levels) {
@@ -2189,16 +2189,19 @@ export function renderElevation(container, line, levels, wallDLTypes, callbacks)
             assemblies.forEach(x => asmSel.appendChild(el('option', { value: x.id, selected: ld.assemblyId === x.id }, (x.name || x.id) + ' (' + x.dl + ' / ' + x.llGravity + ' psf ' + (x.llSymbol || 'L') + ')')));
             asmCell = asmSel;
           }
-          // Trib width: "× trib" switches a plf row to psf × trib; "plf" switches back (unlinks an assembly)
+          // Trib width: checkbox "psf × trib" switches a uniform row between plf (unchecked) and psf × trib
+          // (checked, trib width box shown). Unchecking also unlinks a Flat Load assembly. Values are cleared on switch.
           const tribCell = () => {
-            if (!perArea) {
-              return el('button', { className: 'btn btn-sm', type: 'button', title: 'Enter D / L / Lr in psf × a tributary width',
-                onClick() { ld.perArea = true; ld.D = ''; ld.L = ''; ld.Lr = ''; changed(true); } }, '× trib');
-            }
-            return el('span', { style: { display: 'inline-flex', gap: '3px', alignItems: 'center' } },
-              inp('trib', '50px', false, relink), 'ft',
-              el('button', { className: 'btn btn-ghost btn-sm', type: 'button', title: 'Back to plf (unlinks the Flat Load assembly)',
-                onClick() { ld.perArea = false; ld.assemblyId = ''; ld.D = ''; ld.L = ''; ld.Lr = ''; changed(true); } }, 'plf'));
+            const chk = el('input', { type: 'checkbox', checked: perArea, onChange(e) {
+              ld.perArea = e.target.checked;
+              if (!ld.perArea) ld.assemblyId = '';
+              ld.D = ''; ld.L = ''; ld.Lr = '';
+              changed(true);
+            } });
+            const box = el('span', { style: { display: 'inline-flex', gap: '4px', alignItems: 'center', whiteSpace: 'nowrap' } },
+              el('label', { style: { display: 'inline-flex', gap: '3px', alignItems: 'center', cursor: 'pointer' }, title: 'Checked: enter D / L / Lr in psf × a tributary width. Unchecked: plf.' }, chk, 'psf × trib'));
+            if (perArea) box.appendChild(el('span', { style: { display: 'inline-flex', gap: '3px', alignItems: 'center' } }, inp('trib', '50px', false, relink), 'ft'));
+            return box;
           };
           // Typing a magnitude by hand unlinks the row from the Flat Load assembly
           const mag = (key) => el('input', { type: 'number', step: 'any', value: numOrBlank(ld[key]), style: { width: '62px' }, title: key + ' (' + unit + ')', placeholder: unit,

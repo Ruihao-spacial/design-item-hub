@@ -195,7 +195,7 @@ test('Gravity panel: add a full-line row, link a Flat Load assembly × trib, mar
   assert.equal(ln.gravityLoads['lvl-1'].loads[0].shape, 'full');
   const pick = (sel, v) => { [...sel.querySelectorAll('option')].forEach(o => o.removeAttribute('selected')); [...sel.querySelectorAll('option')].find(o => o.getAttribute('value') === v).setAttribute('selected', ''); sel.dispatchEvent(new window.Event('change')); };
   pick([...c.querySelectorAll('select')].find(s => [...s.querySelectorAll('option')].some(o => o.getAttribute('value') === 'tab2')), 'tab2');
-  const trib = [...c.querySelectorAll('tr')].map(tr => tr.children[5] && tr.children[5].querySelector('input')).find(Boolean);
+  const trib = [...c.querySelectorAll('tr')].map(tr => tr.children[5] && tr.children[5].querySelector('input[type="number"]')).find(Boolean);
   trib.value = '5'; trib.dispatchEvent(new window.Event('change'));
   const row = ln.gravityLoads['lvl-1'].loads[0];
   // Linked row: psf × trib (12 / 40 psf × 5 ft = 60 / 200 plf)
@@ -209,10 +209,15 @@ test('Gravity panel: add a full-line row, link a Flat Load assembly × trib, mar
   assert.ok(!r2.perArea);
   const rowEls = [...c.querySelectorAll('tr')].filter(tr => tr.children.length > 9);
   assert.equal(rowEls[2].children[9].textContent, 'plf', 'default unit plf');
-  [...rowEls[2].querySelectorAll('button')].find(b => b.textContent === '× trib').dispatchEvent(new window.Event('click'));
+  const tick = (tr, on) => { const cb = tr.querySelector('input[type="checkbox"]'); cb.checked = on; cb.dispatchEvent(new window.Event('change')); };
+  assert.ok(rowEls[2].textContent.includes('psf × trib'), 'checkbox label');
+  tick(rowEls[2], true);
   assert.equal(r2.perArea, true);
   const row2 = [...c.querySelectorAll('tr')].filter(tr => tr.children.length > 9)[2];
   assert.ok(row2.children[9].textContent.startsWith('psf'));
+  tick(row2, false);
+  assert.equal(r2.perArea, false);
+  assert.equal([...c.querySelectorAll('tr')].filter(tr => tr.children.length > 9)[2].children[9].textContent, 'plf', 'unchecked → back to plf');
   h.destroy();
 });
 
