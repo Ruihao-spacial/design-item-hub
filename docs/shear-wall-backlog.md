@@ -1,7 +1,7 @@
 # Shear Wall Design — Backlog
 
 Open items after the 2026-09-22 elevation review rounds and Phase 4 round 1 (R1–R3, 2026-09-24).
-Branches: `shearwall-load-path` (pushed, merge to `master` by someone else), `results-and-links` (G4, pushed 2026-09-24), `phase4-r1-r3` (Phase 4 round 1 + distribution + results by line; pushed 2026-09-24; CALC_VERSION v7, schema v6), `phase4-round2` (P9, R4, R6, WSWH; local 2026-09-28; CALC_VERSION v8, schema v7).
+Branches: `shearwall-load-path` (pushed, merge to `master` by someone else), `results-and-links` (G4, pushed 2026-09-24), `phase4-r1-r3` (Phase 4 round 1 + distribution + results by line; pushed 2026-09-24; CALC_VERSION v7, schema v6), `phase4-round2` (P9, R4, R6, WSWH, live loads, results / report rework; local 2026-09-28, not pushed; CALC_VERSION v9, schema v8).
 
 ## Pending approval / housekeeping
 | # | Item | Notes |
@@ -73,6 +73,9 @@ Branches: `shearwall-load-path` (pushed, merge to `master` by someone else), `re
 | R6 | Dead load by statics — **done 2026-09-28** | End reactions R_L / R_R from each load's position (self-weight ½ each end); net = fD·R_end ∓ OTM/L for every combo, replacing fD·D/2. |
 | W1 | Simpson Strong-Wall WSWH wall type — **done 2026-09-28** | Tables from Shared Drive `Shearwall design reference/WSWH` (01–06; `nominal_ft` column added) via `scripts/buildWswhData.mjs`. Conditions concrete / raised floor / two-story stacked; width picked by user; nominal height = floor-to-floor (interpolated); P = combo-factored D; mixes with sheathed walls under either distribution; Table 06 anchors (smallest W, then d_e; SDC + detached dwelling); stacked 2nd story checked against the TSS rod. |
 | G6 | Live load / roof live load — **done 2026-09-28 (aa7d508)** | Gravity rows point / full line / partial with D, L, Lr (schema v8); Flat Load assembly × trib link; all ASCE 7-22 ASD + LRFD combos (shearWallCombos.js) with optional LRFD 0.5L; gravity on transfer beams and post tops carried down; support post members max(ASD, Ω₀ ASD); FTAO jambs and WSWH P include L; calc detail documents every load and the end forces of every combination. CALC_VERSION v9. Open: beam member design (R7); S / R not tracked. |
+| G7 | Line results / report rework — **done 2026-09-28 (4ab70d1)** | Tabs Distribution · Walls · Load path · Drift · LRFD · Ω₀. Distribution: capacity-method table, or the deflection-method final pass with the stiffness basis (Eq. 4.3-1 terms / WSWH table / FTAO engine). Walls: Summary (schedule + overturning table) or Detailed (each wall's calc by type, with an Overturning section). PDF report setting Summary / Detailed (calc sheet per wall). |
+| H8 | App test of `phase4-round2` — **pending** | P9, Ω₀ + design basis, dead load by statics, WSWH (demo item in Test 123), live loads / psf × trib / Flat Load link, Distribution tab, Summary / Detailed report, PDF. |
+| T1 | Test module for the design calculator — **next session** | User request 2026-09-28: create a test module for the design calculator; agree the scope at the start of the session. |
 | W2 | WSWH open items | Table 07 (bolt length l_e, HSR extension) and Table 08 (edge shear anchorage) not in the folder. Table 04 (out-of-plane / axial) skipped by user. Stacked 2nd-story rod arm uses the concrete B — confirm for the TSS kit. Stacked base capacity weight in the capacity distribution = V₀ (the moment check governs D/C). Confirm ESR-2652 lists the 2021 IBC (CBC 2022) and Simpson's α for concrete-governed LRFD anchor rows. Spot-check Tables 03 / 06 against the catalog. |
 | R7 | Optional beam sizing | Planned as a separate Beam Calculator module linked to the shear wall beam reactions (see G3). |
 
