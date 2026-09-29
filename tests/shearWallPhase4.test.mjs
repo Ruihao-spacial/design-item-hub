@@ -235,10 +235,13 @@ test('Openings definition renders: form, results, PDF sections, elevations', () 
   assert.ok(!c.textContent.includes('SW-2a'), 'no wall detail in the summary');
   // Line results, one sub-tab at a time
   const dirOut = out.perDirection[0], ln = dirOut.perLine[0];
-  const tabText = (tab) => { const b = document.createElement('div'); renderLineResults(b, ln, dirOut, { tab, onTab() {} }); return b.textContent; };
-  const expect = { walls: ['SW-2a', 'SW-2b', 'Calc detail'], ftao: ['FTAO calc', 'Jamb posts'], drift: ['Story drift', 'Wall deflections'], lrfd: ['forces only', 'HDUE LRFD cap'], loadpath: ['load path'] };
+  const tabText = (tab, report) => { const b = document.createElement('div'); renderLineResults(b, ln, dirOut, { tab, onTab() {}, report }); return b.textContent; };
+  const expect = { walls: ['SW-2a', 'SW-2b', 'Overturning'], distribution: ['Capacity method', 'Weight = cap × L', 'story shear V'], drift: ['Story drift', 'Wall deflections'], lrfd: ['forces only', 'HDUE LRFD cap'], loadpath: ['load path'] };
   for (const [tab, words] of Object.entries(expect)) for (const w of words) assert.ok(tabText(tab).toLowerCase().includes(w.toLowerCase()), tab + ' tab shows ' + w);
-  assert.ok(!tabText('walls').includes('FTAO calc'), 'FTAO calc only in its tab');
+  // Summary report: schedule + overturning summary; detailed: each wall's calc by type (FTAO included)
+  assert.ok(!tabText('walls').includes('FTAO calc'), 'summary has no per-wall calc');
+  for (const w of ['Calc detail', 'FTAO calc', 'Jamb posts', 'End forces by combination']) assert.ok(tabText('walls', 'detailed').includes(w), 'detailed report shows ' + w);
+  assert.ok(tabText('ftao').includes('Overturning'), 'old FTAO tab key falls back to Walls');
   // The line tab of the form shows the line results
   const form = document.createElement('div');
   shearWallDesign.renderForm(form, JSON.parse(JSON.stringify(inp)), () => {}, [], () => {});

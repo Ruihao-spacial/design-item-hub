@@ -6,7 +6,7 @@ import { checkShearWallItem } from '../scripts/lib/shearWallLoadCheck.mjs'; // s
 import { calcAll, computeWallTC, resolveGravityAtWall } from '../src/modules/shearWallCalc.js';
 import { comboDefs } from '../src/modules/shearWallCombos.js';
 import { gravityRows, assemblyLoads } from '../src/modules/shearWallGravity.js';
-import { shearWallDesign, renderLineResults, migrateV7toV8, gravityDetail, endForceDetail, designBasisRows } from '../src/modules/shearWallDesign.js';
+import { shearWallDesign, renderLineResults, migrateV7toV8, gravityDetail, endForceDetail, designBasisRows, capacityDistRows, deflectionDistRows } from '../src/modules/shearWallDesign.js';
 import { renderElevation } from '../src/modules/shearWallElevation.js';
 
 const near = (a, b, tol, msg) => assert.ok(Math.abs(a - b) <= tol, (msg || '') + ' expected ' + b + ' ± ' + tol + ', got ' + a);
@@ -181,8 +181,9 @@ test('Calc detail documents every load and the end force of every combination; d
   assert.ok(r.ok, r.error);
   const b = document.createElement('div');
   const o = calcAll(inp);
-  renderLineResults(b, lineOf(o), o.perDirection[0], { tab: 'walls', onTab() {} });
+  renderLineResults(b, lineOf(o), o.perDirection[0], { tab: 'walls', onTab() {}, report: 'detailed' });
   assert.ok(b.textContent.includes('End forces by combination'));
+  assert.ok(b.textContent.includes('Overturning — loads used for the end forces'));
 });
 
 test('Gravity panel: add a full-line row, link a Flat Load assembly × trib, markers drawn', () => {
@@ -231,6 +232,48 @@ test('Uniform psf × trib rows: calc uses psf × trib; calc detail shows the con
   g['lvl-1'].loads[0].assemblyId = 'tab2';
   assert.equal(shearWallDesign.linkDiff(inp, { flatLoadSource: { perTab: [floor] } }).length, 0);
   assert.deepEqual(shearWallDesign.linkDiff(inp, { flatLoadSource: { perTab: [{ ...floor, dl: 18 }] } }).map(c => [c.to, /psf$/.test(c.label)]), [[18, true]]);
+});
+
+test('Distribution tab: capacity weights and shares by hand; deflection method shows the final pass and the stiffness basis', () => {
+  // Two sheathed walls 10 ft and 5 ft, same nailing: weights ∝ length → 2/3 and 1/3 of 6 k
+  const inp = model({ levels: one, walls: [wall('w-1', 'lvl-1', 0, 10, { nailingPattern: '6' }), wall('w-2', 'lvl-1', 15, 5, { nailingPattern: '6' })], loads: { 'lvl-1': { seismic: 6, wind: 0 } } });
+  const o = calcAll(inp);
+  const pl = lineOf(o).perLevel[0];
+  const rows = capacityDistRows(pl, 'E');
+  const [w1, w2] = pl.walls;
+  near(w1.capWeight.E, w1.seismicCap * 10, 1e-6);
+  assert.equal(rows[0][5], '66.7%'); assert.equal(rows[1][5], '33.3%');
+  near(parseFloat(rows[0][6]), 4, 0.01);
+  assert.ok(rows[2].cells[3].includes('story shear V = 6.00 k'));
+  const b = document.createElement('div');
+  renderLineResults(b, lineOf(o), o.perDirection[0], { tab: 'distribution', onTab() {} });
+  assert.ok(b.textContent.includes('Capacity method (SDPWS 4.3.3.4.1)'));
+  // Deflection method
+  inp.distribution = 'deflection';
+  const od = calcAll(inp);
+  const dl = deflectionDistRows(lineOf(od).perLevel[0], 'E');
+  assert.ok(dl[0][2].startsWith('Eq. 4.3-1, v = ') && dl[0][2].includes('8vh³/EAb'), 'stiffness basis shows the Eq. 4.3-1 terms');
+  const k1 = parseFloat(dl[0][4]), k2 = parseFloat(dl[1][4]);
+  near(parseFloat(dl[0][5]) / 100, k1 / (k1 + k2), 0.002);
+  const bd = document.createElement('div');
+  renderLineResults(bd, lineOf(od), od.perDirection[0], { tab: 'distribution', onTab() {} });
+  assert.ok(/final pass — distribution by deflection .*pass/.test(bd.textContent));
+  assert.ok(bd.textContent.includes('k = V/δ (lb/in)'));
+});
+
+test('Walls summary report: overturning table; PDF summary vs detailed report', () => {
+  const inp = model({ levels: one, walls: [wall('w-1', 'lvl-1', 0, 10)], loads: { 'lvl-1': { seismic: 4, wind: 0 } },
+    gravity: { 'lvl-1': { loads: [ld('full', { D: '100', L: '300' })] } } });
+  const o = calcAll(inp);
+  const b = document.createElement('div');
+  renderLineResults(b, lineOf(o), o.perDirection[0], { tab: 'walls', onTab() {} });
+  assert.ok(b.textContent.includes('Overturning — loads used for the end forces'));
+  assert.ok(b.textContent.includes('OTM 1.0 = V·h'));
+  assert.ok(b.textContent.includes('(1.0+0.105SDS)D + 0.525ρE + 0.75L'), 'governing compression combo named');
+  const sum = shearWallDesign.pdfSections(inp).map(x => x.title);
+  assert.ok(sum.some(t => /Shear distribution/.test(t)) && !sum.some(t => /Calc sheet/.test(t)));
+  const det = shearWallDesign.pdfSections({ ...inp, pdfReport: 'detailed' }).map(x => x.title);
+  assert.ok(det.some(t => /Calc sheet SW-1/.test(t)) && det.some(t => /SW-1 gravity loads/.test(t)) && det.some(t => /SW-1 end forces/.test(t)));
 });
 
 console.log(passed + ' passed' + (process.exitCode ? ', some FAILED' : ''));

@@ -116,6 +116,7 @@ export const shearWallDesign = {
 
     let activeTopTab = 'summary';
     let activeResultTab = 'walls';
+    let activeReport = 'summary'; // line results Walls tab: 'summary' | 'detailed'
     let refreshLineResults = null; // set by the open line tab
     let resultsTimer = null;
     let activeDirLineTabs = {};
@@ -217,6 +218,10 @@ export const shearWallDesign = {
       sec.appendChild(el('div', { className: 'section-header' }, 'Load Combinations & Design Basis'));
       sec.appendChild(designBasisTable(inputs));
       sec.appendChild(renderGravitySettings());
+      const pdfSel = el('select', { className: 'form-select', style: { width: '260px' }, onChange(e) { inputs.pdfReport = e.target.value; notifyChange(); } });
+      [['summary', 'Summary (schedules, distribution, load path)'], ['detailed', 'Detailed (+ calc sheet for every wall)']].forEach(([v, label]) =>
+        pdfSel.appendChild(el('option', { value: v, selected: (inputs.pdfReport || 'summary') === v }, label)));
+      sec.appendChild(el('div', { className: 'form-group', style: { marginBottom: '1rem' } }, el('label', { className: 'form-label' }, 'PDF report'), pdfSel));
       sec.appendChild(renderWswhSettings());
 
       sec.appendChild(el('div', { style: { fontWeight: '500', fontSize: '0.85rem', marginBottom: '0.25rem' } }, 'Wall Dead Load Types'));
@@ -676,7 +681,8 @@ export const shearWallDesign = {
         const lnOut = dirOut && dirOut.perLine.find(l => l.lineId === line.id);
         if (!lnOut) return;
         try {
-          renderLineResults(resultsBox, lnOut, dirOut, { tab: activeResultTab, onTab(t) { activeResultTab = t; refreshLineResults(); } });
+          renderLineResults(resultsBox, lnOut, dirOut, { tab: activeResultTab, onTab(t) { activeResultTab = t; refreshLineResults(); },
+            report: activeReport, onReport(r) { activeReport = r; refreshLineResults(); } });
         } catch (e) {
           console.error('Rendering line results failed:', e);
           resultsBox.appendChild(el('span', { className: 'badge badge-fail' }, 'Results could not be displayed'));
@@ -836,6 +842,16 @@ export const shearWallDesign = {
           if (wdRows.length) sections.push({ title: dir.dirName + ' / ' + ln.lineName + ' — Wall Deflection (SDPWS Eq. 4.3-1)', table: { headers: WALL_DEFL_HEADERS, rows: wdRows, colWidths: [0.08, 0.26, 0.07, 0.07, 0.1, 0.1, 0.1, 0.1, 0.08] } });
           const lrRows = lrfdRows(ln);
           if (lrRows.length) sections.push({ title: dir.dirName + ' / ' + ln.lineName + ' — LRFD Forces (reported only)', table: { headers: LRFD_HEADERS, rows: lrRows } });
+          const prefix = dir.dirName + ' / ' + ln.lineName;
+          sections.push(...distributionSections(ln, prefix));
+          if ((inputs.pdfReport || 'summary') === 'detailed') {
+            for (const pl of ln.perLevel) for (const w of pl.walls) {
+              sections.push({ title: prefix + ' — Calc sheet ' + w.mark + ' (' + pl.levelName + ', ' + wallTypeOf(w) + ')', rows: overturningRows(w), pageBreakBefore: false });
+              const gr = gravityRowsOf(w);
+              if (gr) sections.push({ title: prefix + ' — ' + w.mark + ' gravity loads (R_R = P·x̄ / L)', table: { headers: GRAVITY_HEADERS, rows: gr.map(r => r.cells || r), colWidths: [0.17, 0.1, 0.25, 0.14, 0.07, 0.135, 0.135] } });
+              if (w.combos) sections.push({ title: prefix + ' — ' + w.mark + ' end forces: ' + endForceTitle(w), table: { headers: END_FORCE_HEADERS, rows: endForceRowsOf(w).map(r => r.cells || r), colWidths: [0.25, 0.1, 0.22, 0.1, 0.22, 0.11] } });
+            }
+          }
           const omRows = omegaRows(ln);
           if (omRows.length) sections.push({ title: dir.dirName + ' / ' + ln.lineName + ' — Ω₀ Forces (reported only, not used for design)', table: { headers: OMEGA_HEADERS, rows: omRows } });
           // Elevation diagram
@@ -932,34 +948,223 @@ function wallScheduleTable(pl) {
   return el('div', { className: 'table-scroll', style: { marginBottom: '0.5rem' } }, tbl);
 }
 
-function lineTabWalls(ln, dirOut) {
+// Walls tab. Summary: schedule + overturning summary per level. Detailed: schedule + every wall's
+// calc in the style of its type (sheathed / pier, FTAO, WSWH), in wall order.
+function lineTabWalls(ln, dirOut, state) {
   const box = el('div');
+  const detailed = state.report === 'detailed';
+  const toggle = el('div', { style: { display: 'flex', gap: '2px', alignItems: 'center', marginBottom: '0.5rem' } },
+    el('span', { style: { fontSize: '0.8rem', color: 'var(--ink-secondary)', marginRight: '0.35rem' } }, 'Report:'),
+    ...[['summary', 'Summary'], ['detailed', 'Detailed']].map(([k, label]) => el('button', {
+      className: 'btn btn-sm' + ((state.report || 'summary') === k ? ' btn-primary' : ''), type: 'button',
+      onClick() { if (state.onReport) state.onReport(k); } }, label)));
+  box.appendChild(toggle);
   let any = false;
   for (const pl of ln.perLevel) {
     if (!pl.walls.length) continue;
     any = true;
     box.appendChild(subHead(pl.levelName + ' — story shear ' + pl.storyShear_1E.toFixed(2) + ' k (1.0E)' + (pl.storyShear_1W ? ', ' + pl.storyShear_1W.toFixed(2) + ' k (1.0W)' : '')));
     box.appendChild(wallScheduleTable(pl));
-    for (const w of pl.walls) {
-      if ((w.method === 'ftao' && w.ftao) || w.method === 'wswh') continue; // FTAO / Strong-Wall calcs have their own tabs
-      box.appendChild(renderWallCalcDetail(w, pl, dirOut, ln));
+    if (!detailed) {
+      box.appendChild(el('div', { style: { fontSize: '0.8rem', fontWeight: '500', margin: '0.25rem 0' } }, 'Overturning — loads used for the end forces (ASD governing incl. loads from above)'));
+      box.appendChild(simpleTable(OT_SUMMARY_HEADERS, overturningSummaryRows(pl), []));
+      continue;
     }
-  }
-  if (!any) box.appendChild(emptyNote('No walls in this line yet.'));
-  return box;
-}
-
-function lineTabFtao(ln) {
-  const box = el('div');
-  for (const pl of ln.perLevel) {
     for (const w of pl.walls) {
-      if (w.method !== 'ftao' || !w.ftao) continue;
-      const d = renderFtaoDetail(w, pl);
+      const d = w.method === 'wswh' ? renderWswhDetail(w, pl)
+        : w.method === 'ftao' && w.ftao ? renderFtaoDetail(w, pl)
+        : renderWallCalcDetail(w, pl, dirOut, ln);
       d.open = true;
       box.appendChild(d);
     }
   }
+  if (!any) { box.appendChild(emptyNote('No walls in this line yet.')); return box; }
+  if (ln.perLevel.some(pl => pl.walls.some(w => w.method === 'wswh'))) box.appendChild(wswhSection(ln));
   return box;
+}
+
+// Strong-Wall panels of a line: panel table, stacked base check, notes
+function wswhSection(ln) {
+  const box = el('div');
+  box.appendChild(subHead('Strong-Wall WSWH panels'));
+  box.appendChild(simpleTable(WSWH_HEADERS, wswhRows(ln), [4, 5, 6, 7, 8]));
+  const st = wswhStackRows(ln);
+  if (st.length) {
+    box.appendChild(subHead('Two-story stack — base moment check (C-L-SW26 p. 50 n.8)'));
+    box.appendChild(simpleTable(WSWH_STACK_HEADERS, st, [2, 3, 4, 5]));
+  }
+  const nb = el('div', { style: { fontSize: '0.8rem', color: 'var(--ink-secondary)', marginBottom: '0.5rem', lineHeight: '1.6' } });
+  wswhNoteLines(ln).forEach(n => nb.appendChild(el('div', null, 'ⓘ ' + n)));
+  box.appendChild(nb);
+  return box;
+}
+
+// === Distribution of the story shear to the walls ===
+const LT_NAME = { E: '1.0E (seismic)', W: '1.0W (wind)' };
+const wallTypeOf = (w) => (w.method === 'wswh' ? 'WSWH' : w.method === 'ftao' ? 'FTAO' : w.method === 'pier' ? 'Pier' : 'Sheathed');
+const loadTypesOf = (ln) => ['E', 'W'].filter(lt => ln.perLevel.some(pl => (lt === 'E' ? pl.storyShear_1E : pl.storyShear_1W) > 0));
+const shareOf = (w, lt) => (lt === 'E' ? w.shareExact_1E : w.shareExact_1W) || 0;
+
+export const CAP_DIST_HEADERS = ['Wall', 'Type', 'L (ft)', 'Capacity basis (ASD)', 'Weight = cap × L (lb)', 'Share = weight / Σ', 'V (k)'];
+// Capacity method (SDPWS 4.3.3.4.1): V_i = V × weight_i / Σ weight
+export function capacityDistRows(pl, lt) {
+  const V = lt === 'E' ? pl.storyShear_1E : pl.storyShear_1W;
+  const tot = pl.walls.reduce((a, w) => a + ((w.capWeight || {})[lt] || 0), 0);
+  const rows = pl.walls.map(w => {
+    const wt = (w.capWeight || {})[lt] || 0;
+    let basis;
+    if (w.hbNotPermitted) basis = 'h/b ' + w.hOverB + ' > 3.5 — not a shear wall';
+    else if (w.method === 'wswh') basis = w.wswh.ok ? (w.wswh.role === 'stackedLower' ? 'V₀ ' : 'V_allow ') + f0(w.wswh.Vcap[lt]) + ' lb (' + w.wswh.evalModel + ')' : 'not tabulated — no shear';
+    else if (w.method === 'ftao') basis = 'FTAO engine V_cap,ASD, ' + (w.nailing ? w.nailing.label : '');
+    else {
+      const cap = lt === 'E' ? w.seismicCap : w.windCap, rf = w.hbReductionFactor || 1;
+      basis = (w.nailing ? w.nailing.label : '') + ': ' + cap + ' plf' + (rf < 1 ? ' × h/b ' + rf.toFixed(3) + ' = ' + f0(cap * rf) + ' plf' : '');
+    }
+    return [w.mark, wallTypeOf(w), w.length.toFixed(2), basis, f0(wt), tot > 0 ? (wt / tot * 100).toFixed(1) + '%' : '—', f2(shareOf(w, lt))];
+  });
+  rows.push({ cells: ['Σ', '', '', 'story shear V = ' + f2(V) + ' k', f0(tot), tot > 0 ? '100%' : '—', f2(pl.walls.reduce((a, w) => a + shareOf(w, lt), 0))], style: { fontWeight: '600' } });
+  return rows;
+}
+
+export const DEFL_DIST_HEADERS = ['Wall', 'Type', 'How δ (and k) is calculated — final pass, 1.0 level', 'δ at share (in)', 'k = V/δ (lb/in)', 'Share = k / Σk', 'V (k)'];
+// Stiffness basis of a wall for the deflection method
+function stiffnessBasis(w, lt) {
+  if (w.hbNotPermitted) return 'not a shear wall';
+  if (w.method === 'wswh') return w.wswh.ok ? 'WSWH table: Δ_cap ' + f2(w.wswh.Dcap[lt]) + ' in at V_cap ' + f0(w.wswh.Vcap[lt]) + ' lb → k = V_cap / Δ_cap' : 'not tabulated';
+  if (w.method === 'ftao') return 'FTAO engine: SDPWS Eq. 4.3-1 over the APA T555 pier cases (average)';
+  const d = (w.stiffnessDefl || {})[lt];
+  if (!d) return '— (no deflection: missing post / nailing Ga)';
+  const g = d.dirs.reduce((a, b) => (b.delta > a.delta ? b : a));
+  return 'Eq. 4.3-1, v = ' + d.v + ' plf, Ga ' + d.Ga + ' k/in, A ' + d.A + ' in²: 8vh³/EAb ' + f4(g.t1) + ' + vh/1000Ga ' + f4(g.t2)
+    + ' + hΔa/b ' + f4(g.t3) + ' (Δa = HD slip ' + f4(g.dHD) + ' + crushing ' + f4(g.dC) + ') = ' + f3(g.delta) + ' in (' + g.dir + ')';
+}
+export function deflectionDistRows(pl, lt) {
+  const ks = pl.walls.map(w => ((w.stiffness || {})[lt]) || 0);
+  const K = ks.reduce((a, b) => a + b, 0);
+  const V = lt === 'E' ? pl.storyShear_1E : pl.storyShear_1W;
+  const rows = pl.walls.map((w, i) => {
+    const k = ks[i], Vw = shareOf(w, lt);
+    return [w.mark, wallTypeOf(w), stiffnessBasis(w, lt), k > 0 ? f3(Vw * 1000 / k) : '—', f0(k), K > 0 ? (k / K * 100).toFixed(1) + '%' : '—', f2(Vw)];
+  });
+  rows.push({ cells: ['Σ', '', 'story shear V = ' + f2(V) + ' k', '', f0(K), K > 0 ? '100%' : '—', f2(pl.walls.reduce((a, w) => a + shareOf(w, lt), 0))], style: { fontWeight: '600' } });
+  return rows;
+}
+function distributionIntro(ln) {
+  const d = ln.distribution;
+  if (d && d.method === 'deflection') {
+    return 'Deflection method: walls at a level deflect equally, so each wall takes V·k_i/Σk with k = V/δ at the 1.0 level. δ depends on the wall share (holdown slip, crushing, nailing), so the shares are iterated from the capacity split. Shown: the final pass — ' + distributionText(ln) + '.';
+  }
+  return 'Capacity method (SDPWS 4.3.3.4.1): each wall takes V × weight_i / Σ weight, weight = ASD unit shear capacity × length (h/b factor applied; FTAO: engine V_cap,ASD; WSWH: tabulated V_allow).';
+}
+function lineTabDistribution(ln) {
+  const box = el('div');
+  box.appendChild(el('div', { style: { fontSize: '0.8rem', color: 'var(--ink-secondary)', marginBottom: '0.5rem' } }, distributionIntro(ln)));
+  const defl = ln.distribution && ln.distribution.method === 'deflection';
+  let any = false;
+  for (const pl of ln.perLevel) {
+    if (!pl.walls.length) continue;
+    for (const lt of loadTypesOf(ln)) {
+      any = true;
+      box.appendChild(subHead(pl.levelName + ' — ' + LT_NAME[lt] + ', V = ' + f2(lt === 'E' ? pl.storyShear_1E : pl.storyShear_1W) + ' k'));
+      box.appendChild(defl ? detailTable(DEFL_DIST_HEADERS, deflectionDistRows(pl, lt)) : detailTable(CAP_DIST_HEADERS, capacityDistRows(pl, lt)));
+    }
+  }
+  if (!any) box.appendChild(emptyNote('No story shear in this line.'));
+  return box;
+}
+// PDF sections of the distribution tables of a line
+function distributionSections(ln, prefix) {
+  const out = [{ title: prefix + ' — Shear distribution', text: distributionIntro(ln) }];
+  const defl = ln.distribution && ln.distribution.method === 'deflection';
+  for (const pl of ln.perLevel) {
+    if (!pl.walls.length) continue;
+    for (const lt of loadTypesOf(ln)) {
+      const rows = (defl ? deflectionDistRows(pl, lt) : capacityDistRows(pl, lt)).map(r => r.cells || r);
+      out.push({ title: prefix + ' — ' + pl.levelName + ', ' + LT_NAME[lt] + ', V = ' + f2(lt === 'E' ? pl.storyShear_1E : pl.storyShear_1W) + ' k',
+        table: { headers: defl ? DEFL_DIST_HEADERS : CAP_DIST_HEADERS, rows, colWidths: defl ? [0.07, 0.07, 0.46, 0.09, 0.1, 0.1, 0.08] : [0.07, 0.08, 0.07, 0.4, 0.13, 0.13, 0.1] } });
+    }
+  }
+  return out;
+}
+
+// === Overturning: the loads used for the end forces of each wall ===
+const OT_SUMMARY_HEADERS = ['Wall', 'V 1.0E / W (k)', 'OTM 1.0 = V·h (k·ft)', 'R_D L / R (k)', 'R_L L / R (k)', 'R_Lr L / R (k)', 'ASD T L / R (k)', 'ASD C L / R (k)', 'Governing T / C'];
+const pairTxt = (a, b) => f2(a) + ' / ' + f2(b);
+// Name of the combination giving the largest value of a field over the ASD group
+function governingCombo(w, field) {
+  const src = w.accumPerCombo || w.combos || {};
+  let best = null, v = 0;
+  for (const [k, c] of Object.entries(src)) {
+    const g = (w.combos && w.combos[k] && w.combos[k].group) || c.group;
+    if (g !== 'asd' || !((c[field] || 0) > v)) continue;
+    v = c[field]; best = k;
+  }
+  if (!best) return '—';
+  const c = w.combos[best] || {};
+  return (c.text || best) + (best.endsWith('_pos') ? ' →' : best.endsWith('_neg') ? ' ←' : '');
+}
+function hwT(w) { return w.hwDemand ? [w.hwDemand.tL, w.hwDemand.tR, w.hwDemand.cL, w.hwDemand.cR] : [w.governingTensionLeft, w.governingTensionRight, w.governingComprLeft, w.governingComprRight]; }
+function overturningSummaryRows(pl) {
+  return pl.walls.map(w => {
+    const st = w.steps || {}, lv = w.live || { L: {}, Lr: {} };
+    const [tL, tR, cL, cR] = hwT(w);
+    const gT = tL >= tR ? governingCombo(w, 'tensionLeft') : governingCombo(w, 'tensionRight');
+    const gC = cL >= cR ? governingCombo(w, 'comprLeft') : governingCombo(w, 'comprRight');
+    return [w.mark + (w.hwDemand ? ' Σ' : ''), pairTxt(w.share_1E, w.share_1W), pairTxt(st.otm1E, st.otm1W), pairTxt(w.dlRL, w.dlRR),
+      pairTxt(lv.L.rL, lv.L.rR), pairTxt(lv.Lr.rL, lv.Lr.rR), pairTxt(tL, tR), pairTxt(cL, cR), gT + ' / ' + gC];
+  });
+}
+// Detailed rows: [label, value]
+function overturningRows(w) {
+  const st = w.steps || {};
+  const rows = [];
+  const panel = w.method === 'wswh';
+  rows.push(['Lateral share (1.0)', 'V_E = ' + f2(w.share_1E) + ' k' + (w.share_1W ? ', V_W = ' + f2(w.share_1W) + ' k' : '')]);
+  rows.push(['Height / arm', panel ? 'h = H_e = ' + f2(w.wswh.He) + ' in, arm = B = ' + w.wswh.B + ' in' : 'h = ' + f2(w.floorH) + ' ft (floor-to-floor), arm = L = ' + f2(w.length) + ' ft']);
+  rows.push(['OTM at the 1.0 level', 'E: ' + f2(st.otm1E) + ' k·ft' + (st.otm1W ? ', W: ' + f2(st.otm1W) + ' k·ft' : '') + (panel && w.wswh.role === 'stackedLower' ? ' (stack base: V₁·H₁ + V₂·(H₁ + d_fl + H₂))' : ' (= V·h)')]);
+  rows.push(['ASD OTM (design)', (st.seismic ? '0.7ρ·OTM_E = ' + f2(st.seismic.otm) + ' k·ft' : '') + (st.wind ? (st.seismic ? '; ' : '') + '0.6·OTM_W = ' + f2(st.wind.otm) + ' k·ft' : '')]);
+  const lv = w.live || { L: {}, Lr: {} };
+  rows.push(['Resisting end reactions', 'R_D ' + pairTxt(w.dlRL, w.dlRR) + ', R_L ' + pairTxt(lv.L.rL, lv.L.rR) + ', R_Lr ' + pairTxt(lv.Lr.rL, lv.Lr.rR) + ' k (L / R)']);
+  rows.push(['This wall, governing ASD', 'T ' + pairTxt(w.governingTensionLeft, w.governingTensionRight) + ' k, C ' + pairTxt(w.governingComprLeft, w.governingComprRight) + ' k']);
+  for (const src of w.injections || []) {
+    rows.push(['Load from above', src.label + ' → ' + (src.side === 'left' ? 'left' : 'right') + ' end: ASD T ' + f2(src.env && src.env.T) + ' / C ' + f2(src.env && src.env.C) + ' k']);
+  }
+  const [tL, tR, cL, cR] = hwT(w);
+  rows.push(['Hardware / post demand', 'T ' + pairTxt(tL, tR) + ' k, C ' + pairTxt(cL, cR) + ' k' + (w.hwDemand ? ' (Σ incl. loads from above)' : '')
+    + ' — T: ' + (tL >= tR ? governingCombo(w, 'tensionLeft') : governingCombo(w, 'tensionRight')) + '; C: ' + (cL >= cR ? governingCombo(w, 'comprLeft') : governingCombo(w, 'comprRight'))]);
+  return rows;
+}
+function overturningDetail(w) {
+  const box = el('div');
+  box.appendChild(el('div', { style: { fontWeight: '600', marginTop: '0.35rem' } }, 'Overturning — loads used for the end forces'));
+  for (const [k, v] of overturningRows(w)) {
+    box.appendChild(el('div', null, el('span', { style: { display: 'inline-block', minWidth: '170px', color: 'var(--ink-tertiary)' } }, k + ':'), v));
+  }
+  return box;
+}
+
+// Strong-Wall panel calc (detailed report)
+function renderWswhDetail(w, pl) {
+  const x = w.wswh;
+  const body = el('div', { style: { fontFamily: 'var(--font-mono, monospace)', fontSize: '0.78rem', lineHeight: '1.7', padding: '0.5rem 0', whiteSpace: 'pre-wrap', color: 'var(--ink-secondary)' } });
+  const line = (k, v) => body.appendChild(el('div', null, el('span', { style: { display: 'inline-block', minWidth: '170px', color: 'var(--ink-tertiary)' } }, k + ':'), v));
+  if (!x.ok) line('Problem', x.errors.join('; ') + ' — panel carries no shear');
+  else {
+    line('Panel', x.evalModel + (x.orderModel !== x.evalModel ? ' (order ' + x.orderModel + ', trimmed)' : '') + ' — ' + conditionLabel(x.role === 'stackedLower' ? 'concrete' : x.condition) + (x.role === 'stackedLower' ? ', stack base' : '') + (x.kit ? ', ' + x.kit : ''));
+    line('Table values', 'H_e ' + f2(x.He) + ' in, B ' + x.B + ' in; V_allow E ' + f0(x.Vcap.E) + ' / W ' + f0(x.Vcap.W) + ' lb; Δ_cap E ' + f2(x.Dcap.E) + ' / W ' + f2(x.Dcap.W) + ' in (' + x.table + ')');
+    line('Vertical load P', 'E ' + f0(x.P.E) + ' lb = max((1.0+0.14SDS)D, (1.0+0.105SDS)D + 0.75L); W ' + f0(x.P.W) + ' lb = max(D, D + 0.75L + 0.75Lr)');
+    const lt = w.dcGoverning === 'wind' ? 'W' : 'E';
+    const sc = x.stacked && x.stacked[lt];
+    line('Shear check', sc ? 'M_d ' + f0(sc.Md) + ' / M_allow ' + f0(sc.Mallow) + ' lb-ft → D/C ' + f2(w.dcRatio) : 'V_ASD ' + f0(x.Vd[lt]) + ' / V_allow ' + f0(x.Vcap[lt]) + ' lb → D/C ' + f2(w.dcRatio));
+    const an = (a, dc) => (!a ? 'OVER' : a.byRDP ? a.id : a.id + (a.cap ? ' ' + a.cap + ' lb' : '') + (a.W ? ', W ' + a.W + '" d_e ' + a.de + '" L_ftg ' + a.Lftg + '"' : '') + (dc != null ? ' (D/C ' + f2(dc) + ')' : ''));
+    line('Anchors L / R', an(w.anchorageLeft, w.anchorageDCLeft) + ' / ' + an(w.anchorageRight, w.anchorageDCRight));
+    if (w.deflection && w.deflection.E) line('δ 1.0E', f3(w.deflection.E.delta) + ' in (Δ_cap × V / V_cap)');
+  }
+  body.appendChild(overturningDetail(w));
+  body.appendChild(gravityDetail(w));
+  body.appendChild(endForceDetail(w));
+  return el('details', { style: { marginBottom: '0.5rem', borderLeft: '3px solid var(--border-light)', paddingLeft: '0.75rem' } },
+    el('summary', { style: { cursor: 'pointer', fontSize: '0.82rem', fontWeight: '500', color: 'var(--ink-secondary)' } }, 'Strong-Wall calc — ' + w.mark + ' (' + pl.levelName + ')'), body);
 }
 
 function lineTabLoadPath(ln) {
@@ -1049,28 +1254,7 @@ function lineTabOmega(ln) {
   return box;
 }
 
-function lineTabWswh(ln) {
-  const box = el('div');
-  box.appendChild(subHead('Strong-Wall WSWH panels'));
-  box.appendChild(simpleTable(WSWH_HEADERS, wswhRows(ln), [4, 5, 6, 7, 8]));
-  const st = wswhStackRows(ln);
-  if (st.length) {
-    box.appendChild(subHead('Two-story stack — base moment check (C-L-SW26 p. 50 n.8)'));
-    box.appendChild(simpleTable(WSWH_STACK_HEADERS, st, [2, 3, 4, 5]));
-  }
-  for (const pl of ln.perLevel) for (const w of pl.walls) {
-    if (w.method !== 'wswh') continue;
-    const body = el('div', { style: { fontSize: '0.8rem', padding: '0.5rem 0', color: 'var(--ink-secondary)' } }, gravityDetail(w), endForceDetail(w));
-    box.appendChild(el('details', { style: { marginBottom: '0.5rem', borderLeft: '3px solid var(--border-light)', paddingLeft: '0.75rem' } },
-      el('summary', { style: { cursor: 'pointer', fontSize: '0.82rem', fontWeight: '500', color: 'var(--ink-secondary)' } }, 'Loads and end forces — ' + w.mark + ' (' + pl.levelName + '; arm = B, h = H_e)'), body));
-  }
-  const nb = el('div', { style: { fontSize: '0.8rem', color: 'var(--ink-secondary)', marginBottom: '0.5rem', lineHeight: '1.6' } });
-  wswhNoteLines(ln).forEach(n => nb.appendChild(el('div', null, 'ⓘ ' + n)));
-  box.appendChild(nb);
-  return box;
-}
-
-// Full results of one line with sub-tabs. state: { tab, onTab(tab) }
+// Full results of one line with sub-tabs. state: { tab, onTab(tab), report: 'summary' | 'detailed', onReport(r) }
 export function renderLineResults(container, ln, dirOut, state) {
   const st = lineStats(ln);
   container.appendChild(el('div', { style: { display: 'flex', gap: '0.5rem', alignItems: 'center', flexWrap: 'wrap', marginBottom: '0.35rem' } },
@@ -1079,9 +1263,7 @@ export function renderLineResults(container, ln, dirOut, state) {
   if (ln.distribution && ln.distribution.note) container.appendChild(el('div', { style: { fontSize: '0.8rem', color: 'var(--stale, #b7791f)', marginBottom: '0.25rem' } }, 'ⓘ ' + ln.distribution.note));
   container.appendChild(designBasisLine(ln));
 
-  const hasFtao = ln.perLevel.some(pl => pl.walls.some(w => w.method === 'ftao' && w.ftao));
-  const hasWswh = ln.perLevel.some(pl => pl.walls.some(w => w.method === 'wswh'));
-  const tabs = [['walls', 'Walls'], hasFtao && ['ftao', 'FTAO'], hasWswh && ['wswh', 'Strong-Wall'], ['loadpath', 'Load path' + (st.issues ? ' (' + st.issues + ')' : '')],
+  const tabs = [['distribution', 'Distribution'], ['walls', 'Walls'], ['loadpath', 'Load path' + (st.issues ? ' (' + st.issues + ')' : '')],
     ['drift', 'Drift' + (st.drift === 'NG' ? ' (NG)' : '')], ['lrfd', 'LRFD'], omegaRows(ln).length && ['omega', 'Ω₀']].filter(Boolean);
   const tab = tabs.some(t => t[0] === state.tab) ? state.tab : 'walls';
   const bar = el('div', { style: { display: 'flex', gap: '2px', marginBottom: '0.5rem', borderBottom: '1px solid var(--border)', flexWrap: 'wrap' } });
@@ -1090,8 +1272,8 @@ export function renderLineResults(container, ln, dirOut, state) {
       style: { borderRadius: '4px 4px 0 0' }, onClick() { state.onTab(key); } }, label));
   }
   container.appendChild(bar);
-  const body = tab === 'ftao' ? lineTabFtao(ln) : tab === 'wswh' ? lineTabWswh(ln) : tab === 'loadpath' ? lineTabLoadPath(ln)
-    : tab === 'drift' ? lineTabDrift(ln) : tab === 'lrfd' ? lineTabLrfd(ln) : tab === 'omega' ? lineTabOmega(ln) : lineTabWalls(ln, dirOut);
+  const body = tab === 'distribution' ? lineTabDistribution(ln) : tab === 'loadpath' ? lineTabLoadPath(ln)
+    : tab === 'drift' ? lineTabDrift(ln) : tab === 'lrfd' ? lineTabLrfd(ln) : tab === 'omega' ? lineTabOmega(ln) : lineTabWalls(ln, dirOut, state);
   container.appendChild(body);
 }
 
@@ -1188,6 +1370,7 @@ function renderFtaoDetail(w, pl) {
     body.appendChild(el('div', { style: { fontWeight: '500', margin: '0.4rem 0 0.2rem' } }, 'Jamb posts — C = d·D + l·L + lr·Lr + k·v_i·h_o (governing ASD combo)'));
     body.appendChild(simpleTable(FTAO_JAMB_HEADERS, ftaoJambRows(w), [1, 3, 5, 6]));
   }
+  body.appendChild(overturningDetail(w));
   body.appendChild(gravityDetail(w));
   body.appendChild(endForceDetail(w));
   if (w.ftao.warnings.length) {
@@ -1480,11 +1663,18 @@ const detailTable = (headers, rows) => {
   return el('div', { className: 'table-scroll' }, tbl);
 };
 
+const GRAVITY_HEADERS = ['Load', 'On wall (ft)', 'w or P', 'P (k)', 'x̄ (ft)', 'R_L (k)', 'R_R (k)'];
 // Every load piece on the wall (shape, position, magnitude, resultant, centroid, share to each end) + self-weight
 export function gravityDetail(w) {
   const box = el('div');
-  const L = w.length || 0;
   box.appendChild(el('div', { style: { fontWeight: '600', marginTop: '0.35rem' } }, 'Gravity loads on this wall (x from its left end; R_R = P·x̄ / L, R_L = P − R_R)'));
+  const rows = gravityRowsOf(w);
+  if (!rows) box.appendChild(el('div', null, 'No gravity load on this wall.'));
+  else box.appendChild(detailTable(GRAVITY_HEADERS, rows));
+  return box;
+}
+function gravityRowsOf(w) {
+  const L = w.length || 0;
   const rows = (w.gravRows || []).map(r => {
     const where = r.shape === 'point' ? 'x = ' + r.x.toFixed(2) : r.a.toFixed(2) + '–' + r.b.toFixed(2);
     const mag = r.shape === 'point' ? caseText(r.mag) + ' k'
@@ -1497,24 +1687,32 @@ export function gravityDetail(w) {
   const tot = { D: w.dlTotal, L: lv.L.total, Lr: lv.Lr.total };
   const rl = { D: w.dlRL, L: lv.L.rL, Lr: lv.Lr.rL }, rr = { D: w.dlRR, L: lv.L.rR, Lr: lv.Lr.rR };
   rows.push({ cells: ['Σ end reactions', '', '', caseText(tot), '', caseText(rl), caseText(rr)], style: { fontWeight: '600' } });
-  if (!(w.gravRows || []).length && !nz(w.dlWallSelf)) box.appendChild(el('div', null, 'No gravity load on this wall.'));
-  else box.appendChild(detailTable(['Load', 'On wall (ft)', 'w or P', 'P (k)', 'x̄ (ft)', 'R_L (k)', 'R_R (k)'], rows));
-  return box;
+  return (w.gravRows || []).length || nz(w.dlWallSelf) ? rows : null;
 }
 
 const GROUP_TITLE = { asd: 'ASD — used for design', load_case: 'Load cases — deflection / display', lrfd: 'LRFD — forces only', asd_omega: 'Ω₀ ASD — forces only (support posts: max with ASD)', lrfd_omega: 'Ω₀ LRFD — forces only' };
 
 // Resisting / end forces of this wall for every combination, with the numbers substituted:
 // N = d·R_D + l·R_L + lr·R_Lr ∓ (e·V_E·h + w·V_W·h) / arm   (+ = compression; T = max(0, −N))
-export function endForceDetail(w, dir) {
-  const box = el('div');
+const END_FORCE_HEADERS = ['Combination', 'ASCE 7-22', 'Left end N (k)', 'T / C left', 'Right end N (k)', 'T / C right'];
+function endForceTitle(w) {
   const st = w.steps || {};
+  return 'End forces by combination — N = d·R_D + l·R_L + lr·R_Lr ∓ (e·' + (st.otm1E || 0).toFixed(2) + ' + w·' + (st.otm1W || 0).toFixed(2) + ') / ' + trimNum(st.arm || w.length || 0)
+    + '  (1.0-level V·h in k·ft; + = compression; this wall only — Σ with loads from above in the Load path tab)';
+}
+export function endForceDetail(w) {
+  const box = el('div');
   if (!w.combos) return box;
+  box.appendChild(el('div', { style: { fontWeight: '600', marginTop: '0.35rem' } }, endForceTitle(w)));
+  box.appendChild(detailTable(END_FORCE_HEADERS, endForceRowsOf(w)));
+  box.appendChild(el('div', null, 'Governing ASD: T L / R ' + w.governingTensionLeft.toFixed(2) + ' / ' + w.governingTensionRight.toFixed(2)
+    + ' k, C L / R ' + w.governingComprLeft.toFixed(2) + ' / ' + w.governingComprRight.toFixed(2) + ' k (→ = shear toward the right end, left end uplift side)'));
+  return box;
+}
+function endForceRowsOf(w) {
+  const st = w.steps || {};
   const R = { D: [st.rL || 0, st.rR || 0], L: (st.live && st.live.L) || [0, 0], Lr: (st.live && st.live.Lr) || [0, 0] };
   const arm = st.arm || w.length || 0;
-  box.appendChild(el('div', { style: { fontWeight: '600', marginTop: '0.35rem' } },
-    'End forces by combination — N = d·R_D + l·R_L + lr·R_Lr ∓ (e·' + (st.otm1E || 0).toFixed(2) + ' + w·' + (st.otm1W || 0).toFixed(2) + ') / ' + trimNum(arm)
-    + '  (1.0-level V·h in k·ft; + = compression; this wall only — Σ with loads from above in the Load path tab)'));
   const byGroup = {};
   for (const [k, c] of Object.entries(w.combos)) (byGroup[c.group] = byGroup[c.group] || []).push([k, c]);
   const rows = [];
@@ -1535,10 +1733,7 @@ export function endForceDetail(w, dir) {
       rows.push([name, c.ref || '', expr(0, -1), c.tensionLeft.toFixed(2) + ' / ' + c.comprLeft.toFixed(2), expr(1, 1), c.tensionRight.toFixed(2) + ' / ' + c.comprRight.toFixed(2), '']);
     }
   }
-  box.appendChild(detailTable(['Combination', 'ASCE 7-22', 'Left end N (k)', 'T / C left', 'Right end N (k)', 'T / C right', ''], rows.map(r => (r.cells ? { ...r, cells: r.cells.slice(0, 6) } : r.slice(0, 6)))));
-  box.appendChild(el('div', null, 'Governing ASD: T L / R ' + w.governingTensionLeft.toFixed(2) + ' / ' + w.governingTensionRight.toFixed(2)
-    + ' k, C L / R ' + w.governingComprLeft.toFixed(2) + ' / ' + w.governingComprRight.toFixed(2) + ' k (→ = shear toward the right end, left end uplift side)'));
-  return box;
+  return rows.map(r => (r.cells ? { ...r, cells: r.cells.slice(0, 6) } : r.slice(0, 6)));
 }
 
 function renderWallCalcDetail(w, pl, dir, ln) {
@@ -1562,7 +1757,12 @@ function renderWallCalcDetail(w, pl, dir, ln) {
   if (w.windDC != null && w.windDC > 0) line('D/C wind:', w.windDC.toFixed(2) + '  =  ' + w.unitShear_wind.toFixed(0) + ' / ' + (w.effectiveWindCap || 0));
   line('D/C governing:', w.dcRatio.toFixed(2) + '  (' + (w.dcGoverning || '') + ')');
 
+  if (w.deflection && w.deflection.E && w.deflection.E.dirs) {
+    const g = w.deflection.E.dirs.reduce((a, b) => (b.delta > a.delta ? b : a));
+    line('δ 1.0E (Eq. 4.3-1):', f4(g.t1) + ' + ' + f4(g.t2) + ' + ' + f4(g.t3) + ' = ' + f3(w.deflection.E.delta) + ' in  (bending + shear/Ga + h·Δa/b)');
+  }
   body.appendChild(el('div', { style: { borderTop: '1px solid var(--border-light)', margin: '0.25rem 0' } }));
+  body.appendChild(overturningDetail(w));
   body.appendChild(gravityDetail(w));
   body.appendChild(endForceDetail(w, dir));
 

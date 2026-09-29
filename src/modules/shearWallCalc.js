@@ -523,6 +523,11 @@ export function calcAll(inputs) {
           return wallResult;
         });
 
+        // Capacity-method weights (lb): capacity (plf-equivalent) × length — share = weight / Σ weights
+        for (const wr of wallResults) {
+          const len = parseFloat((wallsAtLevel.find(x => x.id === wr.wallId) || {}).length) || 0;
+          wr.capWeight = { E: r2((seismicCapMap[wr.wallId] || 0) * len), W: r2((windCapMap[wr.wallId] || 0) * len) };
+        }
         return {
           levelId: lvl.id, levelName: lvl.name || '',
           storyShear_1E: r2(ss.seismic), storyShear_1W: r2(ss.wind),
@@ -623,6 +628,7 @@ export function calcAll(inputs) {
             const share = lt === 'E' ? wr.shareExact_1E : wr.shareExact_1W;
             const d = lt === 'E' ? wr.deflection.E : wallDeflection(wr, 'W', 1.0, deflCtx);
             if (d && d.delta > 0 && share > 0) wr.stiffness[lt] = share * 1000 / d.delta;
+            (wr.stiffnessDefl = wr.stiffnessDefl || {})[lt] = d || null; // Eq. 4.3-1 terms behind k (1.0 level)
           }
         }
       }
