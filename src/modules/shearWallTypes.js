@@ -202,7 +202,7 @@ export function projectV7Defaults() {
 
 // Schema v8: LRFD live-load factor 0.5 (ASCE 7-22 §2.3.1 exc. 1 / §2.3.6; Lo ≤ 100 psf, not garages or assembly)
 export function projectV8Defaults() {
-  return { lrfdHalfL: false };
+  return { lrfdHalfL: false, pdfReport: 'summary' }; // pdfReport: 'summary' | 'detailed' (adds a calc sheet per wall)
 }
 
 export function svgEl(tag, attrs, ...children) {
