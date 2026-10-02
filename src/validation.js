@@ -110,6 +110,7 @@ function validateElf(inputs, errors) {
 function validateWallOpenings(errors, wall, wallLabel, level) {
   const openings = Array.isArray(wall.openings) ? wall.openings : [];
   if (!openings.length) return;
+  if (wall.method !== 'ftao') { errors.push(`${wallLabel}: segmented walls are solid full-height walls and cannot have openings — use FTAO or split the wall.`); return; }
   const length = asNumber(wall.length);
   const height = level ? asNumber(level.floorToFloor) : NaN;
   if (wall.method === 'ftao' && openings.length > 3) errors.push(`${wallLabel}: FTAO covers 1–3 openings.`);

@@ -13,24 +13,26 @@ export const HDUE_TABLE = [
 // === MSTC Strap Catalog (floor-to-floor) ===
 // Keyed by floor clear span (inches). ASD allowable tension (lbs). No LRFD value.
 // delta is the deflection at the strap LRFD cap = ASD cap / 0.7 (used for deflection only; no LRFD design check).
+// minPost: a floor strap end needs at least a double-stud post (user rule 2026-09-30).
+const STRAP_MIN_POST = { '4': '(2)2x4', '6': '(2)2x6' };
 export const MSTC_TABLE = {
   '16': [
-    { id: 'MSTC28', cap: 1535, delta: 0.0808 },
-    { id: 'MSTC40', cap: 3070, delta: 0.0970 },
-    { id: 'MSTC52', cap: 4610, delta: 0.1188 },
-    { id: 'MSTC66', cap: 5850, delta: 0.1296 },
+    { id: 'MSTC28', cap: 1535, minPost: STRAP_MIN_POST, delta: 0.0808 },
+    { id: 'MSTC40', cap: 3070, minPost: STRAP_MIN_POST, delta: 0.0970 },
+    { id: 'MSTC52', cap: 4610, minPost: STRAP_MIN_POST, delta: 0.1188 },
+    { id: 'MSTC66', cap: 5850, minPost: STRAP_MIN_POST, delta: 0.1296 },
   ],
   '18': [
-    { id: 'MSTC28', cap: 1150, delta: 0.0785 },
-    { id: 'MSTC40', cap: 2690, delta: 0.0947 },
-    { id: 'MSTC52', cap: 4225, delta: 0.1162 },
-    { id: 'MSTC66', cap: 5850, delta: 0.1313 },
+    { id: 'MSTC28', cap: 1150, minPost: STRAP_MIN_POST, delta: 0.0785 },
+    { id: 'MSTC40', cap: 2690, minPost: STRAP_MIN_POST, delta: 0.0947 },
+    { id: 'MSTC52', cap: 4225, minPost: STRAP_MIN_POST, delta: 0.1162 },
+    { id: 'MSTC66', cap: 5850, minPost: STRAP_MIN_POST, delta: 0.1313 },
   ],
   '24': [
-    { id: 'MSTC40', cap: 1920, delta: 0.0897 },
-    { id: 'MSTC52', cap: 3455, delta: 0.1150 },
-    { id: 'MSTC66', cap: 5375, delta: 0.1310 },
-    { id: 'MSTC78', cap: 5850, delta: 0.1448 },
+    { id: 'MSTC40', cap: 1920, minPost: STRAP_MIN_POST, delta: 0.0897 },
+    { id: 'MSTC52', cap: 3455, minPost: STRAP_MIN_POST, delta: 0.1150 },
+    { id: 'MSTC66', cap: 5375, minPost: STRAP_MIN_POST, delta: 0.1310 },
+    { id: 'MSTC78', cap: 5850, minPost: STRAP_MIN_POST, delta: 0.1448 },
   ],
 };
 
@@ -182,8 +184,8 @@ export function computePostCapacity(post, grade, floorHeightFt) {
   };
 }
 
-// HDUE minimum post (catalog minPost). At a holdown end the post is never narrower along the
-// wall (d2) than this, in the line's wall thickness. Straps (no minPost) → null.
+// Anchorage minimum post (catalog minPost: HDUE by size, MSTC floor straps (2)2x). At a holdown / strap end
+// the post is never narrower along the wall (d2) than this, in the line's wall thickness. No minPost → null.
 export function hdueMinPost(anchorage, wallThickness) {
   if (!anchorage || !anchorage.minPost) return null;
   const t = POST_SIZES[wallThickness] ? wallThickness : '4';

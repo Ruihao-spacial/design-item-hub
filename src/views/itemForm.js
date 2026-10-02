@@ -69,6 +69,26 @@ export async function renderItemForm(container, state, { moduleId, itemId, onBac
   );
   container.appendChild(nameRow);
 
+  // Report toolbar at the top of every calculator (user request 2026-10-01): Export PDF, plus a report dropdown when
+  // the module declares mod.pdfOptions = { key, label, options: [[value, label]] }. The dropdown writes inputs[key]
+  // through the form hook (saved with the next Calculate & Save) and applies to this export straight away.
+  const formHooks = {};
+  let pdfChoice = null;
+  const pdfToolbar = el('div', { className: 'pdf-toolbar', style: { display: 'flex', gap: '0.5rem', alignItems: 'center', justifyContent: 'flex-end', marginBottom: '0.75rem', flexWrap: 'wrap' } });
+  if (mod.pdfOptions) {
+    const o = mod.pdfOptions;
+    pdfChoice = (item && item.inputs && item.inputs[o.key]) || o.options[0][0];
+    const sel = el('select', { className: 'form-select', style: { width: 'auto' }, onChange(e) {
+      pdfChoice = e.target.value;
+      if (formHooks.setInput) formHooks.setInput(o.key, pdfChoice);
+    } });
+    o.options.forEach(([v, label]) => sel.appendChild(el('option', { value: v, selected: v === pdfChoice }, label)));
+    pdfToolbar.appendChild(el('label', { style: { fontSize: '0.8rem', color: 'var(--ink-secondary)', display: 'flex', alignItems: 'center', gap: '0.35rem' } }, o.label, sel));
+  }
+  pdfToolbar.appendChild(el('button', { className: 'btn btn-sm btn-primary', type: 'button', disabled: isNew,
+    title: isNew ? 'Save the calculation first' : 'Export this calculation as a PDF', onClick: () => exportPdf() }, 'Export PDF'));
+  container.appendChild(pdfToolbar);
+
   const dirtyBadge = el('span', { className: 'badge badge-stale', hidden: true, style: { fontSize: '0.78rem', transition: 'opacity 0.5s' } }, 'Unsaved changes');
   let savedTimer = null;
   function markDirty() {
@@ -143,7 +163,8 @@ export async function renderItemForm(container, state, { moduleId, itemId, onBac
   async function exportPdf() {
     if (!item) return;
     try {
-      await exportItemPdf(p, item, mod, { items: state.items || [] });
+      const forExport = mod.pdfOptions && pdfChoice ? { ...item, inputs: { ...(item.inputs || {}), [mod.pdfOptions.key]: pdfChoice } } : item;
+      await exportItemPdf(p, forExport, mod, { items: state.items || [] });
     } catch (error) {
       console.error('Failed to export PDF:', error);
       showToast('PDF export failed.', 'error');
@@ -154,7 +175,6 @@ export async function renderItemForm(container, state, { moduleId, itemId, onBac
     outputSection = el('div', { className: 'output-section', hidden: true },
       el('div', { className: 'output-header' },
         el('span', null, 'Results'),
-        el('button', { className: 'btn btn-ghost btn-sm', onClick: exportPdf }, 'Export PDF'),
       ),
       el('div', { className: 'output-body' }),
     );
@@ -164,7 +184,6 @@ export async function renderItemForm(container, state, { moduleId, itemId, onBac
 
   const statusRow = el('div', { style: { display: 'flex', gap: '0.5rem', alignItems: 'center', justifyContent: 'flex-end', marginTop: '0.5rem' } },
     dirtyBadge,
-    !isNew ? el('button', { className: 'btn btn-ghost btn-sm', onClick: exportPdf }, 'Export PDF') : null,
   );
   container.appendChild(statusRow);
 
@@ -200,7 +219,7 @@ export async function renderItemForm(container, state, { moduleId, itemId, onBac
       } catch (e) {
         showToast('Error saving: ' + (e.message || ''), 'error');
       }
-    }, projectItems, () => { markDirty(); });
+    }, projectItems, () => { markDirty(); }, formHooks);
   }
   renderModuleForm(isNew ? null : item.inputs || {});
 

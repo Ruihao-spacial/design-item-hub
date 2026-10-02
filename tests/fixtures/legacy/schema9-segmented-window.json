@@ -1,0 +1,139 @@
+{
+ "_source": "TC-2 as first seeded in Test-123 (2026-09-29): a segmented wall with a window (schema 9) — v10 migrates it to FTAO",
+ "schemaVersion": 9,
+ "inputs": {
+  "loadType": "seismic",
+  "sds": "1.0",
+  "wallThickness": "4",
+  "woodGrade": "dfir_no1",
+  "distribution": "capacity",
+  "sheathing": "ply",
+  "cd": "",
+  "ie": "",
+  "riskCategory": "",
+  "driftRow": "other",
+  "alphaS": "",
+  "omega0": "",
+  "seismicDesignCategory": "",
+  "wswhFc": "2500",
+  "detachedOneTwoFamily": false,
+  "lrfdHalfL": false,
+  "pdfReport": "detailed",
+  "refs": {},
+  "notes": "TC-2 — Segmented wall with a window: header load to the jambs (hand check)\nINTENT: check pier design of a segmented wall and the new rule that the load over an opening (and the wall above it) goes half to each jamb, with statics end reactions by position. G4 must show every gravity load accounted for.\nINPUTS: SDS 1.0, rho 1.0, seismic. One story, ftf 10 ft. Line A 16 ft. SW-1 0–16 ft, segmented, window offset 6 ft, width 4 ft, sill 3 ft, head 7 ft → piers SW-1a 0–6 ft and SW-1b 10–16 ft. Wall DL 10 psf. 1.0E = 6 k. Gravity: full line D 200 / L 100 plf; point D 2 k at x = 3 ft.\nHAND CALC:\n1. Equal piers → 3.0 k each. h/b = 10/6 = 1.67 ≤ 2 (no reduction). v = 0.7·3000/6 = 350 plf → 4\" o.c. (470), D/C 0.74.\n2. Header over the window: D = 200·4/1000 + 10·4·(10 − 7)/1000 = 0.80 + 0.12 = 0.92 k → 0.46 k to each jamb; L = 100·4/1000 = 0.40 k → 0.20 k each.\n3. SW-1a (0–6): D = uniform 1.20 (0.60/0.60) + point 2.00 at x = 3 (1.00/1.00) + self 10·6·10/1000 = 0.60 (0.30/0.30) + header 0.46 at right end → total 4.26 k, R_L 1.90, R_R 2.36. L = 0.60 (0.30/0.30) + 0.20 at right → 0.80, R_L 0.30, R_R 0.50.\n   SW-1b (10–16): D = 1.20 + 0.60 + header 0.46 at left → 2.26 k, R_L 1.36, R_R 0.90. L: R_L 0.50, R_R 0.30.\n4. OTM(1.0E) = 3·10 = 30 k·ft → ±5.00 k per pier.\n   SW-1a: T left = 3.50 − 0.46·1.90 = 2.63 k; T right = 3.50 − 0.46·2.36 = 2.41 k; C right = 1.14·2.36 + 3.50 = 6.19 k; C left = 1.14·1.90 + 3.50 = 5.67 k.\n   SW-1b: T left = 3.50 − 0.46·1.36 = 2.87 k; T right = 3.50 − 0.46·0.90 = 3.09 k; C left = 1.14·1.36 + 3.50 = 5.05 k; C right = 1.14·0.90 + 3.50 = 4.53 k.\n   All T < 3.79 k → HDUE3 at every pier end.\n5. G4 dead load: applied = 200·16/1000 + 2.00 + wall 10·(16·10 − 4·4 − 4·3)/1000 = 3.20 + 2.00 + 1.32 = 6.52 k = piers 4.26 + 2.26. The wall under the window (10·4·3 = 0.12 k) bears on the floor and is noted.\nNOT HAND-CHECKED HERE: end posts are auto-sized by the NDS column check ((3)2x4 at 10 ft).\nWHERE TO LOOK: N-S / Line A → Checks tab, Walls → Detailed: gravity table rows \"Header over opening 1 (½ to each jamb)\".",
+  "wallDLTypes": [
+   {
+    "id": "wdt-1",
+    "name": "Stud wall",
+    "psf": "10"
+   }
+  ],
+  "levels": [
+   {
+    "id": "lvl-1",
+    "name": "Level 1",
+    "floorToFloor": 10,
+    "floorClearSpan": "16",
+    "anchorageType": "auto"
+   }
+  ],
+  "directions": [
+   {
+    "id": "dir-1",
+    "name": "N-S",
+    "rho": 1,
+    "lines": [
+     {
+      "id": "ln-1",
+      "name": "Line A",
+      "totalLength": 16,
+      "wallThickness": "",
+      "distribution": "",
+      "levelLoads": {
+       "lvl-1": {
+        "seismic": "6",
+        "wind": ""
+       }
+      },
+      "walls": [
+       {
+        "id": "w-1",
+        "mark": "SW-1",
+        "levelId": "lvl-1",
+        "position": 0,
+        "length": 16,
+        "wallDLTypeId": "wdt-1",
+        "nailingPattern": "",
+        "anchorageLeftOverride": "",
+        "anchorageRightOverride": "",
+        "postLeftOverride": "",
+        "postRightOverride": "",
+        "openings": [
+         {
+          "id": "op-1",
+          "offset": 6,
+          "width": 4,
+          "sill": 3,
+          "head": 7
+         }
+        ],
+        "method": "segmented",
+        "narrowPier": false,
+        "ftaoStrapOverride": "",
+        "jambPostOverride": "",
+        "systemType": "sheathed",
+        "wswhWidth": "18",
+        "wswhCondition": "concrete",
+        "wswhJoist": "12",
+        "wswhFloorDepth": "12",
+        "wswhAnchorOverride": ""
+       }
+      ],
+      "beams": [],
+      "supportPosts": [],
+      "gravityLoads": {
+       "lvl-1": {
+        "loads": [
+         {
+          "id": "gl-1",
+          "shape": "full",
+          "position": 0,
+          "start": 0,
+          "end": 0,
+          "D": "200",
+          "L": "100",
+          "Lr": "",
+          "perArea": false,
+          "trib": "",
+          "assemblyId": ""
+         },
+         {
+          "id": "gl-2",
+          "shape": "point",
+          "position": 3,
+          "start": 3,
+          "end": 3,
+          "D": "2",
+          "L": "",
+          "Lr": "",
+          "perArea": false,
+          "trib": "",
+          "assemblyId": ""
+         }
+        ]
+       }
+      },
+      "driftBypass": ""
+     }
+    ]
+   },
+   {
+    "id": "dir-2",
+    "name": "E-W",
+    "rho": 1,
+    "lines": []
+   }
+  ],
+  "driftBypass": false
+ }
+}

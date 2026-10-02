@@ -1,0 +1,586 @@
+{
+  "id": "V09",
+  "title": "Offset stack with and without a post",
+  "intent": "An upper wall (x = 4–12 ft) sits on a longer wall below (0–16 ft), so both upper ends land mid-wall. Tool rule: a wall end transfers only where it aligns with a wall end below (±0.1 ft); a mid-wall end needs a post. Line A has no post: warning, nothing is transferred, the lower wall is designed for its own load only. Line B adds a post under each upper end: the post carries the end force to the foundation (base holdown, post member for max(ASD, Ω₀ ASD)) and the lower wall is still unchanged.",
+  "covers": [
+    "Wall end transfer rule (aligned ends only)",
+    "Mid-wall end → warning, no transfer",
+    "Support post at any story",
+    "Post base HDUE",
+    "Support post member max(ASD, Ω₀ ASD) (ASCE 7-22 §12.3.3.3)"
+  ],
+  "handCalc": [
+    {
+      "step": 1,
+      "text": "Both lines: Roof V_T = 2 k (upper wall, L = 8 ft, h = 9 ft); Level 1 V_B = 5 k (lower wall, L = 16 ft, h = 10 ft). Self-weight only (10 psf)."
+    },
+    {
+      "step": 2,
+      "text": "Upper wall: v = 0.7 × 2000 / 8 = 175.00 plf → 6\" o.c.. D = 10 × 8 × 9 = 0.72 k → R = 0.36 k; N_E = 2 × 9 / 8 = ±2.250 k."
+    },
+    {
+      "step": 3,
+      "text": "Upper wall ends: T = 0.7 × 2.250 − 0.46 × 0.36 = 1.409 k; C = 1.14 × 0.36 + 0.7 × 2.250 = 1.985 k (same at both ends by symmetry)."
+    },
+    {
+      "step": 4,
+      "text": "Lower wall (own load only): v = 0.7 × 5000 / 16 = 218.75 plf → 6\" o.c.. D = 10 × 16 × 10 = 1.60 k → R = 0.80 k; N_E = 5 × 10 / 16 = ±3.125 k."
+    },
+    {
+      "step": 5,
+      "text": "Lower wall: T = 0.7 × 3.125 − 0.46 × 0.80 = 1.820 k → HDUE3; C = 1.14 × 0.80 + 0.7 × 3.125 = 3.099 k."
+    },
+    {
+      "step": 6,
+      "text": "Line A: upper ends at x = 4 and 12 land inside the lower wall (0–16), no post → warning \"add a post below\", no transfer: the lower wall keeps T = 1.820 / C = 3.099 k."
+    },
+    {
+      "step": 7,
+      "text": "Line B: posts P-B1 (x = 4) and P-B2 (x = 12) in the Level 1 story each receive one upper end: envelope T = 1.409 k, C = 1.985 k. The lower wall is unchanged (T = 1.820 k)."
+    },
+    {
+      "step": 8,
+      "text": "Post base at the foundation: T = 1.409 k → HDUE3. Post member: Ω₀ ASD (5) = 1.14 × 0.36 + 0.7 × 2.5 × 2.250 = 4.348 k > ASD 1.985 k → design C = 4.348 k → (2)2x4 at 10 ft (cap 5.00 k, HDUE3 minimum (2)2x4)."
+    },
+    {
+      "step": 9,
+      "text": "Checks: Line A loses the upper end forces (listed by the audit, excluded, not failed); Line B carries everything to the foundation → G1–G12 pass on both lines."
+    },
+    {
+      "step": 10,
+      "text": "Upper wall (both lines) — SW-A1 / SW-B1 (Eq. 4.3-1, → governs): v = 1000 × 2.000 / 8 = 250.00 plf, A = 10.5 in², G_a = 16 k/in → 8vh³/(EAb) = 0.0102; vh/(1000G_a) = 0.1406; Δ_HD = 0.0808 × 2250.00 / 1535/0.7 = 0.0829 (MSTC28, T = 2250.00 lb); r = 2250.00 / (10.5 × 625) = 0.3429 → Δ_c = 0.0094; h·Δa/b = 9 × (0.0829 + 0.0094) / 8 = 0.1038 → δ = 0.2547 in."
+    },
+    {
+      "step": 11,
+      "text": "Lower wall (both lines; no end force from above: Line A no post, Line B on the posts) — SW-A2 / SW-B2 (Eq. 4.3-1, → governs): v = 1000 × 5.000 / 16 = 312.50 plf, A = 10.5 in², G_a = 16 k/in → 8vh³/(EAb) = 0.0088; vh/(1000G_a) = 0.1953; Δ_HD = 0.127 × 3125.00 / 3790 (ASD cap) = 0.1047 (HDUE3, T = 3125.00 lb); r = 3125.00 / (10.5 × 625) = 0.4762 → Δ_c = 0.0130; h·Δa/b = 10 × (0.1047 + 0.0130) / 16 = 0.0736 → δ = 0.2777 in."
+    },
+    {
+      "step": 12,
+      "text": "Both lines: Story drift Roof: δxe = the largest wall δ = SW-A1 / SW-B1 0.2547 in → δx = Cd·δxe/Ie = 4 × 0.2547 / 1.0 = 1.019 in vs Δa = 0.020 × 9 × 12 = 2.160 in → OK."
+    },
+    {
+      "step": 13,
+      "text": "Both lines: Story drift Level 1: δxe = the largest wall δ = SW-A2 / SW-B2 0.2777 in → δx = Cd·δxe/Ie = 4 × 0.2777 / 1.0 = 1.111 in vs Δa = 0.020 × 10 × 12 = 2.400 in → OK."
+    }
+  ],
+  "expect": [
+    {
+      "label": "Upper wall T, left (k) — Line A",
+      "at": "wall:SW-A1",
+      "field": "governingTensionLeft",
+      "value": 1.4094,
+      "tol": 0.005,
+      "step": 3,
+      "line": "Line A"
+    },
+    {
+      "label": "Upper wall C, right (k) — Line A",
+      "at": "wall:SW-A1",
+      "field": "governingComprRight",
+      "value": 1.9854,
+      "tol": 0.005,
+      "step": 3,
+      "line": "Line A"
+    },
+    {
+      "label": "Lower wall T, left (k) — Line A, no transfer",
+      "at": "wall:SW-A2",
+      "field": "governingTensionLeft",
+      "value": 1.8195000000000001,
+      "tol": 0.005,
+      "step": 6,
+      "line": "Line A"
+    },
+    {
+      "label": "Lower wall 1.0D left = own R only (nothing from above) — Line A",
+      "at": "wall:SW-A2",
+      "field": "lc[\"1.0D\"].left",
+      "value": 0.8,
+      "tol": 0.005,
+      "step": 6,
+      "line": "Line A"
+    },
+    {
+      "label": "Lower wall T, left (k) — Line B, unchanged",
+      "at": "wall:SW-B2",
+      "field": "governingTensionLeft",
+      "value": 1.8195000000000001,
+      "tol": 0.005,
+      "step": 7,
+      "line": "Line B"
+    },
+    {
+      "label": "Lower wall C, right (k) — Line B, unchanged",
+      "at": "wall:SW-B2",
+      "field": "governingComprRight",
+      "value": 3.0995,
+      "tol": 0.005,
+      "step": 7,
+      "line": "Line B"
+    },
+    {
+      "label": "P-B1 envelope T (k)",
+      "at": "post:P-B1",
+      "field": "envelopeT",
+      "value": 1.4094,
+      "tol": 0.005,
+      "step": 7,
+      "line": "Line B"
+    },
+    {
+      "label": "P-B1 envelope C (k)",
+      "at": "post:P-B1",
+      "field": "envelopeC",
+      "value": 1.9854,
+      "tol": 0.005,
+      "step": 7,
+      "line": "Line B"
+    },
+    {
+      "label": "P-B1 member design C (k)",
+      "at": "post:P-B1",
+      "field": "postDesignC",
+      "value": 4.3479,
+      "tol": 0.005,
+      "step": 8,
+      "line": "Line B"
+    },
+    {
+      "label": "P-B1 member governed by",
+      "at": "post:P-B1",
+      "field": "postGoverns",
+      "value": "Ω₀ ASD",
+      "step": 8,
+      "line": "Line B"
+    },
+    {
+      "label": "P-B2 lands on",
+      "at": "post:P-B2",
+      "field": "receiver.type",
+      "value": "foundation",
+      "step": 7,
+      "line": "Line B"
+    },
+    {
+      "label": "Lower wall δ at 1.0E, own forces only (in) — Line A",
+      "at": "wall:SW-A2",
+      "field": "deflection.E.delta",
+      "value": 0.27766767218507743,
+      "tol": 0.0005,
+      "step": 11,
+      "line": "Line A"
+    },
+    {
+      "label": "Line A — Story δxe, Roof (in)",
+      "at": "drift:Roof",
+      "field": "seismic.deltaXE",
+      "value": 0.25467132835241096,
+      "tol": 0.0005,
+      "step": 12,
+      "line": "Line A"
+    },
+    {
+      "label": "Line A — Governing wall for drift, Roof",
+      "at": "drift:Roof",
+      "field": "seismic.wallMark",
+      "value": "SW-A1",
+      "step": 12,
+      "line": "Line A"
+    },
+    {
+      "label": "Line A — δx = Cd·δxe/Ie, Roof (in)",
+      "at": "drift:Roof",
+      "field": "seismic.deltaX",
+      "value": 1.0186853134096439,
+      "tol": 0.002,
+      "step": 12,
+      "line": "Line A"
+    },
+    {
+      "label": "Line A — Drift passes, Roof",
+      "at": "drift:Roof",
+      "field": "seismic.pass",
+      "value": true,
+      "step": 12,
+      "line": "Line A"
+    },
+    {
+      "label": "Line A — Story δxe, Level 1 (in)",
+      "at": "drift:Level 1",
+      "field": "seismic.deltaXE",
+      "value": 0.27766767218507743,
+      "tol": 0.0005,
+      "step": 13,
+      "line": "Line A"
+    },
+    {
+      "label": "Line A — Governing wall for drift, Level 1",
+      "at": "drift:Level 1",
+      "field": "seismic.wallMark",
+      "value": "SW-A2",
+      "step": 13,
+      "line": "Line A"
+    },
+    {
+      "label": "Line A — δx = Cd·δxe/Ie, Level 1 (in)",
+      "at": "drift:Level 1",
+      "field": "seismic.deltaX",
+      "value": 1.1106706887403097,
+      "tol": 0.002,
+      "step": 13,
+      "line": "Line A"
+    },
+    {
+      "label": "Line A — Drift passes, Level 1",
+      "at": "drift:Level 1",
+      "field": "seismic.pass",
+      "value": true,
+      "step": 13,
+      "line": "Line A"
+    },
+    {
+      "label": "Line B — Story δxe, Roof (in)",
+      "at": "drift:Roof",
+      "field": "seismic.deltaXE",
+      "value": 0.25467132835241096,
+      "tol": 0.0005,
+      "step": 12,
+      "line": "Line B"
+    },
+    {
+      "label": "Line B — Governing wall for drift, Roof",
+      "at": "drift:Roof",
+      "field": "seismic.wallMark",
+      "value": "SW-B1",
+      "step": 12,
+      "line": "Line B"
+    },
+    {
+      "label": "Line B — δx = Cd·δxe/Ie, Roof (in)",
+      "at": "drift:Roof",
+      "field": "seismic.deltaX",
+      "value": 1.0186853134096439,
+      "tol": 0.002,
+      "step": 12,
+      "line": "Line B"
+    },
+    {
+      "label": "Line B — Drift passes, Roof",
+      "at": "drift:Roof",
+      "field": "seismic.pass",
+      "value": true,
+      "step": 12,
+      "line": "Line B"
+    },
+    {
+      "label": "Line B — Story δxe, Level 1 (in)",
+      "at": "drift:Level 1",
+      "field": "seismic.deltaXE",
+      "value": 0.27766767218507743,
+      "tol": 0.0005,
+      "step": 13,
+      "line": "Line B"
+    },
+    {
+      "label": "Line B — Governing wall for drift, Level 1",
+      "at": "drift:Level 1",
+      "field": "seismic.wallMark",
+      "value": "SW-B2",
+      "step": 13,
+      "line": "Line B"
+    },
+    {
+      "label": "Line B — δx = Cd·δxe/Ie, Level 1 (in)",
+      "at": "drift:Level 1",
+      "field": "seismic.deltaX",
+      "value": 1.1106706887403097,
+      "tol": 0.002,
+      "step": 13,
+      "line": "Line B"
+    },
+    {
+      "label": "Line B — Drift passes, Level 1",
+      "at": "drift:Level 1",
+      "field": "seismic.pass",
+      "value": true,
+      "step": 13,
+      "line": "Line B"
+    }
+  ],
+  "expectChecks": {
+    "fail": [],
+    "warnings": [
+      "unsupported_wall"
+    ]
+  },
+  "notChecked": "The deflection terms one by one (V15); the post does not stiffen the lower wall in the drift calc. The lower wall nailing and posts follow V01.",
+  "pinned": {
+    "Line A/SW-A1": {
+      "nail": "6",
+      "hdL": "MSTC28",
+      "hdR": "MSTC28",
+      "postL": "(2)2x4",
+      "postR": "(2)2x4"
+    },
+    "Line A/SW-A2": {
+      "nail": "6",
+      "hdL": "HDUE3",
+      "hdR": "HDUE3",
+      "postL": "(2)2x4",
+      "postR": "(2)2x4"
+    },
+    "Line B/SW-B1": {
+      "nail": "6",
+      "hdL": "MSTC28",
+      "hdR": "MSTC28",
+      "postL": "(2)2x4",
+      "postR": "(2)2x4"
+    },
+    "Line B/SW-B2": {
+      "nail": "6",
+      "hdL": "HDUE3",
+      "hdR": "HDUE3",
+      "postL": "(2)2x4",
+      "postR": "(2)2x4"
+    },
+    "Line B/P-B1": {
+      "post": "(2)2x4",
+      "hd": "HDUE3"
+    },
+    "Line B/P-B2": {
+      "post": "(2)2x4",
+      "hd": "HDUE3"
+    }
+  },
+  "schemaVersion": 12,
+  "inputs": {
+    "sds": "1",
+    "loadType": "seismic",
+    "wallThickness": "4",
+    "woodGrade": "dfir_no1",
+    "sheathing": "ply",
+    "distribution": "capacity",
+    "cd": "4",
+    "ie": "1.0",
+    "riskCategory": "II",
+    "driftRow": "other",
+    "driftBypass": false,
+    "alphaS": "",
+    "windDriftLimit": "400",
+    "omega0": "2.5",
+    "lrfdHalfL": false,
+    "wswhFc": "2500",
+    "seismicDesignCategory": "",
+    "detachedOneTwoFamily": false,
+    "pdfReport": "detailed",
+    "refs": {},
+    "notes": "",
+    "wallDLTypes": [
+      {
+        "id": "wdt-1",
+        "name": "Stud wall",
+        "psf": "10"
+      }
+    ],
+    "levels": [
+      {
+        "id": "lvl-1",
+        "name": "Roof",
+        "floorToFloor": 9,
+        "anchorageType": "auto",
+        "floorClearSpan": "16"
+      },
+      {
+        "id": "lvl-2",
+        "name": "Level 1",
+        "floorToFloor": 10,
+        "anchorageType": "auto",
+        "floorClearSpan": "16"
+      }
+    ],
+    "directions": [
+      {
+        "id": "dir-1",
+        "name": "N-S",
+        "rho": 1,
+        "lines": [
+          {
+            "id": "ln-a",
+            "name": "Line A",
+            "totalLength": 16,
+            "wallThickness": "",
+            "distribution": "",
+            "driftBypass": "",
+            "distReviewed": [],
+            "levelLoads": {
+              "lvl-1": {
+                "seismic": "2",
+                "wind": ""
+              },
+              "lvl-2": {
+                "seismic": "3",
+                "wind": ""
+              }
+            },
+            "gravityLoads": {
+              "lvl-1": {
+                "loads": []
+              },
+              "lvl-2": {
+                "loads": []
+              }
+            },
+            "walls": [
+              {
+                "id": "w-A1",
+                "mark": "SW-A1",
+                "levelId": "lvl-1",
+                "position": 4,
+                "length": 8,
+                "method": "segmented",
+                "systemType": "sheathed",
+                "openings": [],
+                "narrowPier": false,
+                "wallDLTypeId": "wdt-1",
+                "nailingPattern": "6",
+                "anchorageLeftOverride": "MSTC28",
+                "anchorageRightOverride": "MSTC28",
+                "postLeftOverride": "(2)2x4",
+                "postRightOverride": "(2)2x4",
+                "ftaoStrapOverride": "",
+                "jambPostOverride": "",
+                "wswhWidth": "18",
+                "wswhCondition": "concrete",
+                "wswhJoist": "12",
+                "wswhFloorDepth": "12",
+                "wswhAnchorOverride": ""
+              },
+              {
+                "id": "w-A2",
+                "mark": "SW-A2",
+                "levelId": "lvl-2",
+                "position": 0,
+                "length": 16,
+                "method": "segmented",
+                "systemType": "sheathed",
+                "openings": [],
+                "narrowPier": false,
+                "wallDLTypeId": "wdt-1",
+                "nailingPattern": "6",
+                "anchorageLeftOverride": "HDUE3",
+                "anchorageRightOverride": "HDUE3",
+                "postLeftOverride": "(2)2x4",
+                "postRightOverride": "(2)2x4",
+                "ftaoStrapOverride": "",
+                "jambPostOverride": "",
+                "wswhWidth": "18",
+                "wswhCondition": "concrete",
+                "wswhJoist": "12",
+                "wswhFloorDepth": "12",
+                "wswhAnchorOverride": ""
+              }
+            ],
+            "beams": [],
+            "supportPosts": []
+          },
+          {
+            "id": "ln-b",
+            "name": "Line B",
+            "totalLength": 16,
+            "wallThickness": "",
+            "distribution": "",
+            "driftBypass": "",
+            "distReviewed": [],
+            "levelLoads": {
+              "lvl-1": {
+                "seismic": "2",
+                "wind": ""
+              },
+              "lvl-2": {
+                "seismic": "3",
+                "wind": ""
+              }
+            },
+            "gravityLoads": {
+              "lvl-1": {
+                "loads": []
+              },
+              "lvl-2": {
+                "loads": []
+              }
+            },
+            "walls": [
+              {
+                "id": "w-B1",
+                "mark": "SW-B1",
+                "levelId": "lvl-1",
+                "position": 4,
+                "length": 8,
+                "method": "segmented",
+                "systemType": "sheathed",
+                "openings": [],
+                "narrowPier": false,
+                "wallDLTypeId": "wdt-1",
+                "nailingPattern": "6",
+                "anchorageLeftOverride": "MSTC28",
+                "anchorageRightOverride": "MSTC28",
+                "postLeftOverride": "(2)2x4",
+                "postRightOverride": "(2)2x4",
+                "ftaoStrapOverride": "",
+                "jambPostOverride": "",
+                "wswhWidth": "18",
+                "wswhCondition": "concrete",
+                "wswhJoist": "12",
+                "wswhFloorDepth": "12",
+                "wswhAnchorOverride": ""
+              },
+              {
+                "id": "w-B2",
+                "mark": "SW-B2",
+                "levelId": "lvl-2",
+                "position": 0,
+                "length": 16,
+                "method": "segmented",
+                "systemType": "sheathed",
+                "openings": [],
+                "narrowPier": false,
+                "wallDLTypeId": "wdt-1",
+                "nailingPattern": "6",
+                "anchorageLeftOverride": "HDUE3",
+                "anchorageRightOverride": "HDUE3",
+                "postLeftOverride": "(2)2x4",
+                "postRightOverride": "(2)2x4",
+                "ftaoStrapOverride": "",
+                "jambPostOverride": "",
+                "wswhWidth": "18",
+                "wswhCondition": "concrete",
+                "wswhJoist": "12",
+                "wswhFloorDepth": "12",
+                "wswhAnchorOverride": ""
+              }
+            ],
+            "beams": [],
+            "supportPosts": [
+              {
+                "id": "sp-1",
+                "mark": "P-B1",
+                "levelId": "lvl-2",
+                "position": 4,
+                "postOverride": "(2)2x4",
+                "anchorageOverride": "HDUE3"
+              },
+              {
+                "id": "sp-2",
+                "mark": "P-B2",
+                "levelId": "lvl-2",
+                "position": 12,
+                "postOverride": "(2)2x4",
+                "anchorageOverride": "HDUE3"
+              }
+            ]
+          }
+        ]
+      }
+    ]
+  }
+}

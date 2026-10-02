@@ -1,0 +1,204 @@
+{
+  "calcVersion": "v18",
+  "lines": [
+    {
+      "line": "N-S / Line A",
+      "walls": [
+        {
+          "mark": "SW-1",
+          "level": "Level 1",
+          "method": "wall",
+          "nailing": "6",
+          "basis": "manual",
+          "V_E": 1.613,
+          "V_W": 0,
+          "dc": 0.6,
+          "T": [
+            1.744,
+            1.744
+          ],
+          "C": [
+            2.224,
+            2.224
+          ],
+          "anchorage": [
+            "HDUE3",
+            "HDUE3"
+          ],
+          "posts": [
+            "(2)2x4",
+            "(2)2x4"
+          ],
+          "deltaE": 0.357
+        },
+        {
+          "mark": "SW-2",
+          "level": "Level 1",
+          "method": "wall",
+          "nailing": "6",
+          "basis": "manual",
+          "V_E": 4.387,
+          "V_W": 0,
+          "dc": 0.82,
+          "T": [
+            2.283,
+            2.283
+          ],
+          "C": [
+            3.243,
+            3.243
+          ],
+          "anchorage": [
+            "HDUE3",
+            "HDUE3"
+          ],
+          "posts": [
+            "(2)2x4",
+            "(2)2x4"
+          ],
+          "deltaE": 0.357
+        }
+      ],
+      "posts": [],
+      "beams": [],
+      "drift": [
+        {
+          "level": "Level 1",
+          "dx": 1.428,
+          "pass": true
+        }
+      ],
+      "checksFailed": [],
+      "warnings": []
+    },
+    {
+      "line": "N-S / Line B",
+      "walls": [
+        {
+          "mark": "SW-3",
+          "level": "Level 2",
+          "method": "wall",
+          "nailing": "2B",
+          "basis": "manual",
+          "V_E": 5.67,
+          "V_W": 0,
+          "dc": 0.31,
+          "T": [
+            4.778,
+            4.778
+          ],
+          "C": [
+            5.418,
+            5.418
+          ],
+          "anchorage": [
+            "MSTC66",
+            "MSTC66"
+          ],
+          "posts": [
+            "(3)2x4",
+            "(3)2x4"
+          ],
+          "deltaE": 0.315
+        },
+        {
+          "mark": "SW-4",
+          "level": "Level 2",
+          "method": "wall",
+          "nailing": "2B",
+          "basis": "manual",
+          "V_E": 1.33,
+          "V_W": 0,
+          "dc": 0.16,
+          "T": [
+            2.235,
+            2.235
+          ],
+          "C": [
+            2.555,
+            2.555
+          ],
+          "anchorage": [
+            "MSTC40",
+            "MSTC40"
+          ],
+          "posts": [
+            "(2)2x4",
+            "(2)2x4"
+          ],
+          "deltaE": 0.315
+        },
+        {
+          "mark": "SW-5",
+          "level": "Level 1",
+          "method": "wall",
+          "nailing": "2B",
+          "basis": "manual",
+          "V_E": 6.633,
+          "V_W": 0,
+          "dc": 0.36,
+          "T": [
+            10.398,
+            10.398
+          ],
+          "C": [
+            11.678,
+            11.678
+          ],
+          "anchorage": [
+            "HDUE13",
+            "HDUE13"
+          ],
+          "posts": [
+            "8x4",
+            "8x4"
+          ],
+          "deltaE": 0.426
+        },
+        {
+          "mark": "SW-6",
+          "level": "Level 1",
+          "method": "wall",
+          "nailing": "2B",
+          "basis": "manual",
+          "V_E": 0.367,
+          "V_W": 0,
+          "dc": 0.04,
+          "T": [
+            2.784,
+            2.784
+          ],
+          "C": [
+            3.424,
+            3.424
+          ],
+          "anchorage": [
+            "HDUE3",
+            "HDUE3"
+          ],
+          "posts": [
+            "(2)2x4",
+            "(2)2x4"
+          ],
+          "deltaE": 0.426
+        }
+      ],
+      "posts": [],
+      "beams": [],
+      "drift": [
+        {
+          "level": "Level 2",
+          "dx": 1.26,
+          "pass": true
+        },
+        {
+          "level": "Level 1",
+          "dx": 1.704,
+          "pass": true
+        }
+      ],
+      "checksFailed": [],
+      "warnings": []
+    }
+  ]
+}

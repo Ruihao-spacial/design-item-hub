@@ -3,7 +3,7 @@
 import assert from 'assert/strict';
 import { checkShearWallItem } from '../scripts/lib/shearWallLoadCheck.mjs'; // sets up the stand-in DOM
 import { calcAll, computeWallTC, resolveGravityAtWall } from '../src/modules/shearWallCalc.js';
-import { shearWallDesign, renderLineResults, migrateV6toV7, designBasisRows } from '../src/modules/shearWallDesign.js';
+import { shearWallDesign, renderLineResults, migrateV6toV7, lcTableRows, loadCaseTableRows } from '../src/modules/shearWallDesign.js';
 import { renderElevation, renderElevationForPdf } from '../src/modules/shearWallElevation.js';
 import { HDUE_TABLE, MSTC_TABLE, hdueMinPost, meetsMinPost, autoSelectPost, getGradeById } from '../src/modules/shearWallHardware.js';
 import { lookupWswh, selectWswhAnchor, permittedCriteria, WSWH_ROD } from '../src/modules/shearWallWswh.js';
@@ -39,11 +39,14 @@ const wallsOf = (out) => lineOf(out).perLevel.flatMap(p => p.walls);
 
 // === P9: HDUE minimum post ===
 
-test('P9: HDUE minimum post by thickness; straps have none', () => {
+test('P9: anchorage minimum post by thickness; MSTC floor straps (2)2x (user rule 2026-09-30)', () => {
   assert.equal(hdueMinPost(HDUE_TABLE[0], '4').id, '(2)2x4');
   assert.equal(hdueMinPost(HDUE_TABLE[0], '6').id, '(2)2x6');
   assert.equal(hdueMinPost(HDUE_TABLE.find(h => h.id === 'HDUE9'), '4').id, '4x4');
-  assert.equal(hdueMinPost(MSTC_TABLE['16'][0], '4'), null);
+  for (const t of Object.values(MSTC_TABLE)) for (const s of t) {
+    assert.equal(hdueMinPost(s, '4').id, '(2)2x4');
+    assert.equal(hdueMinPost(s, '6').id, '(2)2x6');
+  }
   const min = hdueMinPost(HDUE_TABLE[0], '4');
   assert.equal(meetsMinPost({ id: '2x4' }, min), false);
   assert.equal(meetsMinPost({ postId: '4x4' }, min), true);
@@ -66,7 +69,7 @@ test('P9: override below the minimum is not used and is flagged; a heavier overr
   assert.equal(w.postRight.postId, '4x4');
   const warns = lineOf(out).loadPathAudit.warnings.filter(x => x.type === 'post_below_hdue_min');
   assert.equal(warns.length, 1);
-  assert.match(warns[0].message, /2x4 is below the HDUE minimum post \(2\)2x4/);
+  assert.match(warns[0].message, /2x4 is below the anchorage minimum post \(2\)2x4/);
 });
 
 // === R4: Ω₀ combos — forces only ===
@@ -131,25 +134,29 @@ test('R4: Base Shear link carries Ω₀; v6 → v7 migration adds omega0; design
   const m = migrateV6toV7({ directions: [] });
   assert.equal(m.omega0, '');
   assert.ok(shearWallDesign.schemaVersion >= 7);
-  const rows = designBasisRows({ loadType: 'both', omega0: '3' });
-  assert.deepEqual(rows.map(r => r[2]), ['DESIGN', 'Deflection', 'Forces only', 'Forces only + support posts', 'Forces only']);
-  assert.ok(rows[3][0].includes('Ω₀ = 3'));
-  assert.equal(designBasisRows({ loadType: 'wind' }).length, 3);
+  // LC table: one row per combination, numbered ASD → LRFD → Ω₀ ASD → Ω₀ LRFD; load cases are a separate table
+  const rows = lcTableRows({ loadType: 'both', omega0: '3' });
+  assert.deepEqual(rows.map(r => r[0]), rows.map((_, i) => 'LC' + (i + 1)));
+  assert.deepEqual([...new Set(rows.map(r => r[1]))], ['ASD', 'LRFD', 'Ω₀ ASD', 'Ω₀ LRFD']);
+  assert.equal(rows.filter(r => r[1] === 'ASD').length, 10);
+  assert.ok(rows.some(r => r[2] === '(0.6−0.14S_{DS})D + 0.7Ω_{0}E'), 'subscript markup in the combination');
+  assert.equal(lcTableRows({ loadType: 'wind' }).filter(r => r[1].startsWith('Ω₀')).length, 0);
+  assert.deepEqual(loadCaseTableRows({ loadType: 'both' }).map(r => r[0]), ['D', 'L', 'Lr', 'E', 'W']);
 });
 
-test('R4: Ω₀ tab, design-basis line and PDF sections render', () => {
+test('R4: Forces tab with Ω₀ LCs, LC tables in the PDF and the Summary tab', () => {
   const inp = oneStory([wall('w-1', 0, 8)], { seismic: 8, extra: { omega0: '3' } });
   const o = calcAll(inp);
   const b = document.createElement('div');
-  renderLineResults(b, lineOf(o), o.perDirection[0], { tab: 'omega', onTab() {} });
-  assert.ok(b.textContent.includes('Forces only'));
-  assert.ok(b.textContent.includes('not used for design'));
+  const ln = lineOf(o), combos = ln.perLevel[0].walls[0].combos;
+  const omKey = Object.keys(combos).find(k => combos[k].group === 'asd_omega');
+  renderLineResults(b, ln, o.perDirection[0], { tab: 'forces', forcesKey: omKey, onTab() {} });
+  assert.ok(b.textContent.includes('forces only') && b.querySelector('select').value === omKey);
   const secs = shearWallDesign.pdfSections(inp);
-  assert.ok(secs.some(s => s.title === 'Load Combinations & Design Basis'));
-  assert.ok(secs.some(s => /Ω₀ Forces \(reported only, not used for design\)/.test(s.title)));
+  assert.ok(secs.some(s => s.title === 'Load Combinations') && secs.some(s => s.title === 'Load Cases (unfactored)'));
   const form = document.createElement('div');
   shearWallDesign.renderForm(form, JSON.parse(JSON.stringify(inp)), () => {}, [], () => {});
-  assert.ok(form.textContent.includes('Load Combinations & Design Basis'));
+  assert.ok(form.textContent.includes('Load Combinations') && form.textContent.includes('LC1'));
 });
 
 // === R6: dead load end reactions by statics ===
@@ -181,11 +188,11 @@ test('R6: T/C use fD·R_end at each end (net = fD·R_end ∓ OTM/L)', () => {
   assert.equal(w.combos['1.0D'].comprRight, 0);
 });
 
-test('R6: segmented pier takes only the loads over the pier, split by position', () => {
-  const out = calcAll(oneStory([wall('w-1', 0, 10, { openings: [{ id: 'op-1', offset: 4, width: 2, sill: 3, head: 7 }] })],
+test('R6: each solid wall takes only the loads over it, split by position', () => {
+  const out = calcAll(oneStory([wall('w-1', 0, 4), wall('w-2', 6, 4)],
     { seismic: 5, gravity: { 'lvl-1': { uniform: [], point: [{ id: 'pl-1', position: 1, dlKips: 4 }] } } }));
   const [p1, p2] = wallsOf(out);
-  near(p1.dlRL, 3, 0.005); near(p1.dlRR, 1, 0.005); // 4 k at 1 ft on a 4 ft pier
+  near(p1.dlRL, 3, 0.005); near(p1.dlRR, 1, 0.005); // 4 k at 1 ft on a 4 ft wall
   assert.equal(p2.dlTotal, 0);
 });
 
@@ -345,7 +352,13 @@ test('WSWH elevation: panel label, stacked kit and anchor W / d_e drawn (PDF + l
   assert.ok(svg.includes('WSWH-TSS18KT (two-story stacked kit)'), 'stacked kit named at the floor line');
   const base = wallsOf(o).find(w => w.wallId === 'w-2');
   const an = base.anchorageLeft;
-  assert.ok(svg.includes('AB ' + an.grade + ' (' + an.criteria + ') · W ' + an.W + '" · d_e ' + an.de + '"'), 'anchor with min W and d_e');
+  // the anchor is hardware: on the hardware elevation (shared scene, same as the tool with Hardware on)
+  const hwEl = renderElevationForPdf(ln, inp.levels, inp.wallDLTypes, lineOf(o), 700, 'hardware');
+  // d_e is drawn as d with a subscript e (tspan): the label text reads "… · W 24" · de 18""
+  const anchorText = [...hwEl.querySelectorAll('text')].find(t => t.querySelector('tspan') && t.textContent === 'AB ' + an.grade + ' (' + an.criteria + ') · W ' + an.W + '" · de ' + an.de + '"');
+  assert.ok(anchorText, 'anchor with min W and d_e');
+  assert.equal([...anchorText.querySelectorAll('tspan')].find(x => x.textContent === 'e').getAttribute('baseline-shift'), 'sub', 'e is a subscript');
+  assert.ok(!svg.includes(' · d_e '), 'no anchor on the end-force elevation');
   const c = document.createElement('div');
   const h = renderElevation(c, JSON.parse(JSON.stringify(ln)), inp.levels, inp.wallDLTypes, {});
   h.showResults(lineOf(o));

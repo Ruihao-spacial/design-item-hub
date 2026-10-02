@@ -6,7 +6,7 @@ import { checkShearWallItem } from '../scripts/lib/shearWallLoadCheck.mjs'; // s
 import { calcAll, computeWallTC, resolveGravityAtWall } from '../src/modules/shearWallCalc.js';
 import { comboDefs } from '../src/modules/shearWallCombos.js';
 import { gravityRows, assemblyLoads } from '../src/modules/shearWallGravity.js';
-import { shearWallDesign, renderLineResults, migrateV7toV8, gravityDetail, endForceDetail, designBasisRows, capacityDistRows, deflectionDistRows } from '../src/modules/shearWallDesign.js';
+import { shearWallDesign, renderLineResults, migrateV7toV8, gravityDetail, endForceDetail, lcTableRows, capacityDistRows, deflectionDistRows } from '../src/modules/shearWallDesign.js';
 import { renderElevation } from '../src/modules/shearWallElevation.js';
 
 const near = (a, b, tol, msg) => assert.ok(Math.abs(a - b) <= tol, (msg || '') + ' expected ' + b + ' ± ' + tol + ', got ' + a);
@@ -172,18 +172,20 @@ test('Calc detail documents every load and the end force of every combination; d
   const g = gravityDetail(w).textContent, e = endForceDetail(w).textContent;
   assert.ok(g.includes('#1 Point') && g.includes('D 2.00 / L 1.00') && g.includes('Σ end reactions'));
   assert.ok(g.includes('Lr 100 plf'));
-  assert.ok(e.includes('(1.0+0.105SDS)D + 0.525ρE + 0.75L') && e.includes('§2.4.5 (6)') && e.includes('ASD — used for design'));
+  // end forces refer to the combination by its LC# (user 2026-10-01): (1.0+0.105S_DS)D + 0.525ρE + 0.75L = LC6 (seismic)
+  assert.ok(e.includes('LC6 →') && e.includes('§2.4.5 (6)') && e.includes('ASD — used for design'));
   assert.ok(e.includes('0.75×0.80'), 'L reaction at the left end substituted (1 k at 2 ft → 0.80)');
-  const rows = designBasisRows({ loadType: 'both', omega0: '2.5' });
-  assert.ok(rows[0][1].includes('D + L') && rows[0][1].includes('D + 0.75L + 0.75(0.6W) + 0.75Lr'));
-  assert.ok(rows[2][1].includes('1.2D + 1.6L + 0.5Lr'));
+  const rows = lcTableRows({ loadType: 'both', omega0: '2.5' });
+  assert.ok(rows.some(r => r[2] === 'D + L') && rows.some(r => r[2] === 'D + 0.75L + 0.75(0.6W) + 0.75Lr'));
+  assert.ok(rows.some(r => r[1] === 'LRFD' && r[2] === '1.2D + 1.6L + 0.5Lr'));
   const r = checkShearWallItem({ schemaVersion: 8, inputs: inp });
   assert.ok(r.ok, r.error);
   const b = document.createElement('div');
   const o = calcAll(inp);
   renderLineResults(b, lineOf(o), o.perDirection[0], { tab: 'walls', onTab() {}, report: 'detailed' });
-  assert.ok(b.textContent.includes('End forces by combination'));
-  assert.ok(b.textContent.includes('Overturning — loads used for the end forces'));
+  // detailed calc sheet: gravity rows, overturning about each corner, load-case end forces, superposition, all combinations
+  for (const t of ['B2. Gravity on this wall', '#1 Point', 'C3. Overturning about each corner', 'C4. End forces by load case', 'C5. Governing ASD combination', 'End forces by combination'])
+    assert.ok(b.textContent.includes(t), 'calc sheet shows ' + t);
 });
 
 test('Gravity panel: add a full-line row, link a Flat Load assembly × trib, markers drawn', () => {
@@ -251,14 +253,14 @@ test('Distribution tab: capacity weights and shares by hand; deflection method s
   // Deflection method
   inp.distribution = 'deflection';
   const od = calcAll(inp);
-  const dl = deflectionDistRows(lineOf(od).perLevel[0], 'E');
-  assert.ok(dl[0][2].startsWith('Eq. 4.3-1, v = ') && dl[0][2].includes('8vh³/EAb'), 'stiffness basis shows the Eq. 4.3-1 terms');
-  const k1 = parseFloat(dl[0][4]), k2 = parseFloat(dl[1][4]);
-  near(parseFloat(dl[0][5]) / 100, k1 / (k1 + k2), 0.002);
+  const dl = deflectionDistRows(lineOf(od).perLevel[0], 'E', lineOf(od).distribution);
+  assert.ok(dl[0][2].startsWith('Eq. 4.3-1, v = ') && dl[0][2].includes('8vh³/EAb'), 'δ basis shows the Eq. 4.3-1 terms');
+  near(parseFloat(dl[0][3]), parseFloat(dl[1][3]), 0.002); // equal δ at every wall with a share
+  assert.ok(dl[dl.length - 1].cells[2].startsWith('story δ* = '));
   const bd = document.createElement('div');
   renderLineResults(bd, lineOf(od), od.perDirection[0], { tab: 'distribution', onTab() {} });
-  assert.ok(/final pass — distribution by deflection .*pass/.test(bd.textContent));
-  assert.ok(bd.textContent.includes('k = V/δ (lb/in)'));
+  assert.ok(/final split — distribution by deflection .*pass/.test(bd.textContent));
+  assert.ok(bd.textContent.includes('Relative stiffness') && !bd.textContent.includes('k = V/δ (lb/in)') && !bd.textContent.includes('δ at zero own share'));
 });
 
 test('Walls summary report: overturning table; PDF summary vs detailed report', () => {
@@ -269,11 +271,12 @@ test('Walls summary report: overturning table; PDF summary vs detailed report', 
   renderLineResults(b, lineOf(o), o.perDirection[0], { tab: 'walls', onTab() {} });
   assert.ok(b.textContent.includes('Overturning — loads used for the end forces'));
   assert.ok(b.textContent.includes('OTM 1.0 = V·h'));
-  assert.ok(b.textContent.includes('(1.0+0.105SDS)D + 0.525ρE + 0.75L'), 'governing compression combo named');
+  assert.ok(/LC6 [→←]/.test(b.textContent), 'governing compression combo named by its LC#');
   const sum = shearWallDesign.pdfSections(inp).map(x => x.title);
   assert.ok(sum.some(t => /Shear distribution/.test(t)) && !sum.some(t => /Calc sheet/.test(t)));
   const det = shearWallDesign.pdfSections({ ...inp, pdfReport: 'detailed' }).map(x => x.title);
-  assert.ok(det.some(t => /Calc sheet SW-1/.test(t)) && det.some(t => /SW-1 gravity loads/.test(t)) && det.some(t => /SW-1 end forces/.test(t)));
+  // the PDF calc sheet is the tool's (user 2026-10-01): B2 gravity and the all-combinations table are its sections
+  assert.ok(det.some(t => t.includes('Calc sheet SW-1')) && det.some(t => t.includes('B2. Gravity on this wall')) && det.some(t => t.includes('All combinations (this wall only')));
 });
 
 console.log(passed + ' passed' + (process.exitCode ? ', some FAILED' : ''));

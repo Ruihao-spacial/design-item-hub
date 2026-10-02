@@ -1,0 +1,343 @@
+{
+  "id": "V02",
+  "title": "Two unequal walls + self-weight",
+  "intent": "Capacity distribution between two solid walls of different length (8 ft and 12 ft) at one story, with each wall carrying only its own self-weight. Proves weight = v_cap × L, share = V × weight / Σ weight, the equal unit shear that follows, and per-wall overturning, holdown and post.",
+  "covers": [
+    "SDPWS 2021 §4.3.3.4.1 capacity distribution",
+    "SDPWS Table 4.3A + footnote 10",
+    "ASCE 7-22 §2.4.5 (5), (8)",
+    "HDUE selection",
+    "G2 horizontal equilibrium"
+  ],
+  "handCalc": [
+    {
+      "step": 1,
+      "text": "Story shear V = 1.0E = 10 k. Walls SW-1 L = 8 ft, SW-2 L = 12 ft, h = 10 ft (h/b = 1.25 and 0.83, both ≤ 2 → C_hb = 1.0)."
+    },
+    {
+      "step": 2,
+      "text": "Nailing trial: with one pattern at both walls v = 0.7 × 10000 / (8 + 12) = 350.00 plf → 4\" o.c. (470 plf)."
+    },
+    {
+      "step": 3,
+      "text": "Weights = v_cap × L: SW-1 470 × 8 = 3760 lb, SW-2 470 × 12 = 5640 lb, Σ = 9400 lb."
+    },
+    {
+      "step": 4,
+      "text": "Shares: V_1 = 10 × 3760 / 9400 = 4.000 k, V_2 = 10 × 5640 / 9400 = 6.000 k (Σ = 10.00 k)."
+    },
+    {
+      "step": 5,
+      "text": "Unit shear: v_1 = 0.7 × 4000.00 / 8 = 350.00 plf, v_2 = 0.7 × 6000.00 / 12 = 350.00 plf → both 4\" o.c., D/C = 350.00 / 470 = 0.745."
+    },
+    {
+      "step": 6,
+      "text": "Self-weight: D_1 = 10 × 8 × 10 / 1000 = 0.80 k (R = 0.40 each end); D_2 = 10 × 12 × 10 / 1000 = 1.20 k (R = 0.60)."
+    },
+    {
+      "step": 7,
+      "text": "Overturning 1.0E: N_1 = 4.000 × 10 / 8 = 5.000 k; N_2 = 6.000 × 10 / 12 = 5.000 k (equal: same v at both walls)."
+    },
+    {
+      "step": 8,
+      "text": "Uplift (0.6 − 0.14S_DS)D + 0.7E: T_1 = 0.7 × 5.000 − 0.46 × 0.40 = 3.316 k → HDUE3; T_2 = 0.7 × 5.000 − 0.46 × 0.60 = 3.224 k → HDUE3."
+    },
+    {
+      "step": 9,
+      "text": "Compression (1.0 + 0.14S_DS)D + 0.7E: C_1 = 1.14 × 0.40 + 0.7 × 5.000 = 3.956 k; C_2 = 1.14 × 0.60 + 0.7 × 5.000 = 4.184 k."
+    },
+    {
+      "step": 10,
+      "text": "End posts: HDUE3 minimum post (2)2x4; NDS cap at 10 ft = 5.00 k ≥ 4.184 k → (2)2x4 at every end."
+    },
+    {
+      "step": 11,
+      "text": "SW-1 (Eq. 4.3-1, → governs): v = 1000 × 4.000 / 8 = 500.00 plf, A = 10.5 in², G_a = 20 k/in → 8vh³/(EAb) = 0.0280; vh/(1000G_a) = 0.2500; Δ_HD = 0.127 × 5000.00 / 3790 (ASD cap) = 0.1675 (HDUE3, T = 5000.00 lb); r = 5000.00 / (10.5 × 625) = 0.7619 → Δ_c = 0.0224; h·Δa/b = 10 × (0.1675 + 0.0224) / 8 = 0.2374 → δ = 0.5154 in."
+    },
+    {
+      "step": 12,
+      "text": "SW-2 (Eq. 4.3-1, → governs): v = 1000 × 6.000 / 12 = 500.00 plf, A = 10.5 in², G_a = 20 k/in → 8vh³/(EAb) = 0.0187; vh/(1000G_a) = 0.2500; Δ_HD = 0.127 × 5000.00 / 3790 (ASD cap) = 0.1675 (HDUE3, T = 5000.00 lb); r = 5000.00 / (10.5 × 625) = 0.7619 → Δ_c = 0.0224; h·Δa/b = 10 × (0.1675 + 0.0224) / 12 = 0.1583 → δ = 0.4269 in."
+    },
+    {
+      "step": 13,
+      "text": "Story drift Level 1: δxe = the largest wall δ = SW-1 0.5154 in → δx = Cd·δxe/Ie = 4 × 0.5154 / 1.0 = 2.062 in vs Δa = 0.020 × 10 × 12 = 2.400 in → OK."
+    }
+  ],
+  "expect": [
+    {
+      "label": "SW-1 capacity weight (lb)",
+      "at": "wall:SW-1",
+      "field": "capWeight.E",
+      "value": 3760,
+      "tol": 0.01,
+      "step": 3
+    },
+    {
+      "label": "SW-2 capacity weight (lb)",
+      "at": "wall:SW-2",
+      "field": "capWeight.E",
+      "value": 5640,
+      "tol": 0.01,
+      "step": 3
+    },
+    {
+      "label": "SW-1 share V (k)",
+      "at": "wall:SW-1",
+      "field": "shareExact_1E",
+      "value": 4,
+      "tol": 0.005,
+      "step": 4
+    },
+    {
+      "label": "SW-2 share V (k)",
+      "at": "wall:SW-2",
+      "field": "shareExact_1E",
+      "value": 6,
+      "tol": 0.005,
+      "step": 4
+    },
+    {
+      "label": "SW-1 unit shear (plf)",
+      "at": "wall:SW-1",
+      "field": "unitShear_seismic",
+      "value": 350,
+      "tol": 0.01,
+      "step": 5
+    },
+    {
+      "label": "SW-2 unit shear (plf)",
+      "at": "wall:SW-2",
+      "field": "unitShear_seismic",
+      "value": 349.99999999999994,
+      "tol": 0.01,
+      "step": 5
+    },
+    {
+      "label": "SW-1 dead load (k)",
+      "at": "wall:SW-1",
+      "field": "dlTotal",
+      "value": 0.8,
+      "tol": 0.005,
+      "step": 6
+    },
+    {
+      "label": "SW-2 dead load (k)",
+      "at": "wall:SW-2",
+      "field": "dlTotal",
+      "value": 1.2,
+      "tol": 0.005,
+      "step": 6
+    },
+    {
+      "label": "SW-1 governing T left (k)",
+      "at": "wall:SW-1",
+      "field": "governingTensionLeft",
+      "value": 3.316,
+      "tol": 0.005,
+      "step": 8
+    },
+    {
+      "label": "SW-2 governing T left (k)",
+      "at": "wall:SW-2",
+      "field": "governingTensionLeft",
+      "value": 3.224,
+      "tol": 0.005,
+      "step": 8
+    },
+    {
+      "label": "SW-2 governing C right (k)",
+      "at": "wall:SW-2",
+      "field": "governingComprRight",
+      "value": 4.184,
+      "tol": 0.005,
+      "step": 9
+    },
+    {
+      "label": "SW-1 δ at 1.0E (in)",
+      "at": "wall:SW-1",
+      "field": "deflection.E.delta",
+      "value": 0.5153980667807043,
+      "tol": 0.0005,
+      "step": 11
+    },
+    {
+      "label": "SW-2 δ at 1.0E (in)",
+      "at": "wall:SW-2",
+      "field": "deflection.E.delta",
+      "value": 0.4269320445204695,
+      "tol": 0.0005,
+      "step": 12
+    },
+    {
+      "label": "Story δxe, Level 1 (in)",
+      "at": "drift:Level 1",
+      "field": "seismic.deltaXE",
+      "value": 0.5153980667807043,
+      "tol": 0.0005,
+      "step": 13
+    },
+    {
+      "label": "Governing wall for drift, Level 1",
+      "at": "drift:Level 1",
+      "field": "seismic.wallMark",
+      "value": "SW-1",
+      "step": 13
+    },
+    {
+      "label": "δx = Cd·δxe/Ie, Level 1 (in)",
+      "at": "drift:Level 1",
+      "field": "seismic.deltaX",
+      "value": 2.0615922671228173,
+      "tol": 0.002,
+      "step": 13
+    },
+    {
+      "label": "Drift passes, Level 1",
+      "at": "drift:Level 1",
+      "field": "seismic.pass",
+      "value": true,
+      "step": 13
+    }
+  ],
+  "expectChecks": {
+    "fail": []
+  },
+  "notChecked": "The deflection terms one by one (see V15) and the load combinations other than the governing uplift / compression pair (see V03).",
+  "pinned": {
+    "SW-1": {
+      "nail": "4",
+      "hdL": "HDUE3",
+      "hdR": "HDUE3",
+      "postL": "(2)2x4",
+      "postR": "(2)2x4"
+    },
+    "SW-2": {
+      "nail": "4",
+      "hdL": "HDUE3",
+      "hdR": "HDUE3",
+      "postL": "(2)2x4",
+      "postR": "(2)2x4"
+    }
+  },
+  "schemaVersion": 12,
+  "inputs": {
+    "sds": "1",
+    "loadType": "seismic",
+    "wallThickness": "4",
+    "woodGrade": "dfir_no1",
+    "sheathing": "ply",
+    "distribution": "capacity",
+    "cd": "4",
+    "ie": "1.0",
+    "riskCategory": "II",
+    "driftRow": "other",
+    "driftBypass": false,
+    "alphaS": "",
+    "windDriftLimit": "400",
+    "omega0": "2.5",
+    "lrfdHalfL": false,
+    "wswhFc": "2500",
+    "seismicDesignCategory": "",
+    "detachedOneTwoFamily": false,
+    "pdfReport": "detailed",
+    "refs": {},
+    "notes": "",
+    "wallDLTypes": [
+      {
+        "id": "wdt-1",
+        "name": "Stud wall",
+        "psf": "10"
+      }
+    ],
+    "levels": [
+      {
+        "id": "lvl-1",
+        "name": "Level 1",
+        "floorToFloor": 10,
+        "anchorageType": "auto",
+        "floorClearSpan": "16"
+      }
+    ],
+    "directions": [
+      {
+        "id": "dir-1",
+        "name": "N-S",
+        "rho": 1,
+        "lines": [
+          {
+            "id": "ln-1",
+            "name": "Line A",
+            "totalLength": 30,
+            "wallThickness": "",
+            "distribution": "",
+            "driftBypass": "",
+            "distReviewed": [],
+            "levelLoads": {
+              "lvl-1": {
+                "seismic": "10",
+                "wind": ""
+              }
+            },
+            "gravityLoads": {
+              "lvl-1": {
+                "loads": []
+              }
+            },
+            "walls": [
+              {
+                "id": "w-1",
+                "mark": "SW-1",
+                "levelId": "lvl-1",
+                "position": 2,
+                "length": 8,
+                "method": "segmented",
+                "systemType": "sheathed",
+                "openings": [],
+                "narrowPier": false,
+                "wallDLTypeId": "wdt-1",
+                "nailingPattern": "4",
+                "anchorageLeftOverride": "HDUE3",
+                "anchorageRightOverride": "HDUE3",
+                "postLeftOverride": "(2)2x4",
+                "postRightOverride": "(2)2x4",
+                "ftaoStrapOverride": "",
+                "jambPostOverride": "",
+                "wswhWidth": "18",
+                "wswhCondition": "concrete",
+                "wswhJoist": "12",
+                "wswhFloorDepth": "12",
+                "wswhAnchorOverride": ""
+              },
+              {
+                "id": "w-2",
+                "mark": "SW-2",
+                "levelId": "lvl-1",
+                "position": 16,
+                "length": 12,
+                "method": "segmented",
+                "systemType": "sheathed",
+                "openings": [],
+                "narrowPier": false,
+                "wallDLTypeId": "wdt-1",
+                "nailingPattern": "4",
+                "anchorageLeftOverride": "HDUE3",
+                "anchorageRightOverride": "HDUE3",
+                "postLeftOverride": "(2)2x4",
+                "postRightOverride": "(2)2x4",
+                "ftaoStrapOverride": "",
+                "jambPostOverride": "",
+                "wswhWidth": "18",
+                "wswhCondition": "concrete",
+                "wswhJoist": "12",
+                "wswhFloorDepth": "12",
+                "wswhAnchorOverride": ""
+              }
+            ],
+            "beams": [],
+            "supportPosts": []
+          }
+        ]
+      }
+    ]
+  }
+}

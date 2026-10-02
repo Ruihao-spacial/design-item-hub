@@ -1,0 +1,113 @@
+{
+  "calcVersion": "v18",
+  "lines": [
+    {
+      "line": "N-S / Line A",
+      "walls": [
+        {
+          "mark": "SW-5",
+          "level": "Roof",
+          "method": "wall",
+          "nailing": "6",
+          "basis": "manual",
+          "V_E": 2,
+          "V_W": 0,
+          "dc": 0.75,
+          "T": [
+            1.976,
+            1.976
+          ],
+          "C": [
+            2.408,
+            2.408
+          ],
+          "anchorage": [
+            "MSTC40",
+            "MSTC40"
+          ],
+          "posts": [
+            "(2)2x4",
+            "(2)2x4"
+          ],
+          "deltaE": 0.324
+        },
+        {
+          "mark": "SW-6",
+          "level": "Level 1",
+          "method": "wall",
+          "nailing": "4",
+          "basis": "manual",
+          "V_E": 5,
+          "V_W": 0,
+          "dc": 0.74,
+          "T": [
+            3.27,
+            3.27
+          ],
+          "C": [
+            4.07,
+            4.07
+          ],
+          "anchorage": [
+            "HDUE3",
+            "HDUE3"
+          ],
+          "posts": [
+            "(2)2x4",
+            "(2)2x4"
+          ],
+          "deltaE": 0.462
+        }
+      ],
+      "posts": [
+        {
+          "mark": "P-3",
+          "T": 0.353,
+          "C": 2.777,
+          "anchorage": "HDUE3",
+          "post": "(2)2x4"
+        },
+        {
+          "mark": "P-4",
+          "T": 0.395,
+          "C": 2.675,
+          "anchorage": "HDUE3",
+          "post": "(2)2x4"
+        }
+      ],
+      "beams": [
+        {
+          "mark": "BM-1",
+          "supports": [
+            {
+              "x": 2,
+              "T": 0.353,
+              "C": 2.777,
+              "receiver": "post"
+            },
+            {
+              "x": 14,
+              "T": 0.395,
+              "C": 2.675,
+              "receiver": "post"
+            }
+          ]
+        }
+      ],
+      "drift": [
+        {
+          "level": "Roof",
+          "dx": 1.296,
+          "pass": true
+        },
+        {
+          "level": "Level 1",
+          "dx": 1.849,
+          "pass": true
+        }
+      ],
+      "checksFailed": [],
+      "warnings": []
+    }
+  ]
+}

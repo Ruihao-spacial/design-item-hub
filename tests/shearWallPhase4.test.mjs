@@ -9,7 +9,8 @@ import { getNailingById } from '../src/modules/shearWallNailing.js';
 import { getGradeById } from '../src/modules/shearWallHardware.js';
 import { wallPiers, openingProblems } from '../src/modules/shearWallOpenings.js';
 import { checkShearWallItem } from '../scripts/lib/shearWallLoadCheck.mjs';
-import { shearWallDesign, renderLineResults } from '../src/modules/shearWallDesign.js';
+import { shearWallDesign, renderLineResults, migrateV9toV10 } from '../src/modules/shearWallDesign.js';
+import { validateEngineeringInputs } from '../src/validation.js';
 import { renderElevation, renderElevationForPdf } from '../src/modules/shearWallElevation.js';
 
 const near = (a, b, tol, msg) => assert.ok(Math.abs(a - b) <= tol, (msg || '') + ' expected ' + b + ' ± ' + tol + ', got ' + a);
@@ -56,18 +57,45 @@ test('h/b > 3.5 wall carries no shear and is flagged in the audit', () => {
   assert.ok(lineOf(out).loadPathAudit.warnings.some(w => w.type === 'aspect_ratio' && w.elementId === 'w-2'));
 });
 
-test('Segmented wall with one opening = two separate walls', () => {
-  const seg = calcAll(oneStory([wall('w-1', 0, 10, { openings: [{ id: 'op-1', offset: 4, width: 2, sill: 3, head: 7 }] })]));
-  const sep = calcAll(oneStory([wall('w-1', 0, 4), wall('w-2', 6, 4)]));
-  const a = wallsOf(seg), b = wallsOf(sep);
-  assert.deepEqual(a.map(w => w.mark), ['SW-1a', 'SW-1b']);
-  assert.deepEqual(a.map(w => w.parentWallId), ['w-1', 'w-1']);
-  const pick = (w) => [w.position, w.length, w.share_1E, w.nailing.id, w.governingTensionLeft, w.governingComprRight, w.anchorageLeft.id, w.postRight.postId];
-  assert.deepEqual(a.map(pick), b.map(pick));
+test('Segmented walls are solid: openings on a segmented wall (outside data) are ignored, the wall is designed solid and flagged', () => {
+  const out = calcAll(oneStory([wall('w-1', 0, 10, { openings: [{ id: 'op-1', offset: 4, width: 2, sill: 3, head: 7 }] })]));
+  const ws = wallsOf(out);
+  assert.deepEqual(ws.map(w => [w.mark, w.method, w.length, w.openingsIgnored]), [['SW-1', 'wall', 10, true]]);
+  assert.ok(lineOf(out).loadPathAudit.warnings.some(w => w.type === 'openings' && /segmented walls are solid/.test(w.message)));
 });
 
-test('Opening geometry problems → wall designed as solid, audit warning', () => {
-  const bad = wall('w-1', 0, 10, { openings: [{ id: 'op-1', offset: 0.5, width: 3, sill: 3, head: 7 }] });
+test('Only FTAO walls take openings: v9 → v10 migration makes a segmented wall with openings FTAO; save gate; panel', () => {
+  const inp = oneStory([wall('w-1', 0, 10, { openings: [{ id: 'op-1', offset: 4, width: 2, sill: 3, head: 7 }] }), wall('w-2', 20, 8)]);
+  const errs = validateEngineeringInputs('shear_wall_design', { ...JSON.parse(JSON.stringify(inp)), sds: '1.0' });
+  assert.ok(errs.some(e => /SW-1.*segmented walls are solid/.test(e)), 'save blocked: ' + errs.join(' | '));
+  migrateV9toV10(inp); migrateV9toV10(inp);
+  assert.deepEqual(inp.directions[0].lines[0].walls.map(w => w.method), ['ftao', 'segmented']);
+  assert.ok(!validateEngineeringInputs('shear_wall_design', { ...inp, sds: '1.0' }).some(e => /segmented walls are solid/.test(e)));
+  assert.equal(shearWallDesign.migrate({ schemaVersion: 9, inputs: oneStory([wall('w-1', 0, 10, { openings: [{ id: 'op-1', offset: 4, width: 2, sill: 3, head: 7 }] })]) }).inputs.directions[0].lines[0].walls[0].method, 'ftao');
+  // Wall panel: a segmented wall shows no "+ Opening"; an FTAO wall with openings cannot switch to segmented
+  const panelOf = (w) => {
+    const pinp = oneStory([w]);
+    const c = document.createElement('div');
+    const h = renderElevation(c, pinp.directions[0].lines[0], pinp.levels, [], {});
+    h.drawSVG();
+    const find = [...c.querySelectorAll('select')].find(s => (s.getAttribute('title') || '').includes('mark or ID'));
+    [...find.querySelectorAll('option')].find(o => o.getAttribute('value') === 'wall:' + w.id).setAttribute('selected', '');
+    find.dispatchEvent(new window.Event('change'));
+    const out = { t: c.textContent, method: [...c.querySelectorAll('option')].filter(o => /^Segmented \(solid/.test(o.textContent)) };
+    h.destroy();
+    return out;
+  };
+  const seg = panelOf(wall('w-1', 0, 10));
+  assert.ok(seg.t.includes('Wall method and openings'), 'wall panel open');
+  assert.ok(!seg.t.includes('+ Opening'), 'no + Opening for a segmented wall');
+  assert.ok(seg.t.includes('Segmented walls are solid full-height walls. For a window, choose FTAO'));
+  const ft = panelOf(wall('w-1', 0, 19.5, { method: 'ftao', openings: [{ id: 'op-1', offset: 4, width: 6, sill: 4, head: 6.67 }] }));
+  assert.ok(ft.t.includes('+ Opening') && ft.t.includes('FTAO piers beside the openings'));
+  assert.ok(ft.method.length === 1 && ft.method[0].disabled, 'segmented disabled while the wall has openings');
+});
+
+test('Opening geometry problems → FTAO wall designed as solid, audit warning', () => {
+  const bad = wall('w-1', 0, 10, { method: 'ftao', openings: [{ id: 'op-1', offset: 0.5, width: 3, sill: 3, head: 7 }] });
   assert.ok(openingProblems(bad, 10).some(p => /Pier 1/.test(p)));
   const out = calcAll(oneStory([bad]));
   const ws = wallsOf(out);
@@ -145,10 +173,14 @@ test('FTAO jamb posts: C = fD·DL + v_i·h_o; self-weight excludes openings; loa
   near(g.ftao.jambs[0].dl - w.ftao.jambs[0].dl, 0.6, 0.005);
 });
 
-test('Segmented: only loads over the pier lengths reach the piers', () => {
-  const inp = oneStory([wall('w-1', 0, 10, { openings: [{ id: 'op-1', offset: 4, width: 2, sill: 3, head: 7 }] })]);
+test('Window between two solid walls: each wall takes the load over it; the load over the gap is not carried (note)', () => {
+  const inp = oneStory([wall('w-1', 0, 4), wall('w-2', 6, 4)]);
+  inp.directions[0].lines[0].totalLength = 10;
   inp.directions[0].lines[0].gravityLoads = { 'lvl-1': { uniform: [{ id: 'gu-1', start: 0, end: 10, dlPlf: 100 }], point: [] } };
-  assert.deepEqual(wallsOf(calcAll(inp)).map(p => p.dlFromDiagram), [0.4, 0.4]);
+  const out = calcAll(inp), [a, b] = wallsOf(out);
+  assert.deepEqual([a.dlFromDiagram, b.dlFromDiagram], [0.4, 0.4]); // 100 plf × 4 ft each
+  assert.ok(lineOf(out).loadPathAudit.notes.some(n => n.type === 'gravity_unsupported' && /4–6 ft/.test(n.message)), 'gap load noted');
+  assert.equal(lineOf(out).checksFailed, 0, 'G4 / G8 reconcile the noted load');
 });
 
 test('Wall deflection uses 1.0E shear, selected posts/holdown, Ga for sheathing; drift vs Table 12.12-1', () => {
@@ -223,7 +255,7 @@ test('Migration v5→v6 adds opening and deflection defaults, idempotent', () =>
 });
 
 test('Openings definition renders: form, results, PDF sections, elevations', () => {
-  const inp = oneStory([t555Wall(), wall('w-2', 25, 10, { openings: [{ id: 'op-3', offset: 4, width: 2, sill: 3, head: 7 }] })],
+  const inp = oneStory([t555Wall(), wall('w-2', 25, 4), wall('w-3', 31, 4)],
     { seismic: 8, floorH: 8, loadType: 'both', extra: { cd: '4', ie: '1', riskCategory: 'II', alphaS: '0.7' } });
   inp.directions[0].lines[0].levelLoads['lvl-1'].wind = 6;
   const r = checkShearWallItem({ schemaVersion: 6, inputs: inp });
@@ -232,15 +264,19 @@ test('Openings definition renders: form, results, PDF sections, elevations', () 
   const c = document.createElement('div');
   shearWallDesign.renderOutputs(c, out);
   assert.ok(c.textContent.includes('Full results for each wall line'), 'bottom section is a summary');
-  assert.ok(!c.textContent.includes('SW-2a'), 'no wall detail in the summary');
+  assert.ok(!c.textContent.includes('Calc detail'), 'no wall detail in the summary');
   // Line results, one sub-tab at a time
   const dirOut = out.perDirection[0], ln = dirOut.perLine[0];
-  const tabText = (tab, report) => { const b = document.createElement('div'); renderLineResults(b, ln, dirOut, { tab, onTab() {}, report }); return b.textContent; };
-  const expect = { walls: ['SW-2a', 'SW-2b', 'Overturning'], distribution: ['Capacity method', 'Weight = cap × L', 'story shear V'], drift: ['Story drift', 'Wall deflections'], lrfd: ['forces only', 'HDUE LRFD cap'], loadpath: ['load path'] };
+  const tabText = (tab, report, detail) => { const b = document.createElement('div'); renderLineResults(b, ln, dirOut, { tab, onTab() {}, report, detail, defs: { inputs: inp, line: inp.directions[0].lines[0] } }); return b.textContent; };
+  const expect = { walls: ['SW-2', 'SW-3', 'Overturning'], distribution: ['Capacity method', 'Weight = cap × L', 'story shear V'], drift: ['Story drift — seismic', 'Wall deflections'], forces: ['ASD envelope', 'HD / Strap', 'LC1  D'], postsbeams: ['nothing to show'], checks: ['G1'] };
   for (const [tab, words] of Object.entries(expect)) for (const w of words) assert.ok(tabText(tab).toLowerCase().includes(w.toLowerCase()), tab + ' tab shows ' + w);
   // Summary report: schedule + overturning summary; detailed: each wall's calc by type (FTAO included)
-  assert.ok(!tabText('walls').includes('FTAO calc'), 'summary has no per-wall calc');
-  for (const w of ['Calc detail', 'FTAO calc', 'Jamb posts', 'End forces by combination']) assert.ok(tabText('walls', 'detailed').includes(w), 'detailed report shows ' + w);
+  assert.ok(!tabText('walls').includes('Calc sheet'), 'summary has no per-wall calc');
+  // Detailed: level → type → mark tabs, one wall's calc sheet at a time
+  const seg = tabText('walls', 'detailed', { type: 'wall', mark: 'SW-3' });
+  for (const w of ['Segmented (2)', 'FTAO (1)', 'Calc sheet — SW-3', 'A. Wall definition', 'C1. Sheathing capacity', 'C5. Governing ASD combination']) assert.ok(seg.includes(w), 'detailed report shows ' + w);
+  const ft = tabText('walls', 'detailed', { type: 'ftao' });
+  for (const w of ['Calc sheet — SW-1', 'FTAO engine', 'Jamb posts', 'All combinations']) assert.ok(ft.includes(w), 'FTAO sheet shows ' + w);
   assert.ok(tabText('ftao').includes('Overturning'), 'old FTAO tab key falls back to Walls');
   // The line tab of the form shows the line results
   const form = document.createElement('div');
@@ -249,24 +285,29 @@ test('Openings definition renders: form, results, PDF sections, elevations', () 
   assert.ok(form.textContent.includes('Line Results — N-S / A'), 'line tab has its results');
   [...form.querySelectorAll('button')].find(b => b.textContent.startsWith('Drift')).dispatchEvent(new window.Event('click'));
   assert.ok(form.textContent.includes('Story drift'), 'sub-tab switches');
-  const titles = shearWallDesign.pdfSections(inp).map(x => x.title).join(' | ');
-  for (const t of ['FTAO SW-1', 'LRFD Forces', 'Story Drift', 'Wall Deflection']) assert.ok(titles.includes(t), 'PDF has ' + t);
+  // PDF per wall line (user 2026-10-01): Summary = schedules; Detailed adds the calcs (FTAO, deflection terms, forces, checks)
+  const titles = shearWallDesign.pdfSections({ ...inp, pdfReport: 'summary' }).map(x => x.title).join(' | ');
+  for (const t of ['Load Combinations', 'Wall lines', 'N-S / A — Wall schedule', 'N-S / A — Story drift', 'N-S / A — Elevation']) assert.ok(titles.includes(t), 'Summary PDF has ' + t);
+  for (const t of ['FTAO SW-1', 'Wall deflection', 'LRFD Forces']) assert.ok(!titles.includes(t), 'Summary PDF has no ' + t);
+  const det = shearWallDesign.pdfSections({ ...inp, pdfReport: 'detailed' }).map(x => x.title).join(' | ');
+  // the calc sheet is the tool's (user 2026-10-01): the FTAO part is its C1–C2 section
+  for (const t of ['C1–C2. FTAO engine', 'Wall deflection', 'End forces — ASD envelope', 'Equilibrium checks G1–G12', 'Calc sheet SW-1']) assert.ok(det.includes(t), 'Detailed PDF has ' + t);
 });
 
-test('Elevation: segmented piers drawn with their marks, FTAO strap label, pier quick edit sets the parent', () => {
-  const inp = oneStory([t555Wall(), wall('w-2', 25, 10, { openings: [{ id: 'op-3', offset: 4, width: 2, sill: 3, head: 7 }] })], { seismic: 8, floorH: 8 });
+test('Elevation: solid walls and the FTAO strap label drawn; nailing quick edit sets the wall', () => {
+  const inp = oneStory([t555Wall(), wall('w-2', 25, 10)], { seismic: 8, floorH: 8 });
   const line = inp.directions[0].lines[0];
   const resFor = () => shearWallDesign.calc(inp).perDirection[0].perLine[0];
   const c = document.createElement('div');
   const h = renderElevation(c, line, inp.levels, [], { onInputChange() { h.showResults(resFor()); } });
   h.showResults(resFor());
   const texts = () => [...c.querySelectorAll('text')].map(t => t.textContent);
-  assert.ok(texts().includes('SW-2a') && texts().includes('SW-2b'), 'pier marks');
+  assert.ok(texts().includes('SW-2') && !texts().includes('SW-2a'), 'solid wall mark, no piers');
   const strap = resFor().perLevel[0].walls.find(w => w.method === 'ftao').ftao.strap.id;
-  assert.ok(texts().includes(strap), 'FTAO strap label ' + strap);
+  assert.ok(texts().some(t => t.startsWith(strap)), 'FTAO strap label ' + strap + ' (with its D/C)');
   c.querySelector('.elevation-wrapper').getBoundingClientRect = () => ({ left: 0, top: 0 });
-  const t = c.querySelector('[data-edit="nailing:w-2#p1"]');
-  assert.ok(t, 'pier nailing target');
+  const t = c.querySelector('[data-edit="nailing:w-2"]');
+  assert.ok(t, 'wall nailing target');
   const ev = new window.Event('click', { bubbles: true }); ev.clientX = 10; ev.clientY = 10;
   t.dispatchEvent(ev);
   const qe = c.querySelector('.quick-edit');
@@ -275,10 +316,11 @@ test('Elevation: segmented piers drawn with their marks, FTAO strap label, pier 
   [...sel.querySelectorAll('option')].forEach(o => o.removeAttribute('selected'));
   [...sel.querySelectorAll('option')].find(o => o.getAttribute('value') === '3').setAttribute('selected', '');
   sel.dispatchEvent(new window.Event('change'));
-  assert.equal(line.walls[1].nailingPattern, '3', 'parent wall nailing overridden');
-  const pdf = renderElevationForPdf(line, inp.levels, [], resFor(), 600);
-  const pdfTexts = [...pdf.querySelectorAll('text')].map(x => x.textContent);
-  assert.ok(pdfTexts.includes('SW-2a') && pdfTexts.includes(strap), 'PDF shows piers and strap');
+  assert.equal(line.walls[1].nailingPattern, '3', 'wall nailing overridden');
+  // PDF: the strap is hardware — on the hardware elevation (with its D/C), not on the end-force one (user 2026-10-01)
+  const pdfTexts = (mode) => [...renderElevationForPdf(line, inp.levels, [], resFor(), 600, mode).querySelectorAll('text')].map(x => x.textContent);
+  assert.ok(pdfTexts('hardware').includes('SW-2') && pdfTexts('hardware').some(t => t.startsWith(strap)), 'PDF hardware elevation shows the wall and the strap');
+  assert.ok(pdfTexts('forces').includes('SW-2') && !pdfTexts('forces').some(t => t.startsWith(strap)), 'no strap on the PDF end-force elevation');
   h.destroy();
 });
 
@@ -332,7 +374,7 @@ test('Distribution dropdowns render; results and PDF name the approach', () => {
   const b = document.createElement('div');
   const o = shearWallDesign.calc(inp);
   renderLineResults(b, o.perDirection[0].perLine[0], o.perDirection[0], { tab: 'walls', onTab() {} });
-  assert.ok(b.textContent.includes('distribution by deflection (wall δ within'));
+  assert.ok(b.textContent.includes('distribution by deflection (equal δ at every level'));
   assert.ok(shearWallDesign.pdfSections(inp).some(s => (s.rows || []).some(r => /distribution by deflection/.test(r[1]))), 'PDF line summary names the approach');
 });
 

@@ -64,9 +64,11 @@ test('Migration v4→v5: mixed valid and NaN ids continue after the highest exis
 
 test('Regression: aligned stacked walls match Phase 3 results (nailing, T/C, accumulation, hardware)', () => {
   const ln = lineOut(calcAll(fixture()), 'Line A');
+  // end forces are unrounded since calc v12; the Phase 3 baseline is at 0.01 k (display rounding)
+  const q = (v) => (v == null ? null : Math.round(v * 100) / 100);
   const rows = ln.perLevel.flatMap(p => p.walls).map(w => ({ mark: w.mark, nailing: w.nailing.id, dcRatio: w.dcRatio,
-    govT: [w.governingTensionLeft, w.governingTensionRight], govC: [w.governingComprLeft, w.governingComprRight],
-    accumT: w.accumTension ?? null, accumC: w.accumCompression ?? null,
+    govT: [q(w.governingTensionLeft), q(w.governingTensionRight)], govC: [q(w.governingComprLeft), q(w.governingComprRight)],
+    accumT: q(w.accumTension ?? null), accumC: q(w.accumCompression ?? null),
     anchorage: [(w.anchorageLeft || {}).id || null, (w.anchorageRight || {}).id || null],
     anchorageDC: [w.anchorageDCLeft, w.anchorageDCRight],
     post: [(w.postLeft || {}).postLabel || null, (w.postRight || {}).postLabel || null], postDC: [w.postDCLeft, w.postDCRight] }));
@@ -75,7 +77,17 @@ test('Regression: aligned stacked walls match Phase 3 results (nailing, T/C, acc
     const now = rows.find(x => x.mark === r.mark);
     return now && now.accumT === null && r.accumT === Math.max(...r.govT) ? { ...r, accumT: null, accumC: null } : r;
   });
-  assert.deepEqual(rows, base);
+  // ids exact; forces within 0.02 k and D/C within 0.01 (unrounded end forces, calc v12: sums of stacked ends move ≤ 0.01 k)
+  const ids = (r) => ({ mark: r.mark, nailing: r.nailing, anchorage: r.anchorage, post: r.post });
+  assert.deepEqual(rows.map(ids), base.map(ids));
+  const close = (x, y, tol, what) => { if (x == null || y == null) return assert.equal(x, y, what); assert.ok(Math.abs(x - y) <= tol + 1e-9, what + ': ' + x + ' vs ' + y); };
+  rows.forEach((r, i) => {
+    const b = base[i];
+    for (const k of ['govT', 'govC']) r[k].forEach((v, j) => close(v, b[k][j], 0.02, r.mark + ' ' + k));
+    for (const k of ['accumT', 'accumC']) close(r[k], b[k], 0.02, r.mark + ' ' + k);
+    for (const k of ['anchorageDC', 'postDC']) r[k].forEach((v, j) => close(v, b[k][j], 0.011, r.mark + ' ' + k));
+    close(r.dcRatio, b.dcRatio, 1e-9, r.mark + ' dcRatio');
+  });
   assert.equal(ln.loadPathAudit.warnings.length, 0);
 });
 
@@ -100,8 +112,8 @@ test('Beam statics hand check: supports 0 & 12, uplift 3k @2, compression 5k @8'
   // R0 = -3(10/12) + 5(4/12) = -0.833 (uplift); R12 = 2 - (-0.833) = 2.833
   assert.ok(near(a.perCombo.X, -0.83), 'R0 = ' + a.perCombo.X);
   assert.ok(near(b.perCombo.X, 2.83), 'R12 = ' + b.perCombo.X);
-  assert.equal(a.envelopeT, 0.83);
-  assert.equal(b.envelopeC, 2.83);
+  assert.ok(Math.abs(a.envelopeT - 5 / 6) < 1e-9, 'unrounded R0 uplift = 5/6 k');
+  assert.ok(Math.abs(b.envelopeC - 17 / 6) < 1e-9, 'unrounded R12 = 17/6 k');
 });
 
 test('Beam statics overhang: supports 2 & 10, wall 4–11 (compression end on overhang)', () => {
@@ -294,9 +306,16 @@ test('Elevation: walls reach the floor line, beam sits on it, reactions below it
   const inp = fixture();
   const lnC = inp.directions[0].lines[2];
   const lo = lineOut(calcAll(inp), 'Line C');
-  const L = computeElevationLayout(lnC, inp.levels, { width: 500, showForces: true, showHW: true });
+  // PDF elevations (user 2026-10-01): 'forces' = forces only (no hardware rows); 'hardware' = wall + post hardware rows, no forces
+  const Lh = computeElevationLayout(lnC, inp.levels, { width: 500, showForces: false, showHW: true, wallHwRows: true });
+  const svgH = renderElevationForPdf(lnC, inp.levels, inp.wallDLTypes || [], lo, 500, 'hardware');
+  const hwTexts = [...svgH.querySelectorAll('text')].map(t => t.textContent);
+  assert.ok(hwTexts.some(t => /(HDUE|MSTC)\d+/.test(t)), "hardware elevation shows wall HD / strap");
+  assert.ok(!hwTexts.some(t => /^Σ?▲/.test(t)), 'no forces on the hardware elevation');
+  assert.ok(Lh.levelYs.some(l => l.wallHwH > 0));
+  const L = computeElevationLayout(lnC, inp.levels, { width: 500, showForces: true, showHW: false });
   const lv2 = L.levelYs[1], lv3 = L.levelYs[2];
-  const svg = renderElevationForPdf(lnC, inp.levels, inp.wallDLTypes || [], lo, 500);
+  const svg = renderElevationForPdf(lnC, inp.levels, inp.wallDLTypes || [], lo, 500, 'forces');
   const rects = [...svg.querySelectorAll('rect')];
   const beam = rects.find(r => r.getAttribute('fill') === '#7c3aed' && +r.getAttribute('height') === 8);
   assert.ok(beam && near(+beam.getAttribute('y') + 8, lv2.floorY, 0.01), 'beam bottom on the 2nd-story floor line');
@@ -375,7 +394,7 @@ test('Elevation: click nailing / support hardware to override from the quick edi
   choose(qe, 0, 'MSTC40');
   const sDef = line.beams.find(b => b.id === beamId).supports.find(s => s.id === supId);
   assert.equal(sDef.anchorageOverride, 'MSTC40');
-  assert.ok(texts().some(t => /^MSTC40 [\d.]+ ✎$/.test(t)), 'support HW label shows MSTC40 ✎');
+  assert.ok(texts().some(t => /^\S+: MSTC40✎ [\d.]+$/.test(t)), 'support HW label: owner tag, MSTC40 with the override marker, D/C');
 });
 
 test('Elevation: overlapping posts open a chooser; Find selects by ID', () => {

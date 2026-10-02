@@ -100,7 +100,7 @@ export function newDirection(name) {
 export function newLine(name) {
   return {
     id: newLineId(), name: name || '', totalLength: 60,
-    wallThickness: '', distribution: '', // '' = project default distribution
+    wallThickness: '', distribution: '', driftBypass: '', distReviewed: [], // '' = project default distribution / drift mode; distReviewed = engineer-reviewed distribution warnings
     levelLoads: {}, walls: [], beams: [], supportPosts: [], gravityLoads: {},
   };
 }
@@ -181,6 +181,8 @@ export function defaultInputs() {
     ...deflectionDefaults(),
     ...projectV7Defaults(),
     ...projectV8Defaults(),
+    ...projectV9Defaults(),
+    ...projectV12Defaults(),
     woodGrade: 'dfir_no1',
     wallDLTypes: [wdt1, wdt2],
     levels: [lvl1, lvl2],
@@ -201,6 +203,16 @@ export function projectV7Defaults() {
 }
 
 // Schema v8: LRFD live-load factor 0.5 (ASCE 7-22 §2.3.1 exc. 1 / §2.3.6; Lo ≤ 100 psf, not garages or assembly)
+// Schema v9: drift check mode — project bypass (report only) and a per-line override ('' | 'check' | 'bypass')
+export function projectV9Defaults() {
+  return { driftBypass: false };
+}
+
+// Schema v12: wind drift serviceability limit h / n (user 2026-10-01; ASCE 7-22 Commentary CC.2.2: h/600 – h/400), report only
+export function projectV12Defaults() {
+  return { windDriftLimit: '400' };
+}
+
 export function projectV8Defaults() {
   return { lrfdHalfL: false, pdfReport: 'summary' }; // pdfReport: 'summary' | 'detailed' (adds a calc sheet per wall)
 }

@@ -1,7 +1,7 @@
 // Wall openings: geometry, checks, and segmented-wall expansion.
 // An opening is { id, offset, width, sill, head } in ft: offset from the wall's left end,
 // sill and head heights above the floor line. Wall height = level floor-to-floor.
-// Full-height openings (doors) are not openings — model them as separate walls.
+// Full-height openings (doors) are not openings — model them as separate walls. Only FTAO walls have openings.
 
 const TOL = 0.01;
 export const MIN_PIER_FT = 2.0;         // SDPWS 2021 §4.3.5.2
@@ -25,7 +25,7 @@ export function sortedOpenings(wall) {
     .sort((a, b) => a.offset - b.offset);
 }
 
-// Full-height piers between openings, absolute positions along the line
+// Full-height piers between the openings of an FTAO wall, absolute positions along the line
 export function wallPiers(wall) {
   const x0 = num(wall.position);
   const L = num(wall.length);
@@ -73,11 +73,11 @@ export function openingProblems(wall, floorH) {
   return problems;
 }
 
-const PIER_LETTERS = 'abcdefghijklmnopqrstuvwxyz';
-
-// Walls as the calc sees them: a segmented wall with openings becomes one wall per full-height pier.
-// Outer pier ends keep the parent's end overrides; inner ends (at openings) are auto-selected.
+// Walls as the calc sees them. Segmented walls are solid full-height walls and cannot have openings;
+// openings exist only on FTAO walls. A segmented wall that still carries openings (outside data) and an FTAO
+// wall with unusable opening geometry are designed as solid walls and reported.
 // Returns { walls, problems: { wallId: [messages] } }.
+export const SEGMENTED_OPENINGS_MSG = 'segmented walls are solid full-height walls and cannot have openings — use FTAO or split the wall';
 export function expandWalls(walls, levels) {
   const floorHOf = {};
   (levels || []).forEach(l => { floorHOf[l.id] = num(l.floorToFloor); });
@@ -85,24 +85,9 @@ export function expandWalls(walls, levels) {
   const problems = {};
   for (const w of walls || []) {
     if (!hasOpenings(w)) { out.push(w); continue; }
-    const p = openingProblems(w, floorHOf[w.levelId]);
+    const p = wallMethod(w) === 'ftao' ? openingProblems(w, floorHOf[w.levelId]) : [SEGMENTED_OPENINGS_MSG];
     if (p.length) { problems[w.id] = p; out.push({ ...w, openings: [], _openingsIgnored: true }); continue; }
-    if (wallMethod(w) === 'ftao') { out.push(w); continue; }
-    const piers = wallPiers(w);
-    piers.forEach((pr, i) => {
-      const first = i === 0, last = i === piers.length - 1;
-      out.push({
-        ...w,
-        id: w.id + '#p' + (i + 1),
-        mark: (w.mark || w.id) + PIER_LETTERS[i],
-        position: pr.start, length: pr.length, openings: [],
-        parentWallId: w.id, pierIndex: i,
-        anchorageLeftOverride: first ? w.anchorageLeftOverride : '',
-        anchorageRightOverride: last ? w.anchorageRightOverride : '',
-        postLeftOverride: first ? w.postLeftOverride : '',
-        postRightOverride: last ? w.postRightOverride : '',
-      });
-    });
+    out.push(w);
   }
   return { walls: out, problems };
 }

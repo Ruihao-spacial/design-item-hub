@@ -1,0 +1,175 @@
+{
+ "_source": "V18 wind + both case as built 2026-10-01 (schema 11, no windDriftLimit) — v12 adds windDriftLimit = 400",
+ "schemaVersion": 11,
+ "inputs": {
+  "sds": "1",
+  "loadType": "both",
+  "wallThickness": "4",
+  "woodGrade": "dfir_no1",
+  "sheathing": "ply",
+  "distribution": "capacity",
+  "cd": "",
+  "ie": "",
+  "riskCategory": "",
+  "driftRow": "other",
+  "driftBypass": false,
+  "alphaS": "0.7",
+  "omega0": "",
+  "lrfdHalfL": false,
+  "wswhFc": "2500",
+  "seismicDesignCategory": "",
+  "detachedOneTwoFamily": false,
+  "pdfReport": "detailed",
+  "refs": {},
+  "notes": "",
+  "wallDLTypes": [
+   {
+    "id": "wdt-1",
+    "name": "Stud wall",
+    "psf": "10"
+   }
+  ],
+  "levels": [
+   {
+    "id": "lvl-1",
+    "name": "Level 1",
+    "floorToFloor": 10,
+    "anchorageType": "auto",
+    "floorClearSpan": "16"
+   }
+  ],
+  "directions": [
+   {
+    "id": "dir-1",
+    "name": "N-S",
+    "rho": 1,
+    "lines": [
+     {
+      "id": "ln-1",
+      "name": "Line A",
+      "totalLength": 10,
+      "wallThickness": "",
+      "distribution": "",
+      "driftBypass": "",
+      "distReviewed": [],
+      "levelLoads": {
+       "lvl-1": {
+        "seismic": "5",
+        "wind": "6"
+       }
+      },
+      "gravityLoads": {
+       "lvl-1": {
+        "loads": [
+         {
+          "id": "g1",
+          "shape": "full",
+          "position": 0,
+          "start": 0,
+          "end": 0,
+          "D": "100",
+          "L": "",
+          "Lr": "60",
+          "perArea": false,
+          "trib": "",
+          "assemblyId": ""
+         }
+        ]
+       }
+      },
+      "walls": [
+       {
+        "id": "w-1",
+        "mark": "SW-1",
+        "levelId": "lvl-1",
+        "position": 0,
+        "length": 10,
+        "method": "segmented",
+        "systemType": "sheathed",
+        "openings": [],
+        "narrowPier": false,
+        "wallDLTypeId": "wdt-1",
+        "nailingPattern": "4",
+        "anchorageLeftOverride": "HDUE3",
+        "anchorageRightOverride": "HDUE3",
+        "postLeftOverride": "(2)2x4",
+        "postRightOverride": "(2)2x4",
+        "ftaoStrapOverride": "",
+        "jambPostOverride": "",
+        "wswhWidth": "18",
+        "wswhCondition": "concrete",
+        "wswhJoist": "12",
+        "wswhFloorDepth": "12",
+        "wswhAnchorOverride": ""
+       }
+      ],
+      "beams": [],
+      "supportPosts": []
+     },
+     {
+      "id": "ln-2",
+      "name": "Line B",
+      "totalLength": 10,
+      "wallThickness": "",
+      "distribution": "",
+      "driftBypass": "",
+      "distReviewed": [],
+      "levelLoads": {
+       "lvl-1": {
+        "seismic": "2",
+        "wind": "12"
+       }
+      },
+      "gravityLoads": {
+       "lvl-1": {
+        "loads": [
+         {
+          "id": "g2",
+          "shape": "full",
+          "position": 0,
+          "start": 0,
+          "end": 0,
+          "D": "100",
+          "L": "",
+          "Lr": "60",
+          "perArea": false,
+          "trib": "",
+          "assemblyId": ""
+         }
+        ]
+       }
+      },
+      "walls": [
+       {
+        "id": "w-2",
+        "mark": "SW-2",
+        "levelId": "lvl-1",
+        "position": 0,
+        "length": 10,
+        "method": "segmented",
+        "systemType": "sheathed",
+        "openings": [],
+        "narrowPier": false,
+        "wallDLTypeId": "wdt-1",
+        "nailingPattern": "3",
+        "anchorageLeftOverride": "HDUE7",
+        "anchorageRightOverride": "HDUE7",
+        "postLeftOverride": "6x4",
+        "postRightOverride": "6x4",
+        "ftaoStrapOverride": "",
+        "jambPostOverride": "",
+        "wswhWidth": "18",
+        "wswhCondition": "concrete",
+        "wswhJoist": "12",
+        "wswhFloorDepth": "12",
+        "wswhAnchorOverride": ""
+       }
+      ],
+      "beams": [],
+      "supportPosts": []
+     }
+    ]
+   }
+  ]
+ }
+}

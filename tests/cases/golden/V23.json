@@ -1,0 +1,134 @@
+{
+  "calcVersion": "v18",
+  "lines": [
+    {
+      "line": "N-S / Line A",
+      "walls": [
+        {
+          "mark": "SW-3",
+          "level": "Level 2",
+          "method": "wall",
+          "nailing": "6",
+          "basis": "manual",
+          "V_E": 3.073,
+          "V_W": 0,
+          "dc": 0.86,
+          "T": [
+            2.505,
+            2.505
+          ],
+          "C": [
+            3.145,
+            3.145
+          ],
+          "anchorage": [
+            "MSTC66",
+            "MSTC66"
+          ],
+          "posts": [
+            "(3)2x4",
+            "(3)2x4"
+          ],
+          "deltaE": 0.342
+        },
+        {
+          "mark": "SW-4",
+          "level": "Level 2",
+          "method": "wall",
+          "nailing": "2B",
+          "basis": "manual",
+          "V_E": 1.927,
+          "V_W": 0,
+          "dc": 0.22,
+          "T": [
+            3.28,
+            3.28
+          ],
+          "C": [
+            3.6,
+            3.6
+          ],
+          "anchorage": [
+            "MSTC66",
+            "MSTC66"
+          ],
+          "posts": [
+            "(3)2x4",
+            "(3)2x4"
+          ],
+          "deltaE": 0.342
+        },
+        {
+          "mark": "SW-5",
+          "level": "Level 1",
+          "method": "wall",
+          "nailing": "2B",
+          "basis": "manual",
+          "V_E": 5,
+          "V_W": 0,
+          "dc": 0.27,
+          "T": [
+            6.696,
+            6.696
+          ],
+          "C": [
+            7.976,
+            7.976
+          ],
+          "anchorage": [
+            "HDUE13",
+            "HDUE13"
+          ],
+          "posts": [
+            "8x4",
+            "8x4"
+          ],
+          "deltaE": 0.288
+        },
+        {
+          "mark": "SW-6",
+          "level": "Level 1",
+          "method": "wall",
+          "nailing": "2B",
+          "basis": "manual",
+          "V_E": 0,
+          "V_W": 0,
+          "dc": 0,
+          "T": [
+            3.188,
+            3.188
+          ],
+          "C": [
+            3.828,
+            3.828
+          ],
+          "anchorage": [
+            "HDUE5",
+            "HDUE5"
+          ],
+          "posts": [
+            "(2)2x4",
+            "(2)2x4"
+          ],
+          "deltaE": 0.378
+        }
+      ],
+      "posts": [],
+      "beams": [],
+      "drift": [
+        {
+          "level": "Level 2",
+          "dx": 1.369,
+          "pass": true
+        },
+        {
+          "level": "Level 1",
+          "dx": 1.512,
+          "pass": true
+        }
+      ],
+      "checksFailed": [],
+      "warnings": []
+    }
+  ]
+}

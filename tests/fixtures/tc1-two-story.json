@@ -1,0 +1,333 @@
+{
+ "_source": "TC-1 from local Test-123 (2026-10-01): E-W Line 1 has post P-1 inside SW-6 near its right end — PDF label crowding",
+ "schemaVersion": 12,
+ "inputs": {
+  "cd": "4",
+  "ie": "1",
+  "sds": "0.6667",
+  "refs": {
+   "flatLoadSource": "6bcfe489-c25c-40b5-9eea-58de30c883df",
+   "baseShearSource": "652ba677-609d-48eb-af61-081026c128a7"
+  },
+  "notes": "TC-1 — Two-story aligned stack (hand check)\nINTENT: check the base path end to end: story shear build-up, capacity distribution, nailing, gravity statics, every ASD combo, accumulation of T/C at aligned wall ends, hardware, and the line equilibrium checks (G1–G12). Loads over the 10 ft gap between walls have nothing below: they are \"not carried\" (audit note) and must appear as excluded in G4 / G8.\nINPUTS: SDS 1.0, rho 1.0, seismic. Roof story ftf 9 ft, Level 1 ftf 10 ft. Line A 30 ft. Walls 10 ft at x = 0 and x = 20 on both stories (aligned). Wall DL 12 psf. Lateral 1.0E: Roof 4 k, Level 1 6 k. Gravity at Roof: full line D 150 / Lr 100 plf. At Level 1: full line D 120 / L 200 plf.\nHAND CALC:\n1. Story shear: V_roof = 4 k; V_1 = 4 + 6 = 10 k. Equal walls → 2.0 k (top) and 5.0 k (bottom) each.\n2. Unit shear: top v = 0.7·1.0·2000/10 = 140 plf → 6\" o.c. (312), D/C 0.45. Bottom v = 0.7·5000/10 = 350 plf > 312 → 4\" o.c. (470), D/C 0.74.\n3. Top wall gravity: D = 150·10/1000 + 12·10·9/1000 = 1.50 + 1.08 = 2.58 k → R = 1.29 k each end; Lr = 1.0 k → 0.5 each end.\n4. Top OTM(1.0E) = 2.0·9 = 18 k·ft → ±1.80 k.\n   Uplift (0.6−0.14SDS)D + 0.7E: 0.46·1.29 − 0.7·1.80 = −0.67 → T = 0.67 k (strap MSTC28 1535 lb).\n   Compression (1+0.14SDS)D + 0.7E: 1.14·1.29 + 1.26 = 2.73 k (governs over D+Lr 1.79 k and combo (6) 2.37 k).\n5. Bottom wall own gravity: D = 120·10/1000 + 12·10·10/1000 = 2.40 k → 1.20 each end; L = 2.0 k → 1.0 each end. OTM = 5·10 = 50 k·ft → ±5.00 k.\n6. Accumulated (own + wall above, same combo) at the base:\n   T: 0.46·1.20 − 3.50 = −2.95; + (−0.67) = −3.62 → T = 3.62 k → HDUE3 (3790 lb), D/C 0.96.\n   C: 1.14·1.20 + 3.50 = 4.87; + 2.73 = 7.60 k (governs over combo (6): 1.105·1.2 + 0.75·1.0 + 2.625 + 2.37 = 7.07 k).\n7. Line checks: G9 base moment Σ V·h = 4·9 + 10·10 = 136 k·ft. G8 1.0D: applied = 4.50 + 2.16 (roof + top walls) + 3.60 + 2.40 (L1 + bottom walls) = 12.66 k = foundation 9.96 + excluded (gap loads) 1.50 + 1.20 = 2.70 k.\nNOT HAND-CHECKED HERE: end posts are auto-sized by the NDS column check (SW-3 / SW-4: 6x4 for C = 7.60 k at 10 ft).\nWHERE TO LOOK: N-S / Line A → Checks tab (all OK), Walls → Detailed (SW-3 Σ end forces), Load path tab.",
+  "alphaS": "",
+  "levels": [
+   {
+    "id": "lvl-1",
+    "name": "Roof",
+    "floorToFloor": 9,
+    "anchorageType": "auto",
+    "floorClearSpan": "16"
+   },
+   {
+    "id": "lvl-2",
+    "name": "Level 1",
+    "floorToFloor": 10,
+    "anchorageType": "auto",
+    "floorClearSpan": "16"
+   }
+  ],
+  "omega0": "2.5",
+  "wswhFc": "2500",
+  "driftRow": "other",
+  "loadType": "seismic",
+  "lrfdHalfL": false,
+  "pdfReport": "summary",
+  "sheathing": "ply",
+  "woodGrade": "dfir_no1",
+  "directions": [
+   {
+    "id": "dir-1",
+    "rho": 1,
+    "name": "N-S",
+    "lines": [
+     {
+      "id": "ln-1",
+      "name": "Line A",
+      "beams": [],
+      "walls": [
+       {
+        "id": "w-2",
+        "mark": "SW-2",
+        "length": 10,
+        "method": "ftao",
+        "levelId": "lvl-1",
+        "openings": [
+         {
+          "id": "op-1",
+          "head": 7,
+          "sill": 3,
+          "width": 3,
+          "offset": "3"
+         }
+        ],
+        "position": 20,
+        "wswhJoist": "12",
+        "wswhWidth": "18",
+        "narrowPier": false,
+        "systemType": "sheathed",
+        "wallDLTypeId": "wdt-1",
+        "wswhCondition": "concrete",
+        "nailingPattern": "",
+        "wswhFloorDepth": "12",
+        "jambPostOverride": "",
+        "postLeftOverride": "",
+        "ftaoStrapOverride": "",
+        "postRightOverride": "",
+        "wswhAnchorOverride": "",
+        "anchorageLeftOverride": "",
+        "anchorageRightOverride": ""
+       },
+       {
+        "id": "w-3",
+        "mark": "SW-3",
+        "length": 10,
+        "method": "segmented",
+        "levelId": "lvl-2",
+        "openings": [],
+        "position": 0,
+        "wswhJoist": "12",
+        "wswhWidth": "18",
+        "narrowPier": false,
+        "systemType": "sheathed",
+        "wallDLTypeId": "wdt-1",
+        "wswhCondition": "concrete",
+        "nailingPattern": "",
+        "wswhFloorDepth": "12",
+        "jambPostOverride": "",
+        "postLeftOverride": "",
+        "ftaoStrapOverride": "",
+        "postRightOverride": "",
+        "wswhAnchorOverride": "",
+        "anchorageLeftOverride": "",
+        "anchorageRightOverride": ""
+       },
+       {
+        "id": "w-4",
+        "mark": "SW-4",
+        "length": "10",
+        "method": "segmented",
+        "levelId": "lvl-2",
+        "openings": [],
+        "position": 20,
+        "wswhJoist": "12",
+        "wswhWidth": "18",
+        "narrowPier": false,
+        "systemType": "sheathed",
+        "wallDLTypeId": "wdt-1",
+        "wswhCondition": "concrete",
+        "nailingPattern": "",
+        "wswhFloorDepth": "12",
+        "jambPostOverride": "",
+        "postLeftOverride": "",
+        "ftaoStrapOverride": "",
+        "postRightOverride": "",
+        "wswhAnchorOverride": "",
+        "anchorageLeftOverride": "",
+        "anchorageRightOverride": ""
+       },
+       {
+        "id": "w-7",
+        "mark": "SW-7",
+        "length": "10",
+        "method": "segmented",
+        "levelId": "lvl-1",
+        "openings": [],
+        "position": 0,
+        "wswhJoist": "12",
+        "wswhWidth": "18",
+        "narrowPier": false,
+        "systemType": "sheathed",
+        "wallDLTypeId": "wdt-1",
+        "wswhCondition": "concrete",
+        "nailingPattern": "",
+        "wswhFloorDepth": "12",
+        "jambPostOverride": "",
+        "postLeftOverride": "",
+        "ftaoStrapOverride": "",
+        "postRightOverride": "",
+        "wswhAnchorOverride": "",
+        "anchorageLeftOverride": "",
+        "anchorageRightOverride": ""
+       }
+      ],
+      "levelLoads": {
+       "lvl-1": {
+        "wind": "2",
+        "seismic": "4"
+       },
+       "lvl-2": {
+        "wind": "2",
+        "seismic": "6"
+       }
+      },
+      "driftBypass": "",
+      "totalLength": 30,
+      "distReviewed": [],
+      "distribution": "capacity",
+      "gravityLoads": {
+       "lvl-1": {
+        "loads": [
+         {
+          "D": "14.1",
+          "L": "40",
+          "Lr": "",
+          "id": "gl-1",
+          "end": 0,
+          "trib": "",
+          "shape": "full",
+          "start": 0,
+          "perArea": true,
+          "position": 0,
+          "assemblyId": ""
+         },
+         {
+          "D": "2",
+          "L": "",
+          "Lr": "1",
+          "id": "gl-3",
+          "end": 30,
+          "trib": "",
+          "shape": "point",
+          "start": 0,
+          "perArea": false,
+          "position": "3",
+          "assemblyId": ""
+         }
+        ]
+       },
+       "lvl-2": {
+        "loads": [
+         {
+          "D": "120",
+          "L": "200",
+          "Lr": "",
+          "id": "gl-2",
+          "end": 0,
+          "trib": "",
+          "shape": "full",
+          "start": 0,
+          "perArea": false,
+          "position": 0,
+          "assemblyId": ""
+         }
+        ]
+       }
+      },
+      "supportPosts": [],
+      "wallThickness": ""
+     }
+    ]
+   },
+   {
+    "id": "dir-2",
+    "rho": 1,
+    "name": "E-W",
+    "lines": [
+     {
+      "id": "ln-2",
+      "name": "Line 1",
+      "beams": [],
+      "walls": [
+       {
+        "id": "w-5",
+        "mark": "SW-5",
+        "length": "5",
+        "method": "segmented",
+        "levelId": "lvl-1",
+        "openings": [],
+        "position": 16.5,
+        "wswhJoist": "12",
+        "wswhWidth": "18",
+        "narrowPier": false,
+        "systemType": "sheathed",
+        "wallDLTypeId": "wdt-1",
+        "wswhCondition": "concrete",
+        "nailingPattern": "",
+        "wswhFloorDepth": "12",
+        "jambPostOverride": "",
+        "postLeftOverride": "",
+        "ftaoStrapOverride": "",
+        "postRightOverride": "",
+        "wswhAnchorOverride": "",
+        "anchorageLeftOverride": "",
+        "anchorageRightOverride": ""
+       },
+       {
+        "id": "w-6",
+        "mark": "SW-6",
+        "length": "8",
+        "method": "segmented",
+        "levelId": "lvl-2",
+        "openings": [],
+        "position": 16.5,
+        "wswhJoist": "12",
+        "wswhWidth": "18",
+        "narrowPier": false,
+        "systemType": "sheathed",
+        "wallDLTypeId": "wdt-1",
+        "wswhCondition": "concrete",
+        "nailingPattern": "",
+        "wswhFloorDepth": "12",
+        "jambPostOverride": "",
+        "postLeftOverride": "",
+        "ftaoStrapOverride": "",
+        "postRightOverride": "",
+        "wswhAnchorOverride": "",
+        "anchorageLeftOverride": "",
+        "anchorageRightOverride": ""
+       }
+      ],
+      "levelLoads": {
+       "lvl-1": {
+        "wind": "2",
+        "seismic": "2"
+       },
+       "lvl-2": {
+        "wind": "2",
+        "seismic": "3"
+       }
+      },
+      "driftBypass": "",
+      "totalLength": 60,
+      "distReviewed": [],
+      "distribution": "deflection",
+      "gravityLoads": {
+       "lvl-1": {
+        "loads": []
+       },
+       "lvl-2": {
+        "loads": []
+       }
+      },
+      "supportPosts": [
+       {
+        "id": "sp-1",
+        "mark": "P-1",
+        "levelId": "lvl-2",
+        "position": "21.5",
+        "postOverride": "",
+        "anchorageOverride": ""
+       }
+      ],
+      "wallThickness": ""
+     }
+    ]
+   }
+  ],
+  "driftBypass": false,
+  "wallDLTypes": [
+   {
+    "id": "wdt-1",
+    "psf": "12",
+    "name": "Stud wall"
+   }
+  ],
+  "distribution": "capacity",
+  "riskCategory": "II",
+  "wallThickness": "4",
+  "windDriftLimit": "400",
+  "detachedOneTwoFamily": false,
+  "seismicDesignCategory": "D"
+ }
+}

@@ -56,7 +56,37 @@ export function comboDefs({ loadType = 'seismic', sds = 0, rho = 1, omega0 = 2.5
       c('0.9D+1.0W', 'lrfd', { d: 0.9, w: 1.0 }, '0.9D + 1.0W', '§2.3.1 (5)', true),
     );
   }
+  return numberCombos(defs);
+}
+
+// LC# of the combinations (user decision 2026-10-01): one number per combination, continuous over the groups in the
+// order ASD (design) → LRFD → Ω₀ ASD → Ω₀ LRFD, each group in ASCE 7-22 order as listed above. Load cases (D, L, Lr,
+// E, W) are not combinations and get no number. Also: rich = the text with subscript markup (S_{DS}, Ω_{0}).
+export const LC_GROUPS = [['asd', 'ASD'], ['lrfd', 'LRFD'], ['asd_omega', 'Ω₀ ASD'], ['lrfd_omega', 'Ω₀ LRFD']];
+function numberCombos(defs) {
+  let n = 0;
+  for (const [g, tag] of LC_GROUPS) for (const d of defs) if (d.group === g) { d.lc = 'LC' + (++n); d.lcTag = tag; }
+  for (const d of defs) d.rich = d.text.replace(/SDS/g, 'S_{DS}').replace(/Ω₀/g, 'Ω_{0}');
   return defs;
+}
+
+// Load cases (unfactored) with their role (user decision 2026-10-01): D / L / Lr are combined by superposition;
+// E / W are also the 1.0-level cases for deflection, drift and the deflection distribution.
+export function loadCaseRows(defs) {
+  return defs.filter(d => d.group === 'load_case').map(d => {
+    const lat = d.e > 0 || d.w > 0;
+    return { key: d.key, name: d.key.replace('1.0', ''), role: lat ? 'Deflection, drift, distribution + superposition' : 'Superposition',
+      usedFor: lat ? 'SDPWS Eq. 4.3-1 deflection and story drift at 1.0' + (d.e > 0 ? 'E' : 'W') + '; combined into every LC' : 'Combined into every LC by its load factor' };
+  });
+}
+
+// "LC5 →" style reference of a stored combo key (with _pos / _neg); falls back to the text when no LC#
+export function lcRef(defsOrCombos, key) {
+  const base = String(key || '').replace(/_(pos|neg)$/, '');
+  const dir = /_pos$/.test(key) ? ' →' : /_neg$/.test(key) ? ' ←' : '';
+  const d = Array.isArray(defsOrCombos) ? defsOrCombos.find(x => x.key === base) : (defsOrCombos || {})[key];
+  if (!d) return key;
+  return (d.lc || d.text || base) + dir;
 }
 
 // Combo keys as stored on the results (lateral combos get _pos / _neg)

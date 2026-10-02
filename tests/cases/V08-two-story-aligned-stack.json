@@ -1,0 +1,388 @@
+{
+  "id": "V08",
+  "title": "Two-story aligned stack",
+  "intent": "Two solid walls stacked with both ends aligned. The top wall end forces go into the bottom wall ends per combination and add to its own; the base hardware and posts are sized for the sum. Also: strap (MSTC) at the upper floor line, holdown (HDUE) at the foundation, and a combination with live load that does not govern.",
+  "covers": [
+    "Story shear build-up",
+    "Wall end transfer at aligned ends (±0.1 ft)",
+    "Per-combination accumulation",
+    "MSTC strap (16\" floor span)",
+    "HDUE + minimum post",
+    "ASCE 7-22 §2.4.5 (5), (6), (8)"
+  ],
+  "handCalc": [
+    {
+      "step": 1,
+      "text": "Story shears: Roof V_T = 3 k; Level 1 V_B = 3 + 4 = 7 k. One wall per story takes all of it."
+    },
+    {
+      "step": 2,
+      "text": "SW-1 (Roof, L = 10 ft, h = 9 ft): v = 0.7 × 3000 / 10 = 210.00 plf → 6\" o.c. (312 plf). SW-2 (Level 1, h = 10 ft): v = 0.7 × 7000 / 10 = 490.00 plf → 4\" o.c. 470 < 489.9999999999999 NG → 3\" o.c. (611 plf)."
+    },
+    {
+      "step": 3,
+      "text": "SW-1 gravity: D = 100 plf × 10 + 10 psf × 10 × 9 = 1.90 k → R_D = 0.95 k per end; Lr = 50 × 10 = 0.50 k → 0.25 k per end. M_OT = 3 × 9 = 27 k·ft → N_E = ±2.70 k."
+    },
+    {
+      "step": 4,
+      "text": "SW-1 uplift (0.6 − 0.14S_DS)D + 0.7E: 0.46 × 0.95 − 0.7 × 2.70 = -1.453 → T = 1.453 k at the Roof floor line (not the bottom story → strap) → lightest MSTC (16\" span) ≥ 1453 lb: MSTC28 (1535 lb)."
+    },
+    {
+      "step": 5,
+      "text": "SW-1 compression: combo (5) 1.14 × 0.95 + 0.7 × 2.70 = 2.973 k; combo (6) 1.105 × 0.95 + 0.525 × 2.70 = 2.467 k; D + Lr = 1.200 k → C = 2.973 k → post (MSTC minimum (2)2x4) (2)2x4 at 9 ft (cap 6.03 k)."
+    },
+    {
+      "step": 6,
+      "text": "SW-2 own gravity: D = 80 × 10 + 10 × 10 × 10 = 1.80 k → 0.90 k per end; L = 150 × 10 = 1.50 k → 0.75 k per end. M_OT = 7 × 10 = 70 k·ft → N_E = ±7.00 k. Load case 1.0D at each SW-2 end incl. SW-1 above = 0.90 + 0.95 = 1.85 k."
+    },
+    {
+      "step": 7,
+      "text": "Base uplift = own + SW-1 end, same combination. (8): [0.46 × 0.90 − 0.7 × 7.00] + [-1.453] = -5.939; (6): [1.105 × 0.90 + 0.75 × 0.75 − 0.525 × 7.00] + [1.105 × 0.95 − 0.525 × 2.70] = -2.486 → T = 5.939 k → HDUE7 (7015 lb; HDUE5 5375 lb too small)."
+    },
+    {
+      "step": 8,
+      "text": "Base compression: (5) 1.14 × 0.90 + 0.7 × 7.00 + 2.973 = 8.899 k; (6) 1.105 × 0.90 + 0.75 × 0.75 + 0.525 × 7.00 + 2.467 = 7.699 k; D + L = 2.600 k → C = 8.899 k."
+    },
+    {
+      "step": 9,
+      "text": "Base post (HDUE7 minimum (2)2x4, 10 ft): lightest with cap ≥ 8.90 k in the order (2)2x4, (3)2x4, 4x4, 6x4, 8x4 → 6x4 (cap 9.14 k)."
+    },
+    {
+      "step": 10,
+      "text": "Line checks: base shear 7 k, base moment Σ V·h = 3 × 9 + 7 × 10 = 97 k·ft; all gravity reaches the foundation → G1–G12 pass."
+    },
+    {
+      "step": 11,
+      "text": "SW-1 (Eq. 4.3-1, → governs): v = 1000 × 3.000 / 10 = 300.00 plf, A = 10.5 in², G_a = 16 k/in → 8vh³/(EAb) = 0.0098; vh/(1000G_a) = 0.1688; Δ_HD = 0.0808 × 2700.00 / 1535/0.7 = 0.0995 (MSTC28, T = 2700.00 lb); r = 2700.00 / (10.5 × 625) = 0.4114 → Δ_c = 0.0113; h·Δa/b = 9 × (0.0995 + 0.0113) / 10 = 0.0997 → δ = 0.2782 in. (strap slip at its LRFD cap = cap / 0.7.)"
+    },
+    {
+      "step": 12,
+      "text": "SW-2 (Eq. 4.3-1, → governs): v = 1000 × 7.000 / 10 = 700.00 plf, A = 19.25 in², G_a = 22 k/in → 8vh³/(EAb) = 0.0171; vh/(1000G_a) = 0.3182; Δ_HD = 0.154 × 9700.00 / 7015 (ASD cap) = 0.2129 (HDUE7, T = 9700.00 lb); r = 9700.00 / (19.25 × 625) = 0.8062 → Δ_c = 0.0256; h·Δa/b = 10 × (0.2129 + 0.0256) / 10 = 0.2386 → δ = 0.5739 in. (T = C = N_B + N_T = 7.000 + 2.700 = 9.700 k: the SW-1 end force adds to SW-2's own.)"
+    },
+    {
+      "step": 13,
+      "text": "Story drift Roof: δxe = the largest wall δ = SW-1 0.2782 in → δx = Cd·δxe/Ie = 4 × 0.2782 / 1.0 = 1.113 in vs Δa = 0.020 × 9 × 12 = 2.160 in → OK."
+    },
+    {
+      "step": 14,
+      "text": "Story drift Level 1: δxe = the largest wall δ = SW-2 0.5739 in → δx = Cd·δxe/Ie = 4 × 0.5739 / 1.0 = 2.296 in vs Δa = 0.020 × 10 × 12 = 2.400 in → OK."
+    }
+  ],
+  "expect": [
+    {
+      "label": "SW-2 ASD unit shear (plf)",
+      "at": "wall:SW-2",
+      "field": "unitShear_seismic",
+      "value": 489.9999999999999,
+      "tol": 0.01,
+      "step": 2
+    },
+    {
+      "label": "SW-1 governing T, left (k)",
+      "at": "wall:SW-1",
+      "field": "governingTensionLeft",
+      "value": 1.4529999999999998,
+      "tol": 0.005,
+      "step": 4
+    },
+    {
+      "label": "SW-1 governing C, right (k)",
+      "at": "wall:SW-1",
+      "field": "governingComprRight",
+      "value": 2.973,
+      "tol": 0.005,
+      "step": 5
+    },
+    {
+      "label": "SW-2 1.0D left, own + above (k)",
+      "at": "wall:SW-2",
+      "field": "lc[\"1.0D\"].left",
+      "value": 1.85,
+      "tol": 0.005,
+      "step": 6
+    },
+    {
+      "label": "SW-2 1.0E → left, own + above (k)",
+      "at": "wall:SW-2",
+      "field": "lc[\"1.0E →\"].left",
+      "value": -9.7,
+      "tol": 0.005,
+      "step": 6
+    },
+    {
+      "label": "SW-2 base T, left (k)",
+      "at": "wall:SW-2",
+      "field": "hwDemand.tL",
+      "value": 5.939,
+      "tol": 0.005,
+      "step": 7
+    },
+    {
+      "label": "SW-2 base C, right (k)",
+      "at": "wall:SW-2",
+      "field": "hwDemand.cR",
+      "value": 8.899000000000001,
+      "tol": 0.005,
+      "step": 8
+    },
+    {
+      "label": "SW-1 δ at 1.0E (in)",
+      "at": "wall:SW-1",
+      "field": "deflection.E.delta",
+      "value": 0.27823447521831457,
+      "tol": 0.0005,
+      "step": 11
+    },
+    {
+      "label": "SW-2 δ at 1.0E, incl. SW-1 end forces (in)",
+      "at": "wall:SW-2",
+      "field": "deflection.E.delta",
+      "value": 0.5738847553823865,
+      "tol": 0.0005,
+      "step": 12
+    },
+    {
+      "label": "Story δxe, Roof (in)",
+      "at": "drift:Roof",
+      "field": "seismic.deltaXE",
+      "value": 0.27823447521831457,
+      "tol": 0.0005,
+      "step": 13
+    },
+    {
+      "label": "Governing wall for drift, Roof",
+      "at": "drift:Roof",
+      "field": "seismic.wallMark",
+      "value": "SW-1",
+      "step": 13
+    },
+    {
+      "label": "δx = Cd·δxe/Ie, Roof (in)",
+      "at": "drift:Roof",
+      "field": "seismic.deltaX",
+      "value": 1.1129379008732583,
+      "tol": 0.002,
+      "step": 13
+    },
+    {
+      "label": "Drift passes, Roof",
+      "at": "drift:Roof",
+      "field": "seismic.pass",
+      "value": true,
+      "step": 13
+    },
+    {
+      "label": "Story δxe, Level 1 (in)",
+      "at": "drift:Level 1",
+      "field": "seismic.deltaXE",
+      "value": 0.5738847553823865,
+      "tol": 0.0005,
+      "step": 14
+    },
+    {
+      "label": "Governing wall for drift, Level 1",
+      "at": "drift:Level 1",
+      "field": "seismic.wallMark",
+      "value": "SW-2",
+      "step": 14
+    },
+    {
+      "label": "δx = Cd·δxe/Ie, Level 1 (in)",
+      "at": "drift:Level 1",
+      "field": "seismic.deltaX",
+      "value": 2.295539021529546,
+      "tol": 0.002,
+      "step": 14
+    },
+    {
+      "label": "Drift passes, Level 1",
+      "at": "drift:Level 1",
+      "field": "seismic.pass",
+      "value": true,
+      "step": 14
+    }
+  ],
+  "expectChecks": {
+    "fail": []
+  },
+  "notChecked": "The deflection terms one by one (V15). NDS post capacities are computed with the lib.mjs column formula (NDS 2018 §3.7), not re-derived step by step here.",
+  "pinned": {
+    "SW-1": {
+      "nail": "6",
+      "hdL": "MSTC28",
+      "hdR": "MSTC28",
+      "postL": "(2)2x4",
+      "postR": "(2)2x4"
+    },
+    "SW-2": {
+      "nail": "3",
+      "hdL": "HDUE7",
+      "hdR": "HDUE7",
+      "postL": "6x4",
+      "postR": "6x4"
+    }
+  },
+  "schemaVersion": 12,
+  "inputs": {
+    "sds": "1",
+    "loadType": "seismic",
+    "wallThickness": "4",
+    "woodGrade": "dfir_no1",
+    "sheathing": "ply",
+    "distribution": "capacity",
+    "cd": "4",
+    "ie": "1.0",
+    "riskCategory": "II",
+    "driftRow": "other",
+    "driftBypass": false,
+    "alphaS": "",
+    "windDriftLimit": "400",
+    "omega0": "2.5",
+    "lrfdHalfL": false,
+    "wswhFc": "2500",
+    "seismicDesignCategory": "",
+    "detachedOneTwoFamily": false,
+    "pdfReport": "detailed",
+    "refs": {},
+    "notes": "",
+    "wallDLTypes": [
+      {
+        "id": "wdt-1",
+        "name": "Stud wall",
+        "psf": "10"
+      }
+    ],
+    "levels": [
+      {
+        "id": "lvl-1",
+        "name": "Roof",
+        "floorToFloor": 9,
+        "anchorageType": "auto",
+        "floorClearSpan": "16"
+      },
+      {
+        "id": "lvl-2",
+        "name": "Level 1",
+        "floorToFloor": 10,
+        "anchorageType": "auto",
+        "floorClearSpan": "16"
+      }
+    ],
+    "directions": [
+      {
+        "id": "dir-1",
+        "name": "N-S",
+        "rho": 1,
+        "lines": [
+          {
+            "id": "ln-1",
+            "name": "Line A",
+            "totalLength": 10,
+            "wallThickness": "",
+            "distribution": "",
+            "driftBypass": "",
+            "distReviewed": [],
+            "levelLoads": {
+              "lvl-1": {
+                "seismic": "3",
+                "wind": ""
+              },
+              "lvl-2": {
+                "seismic": "4",
+                "wind": ""
+              }
+            },
+            "gravityLoads": {
+              "lvl-1": {
+                "loads": [
+                  {
+                    "id": "g1",
+                    "shape": "full",
+                    "position": 0,
+                    "start": 0,
+                    "end": 0,
+                    "D": "100",
+                    "L": "",
+                    "Lr": "50",
+                    "perArea": false,
+                    "trib": "",
+                    "assemblyId": ""
+                  }
+                ]
+              },
+              "lvl-2": {
+                "loads": [
+                  {
+                    "id": "g2",
+                    "shape": "full",
+                    "position": 0,
+                    "start": 0,
+                    "end": 0,
+                    "D": "80",
+                    "L": "150",
+                    "Lr": "",
+                    "perArea": false,
+                    "trib": "",
+                    "assemblyId": ""
+                  }
+                ]
+              }
+            },
+            "walls": [
+              {
+                "id": "w-1",
+                "mark": "SW-1",
+                "levelId": "lvl-1",
+                "position": 0,
+                "length": 10,
+                "method": "segmented",
+                "systemType": "sheathed",
+                "openings": [],
+                "narrowPier": false,
+                "wallDLTypeId": "wdt-1",
+                "nailingPattern": "6",
+                "anchorageLeftOverride": "MSTC28",
+                "anchorageRightOverride": "MSTC28",
+                "postLeftOverride": "(2)2x4",
+                "postRightOverride": "(2)2x4",
+                "ftaoStrapOverride": "",
+                "jambPostOverride": "",
+                "wswhWidth": "18",
+                "wswhCondition": "concrete",
+                "wswhJoist": "12",
+                "wswhFloorDepth": "12",
+                "wswhAnchorOverride": ""
+              },
+              {
+                "id": "w-2",
+                "mark": "SW-2",
+                "levelId": "lvl-2",
+                "position": 0,
+                "length": 10,
+                "method": "segmented",
+                "systemType": "sheathed",
+                "openings": [],
+                "narrowPier": false,
+                "wallDLTypeId": "wdt-1",
+                "nailingPattern": "3",
+                "anchorageLeftOverride": "HDUE7",
+                "anchorageRightOverride": "HDUE7",
+                "postLeftOverride": "6x4",
+                "postRightOverride": "6x4",
+                "ftaoStrapOverride": "",
+                "jambPostOverride": "",
+                "wswhWidth": "18",
+                "wswhCondition": "concrete",
+                "wswhJoist": "12",
+                "wswhFloorDepth": "12",
+                "wswhAnchorOverride": ""
+              }
+            ],
+            "beams": [],
+            "supportPosts": []
+          }
+        ]
+      }
+    ]
+  }
+}

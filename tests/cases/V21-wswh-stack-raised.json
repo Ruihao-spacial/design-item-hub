@@ -1,0 +1,487 @@
+{
+  "id": "V21",
+  "title": "Strong-Wall WSWH stack and raised floor",
+  "intent": "Line A: two WSWH18 panels stacked over two 9 ft stories. The 2nd-story panel uses Table 03 and is held down by the TSS rod; the 1st-story panel is checked as an allowable base moment (M_allow = V₀·H₁/12 with V₀ at P = 4,000 lb, f'c 2,500) against M_d = [V₁·H₁ + V₂·(H₁ + d_fl + H₂)]/12, and its anchors carry the stack moment. Line B: one panel on a raised wood floor (Table 02): shear check and anchor tension T only — the anchorage is by the RDP.",
+  "covers": [
+    "C-L-SW26 Table 03 (stacked 2nd story)",
+    "Table 01 stack base (README §5)",
+    "Table 02 raised floor",
+    "Table 06-A anchors",
+    "TSS rod"
+  ],
+  "handCalc": [
+    {
+      "step": 1,
+      "text": "Line A shears (1.0E): 2nd story F = 0.8 k → V₂ = 0.80 k on SW-1; 1st story V₁ = 0.8 + 1 = 1.80 k on SW-2. ASD: V₂ = 0.7 × 800 = 559.9999999999999 lb, V₁ = 0.7 × 1800 = 1260 lb. No gravity on the panels (P = 0 ≤ 2,000 / 4,000 lb limits)."
+    },
+    {
+      "step": 2,
+      "text": "2nd story (Table 03, WSWH18x9): V_allow = 1,095 lb → D/C = 559.9999999999999/1095 = 0.511."
+    },
+    {
+      "step": 3,
+      "text": "Stack base (Table 01 at P = 4,000 lb, f'c 2,500): V₀ = 2,575 lb, H₁ = 105.25 in → M_allow = 2575 × 105.25/12 = 22584.90 lb-ft."
+    },
+    {
+      "step": 4,
+      "text": "M_d = [V₁·H₁ + V₂·(H₁ + d_fl + H₂)]/12 = [1260 × 105.25 + 559.9999999999999 × (105.25 + 12 + 105.25)]/12 = 21434.58 lb-ft → D/C = M_d/M_allow = 0.949. Available V₁ = (M_allow − V₂·(H₁ + d_fl + H₂)/12)·12/H₁ = 1391.15 lb ≥ 1260 → OK."
+    },
+    {
+      "step": 5,
+      "text": "2nd-story hold-down: T = 0.7·V₂·H₂/B = 0.7 × 0.80 × 105.25/12.5 = 4.715 k (B = concrete B, Table 05-C, tool note) ≤ TSS rod 36,800 lb → rod."
+    },
+    {
+      "step": 6,
+      "text": "Stack base anchors: M(1.0) = (V₁·H₁ + V₂·(H₁ + d_fl + H₂))/12 = (1.80 × 105.25 + 0.80 × 222.5)/12 = 30.621 k·ft → T = 0.7 × 30.621 / (12.5/12) = 20.577 k = 20577 lb. Table 06-A, SDC D, E rows: STD 16,000 / 17,100 < T → HS 34100 lb, W = 52 in, d_e = 18 in."
+    },
+    {
+      "step": 7,
+      "text": "Drift: 2nd story Δ = 0.44 × 800/1095 = 0.321 in; base Δ₁ = Δ₀·M(1.0)/M_allow = 0.45 × 30620.83/22584.90 = 0.610 in."
+    },
+    {
+      "step": 8,
+      "text": "Line B raised floor (Table 02, WSWH18x9, joist ≤ 12\"): V_allow = 1,475 lb; V = 1.00 k → D/C = 700/1475 = 0.475. T = 0.7·V·H_e/B = 0.7 × 1.00 × 105.25/14.0 = 5.263 k (B raised = 14.0 in) — reported; anchorage by the RDP."
+    },
+    {
+      "step": 9,
+      "text": "Line checks G1–G12 pass on both lines; the 2nd-story panel end forces are absorbed into the stack base moment (not delivered as wall-end loads)."
+    },
+    {
+      "step": 10,
+      "text": "Story drift, Line A (each story has one panel; table drift, ASD seismic column scaled to the 1.0E share, step 7). Story drift Level 2: δxe = the largest wall δ = SW-1 0.3215 in → δx = Cd·δxe/Ie = 4 × 0.3215 / 1.0 = 1.286 in vs Δa = 0.020 × 9 × 12 = 2.160 in → OK. Story drift Level 1: δxe = the largest wall δ = SW-2 0.6101 in → δx = Cd·δxe/Ie = 4 × 0.6101 / 1.0 = 2.440 in vs Δa = 0.020 × 9 × 12 = 2.160 in → NG — over the limit (design pinned, so drift sizing does not change it; the line reports drift NG). The stack base carries the moment of both stories, so its Δ₁ (0.610 in) is larger than the 2nd-story panel Δ."
+    },
+    {
+      "step": 11,
+      "text": "Story drift, Line B: SW-3 Δ = 0.43 × 1000.00 / 1475 = 0.292 in (Table 02). Story drift Level 1: δxe = the largest wall δ = SW-3 0.2915 in → δx = Cd·δxe/Ie = 4 × 0.2915 / 1.0 = 1.166 in vs Δa = 0.020 × 9 × 12 = 2.160 in → OK."
+    }
+  ],
+  "expect": [
+    {
+      "label": "SW-1 table",
+      "at": "wall:SW-1",
+      "field": "wswh.table",
+      "value": "T03",
+      "step": 2,
+      "line": "Line A"
+    },
+    {
+      "label": "SW-1 D/C",
+      "at": "wall:SW-1",
+      "field": "dcRatio",
+      "value": 0.5114155251141551,
+      "tol": 0.006,
+      "step": 2,
+      "line": "Line A"
+    },
+    {
+      "label": "SW-2 role",
+      "at": "wall:SW-2",
+      "field": "wswh.role",
+      "value": "stackedLower",
+      "step": 3,
+      "line": "Line A"
+    },
+    {
+      "label": "Stack M_allow (lb-ft)",
+      "at": "wall:SW-2",
+      "field": "wswh.stacked.E.Mallow",
+      "value": 22584.895833333332,
+      "tol": 0.5,
+      "step": 3,
+      "line": "Line A"
+    },
+    {
+      "label": "Stack M_d (lb-ft)",
+      "at": "wall:SW-2",
+      "field": "wswh.stacked.E.Md",
+      "value": 21434.583333333332,
+      "tol": 0.5,
+      "step": 4,
+      "line": "Line A"
+    },
+    {
+      "label": "Stack V₁ available (lb)",
+      "at": "wall:SW-2",
+      "field": "wswh.stacked.E.V1avail",
+      "value": 1391.1520190023755,
+      "tol": 0.5,
+      "step": 4,
+      "line": "Line A"
+    },
+    {
+      "label": "SW-2 D/C = M_d/M_allow",
+      "at": "wall:SW-2",
+      "field": "dcRatio",
+      "value": 0.9490671770864562,
+      "tol": 0.006,
+      "step": 4,
+      "line": "Line A"
+    },
+    {
+      "label": "SW-1 hold-down (stacked 2nd story)",
+      "at": "wall:SW-1",
+      "field": "anchorageLeft.id",
+      "value": "TSS rod 1\" A193 B7",
+      "step": 5,
+      "line": "Line A",
+      "role": true
+    },
+    {
+      "label": "SW-1 rod tension (k)",
+      "at": "wall:SW-1",
+      "field": "governingTensionLeft",
+      "value": 4.715199999999999,
+      "tol": 0.005,
+      "step": 5,
+      "line": "Line A"
+    },
+    {
+      "label": "SW-2 base T (k)",
+      "at": "wall:SW-2",
+      "field": "governingTensionLeft",
+      "value": 20.5772,
+      "tol": 0.005,
+      "step": 6,
+      "line": "Line A"
+    },
+    {
+      "label": "SW-2 anchor cap (lb)",
+      "at": "wall:SW-2",
+      "field": "anchorageLeft.cap",
+      "value": 34100,
+      "tol": 0,
+      "step": 6,
+      "line": "Line A"
+    },
+    {
+      "label": "SW-2 Δ₁ (in)",
+      "at": "wall:SW-2",
+      "field": "deflection.E.delta",
+      "value": 0.6101146138412934,
+      "tol": 0.0005,
+      "step": 7,
+      "line": "Line A"
+    },
+    {
+      "label": "SW-3 D/C (raised floor)",
+      "at": "wall:SW-3",
+      "field": "dcRatio",
+      "value": 0.4745762711864407,
+      "tol": 0.006,
+      "step": 8,
+      "line": "Line B"
+    },
+    {
+      "label": "SW-3 T (k)",
+      "at": "wall:SW-3",
+      "field": "governingTensionLeft",
+      "value": 5.2625,
+      "tol": 0.005,
+      "step": 8,
+      "line": "Line B"
+    },
+    {
+      "label": "SW-3 anchorage (raised floor)",
+      "at": "wall:SW-3",
+      "field": "anchorageLeft.id",
+      "value": "Anchorage by RDP (raised floor)",
+      "step": 8,
+      "line": "Line B",
+      "role": true
+    },
+    {
+      "label": "Line A — Story δxe, Level 2 (in)",
+      "at": "drift:Level 2",
+      "field": "seismic.deltaXE",
+      "value": 0.3214611872146119,
+      "tol": 0.0005,
+      "step": 10,
+      "line": "Line A"
+    },
+    {
+      "label": "Line A — Governing wall for drift, Level 2",
+      "at": "drift:Level 2",
+      "field": "seismic.wallMark",
+      "value": "SW-1",
+      "step": 10,
+      "line": "Line A"
+    },
+    {
+      "label": "Line A — δx = Cd·δxe/Ie, Level 2 (in)",
+      "at": "drift:Level 2",
+      "field": "seismic.deltaX",
+      "value": 1.2858447488584477,
+      "tol": 0.002,
+      "step": 10,
+      "line": "Line A"
+    },
+    {
+      "label": "Line A — Drift passes, Level 2",
+      "at": "drift:Level 2",
+      "field": "seismic.pass",
+      "value": true,
+      "step": 10,
+      "line": "Line A"
+    },
+    {
+      "label": "Line A — Story δxe, Level 1 (in)",
+      "at": "drift:Level 1",
+      "field": "seismic.deltaXE",
+      "value": 0.6101146138412934,
+      "tol": 0.0005,
+      "step": 10,
+      "line": "Line A"
+    },
+    {
+      "label": "Line A — Governing wall for drift, Level 1",
+      "at": "drift:Level 1",
+      "field": "seismic.wallMark",
+      "value": "SW-2",
+      "step": 10,
+      "line": "Line A"
+    },
+    {
+      "label": "Line A — δx = Cd·δxe/Ie, Level 1 (in)",
+      "at": "drift:Level 1",
+      "field": "seismic.deltaX",
+      "value": 2.4404584553651736,
+      "tol": 0.002,
+      "step": 10,
+      "line": "Line A"
+    },
+    {
+      "label": "Line A — Drift NG, Level 1",
+      "at": "drift:Level 1",
+      "field": "seismic.pass",
+      "value": false,
+      "step": 10,
+      "line": "Line A"
+    },
+    {
+      "label": "SW-3 Δ (in)",
+      "at": "wall:SW-3",
+      "field": "deflection.E.delta",
+      "value": 0.29152542372881357,
+      "tol": 0.0005,
+      "step": 11,
+      "line": "Line B"
+    },
+    {
+      "label": "Line B — Story δxe, Level 1 (in)",
+      "at": "drift:Level 1",
+      "field": "seismic.deltaXE",
+      "value": 0.29152542372881357,
+      "tol": 0.0005,
+      "step": 11,
+      "line": "Line B"
+    },
+    {
+      "label": "Line B — Governing wall for drift, Level 1",
+      "at": "drift:Level 1",
+      "field": "seismic.wallMark",
+      "value": "SW-3",
+      "step": 11,
+      "line": "Line B"
+    },
+    {
+      "label": "Line B — δx = Cd·δxe/Ie, Level 1 (in)",
+      "at": "drift:Level 1",
+      "field": "seismic.deltaX",
+      "value": 1.1661016949152543,
+      "tol": 0.002,
+      "step": 11,
+      "line": "Line B"
+    },
+    {
+      "label": "Line B — Drift passes, Level 1",
+      "at": "drift:Level 1",
+      "field": "seismic.pass",
+      "value": true,
+      "step": 11,
+      "line": "Line B"
+    }
+  ],
+  "expectChecks": {
+    "fail": []
+  },
+  "notChecked": "TSS rod arm (the tool uses the concrete B — confirm for the kit, backlog W2); Table 07 / 08.",
+  "pinned": {
+    "Line A/SW-1": {},
+    "Line A/SW-2": {
+      "wswhAnchor": "E HS 34100"
+    },
+    "Line B/SW-3": {}
+  },
+  "schemaVersion": 12,
+  "inputs": {
+    "sds": "1.0",
+    "loadType": "seismic",
+    "wallThickness": "4",
+    "woodGrade": "dfir_no1",
+    "sheathing": "ply",
+    "distribution": "capacity",
+    "cd": "4",
+    "ie": "1.0",
+    "riskCategory": "II",
+    "driftRow": "other",
+    "driftBypass": false,
+    "alphaS": "",
+    "windDriftLimit": "400",
+    "omega0": "2.5",
+    "lrfdHalfL": false,
+    "wswhFc": "2500",
+    "seismicDesignCategory": "D",
+    "detachedOneTwoFamily": false,
+    "pdfReport": "detailed",
+    "refs": {},
+    "notes": "",
+    "wallDLTypes": [
+      {
+        "id": "wdt-1",
+        "name": "Stud wall",
+        "psf": "10"
+      }
+    ],
+    "levels": [
+      {
+        "id": "lvl-2",
+        "name": "Level 2",
+        "floorToFloor": 9,
+        "anchorageType": "auto",
+        "floorClearSpan": "16"
+      },
+      {
+        "id": "lvl-1",
+        "name": "Level 1",
+        "floorToFloor": 9,
+        "anchorageType": "auto",
+        "floorClearSpan": "16"
+      }
+    ],
+    "directions": [
+      {
+        "id": "dir-1",
+        "name": "N-S",
+        "rho": 1,
+        "lines": [
+          {
+            "id": "ln-1",
+            "name": "Line A",
+            "totalLength": 10,
+            "wallThickness": "",
+            "distribution": "",
+            "driftBypass": "",
+            "distReviewed": [],
+            "levelLoads": {
+              "lvl-2": {
+                "seismic": "0.8",
+                "wind": ""
+              },
+              "lvl-1": {
+                "seismic": "1",
+                "wind": ""
+              }
+            },
+            "gravityLoads": {},
+            "walls": [
+              {
+                "id": "w-1",
+                "mark": "SW-1",
+                "levelId": "lvl-2",
+                "position": 2,
+                "length": 1.5,
+                "method": "segmented",
+                "systemType": "wswh",
+                "openings": [],
+                "narrowPier": false,
+                "wallDLTypeId": "",
+                "nailingPattern": "",
+                "anchorageLeftOverride": "",
+                "anchorageRightOverride": "",
+                "postLeftOverride": "",
+                "postRightOverride": "",
+                "ftaoStrapOverride": "",
+                "jambPostOverride": "",
+                "wswhWidth": "18",
+                "wswhCondition": "stackedUpper",
+                "wswhJoist": "12",
+                "wswhFloorDepth": "12",
+                "wswhAnchorOverride": ""
+              },
+              {
+                "id": "w-2",
+                "mark": "SW-2",
+                "levelId": "lvl-1",
+                "position": 2,
+                "length": 1.5,
+                "method": "segmented",
+                "systemType": "wswh",
+                "openings": [],
+                "narrowPier": false,
+                "wallDLTypeId": "",
+                "nailingPattern": "",
+                "anchorageLeftOverride": "",
+                "anchorageRightOverride": "",
+                "postLeftOverride": "",
+                "postRightOverride": "",
+                "ftaoStrapOverride": "",
+                "jambPostOverride": "",
+                "wswhWidth": "18",
+                "wswhCondition": "concrete",
+                "wswhJoist": "12",
+                "wswhFloorDepth": "12",
+                "wswhAnchorOverride": "E HS 34100"
+              }
+            ],
+            "beams": [],
+            "supportPosts": []
+          },
+          {
+            "id": "ln-2",
+            "name": "Line B",
+            "totalLength": 10,
+            "wallThickness": "",
+            "distribution": "",
+            "driftBypass": "",
+            "distReviewed": [],
+            "levelLoads": {
+              "lvl-1": {
+                "seismic": "1",
+                "wind": ""
+              }
+            },
+            "gravityLoads": {},
+            "walls": [
+              {
+                "id": "w-3",
+                "mark": "SW-3",
+                "levelId": "lvl-1",
+                "position": 2,
+                "length": 1.5,
+                "method": "segmented",
+                "systemType": "wswh",
+                "openings": [],
+                "narrowPier": false,
+                "wallDLTypeId": "",
+                "nailingPattern": "",
+                "anchorageLeftOverride": "",
+                "anchorageRightOverride": "",
+                "postLeftOverride": "",
+                "postRightOverride": "",
+                "ftaoStrapOverride": "",
+                "jambPostOverride": "",
+                "wswhWidth": "18",
+                "wswhCondition": "raised",
+                "wswhJoist": "12",
+                "wswhFloorDepth": "12",
+                "wswhAnchorOverride": ""
+              }
+            ],
+            "beams": [],
+            "supportPosts": []
+          }
+        ]
+      }
+    ]
+  }
+}

@@ -1,0 +1,416 @@
+{
+  "id": "V19",
+  "title": "LRFD and Ω₀ forces, support post",
+  "intent": "A 2nd-story wall SW-1 sits on two support posts (P-1, P-2) that carry its end forces to the foundation. Checks the LRFD seismic combinations (1.2+0.2S_DS)D + ρE + L and (0.9−0.2S_DS)D + ρE and the Ω₀ ASD / LRFD envelopes (all reported forces only), and that the support post member is sized for max(ASD, Ω₀ ASD) compression (ASCE 7-22 §12.3.3.3) while its base hardware stays ASD.",
+  "covers": [
+    "ASCE 7-22 §2.3.6 (6), (7)",
+    "ASCE 7-22 §2.4.5 with Ω₀",
+    "§12.3.3.3 support post",
+    "Reported vs design combinations"
+  ],
+  "handCalc": [
+    {
+      "step": 1,
+      "text": "SW-1 (Level 2, 8 ft, h = 10 ft): D = self-weight 10 × 8 × 10/1000 = 0.80 + 100 plf × 8 = 0.80 → D = 1.60 k, R_D = 0.80 k; L = 50 plf × 8 = 0.40 k → R_L = 0.20 k. 1.0E = 3 k → N_E = 3 × 10/8 = 3.750 k. Ω₀ = 2.5 (entered: wood structural panel walls, Table 12.2-1 A.15; Cd 4, Ie 1.0, RC II)."
+    },
+    {
+      "step": 2,
+      "text": "ASD (design): T = 0.7 × 3.750 − 0.46 × 0.80 = 2.257 k; C = max[1.14 × 0.80 + 0.7 × 3.750 = 3.537, 1.105 × 0.80 + 0.525 × 3.750 + 0.75 × 0.20 = 3.003] = 3.537 k."
+    },
+    {
+      "step": 3,
+      "text": "LRFD (forces only): C = (1.2+0.2S_DS)D + ρE + L = 1.4 × 0.80 + 3.750 + 0.20 = 5.070 k; T = ρE − (0.9−0.2S_DS)D = 3.750 − 0.7 × 0.80 = 3.190 k."
+    },
+    {
+      "step": 4,
+      "text": "Ω₀ ASD (forces only; support posts): C = 1.14 × 0.80 + 0.7 × 2.5 × 3.750 = 7.474 k (combo (6) with Ω₀ 5.956); T = 1.75 × 3.750 − 0.46 × 0.80 = 6.194 k."
+    },
+    {
+      "step": 5,
+      "text": "Ω₀ LRFD (forces only): C = 1.4 × 0.80 + 2.5 × 3.750 + 0.20 = 10.695 k; T = 2.5 × 3.750 − 0.7 × 0.80 = 8.815 k."
+    },
+    {
+      "step": 6,
+      "text": "SW-1 hardware (ASD, upper story → strap): T = 2.257 k → MSTC40 (3070 lb)."
+    },
+    {
+      "step": 7,
+      "text": "Support post P-1 (Level 1, under the SW-1 left end, on the foundation): it carries the SW-1 end per combination, so its envelopes equal the wall end: ASD T 2.257 / C 3.537 k, LRFD C 5.070 k, Ω₀ ASD C 7.474 k."
+    },
+    {
+      "step": 8,
+      "text": "Post base hardware (ASD): T = 2.257 k → HDUE3 (min post (2)2x4). Post member: C_design = max(ASD 3.537, Ω₀ ASD 7.474) = 7.474 k (Ω₀ ASD governs) → (2)2x4 5.00 k < C → (3)2x4 7.50 k. With ASD alone it would be (2)2x4."
+    },
+    {
+      "step": 9,
+      "text": "Level 1: SW-2 (10 ft) takes the story shear 5 k; the SW-1 shear reaches it through the diaphragm. Line checks G1–G12 pass."
+    },
+    {
+      "step": 10,
+      "text": "SW-1 (Eq. 4.3-1, → governs): v = 1000 × 3.000 / 8 = 375.00 plf, A = 10.5 in², G_a = 16 k/in → 8vh³/(EAb) = 0.0210; vh/(1000G_a) = 0.2344; Δ_HD = 0.097 × 3750.00 / 3070/0.7 = 0.0829 (MSTC40, T = 3750.00 lb); r = 3750.00 / (10.5 × 625) = 0.5714 → Δ_c = 0.0157; h·Δa/b = 10 × (0.0829 + 0.0157) / 8 = 0.1232 → δ = 0.3786 in. Story drift Level 2: δxe = the largest wall δ = SW-1 0.3786 in → δx = Cd·δxe/Ie = 4 × 0.3786 / 1.0 = 1.515 in vs Δa = 0.020 × 10 × 12 = 2.400 in → OK."
+    },
+    {
+      "step": 11,
+      "text": "SW-2 (Eq. 4.3-1, → governs): v = 1000 × 5.000 / 10 = 500.00 plf, A = 10.5 in², G_a = 20 k/in → 8vh³/(EAb) = 0.0224; vh/(1000G_a) = 0.2500; Δ_HD = 0.127 × 5000.00 / 3790 (ASD cap) = 0.1675 (HDUE3, T = 5000.00 lb); r = 5000.00 / (10.5 × 625) = 0.7619 → Δ_c = 0.0224; h·Δa/b = 10 × (0.1675 + 0.0224) / 10 = 0.1899 → δ = 0.4623 in. MSTC40 δ basis = cap/0.7 (strap); HDUE3 basis = ASD cap. Story drift Level 1: δxe = the largest wall δ = SW-2 0.4623 in → δx = Cd·δxe/Ie = 4 × 0.4623 / 1.0 = 1.849 in vs Δa = 0.020 × 10 × 12 = 2.400 in → OK."
+    }
+  ],
+  "expect": [
+    {
+      "label": "SW-1 ASD governing T (k)",
+      "at": "wall:SW-1",
+      "field": "governingTensionLeft",
+      "value": 2.257,
+      "tol": 0.005,
+      "step": 2
+    },
+    {
+      "label": "SW-1 ASD governing C (k)",
+      "at": "wall:SW-1",
+      "field": "governingComprRight",
+      "value": 3.537,
+      "tol": 0.005,
+      "step": 2
+    },
+    {
+      "label": "SW-1 LRFD C (k)",
+      "at": "wall:SW-1",
+      "field": "lrfd.cR",
+      "value": 5.07,
+      "tol": 0.005,
+      "step": 3
+    },
+    {
+      "label": "SW-1 LRFD T (k)",
+      "at": "wall:SW-1",
+      "field": "lrfd.tL",
+      "value": 3.19,
+      "tol": 0.005,
+      "step": 3
+    },
+    {
+      "label": "SW-1 Ω₀ ASD C (k)",
+      "at": "wall:SW-1",
+      "field": "omega.asd.cR",
+      "value": 7.4745,
+      "tol": 0.005,
+      "step": 4
+    },
+    {
+      "label": "SW-1 Ω₀ ASD T (k)",
+      "at": "wall:SW-1",
+      "field": "omega.asd.tL",
+      "value": 6.1945,
+      "tol": 0.005,
+      "step": 4
+    },
+    {
+      "label": "SW-1 Ω₀ LRFD C (k)",
+      "at": "wall:SW-1",
+      "field": "omega.lrfd.cR",
+      "value": 10.694999999999999,
+      "tol": 0.005,
+      "step": 5
+    },
+    {
+      "label": "SW-1 Ω₀ LRFD T (k)",
+      "at": "wall:SW-1",
+      "field": "omega.lrfd.tL",
+      "value": 8.815,
+      "tol": 0.005,
+      "step": 5
+    },
+    {
+      "label": "P-1 ASD C (k)",
+      "at": "post:P-1",
+      "field": "envelopeC",
+      "value": 3.537,
+      "tol": 0.005,
+      "step": 7
+    },
+    {
+      "label": "P-1 LRFD C (k)",
+      "at": "post:P-1",
+      "field": "lrfd.C",
+      "value": 5.07,
+      "tol": 0.005,
+      "step": 7
+    },
+    {
+      "label": "P-1 Ω₀ ASD C (k)",
+      "at": "post:P-1",
+      "field": "omega.asd.C",
+      "value": 7.4745,
+      "tol": 0.005,
+      "step": 7
+    },
+    {
+      "label": "P-1 post design C = max(ASD, Ω₀ ASD) (k)",
+      "at": "post:P-1",
+      "field": "postDesignC",
+      "value": 7.4745,
+      "tol": 0.005,
+      "step": 8
+    },
+    {
+      "label": "P-1 post design governed by",
+      "at": "post:P-1",
+      "field": "postGoverns",
+      "value": "Ω₀ ASD",
+      "step": 8
+    },
+    {
+      "label": "Story δxe, Level 2 (in)",
+      "at": "drift:Level 2",
+      "field": "seismic.deltaXE",
+      "value": 0.37862754925271164,
+      "tol": 0.0005,
+      "step": 10
+    },
+    {
+      "label": "Governing wall for drift, Level 2",
+      "at": "drift:Level 2",
+      "field": "seismic.wallMark",
+      "value": "SW-1",
+      "step": 10
+    },
+    {
+      "label": "δx = Cd·δxe/Ie, Level 2 (in)",
+      "at": "drift:Level 2",
+      "field": "seismic.deltaX",
+      "value": 1.5145101970108465,
+      "tol": 0.002,
+      "step": 10
+    },
+    {
+      "label": "Drift passes, Level 2",
+      "at": "drift:Level 2",
+      "field": "seismic.pass",
+      "value": true,
+      "step": 10
+    },
+    {
+      "label": "Story δxe, Level 1 (in)",
+      "at": "drift:Level 1",
+      "field": "seismic.deltaXE",
+      "value": 0.4623184534245634,
+      "tol": 0.0005,
+      "step": 11
+    },
+    {
+      "label": "Governing wall for drift, Level 1",
+      "at": "drift:Level 1",
+      "field": "seismic.wallMark",
+      "value": "SW-2",
+      "step": 11
+    },
+    {
+      "label": "δx = Cd·δxe/Ie, Level 1 (in)",
+      "at": "drift:Level 1",
+      "field": "seismic.deltaX",
+      "value": 1.8492738136982536,
+      "tol": 0.002,
+      "step": 11
+    },
+    {
+      "label": "Drift passes, Level 1",
+      "at": "drift:Level 1",
+      "field": "seismic.pass",
+      "value": true,
+      "step": 11
+    }
+  ],
+  "expectChecks": {
+    "fail": []
+  },
+  "notChecked": "P-2 (mirror of P-1); SW-2 design (standard, see V01).",
+  "pinned": {
+    "SW-1": {
+      "nail": "6",
+      "hdL": "MSTC40",
+      "hdR": "MSTC40",
+      "postL": "(2)2x4",
+      "postR": "(2)2x4"
+    },
+    "SW-2": {
+      "nail": "4",
+      "hdL": "HDUE3",
+      "hdR": "HDUE3",
+      "postL": "(2)2x4",
+      "postR": "(2)2x4"
+    },
+    "P-1": {
+      "post": "(3)2x4",
+      "hd": "HDUE3"
+    },
+    "P-2": {
+      "post": "(3)2x4",
+      "hd": "HDUE3"
+    }
+  },
+  "schemaVersion": 12,
+  "inputs": {
+    "sds": "1",
+    "loadType": "seismic",
+    "wallThickness": "4",
+    "woodGrade": "dfir_no1",
+    "sheathing": "ply",
+    "distribution": "capacity",
+    "cd": "4",
+    "ie": "1.0",
+    "riskCategory": "II",
+    "driftRow": "other",
+    "driftBypass": false,
+    "alphaS": "",
+    "windDriftLimit": "400",
+    "omega0": "2.5",
+    "lrfdHalfL": false,
+    "wswhFc": "2500",
+    "seismicDesignCategory": "",
+    "detachedOneTwoFamily": false,
+    "pdfReport": "detailed",
+    "refs": {},
+    "notes": "",
+    "wallDLTypes": [
+      {
+        "id": "wdt-1",
+        "name": "Stud wall",
+        "psf": "10"
+      }
+    ],
+    "levels": [
+      {
+        "id": "lvl-2",
+        "name": "Level 2",
+        "floorToFloor": 10,
+        "anchorageType": "auto",
+        "floorClearSpan": "16"
+      },
+      {
+        "id": "lvl-1",
+        "name": "Level 1",
+        "floorToFloor": 10,
+        "anchorageType": "auto",
+        "floorClearSpan": "16"
+      }
+    ],
+    "directions": [
+      {
+        "id": "dir-1",
+        "name": "N-S",
+        "rho": 1,
+        "lines": [
+          {
+            "id": "ln-1",
+            "name": "Line A",
+            "totalLength": 24,
+            "wallThickness": "",
+            "distribution": "",
+            "driftBypass": "",
+            "distReviewed": [],
+            "levelLoads": {
+              "lvl-2": {
+                "seismic": "3",
+                "wind": ""
+              },
+              "lvl-1": {
+                "seismic": "2",
+                "wind": ""
+              }
+            },
+            "gravityLoads": {
+              "lvl-2": {
+                "loads": [
+                  {
+                    "id": "g1",
+                    "shape": "partial",
+                    "position": 0,
+                    "start": 0,
+                    "end": 8,
+                    "D": "100",
+                    "L": "50",
+                    "Lr": "",
+                    "perArea": false,
+                    "trib": "",
+                    "assemblyId": ""
+                  }
+                ]
+              },
+              "lvl-1": {
+                "loads": []
+              }
+            },
+            "walls": [
+              {
+                "id": "w-1",
+                "mark": "SW-1",
+                "levelId": "lvl-2",
+                "position": 0,
+                "length": 8,
+                "method": "segmented",
+                "systemType": "sheathed",
+                "openings": [],
+                "narrowPier": false,
+                "wallDLTypeId": "wdt-1",
+                "nailingPattern": "6",
+                "anchorageLeftOverride": "MSTC40",
+                "anchorageRightOverride": "MSTC40",
+                "postLeftOverride": "(2)2x4",
+                "postRightOverride": "(2)2x4",
+                "ftaoStrapOverride": "",
+                "jambPostOverride": "",
+                "wswhWidth": "18",
+                "wswhCondition": "concrete",
+                "wswhJoist": "12",
+                "wswhFloorDepth": "12",
+                "wswhAnchorOverride": ""
+              },
+              {
+                "id": "w-2",
+                "mark": "SW-2",
+                "levelId": "lvl-1",
+                "position": 12,
+                "length": 10,
+                "method": "segmented",
+                "systemType": "sheathed",
+                "openings": [],
+                "narrowPier": false,
+                "wallDLTypeId": "wdt-1",
+                "nailingPattern": "4",
+                "anchorageLeftOverride": "HDUE3",
+                "anchorageRightOverride": "HDUE3",
+                "postLeftOverride": "(2)2x4",
+                "postRightOverride": "(2)2x4",
+                "ftaoStrapOverride": "",
+                "jambPostOverride": "",
+                "wswhWidth": "18",
+                "wswhCondition": "concrete",
+                "wswhJoist": "12",
+                "wswhFloorDepth": "12",
+                "wswhAnchorOverride": ""
+              }
+            ],
+            "beams": [],
+            "supportPosts": [
+              {
+                "id": "sp-1",
+                "mark": "P-1",
+                "levelId": "lvl-1",
+                "position": 0,
+                "postOverride": "(3)2x4",
+                "anchorageOverride": "HDUE3"
+              },
+              {
+                "id": "sp-2",
+                "mark": "P-2",
+                "levelId": "lvl-1",
+                "position": 8,
+                "postOverride": "(3)2x4",
+                "anchorageOverride": "HDUE3"
+              }
+            ]
+          }
+        ]
+      }
+    ]
+  }
+}

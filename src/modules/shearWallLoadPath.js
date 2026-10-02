@@ -18,7 +18,8 @@ function num(v) { return parseFloat(v) || 0; }
 function r2(v) { return Math.round(v * 100) / 100; }
 function zeroMap(keys) { const m = {}; for (const k of keys) m[k] = 0; return m; }
 function addInto(target, src) { for (const k of Object.keys(target)) target[k] += src[k] || 0; }
-function roundMap(m) { const o = {}; for (const [k, v] of Object.entries(m)) o[k] = r2(v); return o; }
+// End forces stay unrounded (rounded for display only, user decision 2026-09-29); roundMap only copies
+function roundMap(m) { return { ...m }; }
 function span(e) { const s = num(e.position); return [s, s + num(e.length)]; }
 
 // Envelope over one combo group (ASD designs; LRFD is reported): T = max uplift, C = max compression
@@ -28,7 +29,7 @@ export function envelope(map, comboGroups, group = 'asd') {
     if (comboGroups[k] !== group) continue;
     if (v < 0) T = Math.max(T, -v); else C = Math.max(C, v);
   }
-  return { T: r2(T), C: r2(C) };
+  return { T, C };
 }
 
 // Per-end envelope of accumulated wall combos over one group
@@ -205,7 +206,7 @@ export function resolveVerticalLoadPath(ctx) {
       const missing = [];
       for (const [side, x] of [['left', ws], ['right', we]]) {
         const map = wallEndMap(w, side);
-        const rec = deliver(li, x, map, { type: 'wall', id: w.id, label: markOf(w) + (side === 'left' ? ' L' : ' R') }, 'element');
+        const rec = deliver(li, x, map, { type: 'wall', id: w.id, end: side, label: markOf(w) + (side === 'left' ? ' L' : ' R') }, 'element');
         wallDeliveries.push({ wallId: w.id, levelId: lvl.id, side, position: x, receiver: rec, map: roundMap(map), env: env(map) });
         if (rec.type === 'none') missing.push(side + ' end: nothing below');
         if (rec.type === 'wall_mid') missing.push(side + ' end lands ' + rec.label.toLowerCase() + ' — add a post below');
@@ -249,7 +250,7 @@ export function resolveVerticalLoadPath(ctx) {
         hasPostAbove: st.sources.some(s => s.type === 'post'),
         sources: st.sources, receiver: rec,
         ...hw, post, postDC, postRaised: ps.raised ? ps : null,
-        postDesignC: r2(Cd), postGoverns: eO.C > e.C + 1e-9 ? 'Ω₀ ASD' : 'ASD',
+        postDesignC: Cd, postGoverns: eO.C > e.C + 1e-9 ? 'Ω₀ ASD' : 'ASD',
       });
     }
 
@@ -326,8 +327,8 @@ export function resolveVerticalLoadPath(ctx) {
       const netL = (c.comprLeft || 0) - (c.tensionLeft || 0) + inc.left[k];
       const netR = (c.comprRight || 0) - (c.tensionRight || 0) + inc.right[k];
       accum[k] = {
-        tensionLeft: r2(Math.max(0, -netL)), comprLeft: r2(Math.max(0, netL)),
-        tensionRight: r2(Math.max(0, -netR)), comprRight: r2(Math.max(0, netR)),
+        tensionLeft: Math.max(0, -netL), comprLeft: Math.max(0, netL),
+        tensionRight: Math.max(0, -netR), comprRight: Math.max(0, netR),
       };
       if (comboGroups[k] === 'lrfd') {
         lr.tL = Math.max(lr.tL, accum[k].tensionLeft); lr.tR = Math.max(lr.tR, accum[k].tensionRight);
@@ -337,19 +338,19 @@ export function resolveVerticalLoadPath(ctx) {
       tL = Math.max(tL, accum[k].tensionLeft); tR = Math.max(tR, accum[k].tensionRight);
       cL = Math.max(cL, accum[k].comprLeft); cR = Math.max(cR, accum[k].comprRight);
     }
-    const demand = { tL: r2(tL), tR: r2(tR), cL: r2(cL), cR: r2(cR) };
+    const demand = { tL, tR, cL, cR };
     wr.accumPerCombo = accum;
     wr.accumTension = Math.max(demand.tL, demand.tR);
     wr.accumCompression = Math.max(demand.cL, demand.cR);
     wr.injections = inc.sources;
     wr.hwDemand = demand;
-    wr.accumLRFD = { tL: r2(lr.tL), tR: r2(lr.tR), cL: r2(lr.cL), cR: r2(lr.cR) };
+    wr.accumLRFD = { ...lr };
     wr.accumOmega = { asd: endEnvelope(accum, comboGroups, 'asd_omega'), lrfd: endEnvelope(accum, comboGroups, 'lrfd_omega') };
 
     const lvl = levels[levelIdx[w.levelId]];
     const floorSpan = (lvl && lvl.floorClearSpan) || '16';
-    const hook = ctx.wallHardware ? (T) => ctx.wallHardware(w, T) : () => undefined;
-    const pickAnc = (ov, T) => { const h = hook(T); if (h !== undefined) return h; return ov ? findAnchorage(ov, floorSpan)
+    const hook = ctx.wallHardware ? (T, ov) => ctx.wallHardware(w, T, ov) : () => undefined;
+    const pickAnc = (ov, T) => { const h = hook(T, ov); if (h !== undefined) return h; return ov ? findAnchorage(ov, floorSpan)
       : wr.anchorageType === 'holdown' ? autoSelectHoldown(T) : autoSelectStrap(T, floorSpan); };
     wr.anchorageLeft = pickAnc(w.anchorageLeftOverride, demand.tL);
     wr.anchorageRight = pickAnc(w.anchorageRightOverride, demand.tR);

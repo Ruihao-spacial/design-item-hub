@@ -78,7 +78,7 @@ export function wallGravity(pos, len, rows, exclude) {
     for (const c of LOAD_CASES) {
       if (!P[c]) continue;
       out[c].total += P[c]; out[c].rR += P[c] * toR; out[c].rL += P[c] * (1 - toR);
-      doc.P[c] = r4(P[c]); doc.rR[c] = r4(P[c] * toR); doc.rL[c] = r4(P[c] * (1 - toR));
+      doc.P[c] = P[c]; doc.rR[c] = P[c] * toR; doc.rL[c] = P[c] * (1 - toR);
     }
     return doc;
   };
@@ -100,7 +100,7 @@ export function wallGravity(pos, len, rows, exclude) {
     doc.mag = { D: p.D, L: p.L, Lr: p.Lr };
     out.rows.push(doc);
   }
-  for (const c of LOAD_CASES) { out[c].total = r4(out[c].total); out[c].rL = r4(out[c].rL); out[c].rR = r4(out[c].rR); }
+  // totals and reactions stay unrounded (display rounds; user decision 2026-09-29)
   return out;
 }
 
@@ -134,8 +134,9 @@ export function gravityToElements({ line, levels, coverWalls }) {
       }
       for (const [a, c] of subtract(u.x0, u.x1, [...spans, ...wallSpans])) {
         if (!LOAD_CASES.some(k => u[k])) continue;
-        notes.push({ type: 'gravity_unsupported', elementId: u.id, elementMark: lbl(u), levelName: lvl.name || '',
-          message: lbl(u) + ' ' + r2(a) + '–' + r2(c) + ' ft (' + mags(u) + ' plf) has no wall, beam or post below — not carried' });
+        const g = {}; for (const k of LOAD_CASES) g[k] = u[k] * (c - a) / 1000;
+        notes.push({ type: 'gravity_unsupported', elementId: u.id, elementMark: lbl(u), levelId: lvl.id, levelName: lvl.name || '', g, x: (a + c) / 2,
+          message: lbl(u) + ' ' + r2(a) + '–' + r2(c) + ' ft (' + mags(u) + ' plf) — carried by framing outside this line (no wall, beam or post below), not checked here' });
       }
     }
     for (const p of rows.point) {
@@ -146,17 +147,21 @@ export function gravityToElements({ line, levels, coverWalls }) {
       if (inSpans(p.x, wallSpans)) continue;
       const post = posts.find(q => Math.abs(num(q.position) - p.x) <= TOL);
       if (post) { (postGravity[post.id] = postGravity[post.id] || []).push({ g, label: lbl(p) + ' at ' + r2(p.x) + ' ft' }); continue; }
-      notes.push({ type: 'gravity_unsupported', elementId: p.id, elementMark: lbl(p), levelName: lvl.name || '',
-        message: lbl(p) + ' at ' + r2(p.x) + ' ft (' + mags(p) + ' k) has no wall, beam or post below — not carried' });
+      notes.push({ type: 'gravity_unsupported', elementId: p.id, elementMark: lbl(p), levelId: lvl.id, levelName: lvl.name || '', g, x: p.x,
+        message: lbl(p) + ' at ' + r2(p.x) + ' ft (' + mags(p) + ' k) — carried by framing outside this line (no wall, beam or post below), not checked here' });
     }
   });
   return { beamGravity, postGravity, notes, excludeByLevel };
 }
 
-// Flat Load link: psf of a uniform row from an assembly (perTab entry): dead → D, live → Lr (roof) or L
+// Dead load of a linked assembly: the lateral dead load dlLateral (coverage-reduced items such as solar PV smeared over
+// the area; user decision 2026-10-01), else the gravity dl for an older Flat Load result without it
+export function assemblyDead(asm) { return asm ? num(asm.dlLateral != null && asm.dlLateral !== '' ? asm.dlLateral : asm.dl) : 0; }
+
+// Flat Load link: psf of a uniform row from an assembly (perTab entry): lateral dead → D, live → Lr (roof) or L
 export function assemblyPsf(asm) {
   const roof = asm && (asm.type === 'roof' || asm.llSymbol === 'Lr');
-  const dead = asm ? num(asm.dl) : 0, live = asm ? num(asm.llGravity) : 0;
+  const dead = assemblyDead(asm), live = asm ? num(asm.llGravity) : 0;
   return { D: dead, L: roof ? 0 : live, Lr: roof ? live : 0 };
 }
 
@@ -164,6 +169,6 @@ export function assemblyPsf(asm) {
 export function assemblyLoads(asm, trib) {
   const t = num(trib);
   const roof = asm && (asm.type === 'roof' || asm.llSymbol === 'Lr');
-  const dead = asm ? num(asm.dl) : 0, live = asm ? num(asm.llGravity) : 0;
+  const dead = assemblyDead(asm), live = asm ? num(asm.llGravity) : 0;
   return { D: r2(dead * t), L: roof ? 0 : r2(live * t), Lr: roof ? r2(live * t) : 0 };
 }

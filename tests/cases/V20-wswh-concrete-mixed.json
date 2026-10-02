@@ -1,0 +1,328 @@
+{
+  "id": "V20",
+  "title": "Strong-Wall WSWH on concrete with a sheathed wall",
+  "intent": "A WSWH18 panel on a concrete foundation (9 ft story, exact WSWH18x9 row) shares the story shear with an 8 ft sheathed wall by capacity: the panel weight is its tabulated V_allow (lb), the wall weight is v_cap × L. Checks the vertical load P used for the table lookup, the panel D/C = V_ASD / V_allow, the anchor tension T = 0.7V·H_e/B − (0.6−0.14S_DS)·P/2, the Table 06 anchor (cracked concrete, SDC D → seismic \"E\" rows only, smallest W then d_e), and the panel drift Δ = Δ_cap·V/V_cap.",
+  "covers": [
+    "Simpson C-L-SW26 Table 01 (WSWH18x9)",
+    "Table 05 arm B",
+    "Table 06-A anchors (cracked, 2,500 psi)",
+    "Capacity distribution with WSWH"
+  ],
+  "handCalc": [
+    {
+      "step": 1,
+      "text": "Panel SW-1 WSWH18 (1.5 ft wide), no wall weight; point load D = 1.2 k on the panel. P (ASD, seismic) = max[(1.0 + 0.14S_DS)D, (1.0 + 0.105S_DS)D + 0.75L] = 1.14 × 1200 = 1368 lb."
+    },
+    {
+      "step": 2,
+      "text": "Table 01, WSWH18x9 (nominal 9 ft = floor-to-floor, f'c 2,500 psi): H_e = 105.25 in; P = 1,000 and 4,000 lb rows both give V_ASD,S = 2,575 lb and Δ = 0.45 in → at P = 1368 lb: V_allow = 2,575 lb. Arm B = 12.5 in (Table 05)."
+    },
+    {
+      "step": 3,
+      "text": "Capacity distribution, SW-2 at 6\" o.c. (312 plf): weights panel 2,575 lb, SW-2 312 × 8 = 2496 lb → Σ = 5071 lb. Panel V = 4 × 2575/5071 = 2.031 k; SW-2 V = 1.969 k."
+    },
+    {
+      "step": 4,
+      "text": "SW-2: v = 0.7 × 1.969 × 1000/8 = 172.27 plf ≤ 312 → 6\" o.c. (unchanged, so the weights hold). N = 1.969 × 9/8 = 2.215 k, T = 0.7 × 2.215 − 0.46 × 0.36 = 1.385 k → HDUE3."
+    },
+    {
+      "step": 5,
+      "text": "Panel D/C = V_ASD / V_allow = 0.7 × 2.031 × 1000 / 2575 = 1422 / 2575 = 0.552."
+    },
+    {
+      "step": 6,
+      "text": "Panel anchor tension, (0.6 − 0.14S_DS)D + 0.7E: T = 0.7·V·H_e/B − 0.46·D/2 = 0.7 × 2.031 × 105.25/12.5 − 0.46 × 0.60 = 11.696 k = 11696 lb."
+    },
+    {
+      "step": 7,
+      "text": "Table 06-A (2,500 psi, cracked), SDC D → criteria E only. Rows with T_ASDallow ≥ 11696 lb, smallest W then d_e: STD 16,000 lb, W = 33 in, d_e = 11 in (L_ftg = 47 in for WSWH18) → WSWH-AB STD (E), D/C = 0.731."
+    },
+    {
+      "step": 8,
+      "text": "Panel drift at 1.0E: Δ = Δ_cap·V/V_cap = 0.45 × 2031.16 / 2575 = 0.355 in (linear, Table 01 n.7)."
+    },
+    {
+      "step": 9,
+      "text": "Line checks G1–G12 pass (the panel load goes straight to the foundation)."
+    },
+    {
+      "step": 10,
+      "text": "Story drift inputs: SW-1 (WSWH) δ = the table drift of step 8 (ASD seismic column Δ_cap = 0.45 in at V_cap = 2,575 lb, scaled to the 1.0E share 2031.16 lb) = 0.355 in. SW-2 (Eq. 4.3-1, → governs): v = 1000 × 1.969 / 8 = 246.11 plf, A = 10.5 in², G_a = 16 k/in → 8vh³/(EAb) = 0.0101; vh/(1000G_a) = 0.1384; Δ_HD = 0.127 × 2214.95 / 3790 (ASD cap) = 0.0742 (HDUE3, T = 2214.95 lb); r = 2214.95 / (10.5 × 625) = 0.3375 → Δ_c = 0.0092; h·Δa/b = 9 × (0.0742 + 0.0092) / 8 = 0.0939 → δ = 0.2424 in."
+    },
+    {
+      "step": 11,
+      "text": "Story drift Level 1: δxe = the largest wall δ = SW-1 0.3550 in → δx = Cd·δxe/Ie = 4 × 0.3550 / 1.0 = 1.420 in vs Δa = 0.020 × 9 × 12 = 2.160 in → OK."
+    }
+  ],
+  "expect": [
+    {
+      "label": "Panel P (seismic, lb)",
+      "at": "wall:SW-1",
+      "field": "wswh.P.E",
+      "value": 1368,
+      "tol": 0.6,
+      "step": 1
+    },
+    {
+      "label": "Panel V_allow (lb)",
+      "at": "wall:SW-1",
+      "field": "wswh.Vcap.E",
+      "value": 2575,
+      "tol": 0.5,
+      "step": 2
+    },
+    {
+      "label": "Panel H_e (in)",
+      "at": "wall:SW-1",
+      "field": "wswh.He",
+      "value": 105.25,
+      "tol": 0.001,
+      "step": 2
+    },
+    {
+      "label": "Panel arm B (in)",
+      "at": "wall:SW-1",
+      "field": "wswh.B",
+      "value": 12.5,
+      "tol": 0.001,
+      "step": 2
+    },
+    {
+      "label": "Panel share V (1.0E)",
+      "at": "wall:SW-1",
+      "field": "shareExact_1E",
+      "value": 2.031157562610925,
+      "tol": 0.005,
+      "step": 3
+    },
+    {
+      "label": "SW-2 share V (1.0E)",
+      "at": "wall:SW-2",
+      "field": "shareExact_1E",
+      "value": 1.9688424373890752,
+      "tol": 0.005,
+      "step": 3
+    },
+    {
+      "label": "Panel D/C",
+      "at": "wall:SW-1",
+      "field": "dcRatio",
+      "value": 0.5521593374087951,
+      "tol": 0.006,
+      "step": 5
+    },
+    {
+      "label": "Panel governing T (k)",
+      "at": "wall:SW-1",
+      "field": "governingTensionLeft",
+      "value": 11.695642674028788,
+      "tol": 0.005,
+      "step": 6
+    },
+    {
+      "label": "Panel anchor cap (lb)",
+      "at": "wall:SW-1",
+      "field": "anchorageLeft.cap",
+      "value": 16000,
+      "tol": 0,
+      "step": 7
+    },
+    {
+      "label": "Panel Δ at 1.0E (in)",
+      "at": "wall:SW-1",
+      "field": "deflection.E.delta",
+      "value": 0.3549595740485112,
+      "tol": 0.0005,
+      "step": 8
+    },
+    {
+      "label": "SW-2 δ at 1.0E (in)",
+      "at": "wall:SW-2",
+      "field": "deflection.E.delta",
+      "value": 0.24238699744759934,
+      "tol": 0.0005,
+      "step": 10
+    },
+    {
+      "label": "Story δxe, Level 1 (in)",
+      "at": "drift:Level 1",
+      "field": "seismic.deltaXE",
+      "value": 0.3549595740485112,
+      "tol": 0.0005,
+      "step": 11
+    },
+    {
+      "label": "Governing wall for drift, Level 1",
+      "at": "drift:Level 1",
+      "field": "seismic.wallMark",
+      "value": "SW-1",
+      "step": 11
+    },
+    {
+      "label": "δx = Cd·δxe/Ie, Level 1 (in)",
+      "at": "drift:Level 1",
+      "field": "seismic.deltaX",
+      "value": 1.4198382961940448,
+      "tol": 0.002,
+      "step": 11
+    },
+    {
+      "label": "Drift passes, Level 1",
+      "at": "drift:Level 1",
+      "field": "seismic.pass",
+      "value": true,
+      "step": 11
+    }
+  ],
+  "expectChecks": {
+    "fail": []
+  },
+  "notChecked": "Bolt length / HSR extension (Table 07) and edge shear anchorage (Table 08) — not in the tool.",
+  "pinned": {
+    "SW-1": {
+      "wswhAnchor": "E STD 16000"
+    },
+    "SW-2": {
+      "nail": "6",
+      "hdL": "HDUE3",
+      "hdR": "HDUE3",
+      "postL": "(2)2x4",
+      "postR": "(2)2x4"
+    }
+  },
+  "schemaVersion": 12,
+  "inputs": {
+    "sds": "1",
+    "loadType": "seismic",
+    "wallThickness": "4",
+    "woodGrade": "dfir_no1",
+    "sheathing": "ply",
+    "distribution": "capacity",
+    "cd": "4",
+    "ie": "1.0",
+    "riskCategory": "II",
+    "driftRow": "other",
+    "driftBypass": false,
+    "alphaS": "",
+    "windDriftLimit": "400",
+    "omega0": "2.5",
+    "lrfdHalfL": false,
+    "wswhFc": "2500",
+    "seismicDesignCategory": "D",
+    "detachedOneTwoFamily": false,
+    "pdfReport": "detailed",
+    "refs": {},
+    "notes": "",
+    "wallDLTypes": [
+      {
+        "id": "wdt-1",
+        "name": "Stud wall",
+        "psf": "10"
+      }
+    ],
+    "levels": [
+      {
+        "id": "lvl-1",
+        "name": "Level 1",
+        "floorToFloor": 9,
+        "anchorageType": "auto",
+        "floorClearSpan": "16"
+      }
+    ],
+    "directions": [
+      {
+        "id": "dir-1",
+        "name": "N-S",
+        "rho": 1,
+        "lines": [
+          {
+            "id": "ln-1",
+            "name": "Line A",
+            "totalLength": 14,
+            "wallThickness": "",
+            "distribution": "",
+            "driftBypass": "",
+            "distReviewed": [],
+            "levelLoads": {
+              "lvl-1": {
+                "seismic": "4",
+                "wind": ""
+              }
+            },
+            "gravityLoads": {
+              "lvl-1": {
+                "loads": [
+                  {
+                    "id": "g1",
+                    "shape": "point",
+                    "position": 0.75,
+                    "start": 0,
+                    "end": 0,
+                    "D": "1.2",
+                    "L": "",
+                    "Lr": "",
+                    "perArea": false,
+                    "trib": "",
+                    "assemblyId": ""
+                  }
+                ]
+              }
+            },
+            "walls": [
+              {
+                "id": "w-1",
+                "mark": "SW-1",
+                "levelId": "lvl-1",
+                "position": 0,
+                "length": 1.5,
+                "method": "segmented",
+                "systemType": "wswh",
+                "openings": [],
+                "narrowPier": false,
+                "wallDLTypeId": "",
+                "nailingPattern": "",
+                "anchorageLeftOverride": "",
+                "anchorageRightOverride": "",
+                "postLeftOverride": "",
+                "postRightOverride": "",
+                "ftaoStrapOverride": "",
+                "jambPostOverride": "",
+                "wswhWidth": "18",
+                "wswhCondition": "concrete",
+                "wswhJoist": "12",
+                "wswhFloorDepth": "12",
+                "wswhAnchorOverride": "E STD 16000"
+              },
+              {
+                "id": "w-2",
+                "mark": "SW-2",
+                "levelId": "lvl-1",
+                "position": 6,
+                "length": 8,
+                "method": "segmented",
+                "systemType": "sheathed",
+                "openings": [],
+                "narrowPier": false,
+                "wallDLTypeId": "wdt-1",
+                "nailingPattern": "6",
+                "anchorageLeftOverride": "HDUE3",
+                "anchorageRightOverride": "HDUE3",
+                "postLeftOverride": "(2)2x4",
+                "postRightOverride": "(2)2x4",
+                "ftaoStrapOverride": "",
+                "jambPostOverride": "",
+                "wswhWidth": "18",
+                "wswhCondition": "concrete",
+                "wswhJoist": "12",
+                "wswhFloorDepth": "12",
+                "wswhAnchorOverride": ""
+              }
+            ],
+            "beams": [],
+            "supportPosts": []
+          }
+        ]
+      }
+    ]
+  }
+}

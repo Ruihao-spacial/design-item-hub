@@ -1,0 +1,368 @@
+{
+  "id": "V03",
+  "title": "Gravity statics D / L / Lr",
+  "intent": "One wall under a full-line uniform (D / L / Lr), a partial uniform that runs past the wall end, and an off-centre point load. Proves the statics end reactions per load case, the resisting moment about each corner, that load over no wall is not carried (audit note, excluded — the checks still pass), and the governing ASD combinations with live and roof live load.",
+  "covers": [
+    "Gravity statics R_R = Σ P·x / L",
+    "C3 M_R about each corner",
+    "ASCE 7-22 §2.4.1 (2), (4), §2.4.5 (5), (6), (8)",
+    "gravity_unsupported audit note",
+    "G4 / G8 excluded loads"
+  ],
+  "handCalc": [
+    {
+      "step": 1,
+      "text": "SW-1 runs x = 4–14 ft on a 20 ft line, h = 10 ft. x below is measured from the wall left end."
+    },
+    {
+      "step": 2,
+      "text": "Load pieces on the wall: full line 100 / 50 / 40 plf over 4–14 ft → P = D 1.000 / L 0.500 / Lr 0.400 k at x = 5.00 ft; partial 200 / 100 plf over 6–14 ft (of 6–18) → P = D 1.600 / L 0.800 / Lr 0.000 k at x = 6.00 ft; point 3 / 2 / 1 k at line x = 7 ft → P = D 3.000 / L 2.000 / Lr 1.000 k at x = 3.00 ft; self-weight 10 psf × 10 × 10 → P = D 1.000 / L 0.000 / Lr 0.000 k at x = 5.00 ft."
+    },
+    {
+      "step": 3,
+      "text": "Not carried (over no wall): full line 0–4 and 14–20 ft (D 1.00 / L 0.50 / Lr 0.40 k) and partial 14–18 ft (D 0.80 / L 0.40 k) → audit notes, excluded in the gravity checks."
+    },
+    {
+      "step": 4,
+      "text": "Totals ΣP: D 6.600 / L 3.300 / Lr 1.400 k."
+    },
+    {
+      "step": 5,
+      "text": "M_R about the right corner (→) = Σ P·(L − x): D 37.400 / L 19.700 / Lr 9.000 k·ft; about the left corner (←) = Σ P·x: D 28.600 / L 13.300 / Lr 5.000 k·ft."
+    },
+    {
+      "step": 6,
+      "text": "Reactions: R_R = Σ P·x / L = D 2.860 / L 1.330 / Lr 0.500 k; R_L = ΣP − R_R = D 3.740 / L 1.970 / Lr 0.900 k."
+    },
+    {
+      "step": 7,
+      "text": "Lateral: V = 4 k, v = 0.7 × 4000 / 10 = 280.00 plf → 6\" o.c.; N_E = 4 × 10 / 10 = ±4.00 k."
+    },
+    {
+      "step": 8,
+      "text": "Left-end compression by combination: D = 3.7400; D + L = 5.7100; D + Lr = 4.6400; D + 0.75L + 0.75Lr = 5.8925; (1.0+0.14S_DS)D + 0.7E ← = 1.14 × 3.7400 + 0.7 × 4.00 = 7.0636; (1.0+0.105S_DS)D + 0.525E + 0.75L ← = 1.105 × 3.7400 + 0.525 × 4.00 + 0.75 × 1.9700 = 7.7102 → governs C_L = 7.7102 k."
+    },
+    {
+      "step": 9,
+      "text": "Right-end compression: combo (6) → = 1.105 × 2.8600 + 0.525 × 4.00 + 0.75 × 1.3300 = 6.2578; combo (5) → = 6.0604 → C_R = 6.2578 k."
+    },
+    {
+      "step": 10,
+      "text": "Uplift (0.6 − 0.14S_DS)D + 0.7E: left (→) 0.7 × 4.00 − 0.46 × 3.7400 = 1.0796 k; right (←) 0.7 × 4.00 − 0.46 × 2.8600 = 1.4844 k → HDUE3 at the right."
+    },
+    {
+      "step": 11,
+      "text": "Left end post (HDUE3 minimum post (2)2x4, sizes tried in catalog order at 10 ft): (2)2x4 5.00 k, (3)2x4 7.50 k, 4x4 5.83 k, 6x4 9.14 k, 8x4 12.47 k → first with cap ≥ C_L = 7.710 k is 6x4."
+    },
+    {
+      "step": 12,
+      "text": "SW-1 (Eq. 4.3-1, → governs): v = 1000 × 4.000 / 10 = 400.00 plf, A = 15.75 in², G_a = 16 k/in → 8vh³/(EAb) = 0.0120; vh/(1000G_a) = 0.2500; Δ_HD = 0.127 × 4000.00 / 3790 (ASD cap) = 0.1340 (HDUE3, T = 4000.00 lb); r = 4000.00 / (15.75 × 625) = 0.4063 → Δ_c = 0.0111; h·Δa/b = 10 × (0.1340 + 0.0111) / 10 = 0.1452 → δ = 0.4071 in."
+    },
+    {
+      "step": 13,
+      "text": "Story drift Level 1: δxe = the largest wall δ = SW-1 0.4071 in → δx = Cd·δxe/Ie = 4 × 0.4071 / 1.0 = 1.628 in vs Δa = 0.020 × 10 × 12 = 2.400 in → OK."
+    }
+  ],
+  "expect": [
+    {
+      "label": "SW-1 total D (k)",
+      "at": "wall:SW-1",
+      "field": "dlTotal",
+      "value": 6.6,
+      "tol": 0.005,
+      "step": 4
+    },
+    {
+      "label": "SW-1 total L (k)",
+      "at": "wall:SW-1",
+      "field": "live.L.total",
+      "value": 3.3,
+      "tol": 0.005,
+      "step": 4
+    },
+    {
+      "label": "SW-1 total Lr (k)",
+      "at": "wall:SW-1",
+      "field": "live.Lr.total",
+      "value": 1.4,
+      "tol": 0.005,
+      "step": 4
+    },
+    {
+      "label": "SW-1 R_L dead (k)",
+      "at": "wall:SW-1",
+      "field": "dlRL",
+      "value": 3.7399999999999993,
+      "tol": 0.005,
+      "step": 6
+    },
+    {
+      "label": "SW-1 R_R dead (k)",
+      "at": "wall:SW-1",
+      "field": "dlRR",
+      "value": 2.8600000000000003,
+      "tol": 0.005,
+      "step": 6
+    },
+    {
+      "label": "SW-1 R_R live (k)",
+      "at": "wall:SW-1",
+      "field": "live.L.rR",
+      "value": 1.33,
+      "tol": 0.005,
+      "step": 6
+    },
+    {
+      "label": "SW-1 R_L roof live (k)",
+      "at": "wall:SW-1",
+      "field": "live.Lr.rL",
+      "value": 0.8999999999999999,
+      "tol": 0.005,
+      "step": 6
+    },
+    {
+      "label": "SW-1 1.0L left end N (k)",
+      "at": "wall:SW-1",
+      "field": "lc[\"1.0L\"].left",
+      "value": 1.9699999999999998,
+      "tol": 0.005,
+      "step": 6
+    },
+    {
+      "label": "SW-1 D + L left compression (k)",
+      "at": "wall:SW-1",
+      "field": "combos[\"D+L\"].comprLeft",
+      "value": 5.709999999999999,
+      "tol": 0.005,
+      "step": 8
+    },
+    {
+      "label": "SW-1 D + 0.75L + 0.75Lr left compression (k)",
+      "at": "wall:SW-1",
+      "field": "combos[\"D+0.75L+0.75Lr\"].comprLeft",
+      "value": 5.892499999999999,
+      "tol": 0.005,
+      "step": 8
+    },
+    {
+      "label": "SW-1 (1.0+0.105SDS)D + 0.525E + 0.75L ← left compression (k)",
+      "at": "wall:SW-1",
+      "field": "combos[\"D+0.525ρE+0.75L_neg\"].comprLeft",
+      "value": 7.7101999999999995,
+      "tol": 0.005,
+      "step": 8
+    },
+    {
+      "label": "SW-1 governing C left (k)",
+      "at": "wall:SW-1",
+      "field": "governingComprLeft",
+      "value": 7.7101999999999995,
+      "tol": 0.005,
+      "step": 8
+    },
+    {
+      "label": "SW-1 governing C right (k)",
+      "at": "wall:SW-1",
+      "field": "governingComprRight",
+      "value": 6.257800000000001,
+      "tol": 0.005,
+      "step": 9
+    },
+    {
+      "label": "SW-1 governing T right (k)",
+      "at": "wall:SW-1",
+      "field": "governingTensionRight",
+      "value": 1.4843999999999997,
+      "tol": 0.005,
+      "step": 10
+    },
+    {
+      "label": "SW-1 δ at 1.0E (in)",
+      "at": "wall:SW-1",
+      "field": "deflection.E.delta",
+      "value": 0.4071212415280205,
+      "tol": 0.0005,
+      "step": 12
+    },
+    {
+      "label": "Story δxe, Level 1 (in)",
+      "at": "drift:Level 1",
+      "field": "seismic.deltaXE",
+      "value": 0.4071212415280205,
+      "tol": 0.0005,
+      "step": 13
+    },
+    {
+      "label": "Governing wall for drift, Level 1",
+      "at": "drift:Level 1",
+      "field": "seismic.wallMark",
+      "value": "SW-1",
+      "step": 13
+    },
+    {
+      "label": "δx = Cd·δxe/Ie, Level 1 (in)",
+      "at": "drift:Level 1",
+      "field": "seismic.deltaX",
+      "value": 1.628484966112082,
+      "tol": 0.002,
+      "step": 13
+    },
+    {
+      "label": "Drift passes, Level 1",
+      "at": "drift:Level 1",
+      "field": "seismic.pass",
+      "value": true,
+      "step": 13
+    }
+  ],
+  "expectChecks": {
+    "fail": []
+  },
+  "notChecked": "The \"not carried\" amounts are only checked through G4 / G8 passing with them excluded; LRFD and Ω₀ combinations (see V19).",
+  "pinned": {
+    "SW-1": {
+      "nail": "6",
+      "hdL": "HDUE3",
+      "hdR": "HDUE3",
+      "postL": "6x4",
+      "postR": "(3)2x4"
+    }
+  },
+  "schemaVersion": 12,
+  "inputs": {
+    "sds": "1",
+    "loadType": "seismic",
+    "wallThickness": "4",
+    "woodGrade": "dfir_no1",
+    "sheathing": "ply",
+    "distribution": "capacity",
+    "cd": "4",
+    "ie": "1.0",
+    "riskCategory": "II",
+    "driftRow": "other",
+    "driftBypass": false,
+    "alphaS": "",
+    "windDriftLimit": "400",
+    "omega0": "2.5",
+    "lrfdHalfL": false,
+    "wswhFc": "2500",
+    "seismicDesignCategory": "",
+    "detachedOneTwoFamily": false,
+    "pdfReport": "detailed",
+    "refs": {},
+    "notes": "",
+    "wallDLTypes": [
+      {
+        "id": "wdt-1",
+        "name": "Stud wall",
+        "psf": "10"
+      }
+    ],
+    "levels": [
+      {
+        "id": "lvl-1",
+        "name": "Level 1",
+        "floorToFloor": 10,
+        "anchorageType": "auto",
+        "floorClearSpan": "16"
+      }
+    ],
+    "directions": [
+      {
+        "id": "dir-1",
+        "name": "N-S",
+        "rho": 1,
+        "lines": [
+          {
+            "id": "ln-1",
+            "name": "Line A",
+            "totalLength": 20,
+            "wallThickness": "",
+            "distribution": "",
+            "driftBypass": "",
+            "distReviewed": [],
+            "levelLoads": {
+              "lvl-1": {
+                "seismic": "4",
+                "wind": ""
+              }
+            },
+            "gravityLoads": {
+              "lvl-1": {
+                "loads": [
+                  {
+                    "id": "g1",
+                    "shape": "full",
+                    "position": 0,
+                    "start": 0,
+                    "end": 0,
+                    "D": "100",
+                    "L": "50",
+                    "Lr": "40",
+                    "perArea": false,
+                    "trib": "",
+                    "assemblyId": ""
+                  },
+                  {
+                    "id": "g2",
+                    "shape": "partial",
+                    "position": 0,
+                    "start": 6,
+                    "end": 18,
+                    "D": "200",
+                    "L": "100",
+                    "Lr": "",
+                    "perArea": false,
+                    "trib": "",
+                    "assemblyId": ""
+                  },
+                  {
+                    "id": "g3",
+                    "shape": "point",
+                    "position": 7,
+                    "start": 0,
+                    "end": 0,
+                    "D": "3",
+                    "L": "2",
+                    "Lr": "1",
+                    "perArea": false,
+                    "trib": "",
+                    "assemblyId": ""
+                  }
+                ]
+              }
+            },
+            "walls": [
+              {
+                "id": "w-1",
+                "mark": "SW-1",
+                "levelId": "lvl-1",
+                "position": 4,
+                "length": 10,
+                "method": "segmented",
+                "systemType": "sheathed",
+                "openings": [],
+                "narrowPier": false,
+                "wallDLTypeId": "wdt-1",
+                "nailingPattern": "6",
+                "anchorageLeftOverride": "HDUE3",
+                "anchorageRightOverride": "HDUE3",
+                "postLeftOverride": "6x4",
+                "postRightOverride": "(3)2x4",
+                "ftaoStrapOverride": "",
+                "jambPostOverride": "",
+                "wswhWidth": "18",
+                "wswhCondition": "concrete",
+                "wswhJoist": "12",
+                "wswhFloorDepth": "12",
+                "wswhAnchorOverride": ""
+              }
+            ],
+            "beams": [],
+            "supportPosts": []
+          }
+        ]
+      }
+    ]
+  }
+}
