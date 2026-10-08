@@ -1,0 +1,133 @@
+{
+  "id": "B17",
+  "title": "Beam check — overhangs on both sides, R1 reverses",
+  "intent": "L 30 on supports 4 / 12 (4 ft left, 18 ft right overhang), w = 100 plf. Hand calc: docs/diaphragm-to-lrs-beam-check.md",
+  "covers": [
+    "Overhangs both sides",
+    "Reversing reaction"
+  ],
+  "handCalc": [
+    {
+      "step": 1,
+      "text": "Method 1: left OH 0.5000 / −0.1000; span 0.4000 / 0.4000; right OH (e 9) −2.0250 / 3.8250 → R1 = −1.1250, R2 = 4.1250 k."
+    },
+    {
+      "step": 2,
+      "text": "Method 2: W = 3 k at 15 → R2 = 3 × 11 / 8 = 4.1250; R1 = 3 − 4.125 = −1.1250 k."
+    }
+  ],
+  "expect": [
+    {
+      "label": "R1 (k)",
+      "at": "dia:E-W/R.D1",
+      "field": "R1",
+      "value": -1.125,
+      "step": 1
+    },
+    {
+      "label": "R2 (k)",
+      "at": "dia:E-W/R.D1",
+      "field": "R2",
+      "value": 4.125,
+      "step": 1
+    },
+    {
+      "label": "right overhang piece R1 (k)",
+      "at": "dia:E-W/R.D1",
+      "field": "rows[2].R1",
+      "value": -2.025,
+      "step": 1
+    },
+    {
+      "label": "R1 reverses",
+      "at": "dia:E-W/R.D1",
+      "field": "supports[0].reverses",
+      "value": true,
+      "step": 1
+    }
+  ],
+  "beam": {
+    "L": 30,
+    "x1": 4,
+    "x2": 12,
+    "parts": [
+      {
+        "id": "p1",
+        "label": "part 1",
+        "a": 0,
+        "b": 30,
+        "w": 0.1
+      }
+    ],
+    "points": []
+  },
+  "inputs": {
+    "loadType": "seismic",
+    "pdfReport": "detailed",
+    "refs": {},
+    "notes": "",
+    "levels": [
+      {
+        "id": "lv-Roof",
+        "name": "Roof",
+        "tag": "",
+        "fx": "3"
+      }
+    ],
+    "directions": [
+      {
+        "id": "dir-E-W",
+        "name": "E-W",
+        "lines": [
+          {
+            "id": "dir-E-W-A",
+            "name": "A"
+          },
+          {
+            "id": "dir-E-W-B",
+            "name": "B"
+          }
+        ],
+        "groups": [],
+        "down": {},
+        "diaphragms": [
+          {
+            "id": "dir-E-W-lv-Roof-D1",
+            "levelId": "lv-Roof",
+            "mark": "D1",
+            "length": "30",
+            "supports": [
+              {
+                "x": "4",
+                "kind": "line",
+                "lineId": "dir-E-W-A",
+                "diaphragmId": "",
+                "atX": ""
+              },
+              {
+                "x": "12",
+                "kind": "line",
+                "lineId": "dir-E-W-B",
+                "diaphragmId": "",
+                "atX": ""
+              }
+            ],
+            "parts": [
+              {
+                "id": "dir-E-W-lv-Roof-D1-p1",
+                "a": "0",
+                "b": "30",
+                "d": "10"
+              }
+            ],
+            "pointLoads": []
+          }
+        ]
+      }
+    ]
+  },
+  "expectChecks": {
+    "fail": []
+  },
+  "schemaVersion": 1
+}

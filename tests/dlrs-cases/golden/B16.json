@@ -1,0 +1,348 @@
+{
+ "calcVersion": "v2",
+ "levels": [
+  {
+   "id": "lv-Roof",
+   "name": "Roof",
+   "tag": "R",
+   "fx": 1,
+   "sumA": {
+    "dir-E-W": 100
+   }
+  }
+ ],
+ "perDirection": [
+  {
+   "id": "dir-E-W",
+   "name": "E-W",
+   "perLevel": [
+    {
+     "levelId": "lv-Roof",
+     "name": "Roof",
+     "tag": "R",
+     "fx": 1,
+     "sumA": 100,
+     "q": 0.01,
+     "qPsf": 10,
+     "sumManual": 1.5,
+     "sumToLines": 2.5,
+     "diaphragms": [
+      {
+       "id": "dir-E-W-lv-Roof-D1",
+       "mark": "D1",
+       "label": "R.D1",
+       "errors": [],
+       "L": 25,
+       "x1": 0,
+       "x2": 20,
+       "l": 20,
+       "parts": [],
+       "points": [
+        {
+         "id": "dir-E-W-lv-Roof-D1-m1",
+         "label": "P1",
+         "x": 25,
+         "P": 1,
+         "source": "",
+         "manual": true,
+         "note": "P1"
+        },
+        {
+         "id": "dir-E-W-lv-Roof-D1-m2",
+         "label": "P2",
+         "x": 22,
+         "P": 0.5,
+         "source": "",
+         "manual": true,
+         "note": "P2"
+        }
+       ],
+       "rows": [
+        {
+         "kind": "point",
+         "pointId": "dir-E-W-lv-Roof-D1-m1",
+         "label": "P1",
+         "manual": true,
+         "region": "right",
+         "x": 25,
+         "P": 1,
+         "lever1": -5,
+         "lever2": 25,
+         "R1": -0.25,
+         "R2": 1.25
+        },
+        {
+         "kind": "point",
+         "pointId": "dir-E-W-lv-Roof-D1-m2",
+         "label": "P2",
+         "manual": true,
+         "region": "right",
+         "x": 22,
+         "P": 0.5,
+         "lever1": -2,
+         "lever2": 22,
+         "R1": -0.05,
+         "R2": 0.55
+        }
+       ],
+       "sumW": 0,
+       "sumP": 1.5,
+       "supports": [
+        {
+         "name": "R1",
+         "x": 0,
+         "kind": "line",
+         "R": -0.3,
+         "Rdist": 0,
+         "RP": -0.3,
+         "lineId": "dir-E-W-A",
+         "to": "R.A",
+         "reverses": true
+        },
+        {
+         "name": "R2",
+         "x": 20,
+         "kind": "line",
+         "R": 1.8,
+         "Rdist": 0,
+         "RP": 1.8,
+         "lineId": "dir-E-W-B",
+         "to": "R.B",
+         "reverses": false
+        }
+       ]
+      },
+      {
+       "id": "dir-E-W-lv-Roof-D2",
+       "mark": "D2",
+       "label": "R.D2",
+       "errors": [],
+       "L": 10,
+       "x1": 0,
+       "x2": 10,
+       "l": 10,
+       "parts": [
+        {
+         "id": "dir-E-W-lv-Roof-D2-p1",
+         "label": "part 1",
+         "a": 0,
+         "b": 10,
+         "c": 0,
+         "d": 10,
+         "A": 100,
+         "w": 0.1,
+         "wPlf": 100
+        }
+       ],
+       "points": [],
+       "rows": [
+        {
+         "kind": "uniform",
+         "partId": "dir-E-W-lv-Roof-D2-p1",
+         "label": "part 1",
+         "region": "span",
+         "u": 0,
+         "v": 10,
+         "w": 0.1,
+         "W": 1,
+         "xbar": 5,
+         "lever1": 5,
+         "lever2": 5,
+         "R1": 0.5,
+         "R2": 0.5
+        }
+       ],
+       "sumW": 1,
+       "sumP": 0,
+       "supports": [
+        {
+         "name": "R1",
+         "x": 0,
+         "kind": "line",
+         "R": 0.5,
+         "Rdist": 0.5,
+         "RP": 0,
+         "lineId": "dir-E-W-C",
+         "to": "R.C",
+         "reverses": false
+        },
+        {
+         "name": "R2",
+         "x": 10,
+         "kind": "line",
+         "R": 0.5,
+         "Rdist": 0.5,
+         "RP": 0,
+         "lineId": "dir-E-W-D",
+         "to": "R.D",
+         "reverses": false
+        }
+       ]
+      }
+     ],
+     "lines": [
+      {
+       "key": "dir-E-W-A",
+       "name": "A",
+       "label": "R.A",
+       "lineIds": [
+        "dir-E-W-A"
+       ],
+       "F": -0.3,
+       "sources": [
+        {
+         "from": "R.D1.R1",
+         "R": -0.3
+        }
+       ],
+       "fromAbove": [],
+       "V": -0.3,
+       "goesTo": [
+        {
+         "text": "foundation"
+        }
+       ],
+       "ends": true,
+       "merged": false
+      },
+      {
+       "key": "dir-E-W-B",
+       "name": "B",
+       "label": "R.B",
+       "lineIds": [
+        "dir-E-W-B"
+       ],
+       "F": 1.8,
+       "sources": [
+        {
+         "from": "R.D1.R2",
+         "R": 1.8
+        }
+       ],
+       "fromAbove": [],
+       "V": 1.8,
+       "goesTo": [
+        {
+         "text": "foundation"
+        }
+       ],
+       "ends": true,
+       "merged": false
+      },
+      {
+       "key": "dir-E-W-C",
+       "name": "C",
+       "label": "R.C",
+       "lineIds": [
+        "dir-E-W-C"
+       ],
+       "F": 0.5,
+       "sources": [
+        {
+         "from": "R.D2.R1",
+         "R": 0.5
+        }
+       ],
+       "fromAbove": [],
+       "V": 0.5,
+       "goesTo": [
+        {
+         "text": "foundation"
+        }
+       ],
+       "ends": true,
+       "merged": false
+      },
+      {
+       "key": "dir-E-W-D",
+       "name": "D",
+       "label": "R.D",
+       "lineIds": [
+        "dir-E-W-D"
+       ],
+       "F": 0.5,
+       "sources": [
+        {
+         "from": "R.D2.R2",
+         "R": 0.5
+        }
+       ],
+       "fromAbove": [],
+       "V": 0.5,
+       "goesTo": [
+        {
+         "text": "foundation"
+        }
+       ],
+       "ends": true,
+       "merged": false
+      }
+     ],
+     "sumF": 2.5,
+     "sumV": 2.5,
+     "ended": 2.5,
+     "lost": 0,
+     "cumF": 2.5,
+     "cumEnded": 2.5
+    }
+   ],
+   "checks": [
+    {
+     "id": "D1",
+     "label": "Each diaphragm: ΣR = ΣW + ΣP",
+     "status": "pass",
+     "items": []
+    },
+    {
+     "id": "D2",
+     "label": "Each level: Σ reactions to wall lines = F_x + Σ manual P",
+     "status": "pass",
+     "items": []
+    },
+    {
+     "id": "D3",
+     "label": "Geometry valid and every support assigned",
+     "status": "pass",
+     "items": []
+    },
+    {
+     "id": "D4",
+     "label": "No support loops; links stay within the level",
+     "status": "pass",
+     "items": []
+    },
+    {
+     "id": "D5",
+     "label": "Split percentages add to 100 %",
+     "status": "pass",
+     "items": []
+    },
+    {
+     "id": "D6",
+     "label": "Every wall line has a place to go at the level below",
+     "status": "pass",
+     "items": []
+    },
+    {
+     "id": "D7",
+     "label": "Each level: ΣV = ΣF at and above − force resisted above",
+     "status": "pass",
+     "items": []
+    },
+    {
+     "id": "D8",
+     "label": "F_x and diaphragm area present (q > 0)",
+     "status": "pass",
+     "items": []
+    },
+    {
+     "id": "D9",
+     "label": "Merged lines: each line is in at most one merge per level",
+     "status": "pass",
+     "items": []
+    }
+   ]
+  }
+ ],
+ "status": "pass"
+}

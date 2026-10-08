@@ -1,0 +1,287 @@
+{
+  "id": "D08",
+  "title": "Robustness: loop, unassigned support, supports at the same x, split ≠ 100 %",
+  "intent": "Bad inputs must be reported, not crash: R.D2 and R.D3 rest on each other (loop, D4); R.D4 has no R2 target and R.D5 has both supports at x = 3 (D3); roof line B is split 60 % only (D5). The lost force makes D2 (roof) and D7 (2nd floor) fail. R.D1 typed with spaces (\" 20 \") still calculates.",
+  "covers": [
+    "D2",
+    "D3",
+    "D4",
+    "D5",
+    "D7",
+    "Input parsing (whitespace)"
+  ],
+  "handCalc": [
+    {
+      "step": 1,
+      "text": "Roof ΣA = 200 + 50 + 50 + 40 + 40 = 380 sf → q = 4 / 380 k/sf; only R.D1 is solved: R1 = R2 = q·10·20/2 = 1.0526 k."
+    },
+    {
+      "step": 2,
+      "text": "The roof does not balance (only R.D1 reaches the lines) → D2 fails; the loop → D4; the bad diaphragms → D3; split 60 % → D5; the lost 40 % → D7 at the 2nd floor."
+    }
+  ],
+  "expect": [
+    {
+      "label": "R.D1 R1 (k)",
+      "at": "dia:E-W/R.D1",
+      "field": "R1",
+      "value": 1.0526315789473684,
+      "step": 1
+    },
+    {
+      "label": "D4 status",
+      "at": "check:E-W/D4",
+      "field": "status",
+      "value": "fail",
+      "step": 2
+    }
+  ],
+  "expectChecks": {
+    "fail": [
+      "D2",
+      "D3",
+      "D4",
+      "D5",
+      "D7"
+    ]
+  },
+  "inputs": {
+    "loadType": "seismic",
+    "pdfReport": "detailed",
+    "refs": {},
+    "notes": "",
+    "levels": [
+      {
+        "id": "lv-Roof",
+        "name": "Roof",
+        "tag": "",
+        "fx": "4"
+      },
+      {
+        "id": "lv-2ndFloor",
+        "name": "2nd Floor",
+        "tag": "",
+        "fx": "2"
+      }
+    ],
+    "directions": [
+      {
+        "id": "dir-E-W",
+        "name": "E-W",
+        "lines": [
+          {
+            "id": "dir-E-W-A",
+            "name": "A"
+          },
+          {
+            "id": "dir-E-W-B",
+            "name": "B"
+          }
+        ],
+        "groups": [],
+        "down": {
+          "lv-Roof": {
+            "dir-E-W-B": {
+              "mode": "split",
+              "split": [
+                {
+                  "to": "dir-E-W-A",
+                  "pct": "60"
+                }
+              ]
+            }
+          }
+        },
+        "diaphragms": [
+          {
+            "id": "dir-E-W-lv-Roof-D1",
+            "levelId": "lv-Roof",
+            "mark": "D1",
+            "length": " 20 ",
+            "supports": [
+              {
+                "x": "",
+                "kind": "line",
+                "lineId": "dir-E-W-A",
+                "diaphragmId": "",
+                "atX": ""
+              },
+              {
+                "x": "",
+                "kind": "line",
+                "lineId": "dir-E-W-B",
+                "diaphragmId": "",
+                "atX": ""
+              }
+            ],
+            "parts": [
+              {
+                "id": "dir-E-W-lv-Roof-D1-p1",
+                "a": "0",
+                "b": "20",
+                "d": "10"
+              }
+            ],
+            "pointLoads": []
+          },
+          {
+            "id": "dir-E-W-lv-Roof-D2",
+            "levelId": "lv-Roof",
+            "mark": "D2",
+            "length": "10",
+            "supports": [
+              {
+                "x": "",
+                "kind": "diaphragm",
+                "lineId": "",
+                "diaphragmId": "dir-E-W-lv-Roof-D3",
+                "atX": "2"
+              },
+              {
+                "x": "",
+                "kind": "line",
+                "lineId": "dir-E-W-B",
+                "diaphragmId": "",
+                "atX": ""
+              }
+            ],
+            "parts": [
+              {
+                "id": "dir-E-W-lv-Roof-D2-p1",
+                "a": "0",
+                "b": "10",
+                "d": "5"
+              }
+            ],
+            "pointLoads": []
+          },
+          {
+            "id": "dir-E-W-lv-Roof-D3",
+            "levelId": "lv-Roof",
+            "mark": "D3",
+            "length": "10",
+            "supports": [
+              {
+                "x": "",
+                "kind": "diaphragm",
+                "lineId": "",
+                "diaphragmId": "dir-E-W-lv-Roof-D2",
+                "atX": "2"
+              },
+              {
+                "x": "",
+                "kind": "line",
+                "lineId": "dir-E-W-A",
+                "diaphragmId": "",
+                "atX": ""
+              }
+            ],
+            "parts": [
+              {
+                "id": "dir-E-W-lv-Roof-D3-p1",
+                "a": "0",
+                "b": "10",
+                "d": "5"
+              }
+            ],
+            "pointLoads": []
+          },
+          {
+            "id": "dir-E-W-lv-Roof-D4",
+            "levelId": "lv-Roof",
+            "mark": "D4",
+            "length": "8",
+            "supports": [
+              {
+                "x": "",
+                "kind": "line",
+                "lineId": "dir-E-W-A",
+                "diaphragmId": "",
+                "atX": ""
+              },
+              {
+                "x": "",
+                "kind": "line",
+                "lineId": "",
+                "diaphragmId": "",
+                "atX": ""
+              }
+            ],
+            "parts": [
+              {
+                "id": "dir-E-W-lv-Roof-D4-p1",
+                "a": "0",
+                "b": "8",
+                "d": "5"
+              }
+            ],
+            "pointLoads": []
+          },
+          {
+            "id": "dir-E-W-lv-Roof-D5",
+            "levelId": "lv-Roof",
+            "mark": "D5",
+            "length": "8",
+            "supports": [
+              {
+                "x": "3",
+                "kind": "line",
+                "lineId": "dir-E-W-A",
+                "diaphragmId": "",
+                "atX": ""
+              },
+              {
+                "x": "3",
+                "kind": "line",
+                "lineId": "dir-E-W-B",
+                "diaphragmId": "",
+                "atX": ""
+              }
+            ],
+            "parts": [
+              {
+                "id": "dir-E-W-lv-Roof-D5-p1",
+                "a": "0",
+                "b": "8",
+                "d": "5"
+              }
+            ],
+            "pointLoads": []
+          },
+          {
+            "id": "dir-E-W-lv-2ndFloor-D1",
+            "levelId": "lv-2ndFloor",
+            "mark": "D1",
+            "length": "20",
+            "supports": [
+              {
+                "x": "",
+                "kind": "line",
+                "lineId": "dir-E-W-A",
+                "diaphragmId": "",
+                "atX": ""
+              },
+              {
+                "x": "",
+                "kind": "line",
+                "lineId": "dir-E-W-B",
+                "diaphragmId": "",
+                "atX": ""
+              }
+            ],
+            "parts": [
+              {
+                "id": "dir-E-W-lv-2ndFloor-D1-p1",
+                "a": "0",
+                "b": "20",
+                "d": "10"
+              }
+            ],
+            "pointLoads": []
+          }
+        ]
+      }
+    ]
+  },
+  "schemaVersion": 1
+}

@@ -1,0 +1,131 @@
+{
+  "id": "D03",
+  "title": "Overhangs on both sides — a reaction reverses",
+  "intent": "A 30 ft diaphragm on supports at 4 and 12 ft (4 ft overhang left, 18 ft right). The long right overhang lifts R1: its reaction is negative (reverses) and line A gets a negative force. ΣR still equals ΣW.",
+  "covers": [
+    "Overhangs left + right (E)",
+    "General overhang form (e past the support)",
+    "Negative reaction kept with its sign"
+  ],
+  "handCalc": [
+    {
+      "step": 1,
+      "text": "ΣA = 30 × 10 = 300 sf → q = 3 / 300 = 0.01 k/sf; w = 100.00 plf; l = 12 − 4 = 8 ft."
+    },
+    {
+      "step": 2,
+      "text": "Left overhang 0–4: W = 0.4 k at e = 2 ft past R1 → R1 = W(l + e)/l = 0.5000, R2 = −W·e/l = -0.1000 k."
+    },
+    {
+      "step": 3,
+      "text": "Back span 4–12 (Case 1): R1 = R2 = 0.4000 k."
+    },
+    {
+      "step": 4,
+      "text": "Right overhang 12–30: W = 1.8 k at e = 9 ft past R2 → R1 = −W·e/l = -2.0250, R2 = W(l + e)/l = 3.8250 k."
+    },
+    {
+      "step": 5,
+      "text": "R1 = -1.1250 k (reverses), R2 = 4.1250 k; ΣR = 3.0000 = ΣW = 3.0 k."
+    }
+  ],
+  "expect": [
+    {
+      "label": "R.D1 R1 (k)",
+      "at": "dia:E-W/R.D1",
+      "field": "R1",
+      "value": -1.125,
+      "step": 5
+    },
+    {
+      "label": "R.D1 R2 (k)",
+      "at": "dia:E-W/R.D1",
+      "field": "R2",
+      "value": 4.125,
+      "step": 5
+    },
+    {
+      "label": "R1 reverses",
+      "at": "dia:E-W/R.D1",
+      "field": "supports[0].reverses",
+      "value": true,
+      "step": 5
+    },
+    {
+      "label": "Line R.A F (k)",
+      "at": "line:E-W/R.A",
+      "field": "F",
+      "value": -1.125,
+      "step": 5
+    }
+  ],
+  "expectChecks": {
+    "fail": []
+  },
+  "inputs": {
+    "loadType": "seismic",
+    "pdfReport": "detailed",
+    "refs": {},
+    "notes": "",
+    "levels": [
+      {
+        "id": "lv-Roof",
+        "name": "Roof",
+        "tag": "",
+        "fx": "3"
+      }
+    ],
+    "directions": [
+      {
+        "id": "dir-E-W",
+        "name": "E-W",
+        "lines": [
+          {
+            "id": "dir-E-W-A",
+            "name": "A"
+          },
+          {
+            "id": "dir-E-W-B",
+            "name": "B"
+          }
+        ],
+        "groups": [],
+        "down": {},
+        "diaphragms": [
+          {
+            "id": "dir-E-W-lv-Roof-D1",
+            "levelId": "lv-Roof",
+            "mark": "D1",
+            "length": "30",
+            "supports": [
+              {
+                "x": "4",
+                "kind": "line",
+                "lineId": "dir-E-W-A",
+                "diaphragmId": "",
+                "atX": ""
+              },
+              {
+                "x": "12",
+                "kind": "line",
+                "lineId": "dir-E-W-B",
+                "diaphragmId": "",
+                "atX": ""
+              }
+            ],
+            "parts": [
+              {
+                "id": "dir-E-W-lv-Roof-D1-p1",
+                "a": "0",
+                "b": "30",
+                "d": "10"
+              }
+            ],
+            "pointLoads": []
+          }
+        ]
+      }
+    ]
+  },
+  "schemaVersion": 1
+}

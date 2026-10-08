@@ -1,0 +1,178 @@
+{
+  "id": "B18",
+  "title": "Beam check — point loads at the supports with overhangs",
+  "intent": "Supports at 5 and 20 on a 25 ft diaphragm; P1 = 1 k at 5 (on R1), P2 = 1 k at 20 (on R2). Neither is on the overhang. Hand calc: docs/diaphragm-to-lrs-beam-check.md",
+  "covers": [
+    "Point at a support",
+    "Overhang boundary"
+  ],
+  "handCalc": [
+    {
+      "step": 1,
+      "text": "Method 1: P1 a 0 b 15 → 1.0000 / 0.0000; P2 a 15 b 0 → 0.0000 / 1.0000 → R1 = R2 = 1.0000 k."
+    },
+    {
+      "step": 2,
+      "text": "Method 2: R2 = (1 × 0 + 1 × 15) / 15 = 1.0000; R1 = 2 − 1 = 1.0000 k."
+    }
+  ],
+  "expect": [
+    {
+      "label": "R1 (k)",
+      "at": "dia:E-W/R.D1",
+      "field": "R1",
+      "value": 1,
+      "step": 1
+    },
+    {
+      "label": "R2 (k)",
+      "at": "dia:E-W/R.D1",
+      "field": "R2",
+      "value": 1,
+      "step": 1
+    },
+    {
+      "label": "P2 share to R1 (k)",
+      "at": "dia:E-W/R.D1",
+      "field": "rows[1].R1",
+      "value": 0,
+      "step": 1
+    }
+  ],
+  "beam": {
+    "L": 25,
+    "x1": 5,
+    "x2": 20,
+    "parts": [],
+    "points": [
+      {
+        "id": "m1",
+        "label": "P1",
+        "x": 5,
+        "P": 1,
+        "manual": true
+      },
+      {
+        "id": "m2",
+        "label": "P2",
+        "x": 20,
+        "P": 1,
+        "manual": true
+      }
+    ]
+  },
+  "inputs": {
+    "loadType": "seismic",
+    "pdfReport": "detailed",
+    "refs": {},
+    "notes": "",
+    "levels": [
+      {
+        "id": "lv-Roof",
+        "name": "Roof",
+        "tag": "",
+        "fx": "1"
+      }
+    ],
+    "directions": [
+      {
+        "id": "dir-E-W",
+        "name": "E-W",
+        "lines": [
+          {
+            "id": "dir-E-W-A",
+            "name": "A"
+          },
+          {
+            "id": "dir-E-W-B",
+            "name": "B"
+          },
+          {
+            "id": "dir-E-W-C",
+            "name": "C"
+          },
+          {
+            "id": "dir-E-W-D",
+            "name": "D"
+          }
+        ],
+        "groups": [],
+        "down": {},
+        "diaphragms": [
+          {
+            "id": "dir-E-W-lv-Roof-D1",
+            "levelId": "lv-Roof",
+            "mark": "D1",
+            "length": "25",
+            "supports": [
+              {
+                "x": "5",
+                "kind": "line",
+                "lineId": "dir-E-W-A",
+                "diaphragmId": "",
+                "atX": ""
+              },
+              {
+                "x": "20",
+                "kind": "line",
+                "lineId": "dir-E-W-B",
+                "diaphragmId": "",
+                "atX": ""
+              }
+            ],
+            "parts": [],
+            "pointLoads": [
+              {
+                "id": "dir-E-W-lv-Roof-D1-m1",
+                "x": "5",
+                "p": "1",
+                "note": "P1"
+              },
+              {
+                "id": "dir-E-W-lv-Roof-D1-m2",
+                "x": "20",
+                "p": "1",
+                "note": "P2"
+              }
+            ]
+          },
+          {
+            "id": "dir-E-W-lv-Roof-D2",
+            "levelId": "lv-Roof",
+            "mark": "D2",
+            "length": "10",
+            "supports": [
+              {
+                "x": "",
+                "kind": "line",
+                "lineId": "dir-E-W-C",
+                "diaphragmId": "",
+                "atX": ""
+              },
+              {
+                "x": "",
+                "kind": "line",
+                "lineId": "dir-E-W-D",
+                "diaphragmId": "",
+                "atX": ""
+              }
+            ],
+            "parts": [
+              {
+                "id": "dir-E-W-lv-Roof-D2-p1",
+                "a": "0",
+                "b": "10",
+                "d": "10"
+              }
+            ],
+            "pointLoads": []
+          }
+        ]
+      }
+    ]
+  },
+  "expectChecks": {
+    "fail": []
+  },
+  "schemaVersion": 1
+}
