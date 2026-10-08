@@ -1,0 +1,336 @@
+{
+  "id": "V22",
+  "title": "Robustness — awkward inputs",
+  "intent": "Valid but awkward inputs: numbers typed with spaces or left blank, a level with lateral load but no wall, walls touching both line ends, zero gravity (blank wall weight and a blank uniform load), a wall with h/b > 3.5 and a manual nailing lighter than needed. The item must calculate and render every tab; the problems must be reported: G2 fails at the level without a wall, the h/b > 3.5 wall is flagged and carries no shear, and the under-nailed wall shows D/C > 1.",
+  "covers": [
+    "Input parsing (blank / whitespace)",
+    "G2 horizontal equilibrium",
+    "SDPWS 2021 §4.3.4 h/b > 3.5",
+    "Manual nailing NG",
+    "Rendering with no gravity"
+  ],
+  "handCalc": [
+    {
+      "step": 1,
+      "text": "Parsing: S_DS \" 1.0 \" → 1.0 (so the ASD uplift factor 0.6 − 0.14 × 1.0 = 0.46), ρ \" \" → 1.0, Level 1 floor-to-floor \"10\" → 10 ft, wind \"  \" / \"\" → 0, wall weight psf \"\" → 0, uniform D \" \" → 0: no gravity anywhere."
+    },
+    {
+      "step": 2,
+      "text": "Level 2 has 1.0E = 2 k but no wall in this line → G2 (horizontal equilibrium) fails at Level 2 (expected 2 k, carried 0). The load still accumulates into the Level 1 story shear: V = 2 + 4 = 6 k."
+    },
+    {
+      "step": 3,
+      "text": "SW-2 (x = 17.5–20.0 ft, touching the line end): h/b = 10/2.5 = 4.0 > 3.5 → not a shear wall (SDPWS 2021 §4.3.4), carries no shear, audit warning. SW-1 (x = 0–8, touching the line start) takes all 6 k."
+    },
+    {
+      "step": 4,
+      "text": "SW-1 manual 6\" o.c.: v = 0.7 × 6000/8 = 525.00 plf vs 312 plf → D/C = 1.683 > 1 → wall NG (a design result, not an equilibrium check)."
+    },
+    {
+      "step": 5,
+      "text": "SW-1 end forces (no gravity): N = 6 × 10/8 = 7.50 k → T = C = 0.7 × 7.50 = 5.25 k → HDUE5 (5,375 lb; HDUE3 3,790 lb too small), posts (3)2x4 (the (2)2x4 minimum post has 5.00 k < 5.25 k)."
+    },
+    {
+      "step": 6,
+      "text": "SW-1 δ at 1.0E: v = 750 plf, A = 15.75 in², G_a = 16 → 8vh³/(EAb) = 0.0280, vh/(1000G_a) = 0.4688, Δ_HD = 0.146 × 7500/5375 = 0.2037, r = 0.7619 (0.73–1.0) → Δ_c = 0.02 × (1 + (r − 0.73)/0.27) = 0.0224, h·Δa/b = 0.2826 → δ = 0.7794 in."
+    },
+    {
+      "step": 7,
+      "text": "Seismic inputs typed with spaces: C_d \" 4 \" → 4, I_e \"1.0 \" → 1.0, risk category II (Ω₀ blank → default 2.5). SW-2 (h/b > 3.5) has no share and no δ; Level 2 has no wall, so no drift row. Story drift Level 1: δxe = the largest wall δ = SW-1 0.7794 in → δx = Cd·δxe/Ie = 4 × 0.7794 / 1.0 = 3.117 in vs Δa = 0.020 × 10 × 12 = 2.400 in → NG — over the limit (design pinned, so drift sizing does not change it; the line reports drift NG)."
+    },
+    {
+      "step": 8,
+      "text": "Every other line check passes; every tab, calc sheet, elevation and PDF section renders (runner T4)."
+    }
+  ],
+  "expect": [
+    {
+      "label": "ASD uplift factor from S_DS \" 1.0 \"",
+      "at": "wall:SW-1",
+      "field": "combos[\"0.6D+0.7ρE_pos\"].f.d",
+      "value": 0.46,
+      "tol": 1e-9,
+      "step": 1
+    },
+    {
+      "label": "SW-1 floor height from \"10\" (ft)",
+      "at": "wall:SW-1",
+      "field": "floorH",
+      "value": 10,
+      "tol": 0,
+      "step": 1
+    },
+    {
+      "label": "SW-1 dead load (k)",
+      "at": "wall:SW-1",
+      "field": "dlTotal",
+      "value": 0,
+      "tol": 0,
+      "step": 1
+    },
+    {
+      "label": "Level 1 story shear (k)",
+      "at": "level:Level 1",
+      "field": "storyShear_1E",
+      "value": 6,
+      "tol": 0.005,
+      "step": 2
+    },
+    {
+      "label": "SW-2 not a shear wall (h/b > 3.5)",
+      "at": "wall:SW-2",
+      "field": "hbNotPermitted",
+      "value": true,
+      "step": 3
+    },
+    {
+      "label": "SW-2 share (k)",
+      "at": "wall:SW-2",
+      "field": "shareExact_1E",
+      "value": 0,
+      "tol": 1e-9,
+      "step": 3
+    },
+    {
+      "label": "SW-1 share (k)",
+      "at": "wall:SW-1",
+      "field": "shareExact_1E",
+      "value": 6,
+      "tol": 0.005,
+      "step": 3
+    },
+    {
+      "label": "SW-1 unit shear (plf)",
+      "at": "wall:SW-1",
+      "field": "unitShear_seismic",
+      "value": 524.9999999999999,
+      "tol": 0.01,
+      "step": 4
+    },
+    {
+      "label": "SW-1 D/C > 1",
+      "at": "wall:SW-1",
+      "field": "dcRatio",
+      "value": 1.6826923076923073,
+      "tol": 0.006,
+      "step": 4
+    },
+    {
+      "label": "SW-1 governing T (k)",
+      "at": "wall:SW-1",
+      "field": "governingTensionLeft",
+      "value": 5.25,
+      "tol": 0.005,
+      "step": 5
+    },
+    {
+      "label": "SW-1 δ (in)",
+      "at": "wall:SW-1",
+      "field": "deflection.E.delta",
+      "value": 0.7793665118933017,
+      "tol": 0.0005,
+      "step": 6
+    },
+    {
+      "label": "Story δxe, Level 1 (in)",
+      "at": "drift:Level 1",
+      "field": "seismic.deltaXE",
+      "value": 0.7793665118933017,
+      "tol": 0.0005,
+      "step": 7
+    },
+    {
+      "label": "Governing wall for drift, Level 1",
+      "at": "drift:Level 1",
+      "field": "seismic.wallMark",
+      "value": "SW-1",
+      "step": 7
+    },
+    {
+      "label": "δx = Cd·δxe/Ie, Level 1 (in)",
+      "at": "drift:Level 1",
+      "field": "seismic.deltaX",
+      "value": 3.117466047573207,
+      "tol": 0.002,
+      "step": 7
+    },
+    {
+      "label": "Drift NG, Level 1",
+      "at": "drift:Level 1",
+      "field": "seismic.pass",
+      "value": false,
+      "step": 7
+    }
+  ],
+  "expectChecks": {
+    "fail": [
+      "G2"
+    ],
+    "warnings": [
+      "aspect_ratio"
+    ]
+  },
+  "notChecked": "The save gate (src/validation.js) is not part of the calc — a line with an empty level is still saved here because walls exist in the line.",
+  "pinned": {
+    "SW-1": {
+      "nail": "6",
+      "hdL": "HDUE5",
+      "hdR": "HDUE5",
+      "postL": "(3)2x4",
+      "postR": "(3)2x4"
+    },
+    "SW-2": {
+      "nail": "6",
+      "hdL": "HDUE3",
+      "hdR": "HDUE3",
+      "postL": "(2)2x4",
+      "postR": "(2)2x4"
+    }
+  },
+  "schemaVersion": 12,
+  "inputs": {
+    "sds": " 1.0 ",
+    "loadType": "seismic",
+    "wallThickness": "4",
+    "woodGrade": "dfir_no1",
+    "sheathing": "ply",
+    "distribution": "capacity",
+    "cd": " 4 ",
+    "ie": "1.0 ",
+    "riskCategory": "II",
+    "driftRow": "other",
+    "driftBypass": false,
+    "alphaS": "",
+    "windDriftLimit": "400",
+    "omega0": "",
+    "lrfdHalfL": false,
+    "wswhFc": "2500",
+    "seismicDesignCategory": "",
+    "detachedOneTwoFamily": false,
+    "pdfReport": "detailed",
+    "refs": {},
+    "notes": "",
+    "wallDLTypes": [
+      {
+        "id": "wdt-1",
+        "name": "Stud wall",
+        "psf": ""
+      }
+    ],
+    "levels": [
+      {
+        "id": "lvl-2",
+        "name": "Level 2",
+        "floorToFloor": 10,
+        "anchorageType": "auto",
+        "floorClearSpan": "16"
+      },
+      {
+        "id": "lvl-1",
+        "name": "Level 1",
+        "floorToFloor": "10",
+        "anchorageType": "auto",
+        "floorClearSpan": "16"
+      }
+    ],
+    "directions": [
+      {
+        "id": "dir-1",
+        "name": "N-S",
+        "rho": " ",
+        "lines": [
+          {
+            "id": "ln-1",
+            "name": "Line A",
+            "totalLength": "20",
+            "wallThickness": "",
+            "distribution": "",
+            "driftBypass": "",
+            "distReviewed": [],
+            "levelLoads": {
+              "lvl-2": {
+                "seismic": "2",
+                "wind": "  "
+              },
+              "lvl-1": {
+                "seismic": " 4 ",
+                "wind": ""
+              }
+            },
+            "gravityLoads": {
+              "lvl-1": {
+                "loads": [
+                  {
+                    "id": "g1",
+                    "shape": "full",
+                    "position": 0,
+                    "start": 0,
+                    "end": 0,
+                    "D": " ",
+                    "L": "",
+                    "Lr": "",
+                    "perArea": false,
+                    "trib": "",
+                    "assemblyId": ""
+                  }
+                ]
+              }
+            },
+            "walls": [
+              {
+                "id": "w-1",
+                "mark": "SW-1",
+                "levelId": "lvl-1",
+                "position": "0",
+                "length": "8",
+                "method": "segmented",
+                "systemType": "sheathed",
+                "openings": [],
+                "narrowPier": false,
+                "wallDLTypeId": "wdt-1",
+                "nailingPattern": "6",
+                "anchorageLeftOverride": "HDUE5",
+                "anchorageRightOverride": "HDUE5",
+                "postLeftOverride": "(3)2x4",
+                "postRightOverride": "(3)2x4",
+                "ftaoStrapOverride": "",
+                "jambPostOverride": "",
+                "wswhWidth": "18",
+                "wswhCondition": "concrete",
+                "wswhJoist": "12",
+                "wswhFloorDepth": "12",
+                "wswhAnchorOverride": ""
+              },
+              {
+                "id": "w-2",
+                "mark": "SW-2",
+                "levelId": "lvl-1",
+                "position": 17.5,
+                "length": 2.5,
+                "method": "segmented",
+                "systemType": "sheathed",
+                "openings": [],
+                "narrowPier": false,
+                "wallDLTypeId": "wdt-1",
+                "nailingPattern": "6",
+                "anchorageLeftOverride": "HDUE3",
+                "anchorageRightOverride": "HDUE3",
+                "postLeftOverride": "(2)2x4",
+                "postRightOverride": "(2)2x4",
+                "ftaoStrapOverride": "",
+                "jambPostOverride": "",
+                "wswhWidth": "18",
+                "wswhCondition": "concrete",
+                "wswhJoist": "12",
+                "wswhFloorDepth": "12",
+                "wswhAnchorOverride": ""
+              }
+            ],
+            "beams": [],
+            "supportPosts": []
+          }
+        ]
+      }
+    ]
+  }
+}

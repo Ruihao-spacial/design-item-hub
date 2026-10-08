@@ -172,6 +172,7 @@ function updateNavigation() {
 async function renderCurrentView() {
   const main = getMain();
   if (!main) return;
+  main.classList.remove('main-content--wide'); // item forms opt back in via mod.wideLayout
 
   if (state.view === 'projects') {
     renderProjectPicker(main, state, {

@@ -1,0 +1,426 @@
+{
+  "id": "V04",
+  "title": "Aspect ratio factor and walls over 3.5",
+  "intent": "Four walls at one 7 ft story with h/b = 2.0, 2.5, 3.5 and 4.0. Proves the SDPWS 2021 aspect ratio factor C_hb = 1.25 − 0.125·h/b for 2 < h/b ≤ 3.5, that it scales both the capacity and the capacity-distribution weight, and that a wall over 3.5 is flagged (aspect_ratio warning) and takes no shear.",
+  "covers": [
+    "SDPWS 2021 §4.3.4 aspect ratio",
+    "SDPWS 4.3.3.4.1 capacity distribution with C_hb",
+    "aspect_ratio audit warning",
+    "G2 / G11"
+  ],
+  "handCalc": [
+    {
+      "step": 1,
+      "text": "Story shear V = 3 k, h = 7 ft. Walls: SW-1 L = 3.5 ft, h/b = 7/3.5 = 2.00; SW-2 L = 2.8 ft, h/b = 7/2.8 = 2.50; SW-3 L = 2 ft, h/b = 7/2 = 3.50; SW-4 L = 1.75 ft, h/b = 7/1.75 = 4.00."
+    },
+    {
+      "step": 2,
+      "text": "C_hb: SW-1 h/b 2.00 ≤ 2 → 1.0; SW-2 1.25 − 0.125 × 2.5 = 0.9375; SW-3 1.25 − 0.125 × 3.5 = 0.8125; SW-4 h/b 4.00 > 3.5 → not a shear wall (C_hb = 0, no shear, audit warning)."
+    },
+    {
+      "step": 3,
+      "text": "Reduced capacity at 6\" o.c. (312 plf): SW-1 312 × 1.0000 = 312.00 plf; SW-2 312 × 0.9375 = 292.50 plf; SW-3 312 × 0.8125 = 253.50 plf."
+    },
+    {
+      "step": 4,
+      "text": "Weights v_cap × L: SW-1 312.00 × 3.5 = 1092.00 lb; SW-2 292.50 × 2.8 = 819.00 lb; SW-3 253.50 × 2 = 507.00 lb; Σ = 2418.00 lb (SW-4 0)."
+    },
+    {
+      "step": 5,
+      "text": "Shares V × wt / Σ: SW-1 1.3548 k; SW-2 1.0161 k; SW-3 0.6290 k; SW-4 0 k. Unit shears 0.7·V/L: SW-1 270.97 plf; SW-2 254.03 plf; SW-3 220.16 plf — all ≤ their reduced 6\" capacity, so 6\" o.c. stays."
+    },
+    {
+      "step": 6,
+      "text": "D/C = v / (312·C_hb) = 0.8685 at every sheathed wall (the capacity method gives every wall the same D/C)."
+    },
+    {
+      "step": 7,
+      "text": "SW-1 (Eq. 4.3-1, → governs): v = 1000 × 1.355 / 3.5 = 387.10 plf, A = 10.5 in², G_a = 16 k/in → 8vh³/(EAb) = 0.0170; vh/(1000G_a) = 0.1694; Δ_HD = 0.127 × 2709.68 / 3790 (ASD cap) = 0.0908 (HDUE3, T = 2709.68 lb); r = 2709.68 / (10.5 × 625) = 0.4129 → Δ_c = 0.0113; h·Δa/b = 7 × (0.0908 + 0.0113) / 3.5 = 0.2042 → δ = 0.3906 in."
+    },
+    {
+      "step": 8,
+      "text": "SW-2 (Eq. 4.3-1, → governs): v = 1000 × 1.016 / 2.8 = 362.90 plf, A = 10.5 in², G_a = 16 k/in → 8vh³/(EAb) = 0.0199; vh/(1000G_a) = 0.1588; Δ_HD = 0.127 × 2540.32 / 3790 (ASD cap) = 0.0851 (HDUE3, T = 2540.32 lb); r = 2540.32 / (10.5 × 625) = 0.3871 → Δ_c = 0.0106; h·Δa/b = 7 × (0.0851 + 0.0106) / 2.8 = 0.2393 → δ = 0.4180 in."
+    },
+    {
+      "step": 9,
+      "text": "SW-3 (Eq. 4.3-1, → governs): v = 1000 × 0.629 / 2 = 314.52 plf, A = 10.5 in², G_a = 16 k/in → 8vh³/(EAb) = 0.0242; vh/(1000G_a) = 0.1376; Δ_HD = 0.127 × 2201.61 / 3790 (ASD cap) = 0.0738 (HDUE3, T = 2201.61 lb); r = 2201.61 / (10.5 × 625) = 0.3355 → Δ_c = 0.0092; h·Δa/b = 7 × (0.0738 + 0.0092) / 2 = 0.2904 → δ = 0.4522 in."
+    },
+    {
+      "step": 10,
+      "text": "SW-4 (h/b 4.00 > 3.5) is not a shear wall: no share, no deflection, not part of the story drift. Story drift Level 1: δxe = the largest wall δ = SW-3 0.4522 in → δx = Cd·δxe/Ie = 4 × 0.4522 / 1.0 = 1.809 in vs Δa = 0.020 × 7 × 12 = 1.680 in → NG — over the limit (design pinned, so drift sizing does not change it; the line reports drift NG). The short walls deflect most for their shear (the 8vh³/EAb and h·Δa/b terms grow with h/b): this case keeps its pinned design and verifies the drift NG."
+    }
+  ],
+  "expect": [
+    {
+      "label": "SW-2 C_hb",
+      "at": "wall:SW-2",
+      "field": "hbReductionFactor",
+      "value": 0.9375,
+      "tol": 0.0001,
+      "step": 2
+    },
+    {
+      "label": "SW-3 C_hb",
+      "at": "wall:SW-3",
+      "field": "hbReductionFactor",
+      "value": 0.8125,
+      "tol": 0.0001,
+      "step": 2
+    },
+    {
+      "label": "SW-4 not a shear wall",
+      "at": "wall:SW-4",
+      "field": "hbNotPermitted",
+      "value": true,
+      "step": 2
+    },
+    {
+      "label": "SW-2 reduced capacity (plf)",
+      "at": "wall:SW-2",
+      "field": "effectiveSeismicCap",
+      "value": 292.5,
+      "tol": 0.01,
+      "step": 3
+    },
+    {
+      "label": "SW-3 reduced capacity (plf)",
+      "at": "wall:SW-3",
+      "field": "effectiveSeismicCap",
+      "value": 253.5,
+      "tol": 0.01,
+      "step": 3
+    },
+    {
+      "label": "SW-1 weight (lb)",
+      "at": "wall:SW-1",
+      "field": "capWeight.E",
+      "value": 1092,
+      "tol": 0.01,
+      "step": 4
+    },
+    {
+      "label": "SW-2 weight (lb)",
+      "at": "wall:SW-2",
+      "field": "capWeight.E",
+      "value": 819,
+      "tol": 0.01,
+      "step": 4
+    },
+    {
+      "label": "SW-3 weight (lb)",
+      "at": "wall:SW-3",
+      "field": "capWeight.E",
+      "value": 507,
+      "tol": 0.01,
+      "step": 4
+    },
+    {
+      "label": "SW-4 weight (lb)",
+      "at": "wall:SW-4",
+      "field": "capWeight.E",
+      "value": 0,
+      "tol": 0.01,
+      "step": 4
+    },
+    {
+      "label": "SW-1 share (k)",
+      "at": "wall:SW-1",
+      "field": "shareExact_1E",
+      "value": 1.3548387096774193,
+      "tol": 0.005,
+      "step": 5
+    },
+    {
+      "label": "SW-3 share (k)",
+      "at": "wall:SW-3",
+      "field": "shareExact_1E",
+      "value": 0.6290322580645161,
+      "tol": 0.005,
+      "step": 5
+    },
+    {
+      "label": "SW-4 share (k)",
+      "at": "wall:SW-4",
+      "field": "shareExact_1E",
+      "value": 0,
+      "tol": 0.005,
+      "step": 5
+    },
+    {
+      "label": "SW-3 unit shear (plf)",
+      "at": "wall:SW-3",
+      "field": "unitShear_seismic",
+      "value": 220.16129032258064,
+      "tol": 0.01,
+      "step": 5
+    },
+    {
+      "label": "SW-2 D/C",
+      "at": "wall:SW-2",
+      "field": "dcRatio",
+      "value": 0.86848635235732,
+      "tol": 0.006,
+      "step": 6
+    },
+    {
+      "label": "SW-1 δ at 1.0E (in)",
+      "at": "wall:SW-1",
+      "field": "deflection.E.delta",
+      "value": 0.39058000444291757,
+      "tol": 0.0005,
+      "step": 7
+    },
+    {
+      "label": "SW-2 δ at 1.0E (in)",
+      "at": "wall:SW-2",
+      "field": "deflection.E.delta",
+      "value": 0.4180184023839634,
+      "tol": 0.0005,
+      "step": 8
+    },
+    {
+      "label": "SW-3 δ at 1.0E (in)",
+      "at": "wall:SW-3",
+      "field": "deflection.E.delta",
+      "value": 0.45215533897856375,
+      "tol": 0.0005,
+      "step": 9
+    },
+    {
+      "label": "Story δxe, Level 1 (in)",
+      "at": "drift:Level 1",
+      "field": "seismic.deltaXE",
+      "value": 0.45215533897856375,
+      "tol": 0.0005,
+      "step": 10
+    },
+    {
+      "label": "Governing wall for drift, Level 1",
+      "at": "drift:Level 1",
+      "field": "seismic.wallMark",
+      "value": "SW-3",
+      "step": 10
+    },
+    {
+      "label": "δx = Cd·δxe/Ie, Level 1 (in)",
+      "at": "drift:Level 1",
+      "field": "seismic.deltaX",
+      "value": 1.808621355914255,
+      "tol": 0.002,
+      "step": 10
+    },
+    {
+      "label": "Drift NG, Level 1",
+      "at": "drift:Level 1",
+      "field": "seismic.pass",
+      "value": false,
+      "step": 10
+    }
+  ],
+  "expectChecks": {
+    "fail": [],
+    "warnings": [
+      "aspect_ratio"
+    ]
+  },
+  "notChecked": "D/C is compared at ± 0.006 because the engine stores dcRatio rounded to 0.01. Overturning, hardware and posts of the short walls (the chain is covered in V01 / V02). No self-weight (wall DL type blank) to keep the shares clean.",
+  "pinned": {
+    "SW-1": {
+      "nail": "6",
+      "hdL": "HDUE3",
+      "hdR": "HDUE3",
+      "postL": "(2)2x4",
+      "postR": "(2)2x4"
+    },
+    "SW-2": {
+      "nail": "6",
+      "hdL": "HDUE3",
+      "hdR": "HDUE3",
+      "postL": "(2)2x4",
+      "postR": "(2)2x4"
+    },
+    "SW-3": {
+      "nail": "6",
+      "hdL": "HDUE3",
+      "hdR": "HDUE3",
+      "postL": "(2)2x4",
+      "postR": "(2)2x4"
+    },
+    "SW-4": {
+      "nail": "6",
+      "hdL": "HDUE3",
+      "hdR": "HDUE3",
+      "postL": "(2)2x4",
+      "postR": "(2)2x4"
+    }
+  },
+  "schemaVersion": 12,
+  "inputs": {
+    "sds": "1.0",
+    "loadType": "seismic",
+    "wallThickness": "4",
+    "woodGrade": "dfir_no1",
+    "sheathing": "ply",
+    "distribution": "capacity",
+    "cd": "4",
+    "ie": "1.0",
+    "riskCategory": "II",
+    "driftRow": "other",
+    "driftBypass": false,
+    "alphaS": "",
+    "windDriftLimit": "400",
+    "omega0": "2.5",
+    "lrfdHalfL": false,
+    "wswhFc": "2500",
+    "seismicDesignCategory": "",
+    "detachedOneTwoFamily": false,
+    "pdfReport": "detailed",
+    "refs": {},
+    "notes": "",
+    "wallDLTypes": [
+      {
+        "id": "wdt-1",
+        "name": "Stud wall",
+        "psf": "10"
+      }
+    ],
+    "levels": [
+      {
+        "id": "lvl-1",
+        "name": "Level 1",
+        "floorToFloor": 7,
+        "anchorageType": "auto",
+        "floorClearSpan": "16"
+      }
+    ],
+    "directions": [
+      {
+        "id": "dir-1",
+        "name": "N-S",
+        "rho": 1,
+        "lines": [
+          {
+            "id": "ln-1",
+            "name": "Line A",
+            "totalLength": 24,
+            "wallThickness": "",
+            "distribution": "",
+            "driftBypass": "",
+            "distReviewed": [],
+            "levelLoads": {
+              "lvl-1": {
+                "seismic": "3",
+                "wind": ""
+              }
+            },
+            "gravityLoads": {
+              "lvl-1": {
+                "loads": []
+              }
+            },
+            "walls": [
+              {
+                "id": "w-1",
+                "mark": "SW-1",
+                "levelId": "lvl-1",
+                "position": 0,
+                "length": 3.5,
+                "method": "segmented",
+                "systemType": "sheathed",
+                "openings": [],
+                "narrowPier": false,
+                "wallDLTypeId": "",
+                "nailingPattern": "6",
+                "anchorageLeftOverride": "HDUE3",
+                "anchorageRightOverride": "HDUE3",
+                "postLeftOverride": "(2)2x4",
+                "postRightOverride": "(2)2x4",
+                "ftaoStrapOverride": "",
+                "jambPostOverride": "",
+                "wswhWidth": "18",
+                "wswhCondition": "concrete",
+                "wswhJoist": "12",
+                "wswhFloorDepth": "12",
+                "wswhAnchorOverride": ""
+              },
+              {
+                "id": "w-2",
+                "mark": "SW-2",
+                "levelId": "lvl-1",
+                "position": 6,
+                "length": 2.8,
+                "method": "segmented",
+                "systemType": "sheathed",
+                "openings": [],
+                "narrowPier": false,
+                "wallDLTypeId": "",
+                "nailingPattern": "6",
+                "anchorageLeftOverride": "HDUE3",
+                "anchorageRightOverride": "HDUE3",
+                "postLeftOverride": "(2)2x4",
+                "postRightOverride": "(2)2x4",
+                "ftaoStrapOverride": "",
+                "jambPostOverride": "",
+                "wswhWidth": "18",
+                "wswhCondition": "concrete",
+                "wswhJoist": "12",
+                "wswhFloorDepth": "12",
+                "wswhAnchorOverride": ""
+              },
+              {
+                "id": "w-3",
+                "mark": "SW-3",
+                "levelId": "lvl-1",
+                "position": 12,
+                "length": 2,
+                "method": "segmented",
+                "systemType": "sheathed",
+                "openings": [],
+                "narrowPier": false,
+                "wallDLTypeId": "",
+                "nailingPattern": "6",
+                "anchorageLeftOverride": "HDUE3",
+                "anchorageRightOverride": "HDUE3",
+                "postLeftOverride": "(2)2x4",
+                "postRightOverride": "(2)2x4",
+                "ftaoStrapOverride": "",
+                "jambPostOverride": "",
+                "wswhWidth": "18",
+                "wswhCondition": "concrete",
+                "wswhJoist": "12",
+                "wswhFloorDepth": "12",
+                "wswhAnchorOverride": ""
+              },
+              {
+                "id": "w-4",
+                "mark": "SW-4",
+                "levelId": "lvl-1",
+                "position": 18,
+                "length": 1.75,
+                "method": "segmented",
+                "systemType": "sheathed",
+                "openings": [],
+                "narrowPier": false,
+                "wallDLTypeId": "",
+                "nailingPattern": "6",
+                "anchorageLeftOverride": "HDUE3",
+                "anchorageRightOverride": "HDUE3",
+                "postLeftOverride": "(2)2x4",
+                "postRightOverride": "(2)2x4",
+                "ftaoStrapOverride": "",
+                "jambPostOverride": "",
+                "wswhWidth": "18",
+                "wswhCondition": "concrete",
+                "wswhJoist": "12",
+                "wswhFloorDepth": "12",
+                "wswhAnchorOverride": ""
+              }
+            ],
+            "beams": [],
+            "supportPosts": []
+          }
+        ]
+      }
+    ]
+  }
+}

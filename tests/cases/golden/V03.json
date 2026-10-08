@@ -1,0 +1,48 @@
+{
+  "calcVersion": "v18",
+  "lines": [
+    {
+      "line": "N-S / Line A",
+      "walls": [
+        {
+          "mark": "SW-1",
+          "level": "Level 1",
+          "method": "wall",
+          "nailing": "6",
+          "basis": "manual",
+          "V_E": 4,
+          "V_W": 0,
+          "dc": 0.9,
+          "T": [
+            1.08,
+            1.484
+          ],
+          "C": [
+            7.71,
+            6.258
+          ],
+          "anchorage": [
+            "HDUE3",
+            "HDUE3"
+          ],
+          "posts": [
+            "6x4",
+            "(3)2x4"
+          ],
+          "deltaE": 0.407
+        }
+      ],
+      "posts": [],
+      "beams": [],
+      "drift": [
+        {
+          "level": "Level 1",
+          "dx": 1.628,
+          "pass": true
+        }
+      ],
+      "checksFailed": [],
+      "warnings": []
+    }
+  ]
+}

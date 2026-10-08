@@ -1,13 +1,17 @@
-import { el, clearEl, numOrBlank } from '../utils.js';
+import { el, clearEl, numOrBlank, sameNumber } from '../utils.js';
 
 const round2 = v => Math.round(v * 100) / 100;
 const round4 = v => Math.round(v * 10000) / 10000;
+
+const BASE_SHEAR_FIELDS = [['sds', 'Sds'], ['cs', 'Cs'], ['ie', 'Ie'], ['omega0', 'Ω0'], ['k', 'k']];
+const sameName = (a, b) => String(a || '').trim().toLowerCase() === String(b || '').trim().toLowerCase();
 
 export const elfDiaphragmCollector = {
   id: 'elf_diaphragm_collector',
   label: 'ELF Diaphragm & Collector',
   schemaVersion: 1,
   calcVersion: 'v1',
+  regenerateResults: true,
   refs: [
     { key: 'massSource', label: 'Seismic Mass Takeoff', sourceType: 'seismic_mass_takeoff',
       extract: (outputs) => ({ perLevel: outputs.perLevel, totalSeismicWeight: outputs.totalSeismicWeight }) },
@@ -18,6 +22,48 @@ export const elfDiaphragmCollector = {
   outputFields: [],
 
   migrate(item) { return item; },
+
+  // Copied Mass Takeoff levels / Base Shear coefficients that no longer match the linked items
+  linkDiff(inputs, linked) {
+    const changes = [];
+    const mass = linked.massSource && linked.massSource.perLevel;
+    if (mass) {
+      const levels = inputs.levels || [];
+      const sameList = mass.length === levels.length && mass.every(m => levels.some(lv => sameName(lv.name, m.label)));
+      if (!sameList) {
+        changes.push({ refKey: 'massSource', label: 'Level list', from: levels.map(l => l.name).join(', '), to: mass.map(m => m.label).join(', ') });
+      } else {
+        for (const m of mass) {
+          const lv = levels.find(l => sameName(l.name, m.label));
+          if (!sameNumber(lv.wx, m.seismicWeight, 0.05)) changes.push({ refKey: 'massSource', label: (m.label || 'Level') + ' W', from: lv.wx, to: m.seismicWeight });
+          if (!sameNumber(lv.hx, m.hx, 0.005)) changes.push({ refKey: 'massSource', label: (m.label || 'Level') + ' hx', from: lv.hx, to: m.hx });
+        }
+      }
+    }
+    const bs = linked.baseShearSource;
+    if (bs) {
+      for (const [key, label] of BASE_SHEAR_FIELDS) {
+        if (bs[key] == null) continue;
+        if (!sameNumber(inputs[key], bs[key], 0.0005)) changes.push({ refKey: 'baseShearSource', label, from: inputs[key], to: bs[key] });
+      }
+    }
+    return changes;
+  },
+
+  applyLinks(inputs, linked) {
+    const mass = linked.massSource && linked.massSource.perLevel;
+    if (mass) {
+      const old = inputs.levels || [];
+      // Same shape as picking the link, keeping Wpx for levels whose names still match
+      inputs.levels = mass.map(m => {
+        const prev = old.find(l => sameName(l.name, m.label));
+        return { name: m.label || '', wx: m.seismicWeight != null ? String(m.seismicWeight) : '', hx: m.hx != null ? String(m.hx) : '', wpx: prev ? prev.wpx : '' };
+      });
+    }
+    const bs = linked.baseShearSource;
+    if (bs) for (const [key] of BASE_SHEAR_FIELDS) if (bs[key] != null) inputs[key] = String(bs[key]);
+    return inputs;
+  },
 
   summaryLabel(inputs, outputs) {
     const n = inputs.levels ? inputs.levels.length : 0;

@@ -1,0 +1,394 @@
+{
+ "_source": "Test 123 item 04327abe revision 2026-09-22 19:23 (Phase 3, duplicate bm-NaN/sp-NaN ids)",
+ "schemaVersion": 4,
+ "inputs": {
+  "sds": "1.0",
+  "refs": {},
+  "notes": "",
+  "levels": [
+   {
+    "id": "lvl-1",
+    "name": "Roof",
+    "floorToFloor": 10,
+    "anchorageType": "auto",
+    "floorClearSpan": "16"
+   },
+   {
+    "id": "lvl-3",
+    "name": "3rd Floor",
+    "floorToFloor": "10",
+    "anchorageType": "auto",
+    "floorClearSpan": "16"
+   },
+   {
+    "id": "lvl-2",
+    "name": "2nd Floor",
+    "floorToFloor": 10,
+    "anchorageType": "auto",
+    "floorClearSpan": "16"
+   }
+  ],
+  "loadType": "seismic",
+  "woodGrade": "dfir_no1",
+  "directions": [
+   {
+    "id": "dir-1",
+    "rho": "1",
+    "name": "N-S",
+    "lines": [
+     {
+      "id": "ln-1",
+      "name": "Line 1",
+      "beams": [],
+      "walls": [
+       {
+        "id": "w-1",
+        "mark": "SW-1",
+        "length": "5",
+        "levelId": "lvl-1",
+        "numSides": 1,
+        "position": 12,
+        "wallDLTypeId": "wdt-1",
+        "sheathingType": "",
+        "nailingPattern": ""
+       },
+       {
+        "id": "w-2",
+        "mark": "SW-2",
+        "length": "5",
+        "levelId": "lvl-3",
+        "numSides": 1,
+        "position": "12",
+        "wallDLTypeId": "wdt-1",
+        "sheathingType": "",
+        "nailingPattern": ""
+       },
+       {
+        "id": "w-3",
+        "mark": "SW-3",
+        "length": "5",
+        "levelId": "lvl-2",
+        "numSides": 1,
+        "position": "12",
+        "wallDLTypeId": "wdt-1",
+        "sheathingType": "",
+        "nailingPattern": ""
+       },
+       {
+        "id": "w-4",
+        "mark": "SW-4",
+        "length": "5",
+        "levelId": "lvl-3",
+        "numSides": 1,
+        "position": "5",
+        "wallDLTypeId": "wdt-1",
+        "sheathingType": "",
+        "nailingPattern": ""
+       },
+       {
+        "id": "w-5",
+        "mark": "SW-5",
+        "length": "5",
+        "levelId": "lvl-2",
+        "numSides": 1,
+        "position": "5",
+        "wallDLTypeId": "wdt-1",
+        "sheathingType": "",
+        "nailingPattern": ""
+       }
+      ],
+      "levelLoads": {
+       "lvl-1": {
+        "wind": "5",
+        "seismic": "2"
+       },
+       "lvl-2": {
+        "wind": "5",
+        "seismic": "2"
+       },
+       "lvl-3": {
+        "wind": "5",
+        "seismic": "2"
+       }
+      },
+      "totalLength": "20",
+      "gravityLoads": {
+       "lvl-1": {
+        "point": [],
+        "uniform": [
+         {
+          "id": "gu-1",
+          "end": "20",
+          "dlPlf": "100",
+          "start": 0
+         }
+        ]
+       },
+       "lvl-2": {
+        "point": [],
+        "uniform": [
+         {
+          "id": "gu-3",
+          "end": 20,
+          "dlPlf": "100",
+          "start": 0
+         }
+        ]
+       },
+       "lvl-3": {
+        "point": [],
+        "uniform": [
+         {
+          "id": "gu-2",
+          "end": 20,
+          "dlPlf": "100",
+          "start": 0
+         }
+        ]
+       }
+      },
+      "supportPosts": [],
+      "wallThickness": ""
+     },
+     {
+      "id": "ln-3",
+      "name": "Line 2",
+      "beams": [
+       {
+        "id": "bm-NaN",
+        "length": 8,
+        "levelId": "lvl-1",
+        "position": 6.5
+       },
+       {
+        "id": "bm-NaN",
+        "length": 8,
+        "levelId": "lvl-1",
+        "position": 29.5
+       }
+      ],
+      "walls": [
+       {
+        "id": "w-6",
+        "mark": "SW-6",
+        "length": 4,
+        "levelId": "lvl-1",
+        "position": 12.5,
+        "wallDLTypeId": "wdt-1",
+        "nailingPattern": "",
+        "postLeftOverride": "",
+        "postRightOverride": "",
+        "anchorageLeftOverride": "",
+        "anchorageRightOverride": ""
+       }
+      ],
+      "levelLoads": {
+       "lvl-1": {
+        "wind": "5",
+        "seismic": "2"
+       },
+       "lvl-2": {
+        "wind": "5",
+        "seismic": "2"
+       },
+       "lvl-3": {
+        "wind": "5",
+        "seismic": "2"
+       }
+      },
+      "totalLength": 60,
+      "gravityLoads": {
+       "lvl-1": {
+        "point": [],
+        "uniform": []
+       },
+       "lvl-2": {
+        "point": [],
+        "uniform": []
+       },
+       "lvl-3": {
+        "point": [],
+        "uniform": []
+       }
+      },
+      "supportPosts": [
+       {
+        "id": "sp-NaN",
+        "levelId": "lvl-2",
+        "position": 6.5
+       },
+       {
+        "id": "sp-NaN",
+        "levelId": "lvl-2",
+        "position": 18.5
+       },
+       {
+        "id": "sp-NaN",
+        "levelId": "lvl-2",
+        "position": 23.5
+       },
+       {
+        "id": "sp-NaN",
+        "levelId": "lvl-2",
+        "position": 40
+       },
+       {
+        "id": "sp-NaN",
+        "levelId": "lvl-2",
+        "position": 47.5
+       },
+       {
+        "id": "sp-NaN",
+        "levelId": "lvl-2",
+        "position": 47.5
+       }
+      ],
+      "wallThickness": ""
+     },
+     {
+      "id": "ln-4",
+      "name": "Line 3",
+      "beams": [],
+      "walls": [],
+      "levelLoads": {
+       "lvl-1": {
+        "wind": "5",
+        "seismic": ""
+       },
+       "lvl-2": {
+        "wind": "5",
+        "seismic": ""
+       },
+       "lvl-3": {
+        "wind": "5",
+        "seismic": ""
+       }
+      },
+      "totalLength": 60,
+      "gravityLoads": {
+       "lvl-1": {
+        "point": [],
+        "uniform": []
+       },
+       "lvl-2": {
+        "point": [],
+        "uniform": []
+       },
+       "lvl-3": {
+        "point": [],
+        "uniform": []
+       }
+      },
+      "supportPosts": [],
+      "wallThickness": ""
+     },
+     {
+      "id": "ln-6",
+      "name": "Line 4",
+      "beams": [],
+      "walls": [],
+      "levelLoads": {
+       "lvl-1": {
+        "wind": "",
+        "seismic": ""
+       },
+       "lvl-2": {
+        "wind": "",
+        "seismic": ""
+       },
+       "lvl-3": {
+        "wind": "",
+        "seismic": ""
+       }
+      },
+      "totalLength": 60,
+      "gravityLoads": {},
+      "supportPosts": [],
+      "wallThickness": ""
+     }
+    ]
+   },
+   {
+    "id": "dir-2",
+    "rho": 1,
+    "name": "E-W",
+    "lines": [
+     {
+      "id": "ln-2",
+      "name": "Line A",
+      "beams": [],
+      "walls": [],
+      "levelLoads": {
+       "lvl-1": {
+        "wind": "5",
+        "seismic": ""
+       },
+       "lvl-2": {
+        "wind": "5",
+        "seismic": ""
+       },
+       "lvl-3": {
+        "wind": "5",
+        "seismic": ""
+       }
+      },
+      "totalLength": 60,
+      "gravityLoads": {
+       "lvl-1": {
+        "point": [],
+        "uniform": []
+       },
+       "lvl-2": {
+        "point": [],
+        "uniform": []
+       },
+       "lvl-3": {
+        "point": [],
+        "uniform": []
+       }
+      },
+      "supportPosts": [],
+      "wallThickness": ""
+     },
+     {
+      "id": "ln-5",
+      "name": "Line B",
+      "beams": [],
+      "walls": [],
+      "levelLoads": {
+       "lvl-1": {
+        "wind": "5",
+        "seismic": ""
+       },
+       "lvl-2": {
+        "wind": "5",
+        "seismic": ""
+       },
+       "lvl-3": {
+        "wind": "5",
+        "seismic": ""
+       }
+      },
+      "totalLength": 60,
+      "gravityLoads": {},
+      "supportPosts": [],
+      "wallThickness": ""
+     }
+    ]
+   }
+  ],
+  "wallDLTypes": [
+   {
+    "id": "wdt-1",
+    "psf": 9.5,
+    "name": "Exterior"
+   },
+   {
+    "id": "wdt-2",
+    "psf": 7,
+    "name": "Interior"
+   }
+  ],
+  "wallThickness": "4"
+ }
+}

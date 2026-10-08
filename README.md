@@ -24,9 +24,10 @@ Shared structural-engineering calculation tool, organized by project number. Eac
 | Seismic Mass Takeoff | `seismicMassTakeoff.js` | Per-level seismic weight from Flat Load assemblies |
 | Seismic Base Shear | `seismicBaseShear.js`, `seismicBaseShearTables.js` | ASCE 7-22 Cs calculator with seismic system dropdown |
 | ELF Diaphragm & Collector | `elfDiaphragmCollector.js` | ASCE 7-22 §12.8/12.10 lateral force distribution |
-| Shear Wall Design | `shearWallDesign.js`, `shearWallCalc.js`, `shearWallElevation.js`, `shearWallTypes.js`, `shearWallNailing.js`, `shearWallHardware.js` | Multi-story shear wall analysis with nailing/hardware auto-select and interactive SVG elevation |
+| Diaphragm to LRS | `diaphragmToLrs.js`, `diaphragmToLrsCalc.js`, `diaphragmToLrsDiagram.js`, `diaphragmToLrsReport.js`, `diaphragmToLrsVerify.js`, `diaphragmToLrsMigrate.js` | Flexible diaphragms to the lines of resistance (seismic 1.0E): q = F_x / ΣA per level and direction (F_x linked from ELF), each diaphragm a 2-support beam with overhangs, any number of rectangular parts (a / b / d) and point loads (manual, or another diaphragm resting on it), one lever rule per piece (shown with its numbers per row), wall lines per direction, merged lines (e.g. R.4+R.5 as one line of resistance, per level), story shear down the building (Same / Split % / Ends here), Wall Line Shear Summary per level, checks D1–D9, PDF Summary / Detailed; stored data versioned and migrated without loss (`docs/data-durability.md`) |
+| Shear Wall Design | `shearWallDesign.js`, `shearWallCalc.js`, `shearWallLoadPath.js`, `shearWallElevation.js`, `shearWallTypes.js`, `shearWallNailing.js`, `shearWallHardware.js`, `shearWallOpenings.js`, `shearWallFtao.js`, `shearWallFtaoAdapter.js`, `shearWallDeflection.js`, `shearWallCombos.js`, `shearWallGravity.js`, `shearWallWswh.js`, `shearWallWswhData.js`, `shearWallChecks.js`, `shearWallCalcSheet.js` | Multi-story shear wall analysis: nailing/hardware auto-select (HDUE minimum post), vertical load path through wall ends, posts at any story and transfer beams with user-defined supports (gravity on top carried down; support posts sized for max(ASD, Ω₀ ASD)), segmented walls (solid, full height — no openings) and FTAO walls with openings (APA T555), Simpson Strong-Wall WSWH panels (concrete / raised floor / two-story stacked, Table 06 anchors), gravity loads D / L / Lr (point, full-line or partial uniform; plf or psf × trib; Flat Load link), every ASCE 7-22 ASD / LRFD / Ω₀ combination (ASD designs; LRFD and Ω₀ reported), SDPWS 2021 deflection and story drift (auto nailing raised for drift, bypass per project / line), built-in equilibrium checks G1–G12, deflection distribution by equal δ (zero-share wall: holdown check + under-load warning, "Engineer reviewed — OK" per warning), wind drift vs h/n (report only), load cases + numbered combinations LC# (referred to by LC# everywhere), line results tabs Walls · Distribution · Posts & Beams · Drift · Forces · Checks (Summary / Detailed calc sheet per wall — one content list `wallSheetBlocks` drawn on screen and printed in the PDF), interactive SVG elevation (one shared drawing `drawElevationScene` for the tool and the PDF; Wall HW row under each wall; "(both)" / L: R: on narrow walls), PDF organised per wall line (Summary / Detailed; landscape elevations at a standard scale, end forces + hardware) |
 
-**Cross-module data flow:** Flat Load Calculator → Seismic Mass Takeoff (per-assembly DL) → ELF (W, per-level). Seismic Base Shear → ELF (Cs, SDS, Ie, Ω0, k auto-fill via ref).
+**Cross-module data flow:** Flat Load Calculator → Seismic Mass Takeoff (per-assembly DL) → ELF (W, per-level). ELF → Diaphragm to LRS (F_x per level). Seismic Base Shear → ELF (Cs, SDS, Ie, Ω0, k auto-fill via ref). Seismic Base Shear → Shear Wall Design (Sds, Cd, Ie, Risk Category for drift; Ω₀; SDC for WSWH anchors). Flat Load Calculator → Shear Wall Design (assembly psf × trib for uniform gravity rows).
 
 ## Project structure
 
@@ -49,12 +50,31 @@ src/
     seismicBaseShear.js    — ASCE 7-22 Cs calculator
     seismicBaseShearTables.js — Fa/Fv/TL lookup tables
     elfDiaphragmCollector.js  — ELF lateral force distribution
+    diaphragmToLrs.js      — Diaphragm to LRS module UI (setup, direction tabs, level sub-tabs, diaphragm table + editor, summary, checks)
+    diaphragmToLrsCalc.js  — its engine: parts cut at the supports, lever rule, diaphragm chain, line forces, story shear, checks D1–D9
+    diaphragmToLrsDiagram.js — beam diagram of one diaphragm (tool and PDF)
+    diaphragmToLrsReport.js — its PDF sections (Summary / Detailed)
+    diaphragmToLrsVerify.js — its verification cases: resolver, comparison, Verification tab
+    diaphragmToLrsMigrate.js — its stored data: schema stamp, migration steps, normalisation, no-loss helpers
     shearWallDesign.js     — shear wall module UI + PDF
-    shearWallCalc.js       — shear wall calc engine
-    shearWallElevation.js  — interactive SVG elevation drawing
+    shearWallCalc.js       — shear wall calc engine (distribution, T/C per combo, CALC_VERSION)
+    shearWallLoadPath.js   — vertical load path: wall ends, posts, transfer beams, audit
+    shearWallElevation.js  — elevation: one shared scene (drawElevationScene) drawn by the interactive tool and the PDF
     shearWallTypes.js      — data model constructors + helpers
     shearWallNailing.js    — SDPWS 4.3A nailing table + auto-select
-    shearWallHardware.js   — holdown/strap catalogs + post design
+    shearWallHardware.js   — holdown/strap/FTAO strap catalogs + post design
+    shearWallOpenings.js   — FTAO wall openings: geometry checks and piers (segmented walls have no openings)
+    shearWallFtao.js       — FTAO engine (vendored from the ftao-shear-wall skill, APA T555)
+    shearWallFtaoAdapter.js — builds FTAO engine input from a wall and runs it
+    shearWallDeflection.js — SDPWS Eq. 4.3-1 deflection, ASCE 7 drift limits
+    shearWallCombos.js     — ASCE 7-22 load combinations (factors on D / L / Lr / E / W; design vs reported groups)
+    shearWallGravity.js    — gravity load rows (point / full / partial, psf × trib), statics to wall ends, loads to beams / posts
+    shearWallWswh.js       — Simpson Strong-Wall WSWH lookup, stacked base check, Table 06 anchors
+    shearWallWswhData.js   — WSWH tables, GENERATED by scripts/buildWswhData.mjs from the Shared Drive WSWH md tables
+    shearWallChecks.js     — built-in equilibrium checks G1–G12 (story shear, gravity, statics, transfer, global, superposition)
+    shearWallCalcSheet.js  — row builders of the per-wall calc sheet (definition, capacity, overturning per corner, load-case end forces, superposition, M_R / beam lever tables, deflection substitution, from-above references)
+    shearWallVerify.js     — verification cases: resolve expected values in the results, compare, check status (runner, catalog, Verification tab)
+  richText.js              — subscript markup X_{ab} (and X_ab in headers): DOM <sub> for the app, runs for the PDF
   views/
     login.js
     projectPicker.js
@@ -62,6 +82,41 @@ src/
     itemForm.js
     userManagement.js
     activityLog.js
+scripts/
+  upgradeShearWallItems.mjs — bulk-upgrade saved shear wall items (dry run by default)
+  upgradeDlrsItems.mjs      — bulk-upgrade saved Diaphragm to LRS items (dry run; no-loss + results report)
+  lib/shearWallLoadCheck.mjs — "does this saved item open?" check shared with the tests
+  buildWswhData.mjs         — regenerate shearWallWswhData.js: node scripts/buildWswhData.mjs "<WSWH reference folder>"
+  casesDoc.mjs              — generate docs/shear-wall-test-cases.md (the verification case catalog)
+  seedCases.mjs             — put the verification cases into the local project SW-VERIFY (dry run by default)
+  dlrsCasesDoc.mjs          — generate docs/diaphragm-to-lrs-test-cases.md (Diaphragm to LRS case catalog)
+  dlrsSeedCases.mjs         — put the Diaphragm to LRS cases into the local project DLRS-VERIFY (dry run by default)
+tests/
+  shearWall.test.mjs       — shear wall calc + regression + legacy-definition checks (npm test)
+  shearWallPhase4.test.mjs — openings (segmented / FTAO), deflection & drift, LRFD, schema v6
+  shearWallRound2.test.mjs — HDUE minimum post, Ω₀ combos, dead load by statics, WSWH, schema v7
+  shearWallLiveLoad.test.mjs — D / L / Lr loads, ASCE 7-22 combos, beam / post gravity, Flat Load link, Distribution tab, reports, schema v8
+  shearWallChecks.test.mjs — G1–G12 on every fixture; tampered results prove each check fires
+  shearWallDrift.test.mjs  — drift sizing, sheathing governed by, drift bypass, schema v9
+  shearWallCalcSheet.test.mjs — calc sheet tabs and sections; C3 / C4 / C5 agree with the tool on every fixture; S0–S7 breakdowns
+  shearWallCases.test.mjs  — METHOD verification cases (design pinned): checks, hand-calc values, method agreement, render, goldens, guard (no selection outcomes)
+  shearWallRules.test.mjs  — design SELECTION rules R1–R6, R8 and R9 as properties on every model (lightest nailing / HD / strap, posts ≥ minimum, overrides kept, support posts, WSWH anchors, equal-δ deflection distribution, engineer review of distribution warnings)
+  diaphragmToLrs.test.mjs  — Diaphragm to LRS engine: lever rule vs every closed form (Cases 1, 4, 8, 24, 25, 26, A–M), random equilibrium, chain, loops, story shear
+  diaphragmToLrsCases.test.mjs — its verification cases D01–D08 (D01 = the team spreadsheet) and beam checks B01–B19: values + checks, form / tabs / PDF render, goldens
+  diaphragmToLrsBeamCheck.test.mjs — B01–B19 straight through solveBeam vs the hand calc (docs/diaphragm-to-lrs-beam-check.md)
+  diaphragmToLrsMigrate.test.mjs — frozen old-schema fixtures (tests/fixtures/legacy-dlrs/): no value lost, same results, open / save / print; merged lines, D9
+  dlrs-cases/              — Dxx-*.json cases; src/ hand-calc sources (closed forms), build / check; golden/
+  shearWallReport.test.mjs — UI / report: subscripts, LC numbering, linked gravity (lateral DL, greyed out), tab order, schedules, Forces tab, PDF per wall line, wind drift limit, elevation scale / parts / notes, FTAO strap on the hardware elevation only; tool and PDF draw the same elevation (same labels at the same places); "(both)" / L: R:; 4 px label gap; PDF calc sheet = tool calc sheet
+  cases/                   — Vxx-*.json method cases (built); src/ hand-calc sources with pins, lib.mjs code tables, build / check; golden/
+  rules/models/            — rule models (former selection cases V05, V06, V07, V16)
+test/
+  ftao.test.js             — FTAO engine regression vs APA T555 examples (node --test)
+  fixtures/                — sample definitions, regression baseline, legacy/ saved definitions by schema
+docs/
+  shear-wall-backlog.md    — deferred shear wall items and gaps
+  diaphragm-to-lrs.md      — Diaphragm to LRS calculator guide (method, use, data, files)
+  diaphragm-to-lrs-backlog.md — Diaphragm to LRS decisions, review notes and open items
+  diaphragm-to-lrs-test-cases.md — its verification catalog (generated)
 supabase/
   config.toml              — Supabase CLI local dev config
   schema.sql               — full database schema, run once on a new Supabase project
@@ -163,7 +218,35 @@ The ordered files in `supabase/migrations/` are the authoritative schema. Summar
 - `audit_log` — append-only database-authored history for project, calculation, profile, and access changes.
 - Row Level Security: active members share engineering work; only active administrators can manage users and read the global audit log.
 
+## Tests and upgrades
+
+- `npm test` — shear wall calc checks, aligned-stacking regression, and every saved definition in `tests/fixtures/legacy/` must open (form tabs, results, PDF sections, elevations) under a stand-in DOM (`linkedom`, dev-only).
+- Shear wall verification has three layers: (1) method cases pin their design as overrides and check loads, T/C, combos, stacking and deflection against a hand calc (the reviewed catalog); (2) selection rules R1–R8 are property tests (`tests/shearWallRules.test.mjs`, drift sizing in `tests/shearWallDrift.test.mjs`) that any valid design passes; (3) goldens are a change detector. A change to the selection logic never needs a hand-calc rewrite.
+- Shear wall verification cases: `npm run cases:build [Vxx …]` (sources → JSON), `npm run cases:check [Vxx]` (every value vs the engine), `npm run cases:diff` (changed golden fields), `npm run cases:accept` (refresh goldens after review), `npm run cases:doc` (catalog `docs/shear-wall-test-cases.md`), `SB_EMAIL=… SB_PASSWORD=… npm run seed:cases [-- --apply]` (local project SW-VERIFY, one item per case with a Verification tab).
+- Diaphragm to LRS cases: `npm run dlrs:cases:build`, `dlrs:cases:check`, `dlrs:cases:diff`, `dlrs:cases:accept`, `dlrs:cases:doc`, `SB_EMAIL=… SB_PASSWORD=… npm run dlrs:seed [-- --apply]` (local project DLRS-VERIFY).
+- `SB_EMAIL=… SB_PASSWORD=… npm run upgrade:shearwall` — dry run over every saved Shear Wall Design item in the database from `.env`; add `-- --apply` to write the upgraded definition and regenerated results (previous version goes into `revisions`).
+
+**Shear Wall Design stores the definition as the source of truth.** `items.inputs` (levels, lines, walls, beams, posts, loads) is authoritative; `items.outputs` is only a snapshot. The module sets `regenerateResults: true`, so `itemForm.js` recalculates results from the migrated definition on open and after save — old projects always show the current rules and visuals. When changing the definition shape: add a step to `DEFINITION_MIGRATIONS` in `shearWallDesign.js`, bump `schemaVersion`, and add a fixture of the previous version to `tests/fixtures/legacy/`. Bump `CALC_VERSION` in `shearWallCalc.js` on calc changes.
+
+## Stored data rules
+
+Saved projects must survive later UI and logic changes without bugs or lost input. The rules are in
+`docs/data-durability.md`:
+- P1 inputs only;
+- P2 ids;
+- P3 version stamp;
+- P4 migration steps that keep unknown fields;
+- P5 normalise;
+- P6 frozen fixtures;
+- P7 upgrade script.
+
+Diaphragm to LRS is the reference implementation (`diaphragmToLrsMigrate.js`, `npm run upgrade:dlrs`).
+
 ## Known limitations / open items
+
+- **Diaphragm to LRS**: guide `docs/diaphragm-to-lrs.md`, backlog `docs/diaphragm-to-lrs-backlog.md` (start with "Next session — start here").
+- **Shear Wall Design backlog**: see `docs/shear-wall-backlog.md` (start with "Next session — start here").
+- **PDF export** (`src/pdf.js`, all calculators): the Export PDF button sits in a toolbar at the top of every calculator (`itemForm.js`); a module that declares `pdfOptions = { key, label, options }` gets a report dropdown next to it (Shear Wall: Summary / Detailed). Sections may set `heading` (large wall-line title), `landscape`, `pageBreakBefore`; table cells may be `{ t, color }`; text supports `_{…}` subscripts and Greek / arrow / math signs (drawn with the PDF Symbol font).
 
 - **No real-time edit locking**: Postgres writes are last-writer-wins. The audit ledger preserves every committed mutation, while the calculation's convenience revision array remains capped.
 - **PDF calc-sheet template**: currently a generic layout (header, input/output tables, signature block). A firm-specific template redesign is planned.

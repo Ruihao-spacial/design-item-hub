@@ -1,0 +1,98 @@
+{
+  "calcVersion": "v18",
+  "lines": [
+    {
+      "line": "N-S / Line A",
+      "walls": [
+        {
+          "mark": "SW-7",
+          "level": "Roof",
+          "method": "wall",
+          "nailing": "6",
+          "basis": "manual",
+          "V_E": 2,
+          "V_W": 0,
+          "dc": 0.75,
+          "T": [
+            1.976,
+            1.976
+          ],
+          "C": [
+            2.408,
+            2.408
+          ],
+          "anchorage": [
+            "MSTC40",
+            "MSTC40"
+          ],
+          "posts": [
+            "(2)2x4",
+            "(2)2x4"
+          ],
+          "deltaE": 0.324
+        },
+        {
+          "mark": "SW-8",
+          "level": "Level 1",
+          "method": "wall",
+          "nailing": "4",
+          "basis": "manual",
+          "V_E": 5,
+          "V_W": 0,
+          "dc": 0.74,
+          "T": [
+            2.117,
+            3.27
+          ],
+          "C": [
+            3.277,
+            4.07
+          ],
+          "anchorage": [
+            "HDUE3",
+            "HDUE3"
+          ],
+          "posts": [
+            "(2)2x4",
+            "(2)2x4"
+          ],
+          "deltaE": 0.455
+        }
+      ],
+      "posts": [],
+      "beams": [
+        {
+          "mark": "BM-2",
+          "supports": [
+            {
+              "x": 0,
+              "T": 0.905,
+              "C": 1.409,
+              "receiver": "reported"
+            },
+            {
+              "x": 12,
+              "T": 0.947,
+              "C": 1.307,
+              "receiver": "wall_end"
+            }
+          ]
+        }
+      ],
+      "drift": [
+        {
+          "level": "Roof",
+          "dx": 1.296,
+          "pass": true
+        },
+        {
+          "level": "Level 1",
+          "dx": 1.818,
+          "pass": true
+        }
+      ],
+      "checksFailed": [],
+      "warnings": []
+    }
+  ]
+}

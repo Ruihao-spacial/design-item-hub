@@ -1,0 +1,329 @@
+{
+  "id": "V14",
+  "title": "FTAO — APA T555 two-opening benchmark",
+  "intent": "A 19.5 ft FTAO wall with two windows reproduces the APA T555 two-opening example through the whole calculator (level load → share → FTAO engine). The statics of the force-transfer method must match the published Figure 4 values: chord force H, unit shear above / below the openings, pier and corner-zone unit shears, strap force F_max and the corner forces.",
+  "covers": [
+    "FTAO method (APA T555 / Diekmann)",
+    "Published benchmark (APA T555 Figure 4)",
+    "Segmented vs FTAO: openings only on FTAO walls"
+  ],
+  "handCalc": [
+    {
+      "step": 1,
+      "text": "Geometry (T555): piers 4 / 4 / 3.5 ft, openings 6 / 2 ft → L = 19.5 ft; h = 8 ft, h_a = 1.33, h_o = 2.67, h_b = 4 ft. In the tool: openings at offset 4 ft (width 6) and 14 ft (width 2), sill 4 ft, head 6.67 ft."
+    },
+    {
+      "step": 2,
+      "text": "Loads: T555 uses V_ASD = 3750 lb. With seismic 0.7ρE and ρ = 1 the level load is V = 3750 / 0.7 = 5357.14 lb (entered as 5.36 k, one wall takes all of it)."
+    },
+    {
+      "step": 3,
+      "text": "Chord force H = V·h / L = 3750 × 8 / 19.5 = 1538.46 lb (published 1,538 lb; no dead load in the FTAO statics)."
+    },
+    {
+      "step": 4,
+      "text": "Unit shear above and below the openings v_a = v_b = H / (h_a + h_b) = 1538.46 / (1.33 + 4) = 288.46 plf (published 288 plf)."
+    },
+    {
+      "step": 5,
+      "text": "Pier unit shears (published): pier 1 / 2 / 3 = 337 / 388 / 244 plf; corner-zone unit shears v_c = 120 / 95 / 167 plf."
+    },
+    {
+      "step": 6,
+      "text": "Strap force F_max (published) = 865 lb; corner forces: opening 1 left / right = 865 / 865 lb, opening 2 left / right = 308 / 269 lb."
+    },
+    {
+      "step": 7,
+      "text": "Anchorage along the wall = V / L = 3750 / 19.5 = 192.31 plf."
+    },
+    {
+      "step": 8,
+      "text": "Line checks: base shear and moment of the one wall = the level load → G1–G12 pass."
+    },
+    {
+      "step": 9,
+      "text": "FTAO deflection at 1.0E (APA T555 method: Eq. 4.3-1 for each pier in each direction, averaged; pinned design 4\" o.c. plywood G_a = 20, HDUE3 δ 0.127 in at 3,790 lb, all pier edges (2)2x4 A = 10.5 in²; the published 0.335 in uses the example’s own components, so it is not this case’s value). V = 5357.14 lb, H = V·h/L = 2197.80 lb. Pier 1 L: v = 5357.14/19.5 × (L_1 + T_1) / L_1 = 5357.14/19.5 × (4 + 3.000)/4 = 480.77 plf, h = 8 → 0.0276 + 0.1923 + 8 × (0.1289 + Δ_c 0.0092 [r = 0.335])/4 = 0.4960; Pier 1 R: v = 5357.14/19.5 × (L_1 + T_1) / L_1 = 5357.14/19.5 × (4 + 3.000)/4 = 480.77 plf, h = 4 → 0.0034 + 0.0962 + 4 × (0.0644)/4 = 0.1640; Pier 2 L: v = 5357.14/19.5 × (L_2 + T_2) / L_2 = 5357.14/19.5 × (4 + 4.067)/4 = 554.03 plf, h = 4 → 0.0040 + 0.1108 + 4 × (0.0743)/4 = 0.1890; Pier 2 R: v = 5357.14/19.5 × (L_2 + T_2) / L_2 = 5357.14/19.5 × (4 + 4.067)/4 = 554.03 plf, h = 4 → 0.0040 + 0.1108 + 4 × (0.0743)/4 = 0.1890; Pier 3 L: v = 5357.14/19.5 × (L_3 + T_3) / L_3 = 5357.14/19.5 × (3.5 + 0.933)/3.5 = 347.99 plf, h = 4 → 0.0029 + 0.0696 + 4 × (0.0466)/3.5 = 0.1258; Pier 3 R: v = 5357.14/19.5 × (L_3 + T_3) / L_3 = 5357.14/19.5 × (3.5 + 0.933)/3.5 = 347.99 plf, h = 8 → 0.0228 + 0.1392 + 8 × (0.0933 + Δ_c 0.0092 [r = 0.335])/3.5 = 0.3962 → Δ = average of the 6 cases = 0.2600 in."
+    },
+    {
+      "step": 10,
+      "text": "Story drift Level 1: δxe = the largest wall δ = SW-14 0.2600 in → δx = Cd·δxe/Ie = 4 × 0.2600 / 1.0 = 1.040 in vs Δa = 0.020 × 8 × 12 = 1.920 in → OK."
+    }
+  ],
+  "expect": [
+    {
+      "label": "SW-14 is FTAO",
+      "at": "wall:SW-14",
+      "field": "method",
+      "value": "ftao",
+      "step": 1
+    },
+    {
+      "label": "V_ASD (lb)",
+      "at": "wall:SW-14",
+      "field": "ftao.perType.E.V_ASD",
+      "value": 3750,
+      "tol": 0.5,
+      "step": 2
+    },
+    {
+      "label": "Chord force H (lb)",
+      "at": "wall:SW-14",
+      "field": "ftao.perType.E.H",
+      "value": 1538.4615384615386,
+      "tol": 0.5,
+      "step": 3
+    },
+    {
+      "label": "v_a above / below openings (plf)",
+      "at": "wall:SW-14",
+      "field": "ftao.perType.E.va",
+      "value": 288.4615384615385,
+      "tol": 0.5,
+      "step": 4
+    },
+    {
+      "label": "Pier 1 unit shear (plf), T555",
+      "at": "wall:SW-14",
+      "field": "ftao.perType.E.piers[0].v",
+      "value": 337,
+      "tol": 1,
+      "step": 5
+    },
+    {
+      "label": "Pier 2 unit shear (plf), T555",
+      "at": "wall:SW-14",
+      "field": "ftao.perType.E.piers[1].v",
+      "value": 388,
+      "tol": 1,
+      "step": 5
+    },
+    {
+      "label": "Pier 3 unit shear (plf), T555",
+      "at": "wall:SW-14",
+      "field": "ftao.perType.E.piers[2].v",
+      "value": 244,
+      "tol": 1,
+      "step": 5
+    },
+    {
+      "label": "Pier 1 corner-zone v_c (plf), T555",
+      "at": "wall:SW-14",
+      "field": "ftao.perType.E.piers[0].vc",
+      "value": 120,
+      "tol": 1,
+      "step": 5
+    },
+    {
+      "label": "Pier 2 corner-zone v_c (plf), T555",
+      "at": "wall:SW-14",
+      "field": "ftao.perType.E.piers[1].vc",
+      "value": 95,
+      "tol": 1,
+      "step": 5
+    },
+    {
+      "label": "Pier 3 corner-zone v_c (plf), T555",
+      "at": "wall:SW-14",
+      "field": "ftao.perType.E.piers[2].vc",
+      "value": 167,
+      "tol": 1,
+      "step": 5
+    },
+    {
+      "label": "F_max (lb), T555",
+      "at": "wall:SW-14",
+      "field": "ftao.perType.E.Fmax",
+      "value": 865,
+      "tol": 1,
+      "step": 6
+    },
+    {
+      "label": "Corner force opening 1 left (lb), T555",
+      "at": "wall:SW-14",
+      "field": "ftao.perType.E.corners[0].F_left",
+      "value": 865,
+      "tol": 1,
+      "step": 6
+    },
+    {
+      "label": "Corner force opening 2 right (lb), T555",
+      "at": "wall:SW-14",
+      "field": "ftao.perType.E.corners[1].F_right",
+      "value": 269,
+      "tol": 1,
+      "step": 6
+    },
+    {
+      "label": "Anchorage (plf)",
+      "at": "wall:SW-14",
+      "field": "ftao.perType.E.anchorage_plf",
+      "value": 192.30769230769232,
+      "tol": 0.01,
+      "step": 7
+    },
+    {
+      "label": "SW-14 FTAO Δ at 1.0E (in)",
+      "at": "wall:SW-14",
+      "field": "deflection.E.delta",
+      "value": 0.26001392990316113,
+      "tol": 0.0005,
+      "step": 9
+    },
+    {
+      "label": "Story δxe, Level 1 (in)",
+      "at": "drift:Level 1",
+      "field": "seismic.deltaXE",
+      "value": 0.26001392990316113,
+      "tol": 0.0005,
+      "step": 10
+    },
+    {
+      "label": "Governing wall for drift, Level 1",
+      "at": "drift:Level 1",
+      "field": "seismic.wallMark",
+      "value": "SW-14",
+      "step": 10
+    },
+    {
+      "label": "δx = Cd·δxe/Ie, Level 1 (in)",
+      "at": "drift:Level 1",
+      "field": "seismic.deltaX",
+      "value": 1.0400557196126445,
+      "tol": 0.002,
+      "step": 10
+    },
+    {
+      "label": "Drift passes, Level 1",
+      "at": "drift:Level 1",
+      "field": "seismic.pass",
+      "value": true,
+      "step": 10
+    }
+  ],
+  "expectChecks": {
+    "fail": []
+  },
+  "notChecked": "The published T555 deflection (0.335 in with 7/16 OSB, G_a 22) uses the example's own posts, holdowns and G_a and is checked by the FTAO engine tests (test/ftao.test.js); here Δ is hand-calculated by the same T555 method with this case's pinned design (step 9). Sheathing capacity (the tool auto-selects nailing).",
+  "pinned": {
+    "SW-14": {
+      "nail": "4",
+      "hdL": "HDUE3",
+      "hdR": "HDUE3",
+      "postL": "(2)2x4",
+      "postR": "(2)2x4",
+      "ftaoStrap": "CS20"
+    }
+  },
+  "schemaVersion": 12,
+  "inputs": {
+    "sds": "1.0",
+    "loadType": "seismic",
+    "wallThickness": "4",
+    "woodGrade": "dfir_no1",
+    "sheathing": "ply",
+    "distribution": "capacity",
+    "cd": "4",
+    "ie": "1.0",
+    "riskCategory": "II",
+    "driftRow": "other",
+    "driftBypass": false,
+    "alphaS": "",
+    "windDriftLimit": "400",
+    "omega0": "2.5",
+    "lrfdHalfL": false,
+    "wswhFc": "2500",
+    "seismicDesignCategory": "",
+    "detachedOneTwoFamily": false,
+    "pdfReport": "detailed",
+    "refs": {},
+    "notes": "",
+    "wallDLTypes": [
+      {
+        "id": "wdt-1",
+        "name": "Stud wall",
+        "psf": "10"
+      }
+    ],
+    "levels": [
+      {
+        "id": "lvl-1",
+        "name": "Level 1",
+        "floorToFloor": 8,
+        "anchorageType": "auto",
+        "floorClearSpan": "16"
+      }
+    ],
+    "directions": [
+      {
+        "id": "dir-1",
+        "name": "N-S",
+        "rho": 1,
+        "lines": [
+          {
+            "id": "ln-1",
+            "name": "Line A",
+            "totalLength": 19.5,
+            "wallThickness": "",
+            "distribution": "",
+            "driftBypass": "",
+            "distReviewed": [],
+            "levelLoads": {
+              "lvl-1": {
+                "seismic": "5.357142857142858",
+                "wind": ""
+              }
+            },
+            "gravityLoads": {
+              "lvl-1": {
+                "loads": []
+              }
+            },
+            "walls": [
+              {
+                "id": "w-14",
+                "mark": "SW-14",
+                "levelId": "lvl-1",
+                "position": 0,
+                "length": 19.5,
+                "method": "ftao",
+                "systemType": "sheathed",
+                "openings": [
+                  {
+                    "id": "o1",
+                    "offset": 4,
+                    "width": 6,
+                    "sill": 4,
+                    "head": 6.666666666666666
+                  },
+                  {
+                    "id": "o2",
+                    "offset": 14,
+                    "width": 2,
+                    "sill": 4,
+                    "head": 6.666666666666666
+                  }
+                ],
+                "narrowPier": false,
+                "wallDLTypeId": "wdt-1",
+                "nailingPattern": "4",
+                "anchorageLeftOverride": "HDUE3",
+                "anchorageRightOverride": "HDUE3",
+                "postLeftOverride": "(2)2x4",
+                "postRightOverride": "(2)2x4",
+                "ftaoStrapOverride": "CS20",
+                "jambPostOverride": "",
+                "wswhWidth": "18",
+                "wswhCondition": "concrete",
+                "wswhJoist": "12",
+                "wswhFloorDepth": "12",
+                "wswhAnchorOverride": ""
+              }
+            ],
+            "beams": [],
+            "supportPosts": []
+          }
+        ]
+      }
+    ]
+  }
+}

@@ -1,0 +1,1298 @@
+{
+ "note": "Real item: project Test-123 \"Diaphragm Test123\", saved 2026-10-08 (schema 1, calc v1). E-W lines 2, 4, 5; Roof + 2nd Floor.",
+ "schemaVersion": 1,
+ "calcVersion": "v1",
+ "captured": "2026-10-08",
+ "inputs": {
+  "refs": {},
+  "notes": "",
+  "levels": [
+   {
+    "fx": "12.36",
+    "id": "lv-muyq1jh7-1",
+    "tag": "",
+    "name": "Roof"
+   },
+   {
+    "fx": "6.95",
+    "id": "lv-muyq1jh7-2",
+    "tag": "",
+    "name": "2nd Floor"
+   }
+  ],
+  "loadType": "seismic",
+  "pdfReport": "summary",
+  "directions": [
+   {
+    "id": "dir-muyq1jh8-3",
+    "down": {
+     "lv-muyq1jh7-1": {
+      "ln-muyq26wq-7": {
+       "mode": "ends",
+       "split": []
+      }
+     }
+    },
+    "name": "E-W",
+    "lines": [
+     {
+      "id": "ln-muyq23rr-5",
+      "name": "2"
+     },
+     {
+      "id": "ln-muyq25yt-6",
+      "name": "4"
+     },
+     {
+      "id": "ln-muzx7u0g-4",
+      "name": "5"
+     }
+    ],
+    "groups": [],
+    "diaphragms": [
+     {
+      "id": "dg-muyq27wh-8",
+      "mark": "D1",
+      "parts": [
+       {
+        "a": "0",
+        "b": "27",
+        "d": "13",
+        "id": "pt-muyq27wh-9"
+       }
+      ],
+      "length": "27",
+      "levelId": "lv-muyq1jh7-1",
+      "supports": [
+       {
+        "x": "3",
+        "atX": "",
+        "kind": "line",
+        "lineId": "ln-muyq25yt-6",
+        "diaphragmId": ""
+       },
+       {
+        "x": "24",
+        "atX": "5",
+        "kind": "line",
+        "lineId": "ln-muyq23rr-5",
+        "diaphragmId": ""
+       }
+      ],
+      "pointLoads": []
+     },
+     {
+      "id": "dg-muyq3xxs-a",
+      "mark": "D2",
+      "parts": [
+       {
+        "a": "0",
+        "b": "32.25",
+        "d": "9",
+        "id": "pt-muyq3xxs-b"
+       }
+      ],
+      "length": "32.25",
+      "levelId": "lv-muyq1jh7-1",
+      "supports": [
+       {
+        "x": "5.5",
+        "atX": "",
+        "kind": "line",
+        "lineId": "ln-muyq25yt-6",
+        "diaphragmId": ""
+       },
+       {
+        "x": "29.25",
+        "atX": "",
+        "kind": "line",
+        "lineId": "ln-muyq23rr-5",
+        "diaphragmId": ""
+       }
+      ],
+      "pointLoads": []
+     },
+     {
+      "id": "dg-muzwiilf-2",
+      "mark": "D3",
+      "parts": [
+       {
+        "a": "0",
+        "b": "30",
+        "d": "16",
+        "id": "pt-muzwiilf-3"
+       }
+      ],
+      "length": "30",
+      "levelId": "lv-muyq1jh7-1",
+      "supports": [
+       {
+        "x": "3",
+        "atX": "",
+        "kind": "line",
+        "lineId": "ln-muzx7u0g-4",
+        "diaphragmId": ""
+       },
+       {
+        "x": "27",
+        "atX": "",
+        "kind": "line",
+        "lineId": "ln-muyq23rr-5",
+        "diaphragmId": ""
+       }
+      ],
+      "pointLoads": []
+     },
+     {
+      "id": "dg-muzx9cek-5",
+      "mark": "D1",
+      "parts": [
+       {
+        "a": "0",
+        "b": "29",
+        "d": "10",
+        "id": "pt-muzx9cek-6"
+       }
+      ],
+      "length": "29",
+      "levelId": "lv-muyq1jh7-2",
+      "supports": [
+       {
+        "x": "8",
+        "atX": "",
+        "kind": "line",
+        "lineId": "ln-muyq25yt-6",
+        "diaphragmId": ""
+       },
+       {
+        "x": "",
+        "atX": "",
+        "kind": "line",
+        "lineId": "ln-muyq23rr-5",
+        "diaphragmId": ""
+       }
+      ],
+      "pointLoads": []
+     },
+     {
+      "id": "dg-muzxa1z4-9",
+      "mark": "D2",
+      "parts": [
+       {
+        "a": "0",
+        "b": "19.42",
+        "d": "9",
+        "id": "pt-muzxa1z4-a"
+       }
+      ],
+      "length": "19.42",
+      "levelId": "lv-muyq1jh7-2",
+      "supports": [
+       {
+        "x": "",
+        "atX": "",
+        "kind": "line",
+        "lineId": "ln-muyq25yt-6",
+        "diaphragmId": ""
+       },
+       {
+        "x": "",
+        "atX": "",
+        "kind": "line",
+        "lineId": "ln-muyq23rr-5",
+        "diaphragmId": ""
+       }
+      ],
+      "pointLoads": []
+     },
+     {
+      "id": "dg-muzxanne-b",
+      "mark": "D3",
+      "parts": [
+       {
+        "a": "0",
+        "b": "24",
+        "d": "13",
+        "id": "pt-muzxanne-c"
+       }
+      ],
+      "length": "24",
+      "levelId": "lv-muyq1jh7-2",
+      "supports": [
+       {
+        "x": "",
+        "atX": "",
+        "kind": "line",
+        "lineId": "ln-muzx7u0g-4",
+        "diaphragmId": ""
+       },
+       {
+        "x": "",
+        "atX": "",
+        "kind": "line",
+        "lineId": "ln-muyq23rr-5",
+        "diaphragmId": ""
+       }
+      ],
+      "pointLoads": []
+     }
+    ]
+   },
+   {
+    "id": "dir-muyq1jh8-4",
+    "down": {},
+    "name": "N-S",
+    "lines": [],
+    "groups": [],
+    "diaphragms": []
+   }
+  ]
+ },
+ "outputs": {
+  "calcVersion": "v1",
+  "levels": [
+   {
+    "id": "lv-muyq1jh7-1",
+    "name": "Roof",
+    "tag": "R",
+    "fx": 12.36,
+    "sumA": {
+     "dir-muyq1jh8-3": 1121.25,
+     "dir-muyq1jh8-4": 0
+    }
+   },
+   {
+    "id": "lv-muyq1jh7-2",
+    "name": "2nd Floor",
+    "tag": "2",
+    "fx": 6.95,
+    "sumA": {
+     "dir-muyq1jh8-3": 776.78,
+     "dir-muyq1jh8-4": 0
+    }
+   }
+  ],
+  "perDirection": [
+   {
+    "id": "dir-muyq1jh8-3",
+    "name": "E-W",
+    "perLevel": [
+     {
+      "levelId": "lv-muyq1jh7-1",
+      "name": "Roof",
+      "tag": "R",
+      "fx": 12.36,
+      "sumA": 1121.25,
+      "q": 0.01102341,
+      "qPsf": 11.0234,
+      "sumManual": 0,
+      "sumToLines": 12.36,
+      "diaphragms": [
+       {
+        "id": "dg-muyq27wh-8",
+        "mark": "D1",
+        "label": "R.D1",
+        "errors": [],
+        "L": 27,
+        "x1": 3,
+        "x2": 24,
+        "l": 21,
+        "parts": [
+         {
+          "id": "pt-muyq27wh-9",
+          "label": "part 1",
+          "a": 0,
+          "b": 27,
+          "c": 0,
+          "d": 13,
+          "A": 351,
+          "w": 0.1433,
+          "wPlf": 143.3043
+         }
+        ],
+        "points": [],
+        "rows": [
+         {
+          "kind": "uniform",
+          "partId": "pt-muyq27wh-9",
+          "label": "part 1",
+          "region": "left",
+          "u": 0,
+          "v": 3,
+          "w": 0.1433,
+          "W": 0.4299,
+          "xbar": 1.5,
+          "lever1": 22.5,
+          "lever2": -1.5,
+          "R1": 0.4606,
+          "R2": -0.0307,
+          "case": {
+           "code": "J",
+           "ref": "AISC 3-23 Case 25",
+           "e": 1.5,
+           "R1": 0.4606,
+           "R2": -0.0307
+          }
+         },
+         {
+          "kind": "uniform",
+          "partId": "pt-muyq27wh-9",
+          "label": "part 1",
+          "region": "span",
+          "u": 3,
+          "v": 24,
+          "w": 0.1433,
+          "W": 3.0094,
+          "xbar": 13.5,
+          "lever1": 10.5,
+          "lever2": 10.5,
+          "R1": 1.5047,
+          "R2": 1.5047,
+          "case": {
+           "code": "B",
+           "ref": "AISC 3-23 Case 1",
+           "a": 0,
+           "b": 21,
+           "c": 0,
+           "R1": 1.5047,
+           "R2": 1.5047
+          }
+         },
+         {
+          "kind": "uniform",
+          "partId": "pt-muyq27wh-9",
+          "label": "part 1",
+          "region": "right",
+          "u": 24,
+          "v": 27,
+          "w": 0.1433,
+          "W": 0.4299,
+          "xbar": 25.5,
+          "lever1": -1.5,
+          "lever2": 22.5,
+          "R1": -0.0307,
+          "R2": 0.4606,
+          "case": {
+           "code": "J",
+           "ref": "AISC 3-23 Case 25",
+           "e": 1.5,
+           "R1": -0.0307,
+           "R2": 0.4606
+          }
+         }
+        ],
+        "sumW": 3.8692,
+        "sumP": 0,
+        "supports": [
+         {
+          "name": "R1",
+          "x": 3,
+          "kind": "line",
+          "R": 1.9346,
+          "Rdist": 1.9346,
+          "RP": 0,
+          "lineId": "ln-muyq25yt-6",
+          "to": "R.4",
+          "reverses": false
+         },
+         {
+          "name": "R2",
+          "x": 24,
+          "kind": "line",
+          "R": 1.9346,
+          "Rdist": 1.9346,
+          "RP": 0,
+          "lineId": "ln-muyq23rr-5",
+          "to": "R.2",
+          "reverses": false
+         }
+        ]
+       },
+       {
+        "id": "dg-muyq3xxs-a",
+        "mark": "D2",
+        "label": "R.D2",
+        "errors": [],
+        "L": 32.25,
+        "x1": 5.5,
+        "x2": 29.25,
+        "l": 23.75,
+        "parts": [
+         {
+          "id": "pt-muyq3xxs-b",
+          "label": "part 1",
+          "a": 0,
+          "b": 32.25,
+          "c": 0,
+          "d": 9,
+          "A": 290.25,
+          "w": 0.0992,
+          "wPlf": 99.2107
+         }
+        ],
+        "points": [],
+        "rows": [
+         {
+          "kind": "uniform",
+          "partId": "pt-muyq3xxs-b",
+          "label": "part 1",
+          "region": "left",
+          "u": 0,
+          "v": 5.5,
+          "w": 0.0992,
+          "W": 0.5457,
+          "xbar": 2.75,
+          "lever1": 26.5,
+          "lever2": -2.75,
+          "R1": 0.6088,
+          "R2": -0.0632,
+          "case": {
+           "code": "J",
+           "ref": "AISC 3-23 Case 25",
+           "e": 2.75,
+           "R1": 0.6088,
+           "R2": -0.0632
+          }
+         },
+         {
+          "kind": "uniform",
+          "partId": "pt-muyq3xxs-b",
+          "label": "part 1",
+          "region": "span",
+          "u": 5.5,
+          "v": 29.25,
+          "w": 0.0992,
+          "W": 2.3563,
+          "xbar": 17.375,
+          "lever1": 11.875,
+          "lever2": 11.875,
+          "R1": 1.1781,
+          "R2": 1.1781,
+          "case": {
+           "code": "B",
+           "ref": "AISC 3-23 Case 1",
+           "a": 0,
+           "b": 23.75,
+           "c": 0,
+           "R1": 1.1781,
+           "R2": 1.1781
+          }
+         },
+         {
+          "kind": "uniform",
+          "partId": "pt-muyq3xxs-b",
+          "label": "part 1",
+          "region": "right",
+          "u": 29.25,
+          "v": 32.25,
+          "w": 0.0992,
+          "W": 0.2976,
+          "xbar": 30.75,
+          "lever1": -1.5,
+          "lever2": 25.25,
+          "R1": -0.0188,
+          "R2": 0.3164,
+          "case": {
+           "code": "J",
+           "ref": "AISC 3-23 Case 25",
+           "e": 1.5,
+           "R1": -0.0188,
+           "R2": 0.3164
+          }
+         }
+        ],
+        "sumW": 3.1995,
+        "sumP": 0,
+        "supports": [
+         {
+          "name": "R1",
+          "x": 5.5,
+          "kind": "line",
+          "R": 1.7682,
+          "Rdist": 1.7682,
+          "RP": 0,
+          "lineId": "ln-muyq25yt-6",
+          "to": "R.4",
+          "reverses": false
+         },
+         {
+          "name": "R2",
+          "x": 29.25,
+          "kind": "line",
+          "R": 1.4314,
+          "Rdist": 1.4314,
+          "RP": 0,
+          "lineId": "ln-muyq23rr-5",
+          "to": "R.2",
+          "reverses": false
+         }
+        ]
+       },
+       {
+        "id": "dg-muzwiilf-2",
+        "mark": "D3",
+        "label": "R.D3",
+        "errors": [],
+        "L": 30,
+        "x1": 3,
+        "x2": 27,
+        "l": 24,
+        "parts": [
+         {
+          "id": "pt-muzwiilf-3",
+          "label": "part 1",
+          "a": 0,
+          "b": 30,
+          "c": 0,
+          "d": 16,
+          "A": 480,
+          "w": 0.1764,
+          "wPlf": 176.3746
+         }
+        ],
+        "points": [],
+        "rows": [
+         {
+          "kind": "uniform",
+          "partId": "pt-muzwiilf-3",
+          "label": "part 1",
+          "region": "left",
+          "u": 0,
+          "v": 3,
+          "w": 0.1764,
+          "W": 0.5291,
+          "xbar": 1.5,
+          "lever1": 25.5,
+          "lever2": -1.5,
+          "R1": 0.5622,
+          "R2": -0.0331,
+          "case": {
+           "code": "J",
+           "ref": "AISC 3-23 Case 25",
+           "e": 1.5,
+           "R1": 0.5622,
+           "R2": -0.0331
+          }
+         },
+         {
+          "kind": "uniform",
+          "partId": "pt-muzwiilf-3",
+          "label": "part 1",
+          "region": "span",
+          "u": 3,
+          "v": 27,
+          "w": 0.1764,
+          "W": 4.233,
+          "xbar": 15,
+          "lever1": 12,
+          "lever2": 12,
+          "R1": 2.1165,
+          "R2": 2.1165,
+          "case": {
+           "code": "B",
+           "ref": "AISC 3-23 Case 1",
+           "a": 0,
+           "b": 24,
+           "c": 0,
+           "R1": 2.1165,
+           "R2": 2.1165
+          }
+         },
+         {
+          "kind": "uniform",
+          "partId": "pt-muzwiilf-3",
+          "label": "part 1",
+          "region": "right",
+          "u": 27,
+          "v": 30,
+          "w": 0.1764,
+          "W": 0.5291,
+          "xbar": 28.5,
+          "lever1": -1.5,
+          "lever2": 25.5,
+          "R1": -0.0331,
+          "R2": 0.5622,
+          "case": {
+           "code": "J",
+           "ref": "AISC 3-23 Case 25",
+           "e": 1.5,
+           "R1": -0.0331,
+           "R2": 0.5622
+          }
+         }
+        ],
+        "sumW": 5.2912,
+        "sumP": 0,
+        "supports": [
+         {
+          "name": "R1",
+          "x": 3,
+          "kind": "line",
+          "R": 2.6456,
+          "Rdist": 2.6456,
+          "RP": 0,
+          "lineId": "ln-muzx7u0g-4",
+          "to": "R.5",
+          "reverses": false
+         },
+         {
+          "name": "R2",
+          "x": 27,
+          "kind": "line",
+          "R": 2.6456,
+          "Rdist": 2.6456,
+          "RP": 0,
+          "lineId": "ln-muyq23rr-5",
+          "to": "R.2",
+          "reverses": false
+         }
+        ]
+       }
+      ],
+      "lines": [
+       {
+        "key": "ln-muyq23rr-5",
+        "name": "2",
+        "label": "R.2",
+        "lineIds": [
+         "ln-muyq23rr-5"
+        ],
+        "F": 6.0116,
+        "sources": [
+         {
+          "from": "R.D1.R2",
+          "R": 1.9346
+         },
+         {
+          "from": "R.D2.R2",
+          "R": 1.4314
+         },
+         {
+          "from": "R.D3.R2",
+          "R": 2.6456
+         }
+        ],
+        "fromAbove": [],
+        "V": 6.0116,
+        "goesTo": [
+         {
+          "text": "2.2",
+          "pending": true
+         }
+        ],
+        "ends": false
+       },
+       {
+        "key": "ln-muyq25yt-6",
+        "name": "4",
+        "label": "R.4",
+        "lineIds": [
+         "ln-muyq25yt-6"
+        ],
+        "F": 3.7028,
+        "sources": [
+         {
+          "from": "R.D1.R1",
+          "R": 1.9346
+         },
+         {
+          "from": "R.D2.R1",
+          "R": 1.7682
+         }
+        ],
+        "fromAbove": [],
+        "V": 3.7028,
+        "goesTo": [
+         {
+          "text": "2.4",
+          "pending": true
+         }
+        ],
+        "ends": false
+       },
+       {
+        "key": "ln-muzx7u0g-4",
+        "name": "5",
+        "label": "R.5",
+        "lineIds": [
+         "ln-muzx7u0g-4"
+        ],
+        "F": 2.6456,
+        "sources": [
+         {
+          "from": "R.D3.R1",
+          "R": 2.6456
+         }
+        ],
+        "fromAbove": [],
+        "V": 2.6456,
+        "goesTo": [
+         {
+          "text": "2.5",
+          "pending": true
+         }
+        ],
+        "ends": false
+       }
+      ],
+      "sumF": 12.36,
+      "sumV": 12.36,
+      "ended": 0,
+      "lost": 0,
+      "cumF": 12.36,
+      "cumEnded": 0
+     },
+     {
+      "levelId": "lv-muyq1jh7-2",
+      "name": "2nd Floor",
+      "tag": "2",
+      "fx": 6.95,
+      "sumA": 776.78,
+      "q": 0.00894719,
+      "qPsf": 8.9472,
+      "sumManual": 0,
+      "sumToLines": 6.95,
+      "diaphragms": [
+       {
+        "id": "dg-muzx9cek-5",
+        "mark": "D1",
+        "label": "2.D1",
+        "errors": [],
+        "L": 29,
+        "x1": 8,
+        "x2": 29,
+        "l": 21,
+        "parts": [
+         {
+          "id": "pt-muzx9cek-6",
+          "label": "part 1",
+          "a": 0,
+          "b": 29,
+          "c": 0,
+          "d": 10,
+          "A": 290,
+          "w": 0.0895,
+          "wPlf": 89.4719
+         }
+        ],
+        "points": [],
+        "rows": [
+         {
+          "kind": "uniform",
+          "partId": "pt-muzx9cek-6",
+          "label": "part 1",
+          "region": "left",
+          "u": 0,
+          "v": 8,
+          "w": 0.0895,
+          "W": 0.7158,
+          "xbar": 4,
+          "lever1": 25,
+          "lever2": -4,
+          "R1": 0.8521,
+          "R2": -0.1363,
+          "case": {
+           "code": "J",
+           "ref": "AISC 3-23 Case 25",
+           "e": 4,
+           "R1": 0.8521,
+           "R2": -0.1363
+          }
+         },
+         {
+          "kind": "uniform",
+          "partId": "pt-muzx9cek-6",
+          "label": "part 1",
+          "region": "span",
+          "u": 8,
+          "v": 29,
+          "w": 0.0895,
+          "W": 1.8789,
+          "xbar": 18.5,
+          "lever1": 10.5,
+          "lever2": 10.5,
+          "R1": 0.9395,
+          "R2": 0.9395,
+          "case": {
+           "code": "B",
+           "ref": "AISC 3-23 Case 1",
+           "a": 0,
+           "b": 21,
+           "c": 0,
+           "R1": 0.9395,
+           "R2": 0.9395
+          }
+         }
+        ],
+        "sumW": 2.5947,
+        "sumP": 0,
+        "supports": [
+         {
+          "name": "R1",
+          "x": 8,
+          "kind": "line",
+          "R": 1.7916,
+          "Rdist": 1.7916,
+          "RP": 0,
+          "lineId": "ln-muyq25yt-6",
+          "to": "2.4",
+          "reverses": false
+         },
+         {
+          "name": "R2",
+          "x": 29,
+          "kind": "line",
+          "R": 0.8031,
+          "Rdist": 0.8031,
+          "RP": 0,
+          "lineId": "ln-muyq23rr-5",
+          "to": "2.2",
+          "reverses": false
+         }
+        ]
+       },
+       {
+        "id": "dg-muzxa1z4-9",
+        "mark": "D2",
+        "label": "2.D2",
+        "errors": [],
+        "L": 19.42,
+        "x1": 0,
+        "x2": 19.42,
+        "l": 19.42,
+        "parts": [
+         {
+          "id": "pt-muzxa1z4-a",
+          "label": "part 1",
+          "a": 0,
+          "b": 19.42,
+          "c": 0,
+          "d": 9,
+          "A": 174.78,
+          "w": 0.0805,
+          "wPlf": 80.5247
+         }
+        ],
+        "points": [],
+        "rows": [
+         {
+          "kind": "uniform",
+          "partId": "pt-muzxa1z4-a",
+          "label": "part 1",
+          "region": "span",
+          "u": 0,
+          "v": 19.42,
+          "w": 0.0805,
+          "W": 1.5638,
+          "xbar": 9.71,
+          "lever1": 9.71,
+          "lever2": 9.71,
+          "R1": 0.7819,
+          "R2": 0.7819,
+          "case": {
+           "code": "B",
+           "ref": "AISC 3-23 Case 1",
+           "a": 0,
+           "b": 19.42,
+           "c": 0,
+           "R1": 0.7819,
+           "R2": 0.7819
+          }
+         }
+        ],
+        "sumW": 1.5638,
+        "sumP": 0,
+        "supports": [
+         {
+          "name": "R1",
+          "x": 0,
+          "kind": "line",
+          "R": 0.7819,
+          "Rdist": 0.7819,
+          "RP": 0,
+          "lineId": "ln-muyq25yt-6",
+          "to": "2.4",
+          "reverses": false
+         },
+         {
+          "name": "R2",
+          "x": 19.42,
+          "kind": "line",
+          "R": 0.7819,
+          "Rdist": 0.7819,
+          "RP": 0,
+          "lineId": "ln-muyq23rr-5",
+          "to": "2.2",
+          "reverses": false
+         }
+        ]
+       },
+       {
+        "id": "dg-muzxanne-b",
+        "mark": "D3",
+        "label": "2.D3",
+        "errors": [],
+        "L": 24,
+        "x1": 0,
+        "x2": 24,
+        "l": 24,
+        "parts": [
+         {
+          "id": "pt-muzxanne-c",
+          "label": "part 1",
+          "a": 0,
+          "b": 24,
+          "c": 0,
+          "d": 13,
+          "A": 312,
+          "w": 0.1163,
+          "wPlf": 116.3135
+         }
+        ],
+        "points": [],
+        "rows": [
+         {
+          "kind": "uniform",
+          "partId": "pt-muzxanne-c",
+          "label": "part 1",
+          "region": "span",
+          "u": 0,
+          "v": 24,
+          "w": 0.1163,
+          "W": 2.7915,
+          "xbar": 12,
+          "lever1": 12,
+          "lever2": 12,
+          "R1": 1.3958,
+          "R2": 1.3958,
+          "case": {
+           "code": "B",
+           "ref": "AISC 3-23 Case 1",
+           "a": 0,
+           "b": 24,
+           "c": 0,
+           "R1": 1.3958,
+           "R2": 1.3958
+          }
+         }
+        ],
+        "sumW": 2.7915,
+        "sumP": 0,
+        "supports": [
+         {
+          "name": "R1",
+          "x": 0,
+          "kind": "line",
+          "R": 1.3958,
+          "Rdist": 1.3958,
+          "RP": 0,
+          "lineId": "ln-muzx7u0g-4",
+          "to": "2.5",
+          "reverses": false
+         },
+         {
+          "name": "R2",
+          "x": 24,
+          "kind": "line",
+          "R": 1.3958,
+          "Rdist": 1.3958,
+          "RP": 0,
+          "lineId": "ln-muyq23rr-5",
+          "to": "2.2",
+          "reverses": false
+         }
+        ]
+       }
+      ],
+      "lines": [
+       {
+        "key": "ln-muyq23rr-5",
+        "name": "2",
+        "label": "2.2",
+        "lineIds": [
+         "ln-muyq23rr-5"
+        ],
+        "F": 2.9808,
+        "sources": [
+         {
+          "from": "2.D1.R2",
+          "R": 0.8031
+         },
+         {
+          "from": "2.D2.R2",
+          "R": 0.7819
+         },
+         {
+          "from": "2.D3.R2",
+          "R": 1.3958
+         }
+        ],
+        "fromAbove": [
+         {
+          "from": "R.2",
+          "pct": 100,
+          "V": 6.0116
+         }
+        ],
+        "V": 8.9924,
+        "goesTo": [
+         {
+          "text": "foundation"
+         }
+        ],
+        "ends": true
+       },
+       {
+        "key": "ln-muyq25yt-6",
+        "name": "4",
+        "label": "2.4",
+        "lineIds": [
+         "ln-muyq25yt-6"
+        ],
+        "F": 2.5735,
+        "sources": [
+         {
+          "from": "2.D1.R1",
+          "R": 1.7916
+         },
+         {
+          "from": "2.D2.R1",
+          "R": 0.7819
+         }
+        ],
+        "fromAbove": [
+         {
+          "from": "R.4",
+          "pct": 100,
+          "V": 3.7028
+         }
+        ],
+        "V": 6.2762,
+        "goesTo": [
+         {
+          "text": "foundation"
+         }
+        ],
+        "ends": true
+       },
+       {
+        "key": "ln-muzx7u0g-4",
+        "name": "5",
+        "label": "2.5",
+        "lineIds": [
+         "ln-muzx7u0g-4"
+        ],
+        "F": 1.3958,
+        "sources": [
+         {
+          "from": "2.D3.R1",
+          "R": 1.3958
+         }
+        ],
+        "fromAbove": [
+         {
+          "from": "R.5",
+          "pct": 100,
+          "V": 2.6456
+         }
+        ],
+        "V": 4.0414,
+        "goesTo": [
+         {
+          "text": "foundation"
+         }
+        ],
+        "ends": true
+       }
+      ],
+      "sumF": 6.95,
+      "sumV": 19.31,
+      "ended": 19.31,
+      "lost": 0,
+      "cumF": 19.31,
+      "cumEnded": 19.31
+     }
+    ],
+    "checks": [
+     {
+      "id": "D1",
+      "label": "Each diaphragm: ΣR = ΣW + ΣP",
+      "status": "pass",
+      "items": []
+     },
+     {
+      "id": "D2",
+      "label": "Each level: Σ reactions to wall lines = F_x + Σ manual P",
+      "status": "pass",
+      "items": []
+     },
+     {
+      "id": "D3",
+      "label": "Geometry valid and every support assigned",
+      "status": "pass",
+      "items": []
+     },
+     {
+      "id": "D4",
+      "label": "No support loops; links stay within the level",
+      "status": "pass",
+      "items": []
+     },
+     {
+      "id": "D5",
+      "label": "Split percentages add to 100 %",
+      "status": "pass",
+      "items": []
+     },
+     {
+      "id": "D6",
+      "label": "Every wall line has a place to go at the level below",
+      "status": "pass",
+      "items": []
+     },
+     {
+      "id": "D7",
+      "label": "Each level: ΣV = ΣF at and above − force resisted above",
+      "status": "pass",
+      "items": []
+     },
+     {
+      "id": "D8",
+      "label": "F_x and diaphragm area present (q > 0)",
+      "status": "pass",
+      "items": []
+     }
+    ]
+   },
+   {
+    "id": "dir-muyq1jh8-4",
+    "name": "N-S",
+    "perLevel": [
+     {
+      "levelId": "lv-muyq1jh7-1",
+      "name": "Roof",
+      "tag": "R",
+      "fx": 12.36,
+      "sumA": 0,
+      "q": 0,
+      "qPsf": 0,
+      "sumManual": 0,
+      "sumToLines": 0,
+      "diaphragms": [],
+      "lines": [],
+      "sumF": 0,
+      "sumV": 0,
+      "ended": 0,
+      "lost": 0,
+      "cumF": 0,
+      "cumEnded": 0
+     },
+     {
+      "levelId": "lv-muyq1jh7-2",
+      "name": "2nd Floor",
+      "tag": "2",
+      "fx": 6.95,
+      "sumA": 0,
+      "q": 0,
+      "qPsf": 0,
+      "sumManual": 0,
+      "sumToLines": 0,
+      "diaphragms": [],
+      "lines": [],
+      "sumF": 0,
+      "sumV": 0,
+      "ended": 0,
+      "lost": 0,
+      "cumF": 0,
+      "cumEnded": 0
+     }
+    ],
+    "checks": [
+     {
+      "id": "D1",
+      "label": "Each diaphragm: ΣR = ΣW + ΣP",
+      "status": "pass",
+      "items": []
+     },
+     {
+      "id": "D2",
+      "label": "Each level: Σ reactions to wall lines = F_x + Σ manual P",
+      "status": "pass",
+      "items": []
+     },
+     {
+      "id": "D3",
+      "label": "Geometry valid and every support assigned",
+      "status": "pass",
+      "items": []
+     },
+     {
+      "id": "D4",
+      "label": "No support loops; links stay within the level",
+      "status": "pass",
+      "items": []
+     },
+     {
+      "id": "D5",
+      "label": "Split percentages add to 100 %",
+      "status": "pass",
+      "items": []
+     },
+     {
+      "id": "D6",
+      "label": "Every wall line has a place to go at the level below",
+      "status": "pass",
+      "items": []
+     },
+     {
+      "id": "D7",
+      "label": "Each level: ΣV = ΣF at and above − force resisted above",
+      "status": "pass",
+      "items": []
+     },
+     {
+      "id": "D8",
+      "label": "F_x and diaphragm area present (q > 0)",
+      "status": "pass",
+      "items": []
+     }
+    ]
+   }
+  ],
+  "status": "pass"
+ },
+ "numbers": {
+  "E-W/Roof ΣA": 1121.25,
+  "E-W/Roof q": 0.01102341,
+  "E-W/Roof R.D1.R1": 1.9346,
+  "E-W/Roof R.D1.R2": 1.9346,
+  "E-W/Roof R.D2.R1": 1.7682,
+  "E-W/Roof R.D2.R2": 1.4314,
+  "E-W/Roof R.D3.R1": 2.6456,
+  "E-W/Roof R.D3.R2": 2.6456,
+  "E-W/Roof R.2 F": 6.0116,
+  "E-W/Roof R.2 V": 6.0116,
+  "E-W/Roof R.4 F": 3.7028,
+  "E-W/Roof R.4 V": 3.7028,
+  "E-W/Roof R.5 F": 2.6456,
+  "E-W/Roof R.5 V": 2.6456,
+  "E-W/2nd Floor ΣA": 776.78,
+  "E-W/2nd Floor q": 0.00894719,
+  "E-W/2nd Floor 2.D1.R1": 1.7916,
+  "E-W/2nd Floor 2.D1.R2": 0.8031,
+  "E-W/2nd Floor 2.D2.R1": 0.7819,
+  "E-W/2nd Floor 2.D2.R2": 0.7819,
+  "E-W/2nd Floor 2.D3.R1": 1.3958,
+  "E-W/2nd Floor 2.D3.R2": 1.3958,
+  "E-W/2nd Floor 2.2 F": 2.9808,
+  "E-W/2nd Floor 2.2 V": 8.9924,
+  "E-W/2nd Floor 2.4 F": 2.5735,
+  "E-W/2nd Floor 2.4 V": 6.2762,
+  "E-W/2nd Floor 2.5 F": 1.3958,
+  "E-W/2nd Floor 2.5 V": 4.0414,
+  "N-S/Roof ΣA": 0,
+  "N-S/Roof q": 0,
+  "N-S/2nd Floor ΣA": 0,
+  "N-S/2nd Floor q": 0
+ }
+}

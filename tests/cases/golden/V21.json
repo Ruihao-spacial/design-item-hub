@@ -1,0 +1,123 @@
+{
+  "calcVersion": "v18",
+  "lines": [
+    {
+      "line": "N-S / Line A",
+      "walls": [
+        {
+          "mark": "SW-1",
+          "level": "Level 2",
+          "method": "wswh",
+          "nailing": "wswh",
+          "basis": null,
+          "V_E": 0.8,
+          "V_W": 0,
+          "dc": 0.51,
+          "T": [
+            4.715,
+            4.715
+          ],
+          "C": [
+            4.715,
+            4.715
+          ],
+          "anchorage": [
+            "TSS rod 1\" A193 B7",
+            "TSS rod 1\" A193 B7"
+          ],
+          "posts": [
+            "WSWH panel",
+            "WSWH panel"
+          ],
+          "deltaE": 0.322
+        },
+        {
+          "mark": "SW-2",
+          "level": "Level 1",
+          "method": "wswh",
+          "nailing": "wswh",
+          "basis": null,
+          "V_E": 1.8,
+          "V_W": 0,
+          "dc": 0.95,
+          "T": [
+            20.577,
+            20.577
+          ],
+          "C": [
+            20.577,
+            20.577
+          ],
+          "anchorage": [
+            "WSWH-AB HS (E)",
+            "WSWH-AB HS (E)"
+          ],
+          "posts": [
+            "WSWH panel",
+            "WSWH panel"
+          ],
+          "deltaE": 0.61
+        }
+      ],
+      "posts": [],
+      "beams": [],
+      "drift": [
+        {
+          "level": "Level 2",
+          "dx": 1.286,
+          "pass": true
+        },
+        {
+          "level": "Level 1",
+          "dx": 2.44,
+          "pass": false
+        }
+      ],
+      "checksFailed": [],
+      "warnings": []
+    },
+    {
+      "line": "N-S / Line B",
+      "walls": [
+        {
+          "mark": "SW-3",
+          "level": "Level 1",
+          "method": "wswh",
+          "nailing": "wswh",
+          "basis": null,
+          "V_E": 1,
+          "V_W": 0,
+          "dc": 0.47,
+          "T": [
+            5.262,
+            5.262
+          ],
+          "C": [
+            5.262,
+            5.262
+          ],
+          "anchorage": [
+            "Anchorage by RDP (raised floor)",
+            "Anchorage by RDP (raised floor)"
+          ],
+          "posts": [
+            "WSWH panel",
+            "WSWH panel"
+          ],
+          "deltaE": 0.292
+        }
+      ],
+      "posts": [],
+      "beams": [],
+      "drift": [
+        {
+          "level": "Level 1",
+          "dx": 1.166,
+          "pass": true
+        }
+      ],
+      "checksFailed": [],
+      "warnings": []
+    }
+  ]
+}

@@ -1,0 +1,215 @@
+{
+ "calcVersion": "v2",
+ "levels": [
+  {
+   "id": "lv-Roof",
+   "name": "Roof",
+   "tag": "R",
+   "fx": 4,
+   "sumA": {
+    "dir-E-W": 400
+   }
+  }
+ ],
+ "perDirection": [
+  {
+   "id": "dir-E-W",
+   "name": "E-W",
+   "perLevel": [
+    {
+     "levelId": "lv-Roof",
+     "name": "Roof",
+     "tag": "R",
+     "fx": 4,
+     "sumA": 400,
+     "q": 0.01,
+     "qPsf": 10,
+     "sumManual": 0,
+     "sumToLines": 4,
+     "diaphragms": [
+      {
+       "id": "dir-E-W-lv-Roof-D1",
+       "mark": "D1",
+       "label": "R.D1",
+       "errors": [],
+       "L": 20,
+       "x1": 0,
+       "x2": 20,
+       "l": 20,
+       "parts": [
+        {
+         "id": "dir-E-W-lv-Roof-D1-p1",
+         "label": "part 1",
+         "a": 0,
+         "b": 20,
+         "c": 0,
+         "d": 20,
+         "A": 400,
+         "w": 0.2,
+         "wPlf": 200
+        }
+       ],
+       "points": [],
+       "rows": [
+        {
+         "kind": "uniform",
+         "partId": "dir-E-W-lv-Roof-D1-p1",
+         "label": "part 1",
+         "region": "span",
+         "u": 0,
+         "v": 20,
+         "w": 0.2,
+         "W": 4,
+         "xbar": 10,
+         "lever1": 10,
+         "lever2": 10,
+         "R1": 2,
+         "R2": 2
+        }
+       ],
+       "sumW": 4,
+       "sumP": 0,
+       "supports": [
+        {
+         "name": "R1",
+         "x": 0,
+         "kind": "line",
+         "R": 2,
+         "Rdist": 2,
+         "RP": 0,
+         "lineId": "dir-E-W-A",
+         "to": "R.A",
+         "reverses": false
+        },
+        {
+         "name": "R2",
+         "x": 20,
+         "kind": "line",
+         "R": 2,
+         "Rdist": 2,
+         "RP": 0,
+         "lineId": "dir-E-W-B",
+         "to": "R.B",
+         "reverses": false
+        }
+       ]
+      }
+     ],
+     "lines": [
+      {
+       "key": "dir-E-W-A",
+       "name": "A",
+       "label": "R.A",
+       "lineIds": [
+        "dir-E-W-A"
+       ],
+       "F": 2,
+       "sources": [
+        {
+         "from": "R.D1.R1",
+         "R": 2
+        }
+       ],
+       "fromAbove": [],
+       "V": 2,
+       "goesTo": [
+        {
+         "text": "foundation"
+        }
+       ],
+       "ends": true,
+       "merged": false
+      },
+      {
+       "key": "dir-E-W-B",
+       "name": "B",
+       "label": "R.B",
+       "lineIds": [
+        "dir-E-W-B"
+       ],
+       "F": 2,
+       "sources": [
+        {
+         "from": "R.D1.R2",
+         "R": 2
+        }
+       ],
+       "fromAbove": [],
+       "V": 2,
+       "goesTo": [
+        {
+         "text": "foundation"
+        }
+       ],
+       "ends": true,
+       "merged": false
+      }
+     ],
+     "sumF": 4,
+     "sumV": 4,
+     "ended": 4,
+     "lost": 0,
+     "cumF": 4,
+     "cumEnded": 4
+    }
+   ],
+   "checks": [
+    {
+     "id": "D1",
+     "label": "Each diaphragm: ΣR = ΣW + ΣP",
+     "status": "pass",
+     "items": []
+    },
+    {
+     "id": "D2",
+     "label": "Each level: Σ reactions to wall lines = F_x + Σ manual P",
+     "status": "pass",
+     "items": []
+    },
+    {
+     "id": "D3",
+     "label": "Geometry valid and every support assigned",
+     "status": "pass",
+     "items": []
+    },
+    {
+     "id": "D4",
+     "label": "No support loops; links stay within the level",
+     "status": "pass",
+     "items": []
+    },
+    {
+     "id": "D5",
+     "label": "Split percentages add to 100 %",
+     "status": "pass",
+     "items": []
+    },
+    {
+     "id": "D6",
+     "label": "Every wall line has a place to go at the level below",
+     "status": "pass",
+     "items": []
+    },
+    {
+     "id": "D7",
+     "label": "Each level: ΣV = ΣF at and above − force resisted above",
+     "status": "pass",
+     "items": []
+    },
+    {
+     "id": "D8",
+     "label": "F_x and diaphragm area present (q > 0)",
+     "status": "pass",
+     "items": []
+    },
+    {
+     "id": "D9",
+     "label": "Merged lines: each line is in at most one merge per level",
+     "status": "pass",
+     "items": []
+    }
+   ]
+  }
+ ],
+ "status": "pass"
+}

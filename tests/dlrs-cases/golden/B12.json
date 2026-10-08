@@ -1,0 +1,215 @@
+{
+ "calcVersion": "v2",
+ "levels": [
+  {
+   "id": "lv-Roof",
+   "name": "Roof",
+   "tag": "R",
+   "fx": 0.5,
+   "sumA": {
+    "dir-E-W": 50
+   }
+  }
+ ],
+ "perDirection": [
+  {
+   "id": "dir-E-W",
+   "name": "E-W",
+   "perLevel": [
+    {
+     "levelId": "lv-Roof",
+     "name": "Roof",
+     "tag": "R",
+     "fx": 0.5,
+     "sumA": 50,
+     "q": 0.01,
+     "qPsf": 10,
+     "sumManual": 0,
+     "sumToLines": 0.5,
+     "diaphragms": [
+      {
+       "id": "dir-E-W-lv-Roof-D1",
+       "mark": "D1",
+       "label": "R.D1",
+       "errors": [],
+       "L": 25,
+       "x1": 0,
+       "x2": 20,
+       "l": 20,
+       "parts": [
+        {
+         "id": "dir-E-W-lv-Roof-D1-p1",
+         "label": "part 1",
+         "a": 20,
+         "b": 5,
+         "c": 0,
+         "d": 10,
+         "A": 50,
+         "w": 0.1,
+         "wPlf": 100
+        }
+       ],
+       "points": [],
+       "rows": [
+        {
+         "kind": "uniform",
+         "partId": "dir-E-W-lv-Roof-D1-p1",
+         "label": "part 1",
+         "region": "right",
+         "u": 20,
+         "v": 25,
+         "w": 0.1,
+         "W": 0.5,
+         "xbar": 22.5,
+         "lever1": -2.5,
+         "lever2": 22.5,
+         "R1": -0.0625,
+         "R2": 0.5625
+        }
+       ],
+       "sumW": 0.5,
+       "sumP": 0,
+       "supports": [
+        {
+         "name": "R1",
+         "x": 0,
+         "kind": "line",
+         "R": -0.0625,
+         "Rdist": -0.0625,
+         "RP": 0,
+         "lineId": "dir-E-W-A",
+         "to": "R.A",
+         "reverses": true
+        },
+        {
+         "name": "R2",
+         "x": 20,
+         "kind": "line",
+         "R": 0.5625,
+         "Rdist": 0.5625,
+         "RP": 0,
+         "lineId": "dir-E-W-B",
+         "to": "R.B",
+         "reverses": false
+        }
+       ]
+      }
+     ],
+     "lines": [
+      {
+       "key": "dir-E-W-A",
+       "name": "A",
+       "label": "R.A",
+       "lineIds": [
+        "dir-E-W-A"
+       ],
+       "F": -0.0625,
+       "sources": [
+        {
+         "from": "R.D1.R1",
+         "R": -0.0625
+        }
+       ],
+       "fromAbove": [],
+       "V": -0.0625,
+       "goesTo": [
+        {
+         "text": "foundation"
+        }
+       ],
+       "ends": true,
+       "merged": false
+      },
+      {
+       "key": "dir-E-W-B",
+       "name": "B",
+       "label": "R.B",
+       "lineIds": [
+        "dir-E-W-B"
+       ],
+       "F": 0.5625,
+       "sources": [
+        {
+         "from": "R.D1.R2",
+         "R": 0.5625
+        }
+       ],
+       "fromAbove": [],
+       "V": 0.5625,
+       "goesTo": [
+        {
+         "text": "foundation"
+        }
+       ],
+       "ends": true,
+       "merged": false
+      }
+     ],
+     "sumF": 0.5,
+     "sumV": 0.5,
+     "ended": 0.5,
+     "lost": 0,
+     "cumF": 0.5,
+     "cumEnded": 0.5
+    }
+   ],
+   "checks": [
+    {
+     "id": "D1",
+     "label": "Each diaphragm: ΣR = ΣW + ΣP",
+     "status": "pass",
+     "items": []
+    },
+    {
+     "id": "D2",
+     "label": "Each level: Σ reactions to wall lines = F_x + Σ manual P",
+     "status": "pass",
+     "items": []
+    },
+    {
+     "id": "D3",
+     "label": "Geometry valid and every support assigned",
+     "status": "pass",
+     "items": []
+    },
+    {
+     "id": "D4",
+     "label": "No support loops; links stay within the level",
+     "status": "pass",
+     "items": []
+    },
+    {
+     "id": "D5",
+     "label": "Split percentages add to 100 %",
+     "status": "pass",
+     "items": []
+    },
+    {
+     "id": "D6",
+     "label": "Every wall line has a place to go at the level below",
+     "status": "pass",
+     "items": []
+    },
+    {
+     "id": "D7",
+     "label": "Each level: ΣV = ΣF at and above − force resisted above",
+     "status": "pass",
+     "items": []
+    },
+    {
+     "id": "D8",
+     "label": "F_x and diaphragm area present (q > 0)",
+     "status": "pass",
+     "items": []
+    },
+    {
+     "id": "D9",
+     "label": "Merged lines: each line is in at most one merge per level",
+     "status": "pass",
+     "items": []
+    }
+   ]
+  }
+ ],
+ "status": "pass"
+}

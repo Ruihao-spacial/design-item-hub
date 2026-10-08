@@ -1,0 +1,207 @@
+{
+  "id": "D04c",
+  "title": "Split into 3 parts on a beam with an overhang (case M) and its mirror",
+  "intent": "The worked example of the plan: part 1 in the back span, part 2 only on the overhang, part 3 over the support. E-W has the overhang on the right; N-S has the same diaphragm mirrored (overhang on the left), so R1 and R2 swap.",
+  "covers": [
+    "Case M = L + J",
+    "Mirror (left overhang)",
+    "Case 1 / Case 4 / Case 25 per piece"
+  ],
+  "handCalc": [
+    {
+      "step": 1,
+      "text": "ΣA = 20·30 + 5·10 + 10·5 = 700 sf → q = 7 / 700 = 0.01 k/sf; l = 20, overhang 5 ft."
+    },
+    {
+      "step": 2,
+      "text": "Part 1 (Case 1, w 300 plf): 3.0000 / 3.0000 k. Part 2 (overhang only, Case 25, W 0.5 k, e 2.5): −0.0625 / 0.5625 k."
+    },
+    {
+      "step": 3,
+      "text": "Part 3: span piece 15–20 (Case 4, w 50 plf) 0.03125 / 0.21875 k + overhang piece 20–25 (Case 25) −0.03125 / 0.28125 k."
+    },
+    {
+      "step": 4,
+      "text": "E-W: R1 = 2.9375, R2 = 4.0625 k. N-S mirror: R1 = 4.0625, R2 = 2.9375 k."
+    }
+  ],
+  "expect": [
+    {
+      "label": "E-W R.D1 R1 (k)",
+      "at": "dia:E-W/R.D1",
+      "field": "R1",
+      "value": 2.9375,
+      "step": 4
+    },
+    {
+      "label": "E-W R.D1 R2 (k)",
+      "at": "dia:E-W/R.D1",
+      "field": "R2",
+      "value": 4.0625,
+      "step": 4
+    },
+    {
+      "label": "N-S R.D1 R1 (k)",
+      "at": "dia:N-S/R.D1",
+      "field": "R1",
+      "value": 4.0625,
+      "step": 4
+    },
+    {
+      "label": "N-S R.D1 R2 (k)",
+      "at": "dia:N-S/R.D1",
+      "field": "R2",
+      "value": 2.9375,
+      "step": 4
+    },
+    {
+      "label": "E-W pieces (rows)",
+      "at": "dia:E-W/R.D1",
+      "field": "rows.length",
+      "value": 4,
+      "step": 3
+    }
+  ],
+  "expectChecks": {
+    "fail": []
+  },
+  "inputs": {
+    "loadType": "seismic",
+    "pdfReport": "detailed",
+    "refs": {},
+    "notes": "",
+    "levels": [
+      {
+        "id": "lv-Roof",
+        "name": "Roof",
+        "tag": "",
+        "fx": "7"
+      }
+    ],
+    "directions": [
+      {
+        "id": "dir-E-W",
+        "name": "E-W",
+        "lines": [
+          {
+            "id": "dir-E-W-A",
+            "name": "A"
+          },
+          {
+            "id": "dir-E-W-B",
+            "name": "B"
+          }
+        ],
+        "groups": [],
+        "down": {},
+        "diaphragms": [
+          {
+            "id": "dir-E-W-lv-Roof-D1",
+            "levelId": "lv-Roof",
+            "mark": "D1",
+            "length": "25",
+            "supports": [
+              {
+                "x": "0",
+                "kind": "line",
+                "lineId": "dir-E-W-A",
+                "diaphragmId": "",
+                "atX": ""
+              },
+              {
+                "x": "20",
+                "kind": "line",
+                "lineId": "dir-E-W-B",
+                "diaphragmId": "",
+                "atX": ""
+              }
+            ],
+            "parts": [
+              {
+                "id": "dir-E-W-lv-Roof-D1-p1",
+                "a": "0",
+                "b": "20",
+                "d": "30"
+              },
+              {
+                "id": "dir-E-W-lv-Roof-D1-p2",
+                "a": "20",
+                "b": "5",
+                "d": "10"
+              },
+              {
+                "id": "dir-E-W-lv-Roof-D1-p3",
+                "a": "15",
+                "b": "10",
+                "d": "5"
+              }
+            ],
+            "pointLoads": []
+          }
+        ]
+      },
+      {
+        "id": "dir-N-S",
+        "name": "N-S",
+        "lines": [
+          {
+            "id": "dir-N-S-1",
+            "name": "1"
+          },
+          {
+            "id": "dir-N-S-2",
+            "name": "2"
+          }
+        ],
+        "groups": [],
+        "down": {},
+        "diaphragms": [
+          {
+            "id": "dir-N-S-lv-Roof-D1",
+            "levelId": "lv-Roof",
+            "mark": "D1",
+            "length": "25",
+            "supports": [
+              {
+                "x": "5",
+                "kind": "line",
+                "lineId": "dir-N-S-1",
+                "diaphragmId": "",
+                "atX": ""
+              },
+              {
+                "x": "25",
+                "kind": "line",
+                "lineId": "dir-N-S-2",
+                "diaphragmId": "",
+                "atX": ""
+              }
+            ],
+            "parts": [
+              {
+                "id": "dir-N-S-lv-Roof-D1-p1",
+                "a": "5",
+                "b": "20",
+                "d": "30"
+              },
+              {
+                "id": "dir-N-S-lv-Roof-D1-p2",
+                "a": "0",
+                "b": "5",
+                "d": "10"
+              },
+              {
+                "id": "dir-N-S-lv-Roof-D1-p3",
+                "a": "0",
+                "b": "10",
+                "d": "5"
+              }
+            ],
+            "pointLoads": []
+          }
+        ]
+      }
+    ]
+  },
+  "schemaVersion": 1
+}

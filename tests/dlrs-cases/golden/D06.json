@@ -1,0 +1,238 @@
+{
+ "calcVersion": "v2",
+ "levels": [
+  {
+   "id": "lv-Roof",
+   "name": "Roof",
+   "tag": "R",
+   "fx": 4,
+   "sumA": {
+    "dir-E-W": 400
+   }
+  }
+ ],
+ "perDirection": [
+  {
+   "id": "dir-E-W",
+   "name": "E-W",
+   "perLevel": [
+    {
+     "levelId": "lv-Roof",
+     "name": "Roof",
+     "tag": "R",
+     "fx": 4,
+     "sumA": 400,
+     "q": 0.01,
+     "qPsf": 10,
+     "sumManual": 1.2,
+     "sumToLines": 5.2,
+     "diaphragms": [
+      {
+       "id": "dir-E-W-lv-Roof-D1",
+       "mark": "D1",
+       "label": "R.D1",
+       "errors": [],
+       "L": 16,
+       "x1": 0,
+       "x2": 16,
+       "l": 16,
+       "parts": [
+        {
+         "id": "dir-E-W-lv-Roof-D1-p1",
+         "label": "part 1",
+         "a": 0,
+         "b": 16,
+         "c": 0,
+         "d": 25,
+         "A": 400,
+         "w": 0.25,
+         "wPlf": 250
+        }
+       ],
+       "points": [
+        {
+         "id": "dir-E-W-lv-Roof-D1-m1",
+         "label": "P1",
+         "x": 4,
+         "P": 1.2,
+         "source": "",
+         "manual": true,
+         "note": "rooftop unit, not in F_x"
+        }
+       ],
+       "rows": [
+        {
+         "kind": "uniform",
+         "partId": "dir-E-W-lv-Roof-D1-p1",
+         "label": "part 1",
+         "region": "span",
+         "u": 0,
+         "v": 16,
+         "w": 0.25,
+         "W": 4,
+         "xbar": 8,
+         "lever1": 8,
+         "lever2": 8,
+         "R1": 2,
+         "R2": 2
+        },
+        {
+         "kind": "point",
+         "pointId": "dir-E-W-lv-Roof-D1-m1",
+         "label": "P1",
+         "manual": true,
+         "region": "span",
+         "x": 4,
+         "P": 1.2,
+         "lever1": 12,
+         "lever2": 4,
+         "R1": 0.9,
+         "R2": 0.3
+        }
+       ],
+       "sumW": 4,
+       "sumP": 1.2,
+       "supports": [
+        {
+         "name": "R1",
+         "x": 0,
+         "kind": "line",
+         "R": 2.9,
+         "Rdist": 2,
+         "RP": 0.9,
+         "lineId": "dir-E-W-A",
+         "to": "R.A",
+         "reverses": false
+        },
+        {
+         "name": "R2",
+         "x": 16,
+         "kind": "line",
+         "R": 2.3,
+         "Rdist": 2,
+         "RP": 0.3,
+         "lineId": "dir-E-W-B",
+         "to": "R.B",
+         "reverses": false
+        }
+       ]
+      }
+     ],
+     "lines": [
+      {
+       "key": "dir-E-W-A",
+       "name": "A",
+       "label": "R.A",
+       "lineIds": [
+        "dir-E-W-A"
+       ],
+       "F": 2.9,
+       "sources": [
+        {
+         "from": "R.D1.R1",
+         "R": 2.9
+        }
+       ],
+       "fromAbove": [],
+       "V": 2.9,
+       "goesTo": [
+        {
+         "text": "foundation"
+        }
+       ],
+       "ends": true,
+       "merged": false
+      },
+      {
+       "key": "dir-E-W-B",
+       "name": "B",
+       "label": "R.B",
+       "lineIds": [
+        "dir-E-W-B"
+       ],
+       "F": 2.3,
+       "sources": [
+        {
+         "from": "R.D1.R2",
+         "R": 2.3
+        }
+       ],
+       "fromAbove": [],
+       "V": 2.3,
+       "goesTo": [
+        {
+         "text": "foundation"
+        }
+       ],
+       "ends": true,
+       "merged": false
+      }
+     ],
+     "sumF": 5.2,
+     "sumV": 5.2,
+     "ended": 5.2,
+     "lost": 0,
+     "cumF": 5.2,
+     "cumEnded": 5.2
+    }
+   ],
+   "checks": [
+    {
+     "id": "D1",
+     "label": "Each diaphragm: ΣR = ΣW + ΣP",
+     "status": "pass",
+     "items": []
+    },
+    {
+     "id": "D2",
+     "label": "Each level: Σ reactions to wall lines = F_x + Σ manual P",
+     "status": "pass",
+     "items": []
+    },
+    {
+     "id": "D3",
+     "label": "Geometry valid and every support assigned",
+     "status": "pass",
+     "items": []
+    },
+    {
+     "id": "D4",
+     "label": "No support loops; links stay within the level",
+     "status": "pass",
+     "items": []
+    },
+    {
+     "id": "D5",
+     "label": "Split percentages add to 100 %",
+     "status": "pass",
+     "items": []
+    },
+    {
+     "id": "D6",
+     "label": "Every wall line has a place to go at the level below",
+     "status": "pass",
+     "items": []
+    },
+    {
+     "id": "D7",
+     "label": "Each level: ΣV = ΣF at and above − force resisted above",
+     "status": "pass",
+     "items": []
+    },
+    {
+     "id": "D8",
+     "label": "F_x and diaphragm area present (q > 0)",
+     "status": "pass",
+     "items": []
+    },
+    {
+     "id": "D9",
+     "label": "Merged lines: each line is in at most one merge per level",
+     "status": "pass",
+     "items": []
+    }
+   ]
+  }
+ ],
+ "status": "pass"
+}

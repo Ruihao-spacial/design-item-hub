@@ -1,0 +1,75 @@
+{
+  "calcVersion": "v18",
+  "lines": [
+    {
+      "line": "N-S / Line A",
+      "walls": [
+        {
+          "mark": "SW-1",
+          "level": "Level 1",
+          "method": "wswh",
+          "nailing": "wswh",
+          "basis": null,
+          "V_E": 2.031,
+          "V_W": 0,
+          "dc": 0.55,
+          "T": [
+            11.696,
+            11.696
+          ],
+          "C": [
+            12.656,
+            12.656
+          ],
+          "anchorage": [
+            "WSWH-AB STD (E)",
+            "WSWH-AB STD (E)"
+          ],
+          "posts": [
+            "WSWH panel",
+            "WSWH panel"
+          ],
+          "deltaE": 0.355
+        },
+        {
+          "mark": "SW-2",
+          "level": "Level 1",
+          "method": "wall",
+          "nailing": "6",
+          "basis": "manual",
+          "V_E": 1.969,
+          "V_W": 0,
+          "dc": 0.55,
+          "T": [
+            1.385,
+            1.385
+          ],
+          "C": [
+            1.961,
+            1.961
+          ],
+          "anchorage": [
+            "HDUE3",
+            "HDUE3"
+          ],
+          "posts": [
+            "(2)2x4",
+            "(2)2x4"
+          ],
+          "deltaE": 0.242
+        }
+      ],
+      "posts": [],
+      "beams": [],
+      "drift": [
+        {
+          "level": "Level 1",
+          "dx": 1.42,
+          "pass": true
+        }
+      ],
+      "checksFailed": [],
+      "warnings": []
+    }
+  ]
+}

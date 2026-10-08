@@ -1,0 +1,131 @@
+{
+  "calcVersion": "v18",
+  "lines": [
+    {
+      "line": "N-S / Line A",
+      "walls": [
+        {
+          "mark": "SW-1",
+          "level": "Level 1",
+          "method": "wall",
+          "nailing": "6",
+          "basis": "manual",
+          "V_E": 1.355,
+          "V_W": 0,
+          "dc": 0.87,
+          "T": [
+            1.897,
+            1.897
+          ],
+          "C": [
+            1.897,
+            1.897
+          ],
+          "anchorage": [
+            "HDUE3",
+            "HDUE3"
+          ],
+          "posts": [
+            "(2)2x4",
+            "(2)2x4"
+          ],
+          "deltaE": 0.391
+        },
+        {
+          "mark": "SW-2",
+          "level": "Level 1",
+          "method": "wall",
+          "nailing": "6",
+          "basis": "manual",
+          "V_E": 1.016,
+          "V_W": 0,
+          "dc": 0.87,
+          "T": [
+            1.778,
+            1.778
+          ],
+          "C": [
+            1.778,
+            1.778
+          ],
+          "anchorage": [
+            "HDUE3",
+            "HDUE3"
+          ],
+          "posts": [
+            "(2)2x4",
+            "(2)2x4"
+          ],
+          "deltaE": 0.418
+        },
+        {
+          "mark": "SW-3",
+          "level": "Level 1",
+          "method": "wall",
+          "nailing": "6",
+          "basis": "manual",
+          "V_E": 0.629,
+          "V_W": 0,
+          "dc": 0.87,
+          "T": [
+            1.541,
+            1.541
+          ],
+          "C": [
+            1.541,
+            1.541
+          ],
+          "anchorage": [
+            "HDUE3",
+            "HDUE3"
+          ],
+          "posts": [
+            "(2)2x4",
+            "(2)2x4"
+          ],
+          "deltaE": 0.452
+        },
+        {
+          "mark": "SW-4",
+          "level": "Level 1",
+          "method": "wall",
+          "nailing": "6",
+          "basis": "manual",
+          "V_E": 0,
+          "V_W": 0,
+          "dc": 0,
+          "T": [
+            0,
+            0
+          ],
+          "C": [
+            0,
+            0
+          ],
+          "anchorage": [
+            "HDUE3",
+            "HDUE3"
+          ],
+          "posts": [
+            "(2)2x4",
+            "(2)2x4"
+          ],
+          "deltaE": null
+        }
+      ],
+      "posts": [],
+      "beams": [],
+      "drift": [
+        {
+          "level": "Level 1",
+          "dx": 1.809,
+          "pass": false
+        }
+      ],
+      "checksFailed": [],
+      "warnings": [
+        "aspect_ratio"
+      ]
+    }
+  ]
+}

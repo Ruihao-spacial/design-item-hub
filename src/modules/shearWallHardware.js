@@ -1,5 +1,6 @@
 // === HDUE Holdown Catalog (concrete anchorage) ===
-// ASD allowable tension (lbs), deflection at 1.0E/1.0W
+// cap = ASD allowable tension (lbs). delta = deflection (in) at the ASD cap, used for 1.0E / 1.0W
+// deflection: Δa = delta · T(1.0) / cap. LRFD cap = 1.4 · cap (delta scales the same way).
 export const HDUE_TABLE = [
   { id: 'HDUE3',  cap: 3790,  minPost: { '4': '(2)2x4', '6': '(2)2x6' }, delta: 0.127 },
   { id: 'HDUE5',  cap: 5375,  minPost: { '4': '(2)2x4', '6': '(2)2x6' }, delta: 0.146 },
@@ -10,27 +11,79 @@ export const HDUE_TABLE = [
 ];
 
 // === MSTC Strap Catalog (floor-to-floor) ===
-// Keyed by floor clear span (inches). ASD allowable tension (lbs).
+// Keyed by floor clear span (inches). ASD allowable tension (lbs). No LRFD value.
+// delta is the deflection at the strap LRFD cap = ASD cap / 0.7 (used for deflection only; no LRFD design check).
+// minPost: a floor strap end needs at least a double-stud post (user rule 2026-09-30).
+const STRAP_MIN_POST = { '4': '(2)2x4', '6': '(2)2x6' };
 export const MSTC_TABLE = {
   '16': [
-    { id: 'MSTC28', cap: 1535, delta: 0.0808 },
-    { id: 'MSTC40', cap: 3070, delta: 0.0970 },
-    { id: 'MSTC52', cap: 4610, delta: 0.1188 },
-    { id: 'MSTC66', cap: 5850, delta: 0.1296 },
+    { id: 'MSTC28', cap: 1535, minPost: STRAP_MIN_POST, delta: 0.0808 },
+    { id: 'MSTC40', cap: 3070, minPost: STRAP_MIN_POST, delta: 0.0970 },
+    { id: 'MSTC52', cap: 4610, minPost: STRAP_MIN_POST, delta: 0.1188 },
+    { id: 'MSTC66', cap: 5850, minPost: STRAP_MIN_POST, delta: 0.1296 },
   ],
   '18': [
-    { id: 'MSTC28', cap: 1150, delta: 0.0785 },
-    { id: 'MSTC40', cap: 2690, delta: 0.0947 },
-    { id: 'MSTC52', cap: 4225, delta: 0.1162 },
-    { id: 'MSTC66', cap: 5850, delta: 0.1313 },
+    { id: 'MSTC28', cap: 1150, minPost: STRAP_MIN_POST, delta: 0.0785 },
+    { id: 'MSTC40', cap: 2690, minPost: STRAP_MIN_POST, delta: 0.0947 },
+    { id: 'MSTC52', cap: 4225, minPost: STRAP_MIN_POST, delta: 0.1162 },
+    { id: 'MSTC66', cap: 5850, minPost: STRAP_MIN_POST, delta: 0.1313 },
   ],
   '24': [
-    { id: 'MSTC40', cap: 1920, delta: 0.0897 },
-    { id: 'MSTC52', cap: 3455, delta: 0.1150 },
-    { id: 'MSTC66', cap: 5375, delta: 0.1310 },
-    { id: 'MSTC78', cap: 5850, delta: 0.1448 },
+    { id: 'MSTC40', cap: 1920, minPost: STRAP_MIN_POST, delta: 0.0897 },
+    { id: 'MSTC52', cap: 3455, minPost: STRAP_MIN_POST, delta: 0.1150 },
+    { id: 'MSTC66', cap: 5375, minPost: STRAP_MIN_POST, delta: 0.1310 },
+    { id: 'MSTC78', cap: 5850, minPost: STRAP_MIN_POST, delta: 0.1448 },
   ],
 };
+
+export const HDUE_LRFD_FACTOR = 1.4;
+// LRFD tension capacity (lbs) — HDUE only; MSTC straps have no LRFD value
+// Load (lbs) at which the catalog delta was measured: HDUE at the ASD cap, MSTC at cap / 0.7
+export const MSTC_DELTA_LOAD_FACTOR = 1 / 0.7;
+export function deltaBasisLoad(hw) {
+  if (!hw || !(hw.cap > 0)) return 0;
+  return HDUE_TABLE.some(h => h.id === hw.id) ? hw.cap : hw.cap * MSTC_DELTA_LOAD_FACTOR;
+}
+
+export function lrfdCap(hw) {
+  return hw && HDUE_TABLE.some(h => h.id === hw.id) ? Math.round(hw.cap * HDUE_LRFD_FACTOR) : null;
+}
+
+// === FTAO Wall Strap Catalog (straps above / below openings) ===
+// ASD allowable tension (lbs). Fasteners total / end length (in) for DF/SP and SPF/HF framing.
+// The app designs with DF-L framing and shows the 0.148" (10d) nail row.
+export const FTAO_STRAP_TABLE = [
+  { id: 'CS22',    gauge: 22, cap:  845, nails: [{ d: '0.148 x 2½', dfsp: [10, 6], spfhf: [12, 7] }, { d: '0.131 x 2½', dfsp: [12, 7], spfhf: [14, 8] }] },
+  { id: 'CS20',    gauge: 20, cap: 1030, nails: [{ d: '0.148 x 2½', dfsp: [12, 7], spfhf: [14, 9] }, { d: '0.131 x 2½', dfsp: [14, 9], spfhf: [16, 9] }] },
+  { id: 'CS18',    gauge: 18, cap: 1370, nails: [{ d: '0.148 x 2½', dfsp: [16, 9], spfhf: [18, 11] }, { d: '0.131 x 2½', dfsp: [18, 11], spfhf: [22, 12] }] },
+  { id: 'CS16',    gauge: 16, cap: 1705, nails: [{ d: '0.148 x 2½', dfsp: [20, 11], spfhf: [22, 13] }, { d: '0.131 x 2½', dfsp: [22, 13], spfhf: [26, 15] }] },
+  { id: 'CS14',    gauge: 14, cap: 2490, nails: [{ d: '0.148 x 2½', dfsp: [26, 15], spfhf: [30, 16] }, { d: '0.131 x 2½', dfsp: [30, 16], spfhf: [36, 19] }] },
+  { id: 'CMSTC16', gauge: 16, cap: 4690, nails: [{ d: '0.148 x 3¼', dfsp: [50, 20], spfhf: [50, 25] }] },
+  { id: 'CMST14',  gauge: 14, cap: 6475, nails: [{ d: '0.148 x 2½', dfsp: [66, 30], spfhf: [76, 34] }, { d: '0.162 x 2½', dfsp: [56, 26], spfhf: [66, 30] }] },
+  { id: 'CMST12',  gauge: 12, cap: 9215, nails: [{ d: '0.148 x 2½', dfsp: [86, 39], spfhf: [98, 44] }, { d: '0.162 x 2½', dfsp: [74, 33], spfhf: [84, 38] }] },
+];
+
+// Lightest strap with ASD allowable ≥ demand (lbs); null when none is enough
+export function autoSelectFtaoStrap(lbs) {
+  if (!(lbs > 0)) return FTAO_STRAP_TABLE[0];
+  return FTAO_STRAP_TABLE.find(s => s.cap >= lbs) || null;
+}
+
+export function getFtaoStrap(id) {
+  return FTAO_STRAP_TABLE.find(s => s.id === id) || null;
+}
+
+// 10d (0.148") DF/SP row of a strap: { d, count, endLength }
+export function strapNailing(strap) {
+  const row = strap && (strap.nails.find(n => n.d.startsWith('0.148')) || strap.nails[0]);
+  return row ? { d: row.d, count: row.dfsp[0], endLength: row.dfsp[1] } : null;
+}
+
+// Jamb (opening edge) posts: (2)2x minimum, same thickness as the line's wall
+export function jambPostOptions(wallThickness) {
+  const posts = POST_SIZES[wallThickness] || POST_SIZES['4'];
+  return posts.filter(p => p.id !== '2x4');
+}
 
 export function autoSelectHoldown(tensionKips) {
   const lbs = tensionKips * 1000;
@@ -53,11 +106,11 @@ export function autoSelectStrap(tensionKips, floorClearSpan) {
 
 // === NDS 2018 Table 4A — Douglas Fir-Larch Grades ===
 export const NDS_GRADES = [
-  { id: 'dfir_ss',     label: 'DF-L Select Structural', Fc: 1700, Fcperp: 625, E: 1900000, Emin: 690000 },
-  { id: 'dfir_no1btr', label: 'DF-L No.1 & Btr',       Fc: 1550, Fcperp: 625, E: 1800000, Emin: 660000 },
-  { id: 'dfir_no1',    label: 'DF-L No.1',              Fc: 1500, Fcperp: 625, E: 1700000, Emin: 620000 },
-  { id: 'dfir_no2',    label: 'DF-L No.2',              Fc: 1350, Fcperp: 625, E: 1600000, Emin: 582000 },
-  { id: 'dfir_no3',    label: 'DF-L No.3',              Fc:  775, Fcperp: 625, E: 1400000, Emin: 510000 },
+  { id: 'dfir_ss', species: 'DF-L', label: 'DF-L Select Structural', Fc: 1700, Fcperp: 625, E: 1900000, Emin: 690000 },
+  { id: 'dfir_no1btr', species: 'DF-L', label: 'DF-L No.1 & Btr',       Fc: 1550, Fcperp: 625, E: 1800000, Emin: 660000 },
+  { id: 'dfir_no1', species: 'DF-L', label: 'DF-L No.1',              Fc: 1500, Fcperp: 625, E: 1700000, Emin: 620000 },
+  { id: 'dfir_no2', species: 'DF-L', label: 'DF-L No.2',              Fc: 1350, Fcperp: 625, E: 1600000, Emin: 582000 },
+  { id: 'dfir_no3', species: 'DF-L', label: 'DF-L No.3',              Fc:  775, Fcperp: 625, E: 1400000, Emin: 510000 },
 ];
 
 // === Post Size Catalog ===
@@ -131,8 +184,24 @@ export function computePostCapacity(post, grade, floorHeightFt) {
   };
 }
 
-export function autoSelectPost(compressionKips, wallThickness, grade, floorHeightFt) {
-  const posts = POST_SIZES[wallThickness] || POST_SIZES['4'];
+// Anchorage minimum post (catalog minPost: HDUE by size, MSTC floor straps (2)2x). At a holdown / strap end
+// the post is never narrower along the wall (d2) than this, in the line's wall thickness. No minPost → null.
+export function hdueMinPost(anchorage, wallThickness) {
+  if (!anchorage || !anchorage.minPost) return null;
+  const t = POST_SIZES[wallThickness] ? wallThickness : '4';
+  return POST_SIZES[t].find(p => p.id === anchorage.minPost[t]) || null;
+}
+
+// true when a post (catalog entry or capacity result) is at least the minimum post
+export function meetsMinPost(post, minPost) {
+  if (!minPost || !post) return true;
+  const id = post.postId || post.id;
+  const ps = [...POST_SIZES['4'], ...POST_SIZES['6']].find(p => p.id === id);
+  return !!ps && ps.d2 >= minPost.d2 - 1e-9;
+}
+
+export function autoSelectPost(compressionKips, wallThickness, grade, floorHeightFt, minPost = null) {
+  const posts = (POST_SIZES[wallThickness] || POST_SIZES['4']).filter(p => meetsMinPost(p, minPost));
   if (compressionKips <= 0) return computePostCapacity(posts[0], grade, floorHeightFt);
   for (const post of posts) {
     const result = computePostCapacity(post, grade, floorHeightFt);

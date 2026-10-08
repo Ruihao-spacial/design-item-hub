@@ -109,6 +109,7 @@ a:focus-visible, summary:focus-visible, .filter-tab:focus-visible, .clickable-ro
 
 /* --- Main content --- */
 .main-content { max-width: 1180px; margin: 0 auto; padding: 1.75rem 1.25rem 3rem; }
+.main-content--wide { max-width: 1440px; }
 
 /* --- Buttons --- */
 .btn {
@@ -121,6 +122,7 @@ a:focus-visible, summary:focus-visible, .filter-tab:focus-visible, .clickable-ro
 .btn:active { transform: translateY(1px); }
 .btn:focus-visible { outline: 2px solid var(--focus-ring); outline-offset: 1px; }
 .btn:disabled { opacity: 0.5; cursor: not-allowed; }
+input:disabled, select:disabled { background: var(--surface); color: var(--ink-tertiary); cursor: not-allowed; }
 .btn-primary { background: var(--accent); color: var(--accent-text); border-color: var(--accent); }
 .btn-primary:hover { background: var(--accent-hover); border-color: var(--accent-hover); }
 .btn-danger { color: var(--fail); border-color: var(--fail); }

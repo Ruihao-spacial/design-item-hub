@@ -1,0 +1,188 @@
+[
+ {
+  "mark": "SW-1",
+  "nailing": "6",
+  "dcRatio": 1,
+  "govT": [
+   2.6,
+   2.6
+  ],
+  "govC": [
+   4.49,
+   4.49
+  ],
+  "accumT": 2.6,
+  "accumC": 4.49,
+  "anchorage": [
+   "MSTC40",
+   "MSTC40"
+  ],
+  "anchorageDC": [
+   0.85,
+   0.85
+  ],
+  "post": [
+   "(2)2x4",
+   "(2)2x4"
+  ],
+  "postDC": [
+   0.9,
+   0.9
+  ]
+ },
+ {
+  "mark": "SW-2",
+  "nailing": "6",
+  "dcRatio": 1,
+  "govT": [
+   2.47,
+   2.47
+  ],
+  "govC": [
+   4.83,
+   4.83
+  ],
+  "accumT": 2.47,
+  "accumC": 4.83,
+  "anchorage": [
+   "MSTC40",
+   "MSTC40"
+  ],
+  "anchorageDC": [
+   0.8,
+   0.8
+  ],
+  "post": [
+   "(2)2x4",
+   "(2)2x4"
+  ],
+  "postDC": [
+   0.97,
+   0.97
+  ]
+ },
+ {
+  "mark": "SW-3",
+  "nailing": "3",
+  "dcRatio": 0.89,
+  "govT": [
+   5.28,
+   5.28
+  ],
+  "govC": [
+   5.89,
+   5.89
+  ],
+  "accumT": 7.88,
+  "accumC": 10.38,
+  "anchorage": [
+   null,
+   null
+  ],
+  "anchorageDC": [
+   null,
+   null
+  ],
+  "post": [
+   "8x4",
+   "8x4"
+  ],
+  "postDC": [
+   0.83,
+   0.83
+  ]
+ },
+ {
+  "mark": "SW-4",
+  "nailing": "3",
+  "dcRatio": 0.89,
+  "govT": [
+   5.24,
+   5.24
+  ],
+  "govC": [
+   6,
+   6
+  ],
+  "accumT": 7.71,
+  "accumC": 10.83,
+  "anchorage": [
+   null,
+   null
+  ],
+  "anchorageDC": [
+   null,
+   null
+  ],
+  "post": [
+   "8x4",
+   "8x4"
+  ],
+  "postDC": [
+   0.87,
+   0.87
+  ]
+ },
+ {
+  "mark": "SW-5",
+  "nailing": "2",
+  "dcRatio": 0.92,
+  "govT": [
+   7.22,
+   7.22
+  ],
+  "govC": [
+   7.83,
+   7.83
+  ],
+  "accumT": 15.1,
+  "accumC": 18.21,
+  "anchorage": [
+   "HDUE17",
+   "HDUE17"
+  ],
+  "anchorageDC": [
+   0.85,
+   0.85
+  ],
+  "post": [
+   null,
+   null
+  ],
+  "postDC": [
+   null,
+   null
+  ]
+ },
+ {
+  "mark": "SW-6",
+  "nailing": "2",
+  "dcRatio": 0.92,
+  "govT": [
+   7.18,
+   7.18
+  ],
+  "govC": [
+   7.94,
+   7.94
+  ],
+  "accumT": 14.89,
+  "accumC": 18.77,
+  "anchorage": [
+   "HDUE17",
+   "HDUE17"
+  ],
+  "anchorageDC": [
+   0.84,
+   0.84
+  ],
+  "post": [
+   null,
+   null
+  ],
+  "postDC": [
+   null,
+   null
+  ]
+ }
+]

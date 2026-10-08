@@ -1,0 +1,208 @@
+{
+  "id": "D05",
+  "title": "A chain of three diaphragms, ending on an overhang tip",
+  "intent": "R.D3 rests on R.D2, which rests on the tip of the R.D1 overhang. They are entered in reverse order; the tool must solve R.D3 → R.D2 → R.D1 and pass each reaction on as a point load. The load at the tip is Case 26.",
+  "covers": [
+    "Solve order (dependency)",
+    "Diaphragm on diaphragm",
+    "Case 26 (point load at the overhang tip)"
+  ],
+  "handCalc": [
+    {
+      "step": 1,
+      "text": "ΣA = 6·10 + 10·10 + 24·10 = 400 sf → q = 0.01 k/sf; w = 100 plf on all three."
+    },
+    {
+      "step": 2,
+      "text": "R.D3 (Case 1): R1 = R2 = 0.3000 k. R1 → point load on R.D2 at x = 5."
+    },
+    {
+      "step": 3,
+      "text": "R.D2: Case 1 0.5 / 0.5 + Case 8 (P 0.3000 k at mid-span) → R1 = 0.6500 k (→ R.D1 at x = 24, its tip), R2 = 0.6500 k → line C."
+    },
+    {
+      "step": 4,
+      "text": "R.D1 (l = 20, overhang 4): uniform (Case 24) + P 0.6500 k at the tip (Case 26: R1 = −P·a/l, R2 = P(l + a)/l) → R1 = 0.8300, R2 = 2.2200 k."
+    },
+    {
+      "step": 5,
+      "text": "Σ lines = A 0.8300 + B 2.2200 + C 0.6500 + D 0.3000 = 4.0000 k = F_x."
+    }
+  ],
+  "expect": [
+    {
+      "label": "R.D2 R1 → R.D1 (k)",
+      "at": "dia:E-W/R.D2",
+      "field": "R1",
+      "value": 0.65,
+      "step": 3
+    },
+    {
+      "label": "R.D1 R1 (k)",
+      "at": "dia:E-W/R.D1",
+      "field": "R1",
+      "value": 0.83,
+      "step": 4
+    },
+    {
+      "label": "R.D1 R2 (k)",
+      "at": "dia:E-W/R.D1",
+      "field": "R2",
+      "value": 2.2199999999999998,
+      "step": 4
+    },
+    {
+      "label": "R.D1 incoming load source",
+      "at": "dia:E-W/R.D1",
+      "field": "points[0].source",
+      "value": "R.D2.R1",
+      "step": 4
+    },
+    {
+      "label": "Tip load region",
+      "at": "dia:E-W/R.D1",
+      "field": "rows[2].region",
+      "value": "right",
+      "step": 4
+    }
+  ],
+  "expectChecks": {
+    "fail": []
+  },
+  "inputs": {
+    "loadType": "seismic",
+    "pdfReport": "detailed",
+    "refs": {},
+    "notes": "",
+    "levels": [
+      {
+        "id": "lv-Roof",
+        "name": "Roof",
+        "tag": "",
+        "fx": "4"
+      }
+    ],
+    "directions": [
+      {
+        "id": "dir-E-W",
+        "name": "E-W",
+        "lines": [
+          {
+            "id": "dir-E-W-A",
+            "name": "A"
+          },
+          {
+            "id": "dir-E-W-B",
+            "name": "B"
+          },
+          {
+            "id": "dir-E-W-C",
+            "name": "C"
+          },
+          {
+            "id": "dir-E-W-D",
+            "name": "D"
+          }
+        ],
+        "groups": [],
+        "down": {},
+        "diaphragms": [
+          {
+            "id": "dir-E-W-lv-Roof-D3",
+            "levelId": "lv-Roof",
+            "mark": "D3",
+            "length": "6",
+            "supports": [
+              {
+                "x": "",
+                "kind": "diaphragm",
+                "lineId": "",
+                "diaphragmId": "dir-E-W-lv-Roof-D2",
+                "atX": "5"
+              },
+              {
+                "x": "",
+                "kind": "line",
+                "lineId": "dir-E-W-D",
+                "diaphragmId": "",
+                "atX": ""
+              }
+            ],
+            "parts": [
+              {
+                "id": "dir-E-W-lv-Roof-D3-p1",
+                "a": "0",
+                "b": "6",
+                "d": "10"
+              }
+            ],
+            "pointLoads": []
+          },
+          {
+            "id": "dir-E-W-lv-Roof-D2",
+            "levelId": "lv-Roof",
+            "mark": "D2",
+            "length": "10",
+            "supports": [
+              {
+                "x": "",
+                "kind": "diaphragm",
+                "lineId": "",
+                "diaphragmId": "dir-E-W-lv-Roof-D1",
+                "atX": "24"
+              },
+              {
+                "x": "",
+                "kind": "line",
+                "lineId": "dir-E-W-C",
+                "diaphragmId": "",
+                "atX": ""
+              }
+            ],
+            "parts": [
+              {
+                "id": "dir-E-W-lv-Roof-D2-p1",
+                "a": "0",
+                "b": "10",
+                "d": "10"
+              }
+            ],
+            "pointLoads": []
+          },
+          {
+            "id": "dir-E-W-lv-Roof-D1",
+            "levelId": "lv-Roof",
+            "mark": "D1",
+            "length": "24",
+            "supports": [
+              {
+                "x": "0",
+                "kind": "line",
+                "lineId": "dir-E-W-A",
+                "diaphragmId": "",
+                "atX": ""
+              },
+              {
+                "x": "20",
+                "kind": "line",
+                "lineId": "dir-E-W-B",
+                "diaphragmId": "",
+                "atX": ""
+              }
+            ],
+            "parts": [
+              {
+                "id": "dir-E-W-lv-Roof-D1-p1",
+                "a": "0",
+                "b": "24",
+                "d": "10"
+              }
+            ],
+            "pointLoads": []
+          }
+        ]
+      }
+    ]
+  },
+  "schemaVersion": 1
+}

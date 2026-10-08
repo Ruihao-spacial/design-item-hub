@@ -1,0 +1,75 @@
+{
+  "calcVersion": "v18",
+  "lines": [
+    {
+      "line": "N-S / Line A",
+      "walls": [
+        {
+          "mark": "SW-1",
+          "level": "Level 1",
+          "method": "wall",
+          "nailing": "4",
+          "basis": "manual",
+          "V_E": 4,
+          "V_W": 0,
+          "dc": 0.74,
+          "T": [
+            3.316,
+            3.316
+          ],
+          "C": [
+            3.956,
+            3.956
+          ],
+          "anchorage": [
+            "HDUE3",
+            "HDUE3"
+          ],
+          "posts": [
+            "(2)2x4",
+            "(2)2x4"
+          ],
+          "deltaE": 0.515
+        },
+        {
+          "mark": "SW-2",
+          "level": "Level 1",
+          "method": "wall",
+          "nailing": "4",
+          "basis": "manual",
+          "V_E": 6,
+          "V_W": 0,
+          "dc": 0.74,
+          "T": [
+            3.224,
+            3.224
+          ],
+          "C": [
+            4.184,
+            4.184
+          ],
+          "anchorage": [
+            "HDUE3",
+            "HDUE3"
+          ],
+          "posts": [
+            "(2)2x4",
+            "(2)2x4"
+          ],
+          "deltaE": 0.427
+        }
+      ],
+      "posts": [],
+      "beams": [],
+      "drift": [
+        {
+          "level": "Level 1",
+          "dx": 2.062,
+          "pass": true
+        }
+      ],
+      "checksFailed": [],
+      "warnings": []
+    }
+  ]
+}

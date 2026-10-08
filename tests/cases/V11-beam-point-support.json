@@ -1,0 +1,416 @@
+{
+  "id": "V11",
+  "title": "Beam point supports — reaction only / over a wall end",
+  "intent": "Beam BM-2 (0–12 ft) carries SW-7 (2–8 ft) on two Point supports. The support at x = 0 has nothing below it: its reaction is reported for external design (\"reaction only\" note) and leaves the load path. The support at x = 12 sits exactly on the left end of SW-8 below: that reaction is added to the SW-8 left end per combination, so its uplift drops and its compression changes; the SW-8 right end keeps its own values.",
+  "covers": [
+    "Point support types",
+    "Reaction only (reported, excluded from the checks)",
+    "Point support over a wall end → added to that end",
+    "Per-combination superposition at a wall end"
+  ],
+  "handCalc": [
+    {
+      "step": 1,
+      "text": "SW-7 (L = 6 ft, h = 9 ft, V = 2 k): D = 10 × 6 × 9 = 0.54 k → 0.27 k per end; N_E = 2 × 9 / 6 = ±3.00 k."
+    },
+    {
+      "step": 2,
+      "text": "BM-2 1.0D: R_b = (0.27 × 2 + 0.27 × 8) / 12 = 0.225 k; R_a = 0.54 − 0.225 = 0.315 k."
+    },
+    {
+      "step": 3,
+      "text": "BM-2 1.0E →: R_b = (−3.00 × 2 + 3.00 × 8) / 12 = 1.500 k; R_a = -1.500 k."
+    },
+    {
+      "step": 4,
+      "text": "Support a (x = 0, nothing below): reaction only. T = −(0.46 × 0.315 + 0.7 × (-1.500)) = 0.905 k; C = 1.14 × 0.315 + 0.7 × 1.500 = 1.409 k — design the support externally."
+    },
+    {
+      "step": 5,
+      "text": "SW-8 (Level 1, 12–22 ft, V = 5 k): D = 10 × 10 × 10 = 1.00 k → 0.50 k per end; N_E = 5 × 10 / 10 = ±5.00 k. Own (right end): T = 3.270 k, C = 4.070 k."
+    },
+    {
+      "step": 6,
+      "text": "SW-8 left end load cases incl. R_b: 1.0D = 0.50 + 0.225 = 0.725 k; 1.0E → = −5.00 + 1.500 = -3.500 k."
+    },
+    {
+      "step": 7,
+      "text": "SW-8 left end uplift, (0.6 − 0.14S_DS)D + 0.7E →: [0.46 × 0.50 − 0.7 × 5.00] + [0.46 × 0.225 + 0.7 × 1.500] = -2.117 → T = 2.117 k (was 3.270 k without the beam) → HDUE3."
+    },
+    {
+      "step": 8,
+      "text": "SW-8 left end compression, (1.0 + 0.14S_DS)D + 0.7E ←: [1.14 × 0.50 + 0.7 × 5.00] + [1.14 × 0.225 − 0.7 × 1.500] = 3.277 k → C = 3.277 k."
+    },
+    {
+      "step": 9,
+      "text": "Checks: the support-a reaction leaves the model (listed as reaction only → excluded); everything else reaches the foundation → G1–G12 pass."
+    },
+    {
+      "step": 10,
+      "text": "SW-7 (Eq. 4.3-1, → governs): v = 1000 × 2.000 / 6 = 333.33 plf, A = 10.5 in², G_a = 16 k/in → 8vh³/(EAb) = 0.0182; vh/(1000G_a) = 0.1875; Δ_HD = 0.097 × 3000.00 / 3070/0.7 = 0.0664 (MSTC40, T = 3000.00 lb); r = 3000.00 / (10.5 × 625) = 0.4571 → Δ_c = 0.0125; h·Δa/b = 9 × (0.0664 + 0.0125) / 6 = 0.1183 → δ = 0.3240 in. (beam deflection under SW-7 not included, tool rule P5)"
+    },
+    {
+      "step": 11,
+      "text": "Story drift Roof: δxe = the largest wall δ = SW-7 0.3240 in → δx = Cd·δxe/Ie = 4 × 0.3240 / 1.0 = 1.296 in vs Δa = 0.020 × 9 × 12 = 2.160 in → OK."
+    },
+    {
+      "step": 12,
+      "text": "SW-8 1.0E → end forces for Eq. 4.3-1: left tension T = N_E − R_b,E = 5.000 − 1.500 = 3.500 k, right compression C = 5.000 k (← is the mirror). SW-8 (Eq. 4.3-1, ← governs): v = 1000 × 5.000 / 10 = 500.00 plf, A = 10.5 in², G_a = 20 k/in → 8vh³/(EAb) = 0.0224; vh/(1000G_a) = 0.2500; Δ_HD = 0.127 × 5000.00 / 3790 (ASD cap) = 0.1675 (HDUE3, T = 5000.00 lb); r = 3500.00 / (10.5 × 625) = 0.5333 → Δ_c = 0.0146; h·Δa/b = 10 × (0.1675 + 0.0146) / 10 = 0.1822 → δ = 0.4546 in."
+    },
+    {
+      "step": 13,
+      "text": "Story drift Level 1: δxe = the largest wall δ = SW-8 0.4546 in → δx = Cd·δxe/Ie = 4 × 0.4546 / 1.0 = 1.818 in vs Δa = 0.020 × 10 × 12 = 2.400 in → OK."
+    }
+  ],
+  "expect": [
+    {
+      "label": "BM-2 R_a 1.0D (k)",
+      "at": "beam:BM-2",
+      "field": "supports[0].perCombo[\"1.0D\"]",
+      "value": 0.315,
+      "tol": 0.005,
+      "step": 2
+    },
+    {
+      "label": "BM-2 R_b 1.0D (k)",
+      "at": "beam:BM-2",
+      "field": "supports[1].perCombo[\"1.0D\"]",
+      "value": 0.22500000000000003,
+      "tol": 0.005,
+      "step": 2
+    },
+    {
+      "label": "BM-2 R_b 1.0E → (k)",
+      "at": "beam:BM-2",
+      "field": "supports[1].perCombo[\"1.0E\"]",
+      "value": 1.5,
+      "tol": 0.005,
+      "step": 3
+    },
+    {
+      "label": "BM-2 support a: reaction only",
+      "at": "beam:BM-2",
+      "field": "supports[0].receiver.type",
+      "value": "reported",
+      "step": 4
+    },
+    {
+      "label": "BM-2 support a envelope T (k)",
+      "at": "beam:BM-2",
+      "field": "supports[0].envelopeT",
+      "value": 0.9050999999999998,
+      "tol": 0.005,
+      "step": 4
+    },
+    {
+      "label": "BM-2 support a envelope C (k)",
+      "at": "beam:BM-2",
+      "field": "supports[0].envelopeC",
+      "value": 1.4090999999999998,
+      "tol": 0.005,
+      "step": 4
+    },
+    {
+      "label": "BM-2 support b lands on a wall end",
+      "at": "beam:BM-2",
+      "field": "supports[1].receiver.type",
+      "value": "wall_end",
+      "step": 6
+    },
+    {
+      "label": "SW-8 left 1.0D incl. R_b (k)",
+      "at": "wall:SW-8",
+      "field": "lc[\"1.0D\"].left",
+      "value": 0.7250000000000001,
+      "tol": 0.005,
+      "step": 6
+    },
+    {
+      "label": "SW-8 left 1.0E → incl. R_b (k)",
+      "at": "wall:SW-8",
+      "field": "lc[\"1.0E →\"].left",
+      "value": -3.5,
+      "tol": 0.005,
+      "step": 6
+    },
+    {
+      "label": "SW-8 left T with R_b (k)",
+      "at": "wall:SW-8",
+      "field": "hwDemand.tL",
+      "value": 2.1165000000000003,
+      "tol": 0.005,
+      "step": 7
+    },
+    {
+      "label": "SW-8 left C with R_b (k)",
+      "at": "wall:SW-8",
+      "field": "hwDemand.cL",
+      "value": 3.2765000000000004,
+      "tol": 0.005,
+      "step": 8
+    },
+    {
+      "label": "SW-8 right T, own only (k)",
+      "at": "wall:SW-8",
+      "field": "hwDemand.tR",
+      "value": 3.27,
+      "tol": 0.005,
+      "step": 5
+    },
+    {
+      "label": "SW-8 right C, own only (k)",
+      "at": "wall:SW-8",
+      "field": "hwDemand.cR",
+      "value": 4.07,
+      "tol": 0.005,
+      "step": 5
+    },
+    {
+      "label": "Audit note: reaction only",
+      "at": "line",
+      "field": "loadPathAudit.notes[0].type",
+      "value": "reaction_reported",
+      "step": 4
+    },
+    {
+      "label": "Story δxe, Roof (in)",
+      "at": "drift:Roof",
+      "field": "seismic.deltaXE",
+      "value": 0.3239656405599141,
+      "tol": 0.0005,
+      "step": 11
+    },
+    {
+      "label": "Governing wall for drift, Roof",
+      "at": "drift:Roof",
+      "field": "seismic.wallMark",
+      "value": "SW-7",
+      "step": 11
+    },
+    {
+      "label": "δx = Cd·δxe/Ie, Roof (in)",
+      "at": "drift:Roof",
+      "field": "seismic.deltaX",
+      "value": 1.2958625622396565,
+      "tol": 0.002,
+      "step": 11
+    },
+    {
+      "label": "Drift passes, Roof",
+      "at": "drift:Roof",
+      "field": "seismic.pass",
+      "value": true,
+      "step": 11
+    },
+    {
+      "label": "Story δxe, Level 1 (in)",
+      "at": "drift:Level 1",
+      "field": "seismic.deltaXE",
+      "value": 0.4545670098740331,
+      "tol": 0.0005,
+      "step": 13
+    },
+    {
+      "label": "Governing wall for drift, Level 1",
+      "at": "drift:Level 1",
+      "field": "seismic.wallMark",
+      "value": "SW-8",
+      "step": 13
+    },
+    {
+      "label": "δx = Cd·δxe/Ie, Level 1 (in)",
+      "at": "drift:Level 1",
+      "field": "seismic.deltaX",
+      "value": 1.8182680394961324,
+      "tol": 0.002,
+      "step": 13
+    },
+    {
+      "label": "Drift passes, Level 1",
+      "at": "drift:Level 1",
+      "field": "seismic.pass",
+      "value": true,
+      "step": 13
+    }
+  ],
+  "expectChecks": {
+    "fail": []
+  },
+  "notChecked": "Beam member design; support-a hardware (reaction only, none selected).",
+  "pinned": {
+    "SW-7": {
+      "nail": "6",
+      "hdL": "MSTC40",
+      "hdR": "MSTC40",
+      "postL": "(2)2x4",
+      "postR": "(2)2x4"
+    },
+    "SW-8": {
+      "nail": "4",
+      "hdL": "HDUE3",
+      "hdR": "HDUE3",
+      "postL": "(2)2x4",
+      "postR": "(2)2x4"
+    },
+    "BM-2": {
+      "support1": "MSTC28"
+    }
+  },
+  "schemaVersion": 12,
+  "inputs": {
+    "sds": "1",
+    "loadType": "seismic",
+    "wallThickness": "4",
+    "woodGrade": "dfir_no1",
+    "sheathing": "ply",
+    "distribution": "capacity",
+    "cd": "4",
+    "ie": "1.0",
+    "riskCategory": "II",
+    "driftRow": "other",
+    "driftBypass": false,
+    "alphaS": "",
+    "windDriftLimit": "400",
+    "omega0": "2.5",
+    "lrfdHalfL": false,
+    "wswhFc": "2500",
+    "seismicDesignCategory": "",
+    "detachedOneTwoFamily": false,
+    "pdfReport": "detailed",
+    "refs": {},
+    "notes": "",
+    "wallDLTypes": [
+      {
+        "id": "wdt-1",
+        "name": "Stud wall",
+        "psf": "10"
+      }
+    ],
+    "levels": [
+      {
+        "id": "lvl-1",
+        "name": "Roof",
+        "floorToFloor": 9,
+        "anchorageType": "auto",
+        "floorClearSpan": "16"
+      },
+      {
+        "id": "lvl-2",
+        "name": "Level 1",
+        "floorToFloor": 10,
+        "anchorageType": "auto",
+        "floorClearSpan": "16"
+      }
+    ],
+    "directions": [
+      {
+        "id": "dir-1",
+        "name": "N-S",
+        "rho": 1,
+        "lines": [
+          {
+            "id": "ln-1",
+            "name": "Line A",
+            "totalLength": 24,
+            "wallThickness": "",
+            "distribution": "",
+            "driftBypass": "",
+            "distReviewed": [],
+            "levelLoads": {
+              "lvl-1": {
+                "seismic": "2",
+                "wind": ""
+              },
+              "lvl-2": {
+                "seismic": "3",
+                "wind": ""
+              }
+            },
+            "gravityLoads": {
+              "lvl-1": {
+                "loads": []
+              },
+              "lvl-2": {
+                "loads": []
+              }
+            },
+            "walls": [
+              {
+                "id": "w-7",
+                "mark": "SW-7",
+                "levelId": "lvl-1",
+                "position": 2,
+                "length": 6,
+                "method": "segmented",
+                "systemType": "sheathed",
+                "openings": [],
+                "narrowPier": false,
+                "wallDLTypeId": "wdt-1",
+                "nailingPattern": "6",
+                "anchorageLeftOverride": "MSTC40",
+                "anchorageRightOverride": "MSTC40",
+                "postLeftOverride": "(2)2x4",
+                "postRightOverride": "(2)2x4",
+                "ftaoStrapOverride": "",
+                "jambPostOverride": "",
+                "wswhWidth": "18",
+                "wswhCondition": "concrete",
+                "wswhJoist": "12",
+                "wswhFloorDepth": "12",
+                "wswhAnchorOverride": ""
+              },
+              {
+                "id": "w-8",
+                "mark": "SW-8",
+                "levelId": "lvl-2",
+                "position": 12,
+                "length": 10,
+                "method": "segmented",
+                "systemType": "sheathed",
+                "openings": [],
+                "narrowPier": false,
+                "wallDLTypeId": "wdt-1",
+                "nailingPattern": "4",
+                "anchorageLeftOverride": "HDUE3",
+                "anchorageRightOverride": "HDUE3",
+                "postLeftOverride": "(2)2x4",
+                "postRightOverride": "(2)2x4",
+                "ftaoStrapOverride": "",
+                "jambPostOverride": "",
+                "wswhWidth": "18",
+                "wswhCondition": "concrete",
+                "wswhJoist": "12",
+                "wswhFloorDepth": "12",
+                "wswhAnchorOverride": ""
+              }
+            ],
+            "beams": [
+              {
+                "id": "bm-2",
+                "mark": "BM-2",
+                "levelId": "lvl-1",
+                "position": 0,
+                "length": 12,
+                "supports": [
+                  {
+                    "id": "bs-1",
+                    "position": 0,
+                    "type": "point",
+                    "anchorageOverride": ""
+                  },
+                  {
+                    "id": "bs-2",
+                    "position": 12,
+                    "type": "point",
+                    "anchorageOverride": "MSTC28"
+                  }
+                ]
+              }
+            ],
+            "supportPosts": []
+          }
+        ]
+      }
+    ]
+  }
+}

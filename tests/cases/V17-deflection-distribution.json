@@ -1,0 +1,579 @@
+{
+  "id": "V17",
+  "title": "Deflection distribution — closed form and a starved stacked wall (F-DD1)",
+  "intent": "Line A: two walls (6 ft and 12 ft) share the story shear by stiffness, k = V/δ from SDPWS Eq. 4.3-1, iterated until the wall δ are within 5 %. With linear δ (no plate crushing beyond r = 0.73, fixed hardware) the converged split has a closed form, which is checked here. Line B (finding F-DD1, pinned design): a 4 ft Level 1 wall (SW-6) under a 4 ft wall (SW-4). The δ of SW-6 includes the holdown slip and crushing from the end force SW-4 sends down, which does not depend on the own share of SW-6 — an offset. Equal δ at Level 1 then gives SW-6 only a few percent of the story shear (starved), although its capacity share is about a third. The tool converges to that split; this case fixes the numbers for the F-DD1 solver work.",
+  "covers": [
+    "Deflection distribution (k = V/δ, 5 % spread, 20 passes)",
+    "SDPWS Eq. 4.3-1",
+    "Stacked walls: offset from the forces above (F-DD1)"
+  ],
+  "handCalc": [
+    {
+      "step": 1,
+      "text": "Line A, both walls 6\" o.c. (G_a = 16 k/in), HDUE3 (δ 0.127 in at 3790 lb), (2)2x4 end posts (A = 10.5 in²), h = 10 ft. δ per kip of wall shear: c = 8,000,000/(E·A·L²) + h/(L·G_a) + (h/L)·[0.127·(1000h/L)/3790 + 0.02·(1000h/L)/(A·625)/0.73]."
+    },
+    {
+      "step": 2,
+      "text": "SW-1 (L = 6): c_1 = 0.0124 + 0.1042 + 0.1047 = 0.2213 in/k → k_1 = 4.519 k/in. SW-2 (L = 12): c_2 = 0.0031 + 0.0521 + 0.0262 = 0.0814 in/k → k_2 = 12.290 k/in."
+    },
+    {
+      "step": 3,
+      "text": "Converged split V_i = V·k_i/Σk: V_1 = 6 × 4.519/16.809 = 1.613 k, V_2 = 4.387 k (by length it would be 2.00 / 4.00 k — the long wall is stiffer than its length share)."
+    },
+    {
+      "step": 4,
+      "text": "Every wall deflects δ = V/Σk = 6/16.809 = 0.3569 in → spread 0 (well inside 5 %). Stiffness reported as k = V·1000/δ: 4519 and 12290 lb/in."
+    },
+    {
+      "step": 5,
+      "text": "Check the assumptions: v = 188.18 / 255.91 plf ≤ 312 → 6\" o.c. on both; SW-2 T = 0.7 × 4.387 × 10/12 − 0.46 × 0.60 = 2.283 k ≤ 3.79 → HDUE3; crushing r = 0.410 / 0.557 < 0.73 → linear."
+    },
+    {
+      "step": 6,
+      "text": "Line B: 2nd story SW-3 (8 ft) and SW-4 (4 ft) over SW-5 (8 ft) / SW-6 (4 ft), all 2\" o.c. both sides (G_a = 56); 1.0E = 7 k at Level 2 only, so both stories carry 7 k. Pinned: SW-3 MSTC66 + (3)2x4, SW-4 MSTC40 + (2)2x4, SW-5 HDUE13 + 8x4, SW-6 HDUE3 + (2)2x4. δ(V, T_above) = 8vh³/(EAb) + vh/(1000G_a) + (h/b)·[δ_cap·T/P_δ + Δ_c(r)], T = 1000·V·h/L + T_above (MSTC P_δ = cap/0.7, HDUE P_δ = cap)."
+    },
+    {
+      "step": 7,
+      "text": "Level 2 (nothing above): equal δ → V_3 = 5.670 k, V_4 = 1.330 k, δ = 0.3151 in at both walls. The 1.0E end forces sent down: SW-3 T = 7088 lb onto SW-5, SW-4 T = 3324 lb onto SW-6."
+    },
+    {
+      "step": 8,
+      "text": "Level 1 offsets: SW-6 at zero own share already deflects d_6 = δ(0, 3324 lb) = 0.3132 in (its HDUE3 slip and crushing under the force from SW-4, × h/b = 2.5). SW-5 carrying the whole 7 k deflects 0.4443 in > d_6, so an equal-δ split exists."
+    },
+    {
+      "step": 9,
+      "text": "Level 1 equal δ: V_6 = 0.367 k (5.24 % of the story), V_5 = 6.633 k, δ = 0.4261 in. By capacity SW-6 would take 31.91 % (2.23 k): the stack above starves it (finding F-DD1)."
+    },
+    {
+      "step": 10,
+      "text": "Offset check (note in G3): δ_6(0)/δ = 0.3132 / 0.4261 = 0.73 > 0.5 → SW-6 is noted: most of its deflection comes from the force of SW-4 above; δ_5(0)/δ = 0.1140 / 0.4261 = 0.27 → no note."
+    },
+    {
+      "step": 11,
+      "text": "Line A drift (Cd 4, Ie 1.0, RC II): the two walls give the same δ at their shares (0.3569 in), so δxe = the story δ and either wall can be named as governing. Story drift Level 1: δxe = the largest wall δ = SW-2 0.3569 in → δx = Cd·δxe/Ie = 4 × 0.3569 / 1.0 = 1.428 in vs Δa = 0.020 × 10 × 12 = 2.400 in → OK."
+    },
+    {
+      "step": 12,
+      "text": "Line B drift: Level 2 δ = 0.3151 in, Level 1 δ = 0.4261 in (equal δ at each story, end forces from above included). Story drift Level 2: δxe = the largest wall δ = SW-4 0.3151 in → δx = Cd·δxe/Ie = 4 × 0.3151 / 1.0 = 1.260 in vs Δa = 0.020 × 10 × 12 = 2.400 in → OK. Story drift Level 1: δxe = the largest wall δ = SW-6 0.4261 in → δx = Cd·δxe/Ie = 4 × 0.4261 / 1.0 = 1.704 in vs Δa = 0.020 × 10 × 12 = 2.400 in → OK."
+    }
+  ],
+  "expect": [
+    {
+      "label": "SW-1 share V (1.0E)",
+      "at": "wall:SW-1",
+      "field": "shareExact_1E",
+      "value": 1.6130057902314143,
+      "tol": 0.005,
+      "step": 3,
+      "line": "Line A"
+    },
+    {
+      "label": "SW-2 share V (1.0E)",
+      "at": "wall:SW-2",
+      "field": "shareExact_1E",
+      "value": 4.386994209768587,
+      "tol": 0.005,
+      "step": 3,
+      "line": "Line A"
+    },
+    {
+      "label": "SW-1 stiffness k (lb/in)",
+      "at": "wall:SW-1",
+      "field": "stiffness.E",
+      "value": 4518.874879516565,
+      "tol": 22.594374397582826,
+      "step": 4,
+      "line": "Line A"
+    },
+    {
+      "label": "SW-2 stiffness k (lb/in)",
+      "at": "wall:SW-2",
+      "field": "stiffness.E",
+      "value": 12290.270779662695,
+      "tol": 61.45135389831347,
+      "step": 4,
+      "line": "Line A"
+    },
+    {
+      "label": "SW-1 δ (in)",
+      "at": "wall:SW-1",
+      "field": "deflection.E.delta",
+      "value": 0.35694853989937775,
+      "tol": 0.001,
+      "step": 4,
+      "line": "Line A"
+    },
+    {
+      "label": "SW-2 δ (in)",
+      "at": "wall:SW-2",
+      "field": "deflection.E.delta",
+      "value": 0.35694853989937775,
+      "tol": 0.001,
+      "step": 4,
+      "line": "Line A"
+    },
+    {
+      "label": "Line A converged",
+      "at": "line",
+      "field": "distribution.converged",
+      "value": true,
+      "step": 4,
+      "line": "Line A"
+    },
+    {
+      "label": "Line A δ spread ≤ 5 %",
+      "at": "line",
+      "field": "distribution.spreadRows[0].spread",
+      "value": 0,
+      "tol": 0.05,
+      "step": 4,
+      "line": "Line A"
+    },
+    {
+      "label": "Line B SW-3 share, Level 2 (k)",
+      "at": "wall:SW-3",
+      "field": "shareExact_1E",
+      "value": 5.670354709655072,
+      "tol": 0.01,
+      "step": 7,
+      "line": "Line B"
+    },
+    {
+      "label": "Line B SW-4 share, Level 2 (k)",
+      "at": "wall:SW-4",
+      "field": "shareExact_1E",
+      "value": 1.3296452903449278,
+      "tol": 0.01,
+      "step": 7,
+      "line": "Line B"
+    },
+    {
+      "label": "Line B SW-4 δ, Level 2 (in)",
+      "at": "wall:SW-4",
+      "field": "deflection.E.delta",
+      "value": 0.3150987950596984,
+      "tol": 0.002,
+      "step": 7,
+      "line": "Line B"
+    },
+    {
+      "label": "Line B SW-6 share, Level 1 — starved (k)",
+      "at": "wall:SW-6",
+      "field": "shareExact_1E",
+      "value": 0.36650746642919074,
+      "tol": 0.005,
+      "step": 9,
+      "line": "Line B"
+    },
+    {
+      "label": "Line B SW-5 share, Level 1 (k)",
+      "at": "wall:SW-5",
+      "field": "shareExact_1E",
+      "value": 6.633492533570809,
+      "tol": 0.005,
+      "step": 9,
+      "line": "Line B"
+    },
+    {
+      "label": "Line B SW-5 δ, Level 1 (in)",
+      "at": "wall:SW-5",
+      "field": "deflection.E.delta",
+      "value": 0.4261152218257285,
+      "tol": 0.0005,
+      "step": 9,
+      "line": "Line B"
+    },
+    {
+      "label": "Line B SW-6 δ, Level 1 (in)",
+      "at": "wall:SW-6",
+      "field": "deflection.E.delta",
+      "value": 0.4261152218257285,
+      "tol": 0.0005,
+      "step": 9,
+      "line": "Line B"
+    },
+    {
+      "label": "Line B SW-6 δ(0)/δ* (from above)",
+      "at": "line",
+      "field": "distribution.levels[1].walls[1].fromAboveRatio",
+      "value": 0.7349307222649777,
+      "tol": 0.002,
+      "step": 10,
+      "line": "Line B"
+    },
+    {
+      "label": "Line B converged",
+      "at": "line",
+      "field": "distribution.converged",
+      "value": true,
+      "step": 9,
+      "line": "Line B"
+    },
+    {
+      "label": "Line A — Story δxe, Level 1 (in)",
+      "at": "drift:Level 1",
+      "field": "seismic.deltaXE",
+      "value": 0.3569485398993778,
+      "tol": 0.0005,
+      "step": 11,
+      "line": "Line A"
+    },
+    {
+      "label": "Line A — δx = Cd·δxe/Ie, Level 1 (in)",
+      "at": "drift:Level 1",
+      "field": "seismic.deltaX",
+      "value": 1.4277941595975112,
+      "tol": 0.002,
+      "step": 11,
+      "line": "Line A"
+    },
+    {
+      "label": "Line A — Drift passes, Level 1",
+      "at": "drift:Level 1",
+      "field": "seismic.pass",
+      "value": true,
+      "step": 11,
+      "line": "Line A"
+    },
+    {
+      "label": "Line B — Story δxe, Level 2 (in)",
+      "at": "drift:Level 2",
+      "field": "seismic.deltaXE",
+      "value": 0.3150987950596985,
+      "tol": 0.0005,
+      "step": 12,
+      "line": "Line B"
+    },
+    {
+      "label": "Line B — δx = Cd·δxe/Ie, Level 2 (in)",
+      "at": "drift:Level 2",
+      "field": "seismic.deltaX",
+      "value": 1.260395180238794,
+      "tol": 0.002,
+      "step": 12,
+      "line": "Line B"
+    },
+    {
+      "label": "Line B — Drift passes, Level 2",
+      "at": "drift:Level 2",
+      "field": "seismic.pass",
+      "value": true,
+      "step": 12,
+      "line": "Line B"
+    },
+    {
+      "label": "Line B — Story δxe, Level 1 (in)",
+      "at": "drift:Level 1",
+      "field": "seismic.deltaXE",
+      "value": 0.4261152218257287,
+      "tol": 0.0005,
+      "step": 12,
+      "line": "Line B"
+    },
+    {
+      "label": "Line B — δx = Cd·δxe/Ie, Level 1 (in)",
+      "at": "drift:Level 1",
+      "field": "seismic.deltaX",
+      "value": 1.7044608873029148,
+      "tol": 0.002,
+      "step": 12,
+      "line": "Line B"
+    },
+    {
+      "label": "Line B — Drift passes, Level 1",
+      "at": "drift:Level 1",
+      "field": "seismic.pass",
+      "value": true,
+      "step": 12,
+      "line": "Line B"
+    }
+  ],
+  "expectChecks": {
+    "fail": []
+  },
+  "notChecked": "Whether a starved lower wall is acceptable is the engineer's judgment: the tool notes it (G3) and names the remedy (a larger holdown / strap on that wall).",
+  "pinned": {
+    "Line A/SW-1": {
+      "nail": "6",
+      "hdL": "HDUE3",
+      "hdR": "HDUE3",
+      "postL": "(2)2x4",
+      "postR": "(2)2x4"
+    },
+    "Line A/SW-2": {
+      "nail": "6",
+      "hdL": "HDUE3",
+      "hdR": "HDUE3",
+      "postL": "(2)2x4",
+      "postR": "(2)2x4"
+    },
+    "Line B/SW-3": {
+      "nail": "2B",
+      "hdL": "MSTC66",
+      "hdR": "MSTC66",
+      "postL": "(3)2x4",
+      "postR": "(3)2x4"
+    },
+    "Line B/SW-4": {
+      "nail": "2B",
+      "hdL": "MSTC40",
+      "hdR": "MSTC40",
+      "postL": "(2)2x4",
+      "postR": "(2)2x4"
+    },
+    "Line B/SW-5": {
+      "nail": "2B",
+      "hdL": "HDUE13",
+      "hdR": "HDUE13",
+      "postL": "8x4",
+      "postR": "8x4"
+    },
+    "Line B/SW-6": {
+      "nail": "2B",
+      "hdL": "HDUE3",
+      "hdR": "HDUE3",
+      "postL": "(2)2x4",
+      "postR": "(2)2x4"
+    }
+  },
+  "schemaVersion": 12,
+  "inputs": {
+    "sds": "1.0",
+    "loadType": "seismic",
+    "wallThickness": "4",
+    "woodGrade": "dfir_no1",
+    "sheathing": "ply",
+    "distribution": "deflection",
+    "cd": "4",
+    "ie": "1.0",
+    "riskCategory": "II",
+    "driftRow": "other",
+    "driftBypass": false,
+    "alphaS": "",
+    "windDriftLimit": "400",
+    "omega0": "2.5",
+    "lrfdHalfL": false,
+    "wswhFc": "2500",
+    "seismicDesignCategory": "",
+    "detachedOneTwoFamily": false,
+    "pdfReport": "detailed",
+    "refs": {},
+    "notes": "",
+    "wallDLTypes": [
+      {
+        "id": "wdt-1",
+        "name": "Stud wall",
+        "psf": "10"
+      }
+    ],
+    "levels": [
+      {
+        "id": "lvl-2",
+        "name": "Level 2",
+        "floorToFloor": 10,
+        "anchorageType": "auto",
+        "floorClearSpan": "16"
+      },
+      {
+        "id": "lvl-1",
+        "name": "Level 1",
+        "floorToFloor": 10,
+        "anchorageType": "auto",
+        "floorClearSpan": "16"
+      }
+    ],
+    "directions": [
+      {
+        "id": "dir-1",
+        "name": "N-S",
+        "rho": 1,
+        "lines": [
+          {
+            "id": "ln-1",
+            "name": "Line A",
+            "totalLength": 30,
+            "wallThickness": "",
+            "distribution": "",
+            "driftBypass": "",
+            "distReviewed": [],
+            "levelLoads": {
+              "lvl-1": {
+                "seismic": "6",
+                "wind": ""
+              }
+            },
+            "gravityLoads": {},
+            "walls": [
+              {
+                "id": "w-1",
+                "mark": "SW-1",
+                "levelId": "lvl-1",
+                "position": 0,
+                "length": 6,
+                "method": "segmented",
+                "systemType": "sheathed",
+                "openings": [],
+                "narrowPier": false,
+                "wallDLTypeId": "wdt-1",
+                "nailingPattern": "6",
+                "anchorageLeftOverride": "HDUE3",
+                "anchorageRightOverride": "HDUE3",
+                "postLeftOverride": "(2)2x4",
+                "postRightOverride": "(2)2x4",
+                "ftaoStrapOverride": "",
+                "jambPostOverride": "",
+                "wswhWidth": "18",
+                "wswhCondition": "concrete",
+                "wswhJoist": "12",
+                "wswhFloorDepth": "12",
+                "wswhAnchorOverride": ""
+              },
+              {
+                "id": "w-2",
+                "mark": "SW-2",
+                "levelId": "lvl-1",
+                "position": 16,
+                "length": 12,
+                "method": "segmented",
+                "systemType": "sheathed",
+                "openings": [],
+                "narrowPier": false,
+                "wallDLTypeId": "wdt-1",
+                "nailingPattern": "6",
+                "anchorageLeftOverride": "HDUE3",
+                "anchorageRightOverride": "HDUE3",
+                "postLeftOverride": "(2)2x4",
+                "postRightOverride": "(2)2x4",
+                "ftaoStrapOverride": "",
+                "jambPostOverride": "",
+                "wswhWidth": "18",
+                "wswhCondition": "concrete",
+                "wswhJoist": "12",
+                "wswhFloorDepth": "12",
+                "wswhAnchorOverride": ""
+              }
+            ],
+            "beams": [],
+            "supportPosts": []
+          },
+          {
+            "id": "ln-2",
+            "name": "Line B",
+            "totalLength": 40,
+            "wallThickness": "",
+            "distribution": "",
+            "driftBypass": "",
+            "distReviewed": [],
+            "levelLoads": {
+              "lvl-2": {
+                "seismic": "7",
+                "wind": ""
+              }
+            },
+            "gravityLoads": {},
+            "walls": [
+              {
+                "id": "w-3",
+                "mark": "SW-3",
+                "levelId": "lvl-2",
+                "position": 0,
+                "length": 8,
+                "method": "segmented",
+                "systemType": "sheathed",
+                "openings": [],
+                "narrowPier": false,
+                "wallDLTypeId": "wdt-1",
+                "nailingPattern": "2B",
+                "anchorageLeftOverride": "MSTC66",
+                "anchorageRightOverride": "MSTC66",
+                "postLeftOverride": "(3)2x4",
+                "postRightOverride": "(3)2x4",
+                "ftaoStrapOverride": "",
+                "jambPostOverride": "",
+                "wswhWidth": "18",
+                "wswhCondition": "concrete",
+                "wswhJoist": "12",
+                "wswhFloorDepth": "12",
+                "wswhAnchorOverride": ""
+              },
+              {
+                "id": "w-4",
+                "mark": "SW-4",
+                "levelId": "lvl-2",
+                "position": 20,
+                "length": 4,
+                "method": "segmented",
+                "systemType": "sheathed",
+                "openings": [],
+                "narrowPier": false,
+                "wallDLTypeId": "wdt-1",
+                "nailingPattern": "2B",
+                "anchorageLeftOverride": "MSTC40",
+                "anchorageRightOverride": "MSTC40",
+                "postLeftOverride": "(2)2x4",
+                "postRightOverride": "(2)2x4",
+                "ftaoStrapOverride": "",
+                "jambPostOverride": "",
+                "wswhWidth": "18",
+                "wswhCondition": "concrete",
+                "wswhJoist": "12",
+                "wswhFloorDepth": "12",
+                "wswhAnchorOverride": ""
+              },
+              {
+                "id": "w-5",
+                "mark": "SW-5",
+                "levelId": "lvl-1",
+                "position": 0,
+                "length": 8,
+                "method": "segmented",
+                "systemType": "sheathed",
+                "openings": [],
+                "narrowPier": false,
+                "wallDLTypeId": "wdt-1",
+                "nailingPattern": "2B",
+                "anchorageLeftOverride": "HDUE13",
+                "anchorageRightOverride": "HDUE13",
+                "postLeftOverride": "8x4",
+                "postRightOverride": "8x4",
+                "ftaoStrapOverride": "",
+                "jambPostOverride": "",
+                "wswhWidth": "18",
+                "wswhCondition": "concrete",
+                "wswhJoist": "12",
+                "wswhFloorDepth": "12",
+                "wswhAnchorOverride": ""
+              },
+              {
+                "id": "w-6",
+                "mark": "SW-6",
+                "levelId": "lvl-1",
+                "position": 20,
+                "length": 4,
+                "method": "segmented",
+                "systemType": "sheathed",
+                "openings": [],
+                "narrowPier": false,
+                "wallDLTypeId": "wdt-1",
+                "nailingPattern": "2B",
+                "anchorageLeftOverride": "HDUE3",
+                "anchorageRightOverride": "HDUE3",
+                "postLeftOverride": "(2)2x4",
+                "postRightOverride": "(2)2x4",
+                "ftaoStrapOverride": "",
+                "jambPostOverride": "",
+                "wswhWidth": "18",
+                "wswhCondition": "concrete",
+                "wswhJoist": "12",
+                "wswhFloorDepth": "12",
+                "wswhAnchorOverride": ""
+              }
+            ],
+            "beams": [],
+            "supportPosts": []
+          }
+        ]
+      }
+    ]
+  }
+}

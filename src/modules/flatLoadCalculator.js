@@ -148,6 +148,7 @@ export const flatLoadCalculator = {
   calcVersion: 'v1',
   noNewPrefix: true,
   noOutputSection: true,
+  regenerateResults: true,
   refs: [],
   fields: [
     { key: 'tabs', label: 'Assemblies', type: 'text' },

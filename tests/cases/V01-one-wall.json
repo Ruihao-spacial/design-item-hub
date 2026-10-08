@@ -1,0 +1,269 @@
+{
+  "id": "V01",
+  "title": "One wall — base chain",
+  "intent": "The shortest complete path through the calculator: one solid 10 ft wall, seismic only, self-weight only. Checks story shear → ASD unit shear → nailing → overturning → holdown → end post → deflection, and that every line check G1–G12 passes.",
+  "covers": [
+    "SDPWS 2021 Table 4.3A + footnote 10",
+    "ASCE 7-22 §2.4.5 (5), (8)",
+    "HDUE selection + minimum post",
+    "NDS 2018 column",
+    "SDPWS Eq. 4.3-1",
+    "G1–G12"
+  ],
+  "handCalc": [
+    {
+      "step": 1,
+      "text": "Story shear V = 1.0E = 5 k (one level, one wall) → SW-1 takes all of it: V = 5.00 k."
+    },
+    {
+      "step": 2,
+      "text": "ASD unit shear v = 0.7·ρ·V / L = 0.7 × 1.0 × 5000 / 10 = 350.00 plf. h/b = 10/10 = 1.0 ≤ 2 → C_hb = 1.0. 6\" o.c. 312 plf < 350 NG; 4\" o.c. 470 plf ≥ 350 → 4\" o.c., D/C = 350/470 = 0.745."
+    },
+    {
+      "step": 3,
+      "text": "Self-weight D = 10 psf × 10 ft × 10 ft = 1.00 k → R_D = 0.50 k at each end (no other gravity)."
+    },
+    {
+      "step": 4,
+      "text": "M_OT(1.0E) = V·h = 5 × 10 = 50 k·ft → N_E = ±50/10 = ±5.00 k (uplift at the left end for →)."
+    },
+    {
+      "step": 5,
+      "text": "Uplift, (0.6 − 0.14S_DS)D + 0.7E: N = 0.46 × 0.50 − 0.7 × 5.00 = -3.27 → T = 3.27 k → lightest HDUE with cap ≥ 3270 lb: HDUE3 (3790 lb), D/C = 0.863."
+    },
+    {
+      "step": 6,
+      "text": "Compression, (1.0 + 0.14S_DS)D + 0.7E: C = 1.14 × 0.50 + 0.7 × 5.00 = 4.07 k (combo (6): 1.105 × 0.50 + 0.525 × 5.00 = 3.178 k, smaller)."
+    },
+    {
+      "step": 7,
+      "text": "End post: HDUE3 minimum post is (2)2x4. NDS column at h = 10 ft, DF-L No.1: F_c* = 1500 × 1.6 × 1.15 = 2760 psi, F_cE = 496 psi, C_P = 0.1724, F_c′ = 476 psi; bearing F_c⊥′ = 625 × (3.0 + 0.375)/3.0 = 703 psi → cap = 5.00 k ≥ 4.07 k → (2)2x4."
+    },
+    {
+      "step": 8,
+      "text": "Deflection at 1.0E: v = 500 plf, A = 10.5 in², G_a = 20 k/in. 8vh³/(EAb) = 8 × 500 × 10³ / (1,700,000 × 10.5 × 10) = 0.0224; vh/(1000G_a) = 500 × 10 / (1000 × 20) = 0.2500; holdown slip = 0.127 × 5000 / 3790 = 0.1675; crushing r = 5000 / (10.5 × 625) = 0.7619 → Δ_c = 0.0224; h·Δa/b = 0.1899 → δ = 0.4623 in."
+    },
+    {
+      "step": 9,
+      "text": "Story drift Level 1: δxe = the largest wall δ = SW-1 0.4623 in → δx = Cd·δxe/Ie = 4 × 0.4623 / 1.0 = 1.849 in vs Δa = 0.020 × 10 × 12 = 2.400 in → OK."
+    },
+    {
+      "step": 10,
+      "text": "Line checks: base shear = 5 k at the foundation, base moment = 50 k·ft, gravity 1.0D = 1.00 k all at the foundation → G1–G12 pass."
+    }
+  ],
+  "expect": [
+    {
+      "label": "SW-1 share V (1.0E)",
+      "at": "wall:SW-1",
+      "field": "shareExact_1E",
+      "value": 5,
+      "tol": 0.005,
+      "step": 1
+    },
+    {
+      "label": "SW-1 ASD unit shear (plf)",
+      "at": "wall:SW-1",
+      "field": "unitShear_seismic",
+      "value": 350,
+      "tol": 0.01,
+      "step": 2
+    },
+    {
+      "label": "SW-1 D/C",
+      "at": "wall:SW-1",
+      "field": "dcRatio",
+      "value": 0.7446808510638298,
+      "tol": 0.006,
+      "step": 2
+    },
+    {
+      "label": "SW-1 dead load D (k)",
+      "at": "wall:SW-1",
+      "field": "dlTotal",
+      "value": 1,
+      "tol": 0.005,
+      "step": 3
+    },
+    {
+      "label": "SW-1 1.0E → left end N (k)",
+      "at": "wall:SW-1",
+      "field": "lc[\"1.0E →\"].left",
+      "value": -5,
+      "tol": 0.005,
+      "step": 4
+    },
+    {
+      "label": "SW-1 governing T, left (k)",
+      "at": "wall:SW-1",
+      "field": "governingTensionLeft",
+      "value": 3.27,
+      "tol": 0.005,
+      "step": 5
+    },
+    {
+      "label": "SW-1 governing C, right (k)",
+      "at": "wall:SW-1",
+      "field": "governingComprRight",
+      "value": 4.07,
+      "tol": 0.005,
+      "step": 6
+    },
+    {
+      "label": "SW-1 post capacity (k)",
+      "at": "wall:SW-1",
+      "field": "postRight.capacityKips",
+      "value": 5,
+      "tol": 0.005,
+      "step": 7
+    },
+    {
+      "label": "SW-1 δ at 1.0E (in)",
+      "at": "wall:SW-1",
+      "field": "deflection.E.delta",
+      "value": 0.4623184534245634,
+      "tol": 0.0005,
+      "step": 8
+    },
+    {
+      "label": "Story δxe, Level 1 (in)",
+      "at": "drift:Level 1",
+      "field": "seismic.deltaXE",
+      "value": 0.4623184534245634,
+      "tol": 0.0005,
+      "step": 9
+    },
+    {
+      "label": "Governing wall for drift, Level 1",
+      "at": "drift:Level 1",
+      "field": "seismic.wallMark",
+      "value": "SW-1",
+      "step": 9
+    },
+    {
+      "label": "δx = Cd·δxe/Ie, Level 1 (in)",
+      "at": "drift:Level 1",
+      "field": "seismic.deltaX",
+      "value": 1.8492738136982536,
+      "tol": 0.002,
+      "step": 9
+    },
+    {
+      "label": "Drift passes, Level 1",
+      "at": "drift:Level 1",
+      "field": "seismic.pass",
+      "value": true,
+      "step": 9
+    }
+  ],
+  "expectChecks": {
+    "fail": []
+  },
+  "notChecked": "",
+  "pinned": {
+    "SW-1": {
+      "nail": "4",
+      "hdL": "HDUE3",
+      "hdR": "HDUE3",
+      "postL": "(2)2x4",
+      "postR": "(2)2x4"
+    }
+  },
+  "schemaVersion": 12,
+  "inputs": {
+    "sds": "1",
+    "loadType": "seismic",
+    "wallThickness": "4",
+    "woodGrade": "dfir_no1",
+    "sheathing": "ply",
+    "distribution": "capacity",
+    "cd": "4",
+    "ie": "1.0",
+    "riskCategory": "II",
+    "driftRow": "other",
+    "driftBypass": false,
+    "alphaS": "",
+    "windDriftLimit": "400",
+    "omega0": "2.5",
+    "lrfdHalfL": false,
+    "wswhFc": "2500",
+    "seismicDesignCategory": "",
+    "detachedOneTwoFamily": false,
+    "pdfReport": "detailed",
+    "refs": {},
+    "notes": "",
+    "wallDLTypes": [
+      {
+        "id": "wdt-1",
+        "name": "Stud wall",
+        "psf": "10"
+      }
+    ],
+    "levels": [
+      {
+        "id": "lvl-1",
+        "name": "Level 1",
+        "floorToFloor": 10,
+        "anchorageType": "auto",
+        "floorClearSpan": "16"
+      }
+    ],
+    "directions": [
+      {
+        "id": "dir-1",
+        "name": "N-S",
+        "rho": 1,
+        "lines": [
+          {
+            "id": "ln-1",
+            "name": "Line A",
+            "totalLength": 20,
+            "wallThickness": "",
+            "distribution": "",
+            "driftBypass": "",
+            "distReviewed": [],
+            "levelLoads": {
+              "lvl-1": {
+                "seismic": "5",
+                "wind": ""
+              }
+            },
+            "gravityLoads": {
+              "lvl-1": {
+                "loads": []
+              }
+            },
+            "walls": [
+              {
+                "id": "w-1",
+                "mark": "SW-1",
+                "levelId": "lvl-1",
+                "position": 5,
+                "length": 10,
+                "method": "segmented",
+                "systemType": "sheathed",
+                "openings": [],
+                "narrowPier": false,
+                "wallDLTypeId": "wdt-1",
+                "nailingPattern": "4",
+                "anchorageLeftOverride": "HDUE3",
+                "anchorageRightOverride": "HDUE3",
+                "postLeftOverride": "(2)2x4",
+                "postRightOverride": "(2)2x4",
+                "ftaoStrapOverride": "",
+                "jambPostOverride": "",
+                "wswhWidth": "18",
+                "wswhCondition": "concrete",
+                "wswhJoist": "12",
+                "wswhFloorDepth": "12",
+                "wswhAnchorOverride": ""
+              }
+            ],
+            "beams": [],
+            "supportPosts": []
+          }
+        ]
+      }
+    ]
+  }
+}

@@ -1,0 +1,186 @@
+{
+  "id": "B16",
+  "title": "Beam check — point loads on the overhang (tip and inside)",
+  "intent": "P1 = 1 k at the tip (25) and P2 = 0.5 k at 22, supports 0 / 20; R1 reverses and line A gets a negative force. Hand calc: docs/diaphragm-to-lrs-beam-check.md",
+  "covers": [
+    "Overhang point at the tip",
+    "Overhang point, general form",
+    "Negative line force"
+  ],
+  "handCalc": [
+    {
+      "step": 1,
+      "text": "Method 1: P1 (e 5) −0.2500 / 1.2500; P2 (e 2) −0.0500 / 0.5500 → R1 = −0.3000, R2 = 1.8000 k."
+    },
+    {
+      "step": 2,
+      "text": "Method 2: R2 = (1 × 25 + 0.5 × 22) / 20 = 1.8000; R1 = 1.5 − 1.8 = −0.3000 k."
+    }
+  ],
+  "expect": [
+    {
+      "label": "R1 (k)",
+      "at": "dia:E-W/R.D1",
+      "field": "R1",
+      "value": -0.3,
+      "step": 1
+    },
+    {
+      "label": "R2 (k)",
+      "at": "dia:E-W/R.D1",
+      "field": "R2",
+      "value": 1.8,
+      "step": 1
+    },
+    {
+      "label": "P1 (tip) share to R1 (k)",
+      "at": "dia:E-W/R.D1",
+      "field": "rows[0].R1",
+      "value": -0.25,
+      "step": 1
+    },
+    {
+      "label": "line A force (k)",
+      "at": "line:E-W/R.A",
+      "field": "F",
+      "value": -0.3,
+      "step": 1
+    }
+  ],
+  "beam": {
+    "L": 25,
+    "x1": 0,
+    "x2": 20,
+    "parts": [],
+    "points": [
+      {
+        "id": "m1",
+        "label": "P1",
+        "x": 25,
+        "P": 1,
+        "manual": true
+      },
+      {
+        "id": "m2",
+        "label": "P2",
+        "x": 22,
+        "P": 0.5,
+        "manual": true
+      }
+    ]
+  },
+  "inputs": {
+    "loadType": "seismic",
+    "pdfReport": "detailed",
+    "refs": {},
+    "notes": "",
+    "levels": [
+      {
+        "id": "lv-Roof",
+        "name": "Roof",
+        "tag": "",
+        "fx": "1"
+      }
+    ],
+    "directions": [
+      {
+        "id": "dir-E-W",
+        "name": "E-W",
+        "lines": [
+          {
+            "id": "dir-E-W-A",
+            "name": "A"
+          },
+          {
+            "id": "dir-E-W-B",
+            "name": "B"
+          },
+          {
+            "id": "dir-E-W-C",
+            "name": "C"
+          },
+          {
+            "id": "dir-E-W-D",
+            "name": "D"
+          }
+        ],
+        "groups": [],
+        "down": {},
+        "diaphragms": [
+          {
+            "id": "dir-E-W-lv-Roof-D1",
+            "levelId": "lv-Roof",
+            "mark": "D1",
+            "length": "25",
+            "supports": [
+              {
+                "x": "0",
+                "kind": "line",
+                "lineId": "dir-E-W-A",
+                "diaphragmId": "",
+                "atX": ""
+              },
+              {
+                "x": "20",
+                "kind": "line",
+                "lineId": "dir-E-W-B",
+                "diaphragmId": "",
+                "atX": ""
+              }
+            ],
+            "parts": [],
+            "pointLoads": [
+              {
+                "id": "dir-E-W-lv-Roof-D1-m1",
+                "x": "25",
+                "p": "1",
+                "note": "P1"
+              },
+              {
+                "id": "dir-E-W-lv-Roof-D1-m2",
+                "x": "22",
+                "p": "0.5",
+                "note": "P2"
+              }
+            ]
+          },
+          {
+            "id": "dir-E-W-lv-Roof-D2",
+            "levelId": "lv-Roof",
+            "mark": "D2",
+            "length": "10",
+            "supports": [
+              {
+                "x": "",
+                "kind": "line",
+                "lineId": "dir-E-W-C",
+                "diaphragmId": "",
+                "atX": ""
+              },
+              {
+                "x": "",
+                "kind": "line",
+                "lineId": "dir-E-W-D",
+                "diaphragmId": "",
+                "atX": ""
+              }
+            ],
+            "parts": [
+              {
+                "id": "dir-E-W-lv-Roof-D2-p1",
+                "a": "0",
+                "b": "10",
+                "d": "10"
+              }
+            ],
+            "pointLoads": []
+          }
+        ]
+      }
+    ]
+  },
+  "expectChecks": {
+    "fail": []
+  },
+  "schemaVersion": 1
+}

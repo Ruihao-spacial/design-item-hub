@@ -112,6 +112,7 @@ export const seismicBaseShear = {
   schemaVersion: 1,
   calcVersion: 'v1',
   noOutputSection: true,
+  regenerateResults: true,
 
   refs: [],
 
