@@ -1,0 +1,127 @@
+{
+  "id": "D02",
+  "title": "Overhang on one side, full uniform (Case 24)",
+  "intent": "One diaphragm 25 ft long on supports at 0 and 20 ft: a 5 ft cantilever past R2. The part is cut at R2 into a back-span piece (Case 1) and an overhang piece (Case 25); the sum must equal the Case 24 closed form.",
+  "covers": [
+    "Overhang right",
+    "Cut at the support",
+    "Case 1 + Case 25 = Case 24"
+  ],
+  "handCalc": [
+    {
+      "step": 1,
+      "text": "ΣA = 25 × 20 = 500 sf → q = 5 / 500 = 0.01 k/sf; w = q·d = 0.01 × 20 = 200.00 plf."
+    },
+    {
+      "step": 2,
+      "text": "Back span 0–20 (Case 1): R1 = R2 = w·l/2 = 2.0000 k."
+    },
+    {
+      "step": 3,
+      "text": "Overhang 20–25 (Case 25): R1 = −w·a²/(2l) = -0.1250, R2 = w·a(2l + a)/(2l) = 1.1250 k."
+    },
+    {
+      "step": 4,
+      "text": "Total R1 = 1.8750, R2 = 3.1250 k. Case 24: R1 = w(l² − a²)/(2l) = 1.8750, R2 = w(l + a)²/(2l) = 3.1250 k — the same."
+    }
+  ],
+  "expect": [
+    {
+      "label": "R.D1 R1 → R.A (k)",
+      "at": "dia:E-W/R.D1",
+      "field": "R1",
+      "value": 1.875,
+      "step": 4
+    },
+    {
+      "label": "R.D1 R2 → R.B (k)",
+      "at": "dia:E-W/R.D1",
+      "field": "R2",
+      "value": 3.125,
+      "step": 4
+    },
+    {
+      "label": "Line R.B (k)",
+      "at": "line:E-W/R.B",
+      "field": "V",
+      "value": 3.125,
+      "step": 4
+    },
+    {
+      "label": "Overhang piece region",
+      "at": "dia:E-W/R.D1",
+      "field": "rows[1].region",
+      "value": "right",
+      "step": 3
+    }
+  ],
+  "expectChecks": {
+    "fail": []
+  },
+  "inputs": {
+    "loadType": "seismic",
+    "pdfReport": "detailed",
+    "refs": {},
+    "notes": "",
+    "levels": [
+      {
+        "id": "lv-Roof",
+        "name": "Roof",
+        "tag": "",
+        "fx": "5"
+      }
+    ],
+    "directions": [
+      {
+        "id": "dir-E-W",
+        "name": "E-W",
+        "lines": [
+          {
+            "id": "dir-E-W-A",
+            "name": "A"
+          },
+          {
+            "id": "dir-E-W-B",
+            "name": "B"
+          }
+        ],
+        "groups": [],
+        "down": {},
+        "diaphragms": [
+          {
+            "id": "dir-E-W-lv-Roof-D1",
+            "levelId": "lv-Roof",
+            "mark": "D1",
+            "length": "25",
+            "supports": [
+              {
+                "x": "0",
+                "kind": "line",
+                "lineId": "dir-E-W-A",
+                "diaphragmId": "",
+                "atX": ""
+              },
+              {
+                "x": "20",
+                "kind": "line",
+                "lineId": "dir-E-W-B",
+                "diaphragmId": "",
+                "atX": ""
+              }
+            ],
+            "parts": [
+              {
+                "id": "dir-E-W-lv-Roof-D1-p1",
+                "a": "0",
+                "b": "25",
+                "d": "20"
+              }
+            ],
+            "pointLoads": []
+          }
+        ]
+      }
+    ]
+  },
+  "schemaVersion": 1
+}

@@ -1,4 +1,5 @@
 import { ASSEMBLY_TYPES } from './modules/flatLoadMaterials.js';
+import { parseDiaphragm, beamErrors } from './modules/diaphragmToLrsCalc.js';
 
 const isPresent = value => value !== '' && value !== null && value !== undefined;
 const asNumber = value => Number(value);
@@ -173,6 +174,24 @@ function validateShearWall(inputs, errors) {
       });
     });
   });
+}
+
+// Diaphragm to LRS: block only what cannot be calculated (no levels, an unassigned support, invalid geometry).
+// Split % and line choices are reported by the checks D5 / D6 instead.
+function validateDiaphragmToLrs(inputs, errors) {
+  const levels = Array.isArray(inputs.levels) ? inputs.levels : [];
+  if (levels.length === 0) errors.push('Add at least one level.');
+  const levelIds = new Set(levels.map(l => l.id));
+  for (const dir of inputs.directions || []) {
+    for (const d of dir.diaphragms || []) {
+      if (!levelIds.has(d.levelId)) continue;
+      const label = (dir.name || 'Direction') + ' ' + (d.mark || 'diaphragm');
+      (d.supports || []).slice(0, 2).forEach((s, i) => {
+        if (!s || (s.kind === 'diaphragm' ? !s.diaphragmId : !s.lineId)) errors.push(`${label}: support R${i + 1} needs a wall line or a diaphragm.`);
+      });
+      for (const e of beamErrors(parseDiaphragm(d))) errors.push(`${label}: ${e}.`);
+    }
+  }
 }
 
 export function validateEngineeringInputs(moduleId, inputs = {}) {

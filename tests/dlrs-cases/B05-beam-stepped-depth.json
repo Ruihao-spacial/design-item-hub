@@ -1,0 +1,160 @@
+{
+  "id": "B05",
+  "title": "Beam check — stepped depth, three parts",
+  "intent": "Three parts 0–6 (d 30), 6–14 (d 20), 14–20 (d 10) on a 20 ft simple span. Hand calc: docs/diaphragm-to-lrs-beam-check.md",
+  "covers": [
+    "Simple span",
+    "Partial uniform × 3",
+    "Stepped depth"
+  ],
+  "handCalc": [
+    {
+      "step": 1,
+      "text": "Method 1: part 1 1.5300 / 0.2700, part 2 0.8000 / 0.8000, part 3 0.0900 / 0.5100 → R1 = 2.4200, R2 = 1.5800 k."
+    },
+    {
+      "step": 2,
+      "text": "Method 2: ΣM about R1 = 1.8 × 3 + 1.6 × 10 + 0.6 × 17 = 31.6 → R2 = 1.5800; R1 = 4.0 − 1.58 = 2.4200 k."
+    }
+  ],
+  "expect": [
+    {
+      "label": "R1 (k)",
+      "at": "dia:E-W/R.D1",
+      "field": "R1",
+      "value": 2.42,
+      "step": 1
+    },
+    {
+      "label": "R2 (k)",
+      "at": "dia:E-W/R.D1",
+      "field": "R2",
+      "value": 1.58,
+      "step": 1
+    },
+    {
+      "label": "part 1 R1 (k)",
+      "at": "dia:E-W/R.D1",
+      "field": "rows[0].R1",
+      "value": 1.53,
+      "step": 1
+    },
+    {
+      "label": "part 3 R2 (k)",
+      "at": "dia:E-W/R.D1",
+      "field": "rows[2].R2",
+      "value": 0.51,
+      "step": 1
+    }
+  ],
+  "beam": {
+    "L": 20,
+    "x1": 0,
+    "x2": 20,
+    "parts": [
+      {
+        "id": "p1",
+        "label": "part 1",
+        "a": 0,
+        "b": 6,
+        "w": 0.3
+      },
+      {
+        "id": "p2",
+        "label": "part 2",
+        "a": 6,
+        "b": 8,
+        "w": 0.2
+      },
+      {
+        "id": "p3",
+        "label": "part 3",
+        "a": 14,
+        "b": 6,
+        "w": 0.1
+      }
+    ],
+    "points": []
+  },
+  "inputs": {
+    "loadType": "seismic",
+    "pdfReport": "detailed",
+    "refs": {},
+    "notes": "",
+    "levels": [
+      {
+        "id": "lv-Roof",
+        "name": "Roof",
+        "tag": "",
+        "fx": "4"
+      }
+    ],
+    "directions": [
+      {
+        "id": "dir-E-W",
+        "name": "E-W",
+        "lines": [
+          {
+            "id": "dir-E-W-A",
+            "name": "A"
+          },
+          {
+            "id": "dir-E-W-B",
+            "name": "B"
+          }
+        ],
+        "groups": [],
+        "down": {},
+        "diaphragms": [
+          {
+            "id": "dir-E-W-lv-Roof-D1",
+            "levelId": "lv-Roof",
+            "mark": "D1",
+            "length": "20",
+            "supports": [
+              {
+                "x": "",
+                "kind": "line",
+                "lineId": "dir-E-W-A",
+                "diaphragmId": "",
+                "atX": ""
+              },
+              {
+                "x": "",
+                "kind": "line",
+                "lineId": "dir-E-W-B",
+                "diaphragmId": "",
+                "atX": ""
+              }
+            ],
+            "parts": [
+              {
+                "id": "dir-E-W-lv-Roof-D1-p1",
+                "a": "0",
+                "b": "6",
+                "d": "30"
+              },
+              {
+                "id": "dir-E-W-lv-Roof-D1-p2",
+                "a": "6",
+                "b": "8",
+                "d": "20"
+              },
+              {
+                "id": "dir-E-W-lv-Roof-D1-p3",
+                "a": "14",
+                "b": "6",
+                "d": "10"
+              }
+            ],
+            "pointLoads": []
+          }
+        ]
+      }
+    ]
+  },
+  "expectChecks": {
+    "fail": []
+  },
+  "schemaVersion": 1
+}

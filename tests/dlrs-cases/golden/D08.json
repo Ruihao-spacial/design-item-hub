@@ -1,0 +1,465 @@
+{
+ "calcVersion": "v2",
+ "levels": [
+  {
+   "id": "lv-Roof",
+   "name": "Roof",
+   "tag": "R",
+   "fx": 4,
+   "sumA": {
+    "dir-E-W": 380
+   }
+  },
+  {
+   "id": "lv-2ndFloor",
+   "name": "2nd Floor",
+   "tag": "2",
+   "fx": 2,
+   "sumA": {
+    "dir-E-W": 200
+   }
+  }
+ ],
+ "perDirection": [
+  {
+   "id": "dir-E-W",
+   "name": "E-W",
+   "perLevel": [
+    {
+     "levelId": "lv-Roof",
+     "name": "Roof",
+     "tag": "R",
+     "fx": 4,
+     "sumA": 380,
+     "q": 0.01052632,
+     "qPsf": 10.5263,
+     "sumManual": 0,
+     "sumToLines": 2.1053,
+     "diaphragms": [
+      {
+       "id": "dir-E-W-lv-Roof-D1",
+       "mark": "D1",
+       "label": "R.D1",
+       "errors": [],
+       "L": 20,
+       "x1": 0,
+       "x2": 20,
+       "l": 20,
+       "parts": [
+        {
+         "id": "dir-E-W-lv-Roof-D1-p1",
+         "label": "part 1",
+         "a": 0,
+         "b": 20,
+         "c": 0,
+         "d": 10,
+         "A": 200,
+         "w": 0.1053,
+         "wPlf": 105.2632
+        }
+       ],
+       "points": [],
+       "rows": [
+        {
+         "kind": "uniform",
+         "partId": "dir-E-W-lv-Roof-D1-p1",
+         "label": "part 1",
+         "region": "span",
+         "u": 0,
+         "v": 20,
+         "w": 0.1053,
+         "W": 2.1053,
+         "xbar": 10,
+         "lever1": 10,
+         "lever2": 10,
+         "R1": 1.0526,
+         "R2": 1.0526
+        }
+       ],
+       "sumW": 2.1053,
+       "sumP": 0,
+       "supports": [
+        {
+         "name": "R1",
+         "x": 0,
+         "kind": "line",
+         "R": 1.0526,
+         "Rdist": 1.0526,
+         "RP": 0,
+         "lineId": "dir-E-W-A",
+         "to": "R.A",
+         "reverses": false
+        },
+        {
+         "name": "R2",
+         "x": 20,
+         "kind": "line",
+         "R": 1.0526,
+         "Rdist": 1.0526,
+         "RP": 0,
+         "lineId": "dir-E-W-B",
+         "to": "R.B",
+         "reverses": false
+        }
+       ]
+      },
+      {
+       "id": "dir-E-W-lv-Roof-D2",
+       "mark": "D2",
+       "label": "R.D2",
+       "errors": [
+        "in a support loop — not solved"
+       ],
+       "parts": [],
+       "points": [],
+       "rows": [],
+       "supports": []
+      },
+      {
+       "id": "dir-E-W-lv-Roof-D3",
+       "mark": "D3",
+       "label": "R.D3",
+       "errors": [
+        "in a support loop — not solved"
+       ],
+       "parts": [],
+       "points": [],
+       "rows": [],
+       "supports": []
+      },
+      {
+       "id": "dir-E-W-lv-Roof-D4",
+       "mark": "D4",
+       "label": "R.D4",
+       "errors": [
+        "R2 has no target (wall line or diaphragm)"
+       ],
+       "L": 8,
+       "x1": 0,
+       "x2": 8,
+       "l": 8,
+       "parts": [
+        {
+         "id": "dir-E-W-lv-Roof-D4-p1",
+         "label": "part 1",
+         "a": 0,
+         "b": 8,
+         "c": 0,
+         "d": 5,
+         "A": 40,
+         "w": 0.0526,
+         "wPlf": 52.6316
+        }
+       ],
+       "points": [],
+       "rows": [],
+       "supports": []
+      },
+      {
+       "id": "dir-E-W-lv-Roof-D5",
+       "mark": "D5",
+       "label": "R.D5",
+       "errors": [
+        "R1 must be left of R2 (x₁ < x₂)"
+       ],
+       "L": 8,
+       "x1": 3,
+       "x2": 3,
+       "l": 0,
+       "parts": [
+        {
+         "id": "dir-E-W-lv-Roof-D5-p1",
+         "label": "part 1",
+         "a": 0,
+         "b": 8,
+         "c": 0,
+         "d": 5,
+         "A": 40,
+         "w": 0.0526,
+         "wPlf": 52.6316
+        }
+       ],
+       "points": [],
+       "rows": [],
+       "supports": []
+      }
+     ],
+     "lines": [
+      {
+       "key": "dir-E-W-A",
+       "name": "A",
+       "label": "R.A",
+       "lineIds": [
+        "dir-E-W-A"
+       ],
+       "F": 1.0526,
+       "sources": [
+        {
+         "from": "R.D1.R1",
+         "R": 1.0526
+        }
+       ],
+       "fromAbove": [],
+       "V": 1.0526,
+       "goesTo": [
+        {
+         "text": "2.A",
+         "pending": true
+        }
+       ],
+       "ends": false,
+       "merged": false
+      },
+      {
+       "key": "dir-E-W-B",
+       "name": "B",
+       "label": "R.B",
+       "lineIds": [
+        "dir-E-W-B"
+       ],
+       "F": 1.0526,
+       "sources": [
+        {
+         "from": "R.D1.R2",
+         "R": 1.0526
+        }
+       ],
+       "fromAbove": [],
+       "V": 1.0526,
+       "goesTo": [
+        {
+         "text": "2.A 60 %"
+        }
+       ],
+       "ends": false,
+       "merged": false
+      }
+     ],
+     "sumF": 2.1053,
+     "sumV": 2.1053,
+     "ended": 0,
+     "lost": 0,
+     "cumF": 2.1053,
+     "cumEnded": 0
+    },
+    {
+     "levelId": "lv-2ndFloor",
+     "name": "2nd Floor",
+     "tag": "2",
+     "fx": 2,
+     "sumA": 200,
+     "q": 0.01,
+     "qPsf": 10,
+     "sumManual": 0,
+     "sumToLines": 2,
+     "diaphragms": [
+      {
+       "id": "dir-E-W-lv-2ndFloor-D1",
+       "mark": "D1",
+       "label": "2.D1",
+       "errors": [],
+       "L": 20,
+       "x1": 0,
+       "x2": 20,
+       "l": 20,
+       "parts": [
+        {
+         "id": "dir-E-W-lv-2ndFloor-D1-p1",
+         "label": "part 1",
+         "a": 0,
+         "b": 20,
+         "c": 0,
+         "d": 10,
+         "A": 200,
+         "w": 0.1,
+         "wPlf": 100
+        }
+       ],
+       "points": [],
+       "rows": [
+        {
+         "kind": "uniform",
+         "partId": "dir-E-W-lv-2ndFloor-D1-p1",
+         "label": "part 1",
+         "region": "span",
+         "u": 0,
+         "v": 20,
+         "w": 0.1,
+         "W": 2,
+         "xbar": 10,
+         "lever1": 10,
+         "lever2": 10,
+         "R1": 1,
+         "R2": 1
+        }
+       ],
+       "sumW": 2,
+       "sumP": 0,
+       "supports": [
+        {
+         "name": "R1",
+         "x": 0,
+         "kind": "line",
+         "R": 1,
+         "Rdist": 1,
+         "RP": 0,
+         "lineId": "dir-E-W-A",
+         "to": "2.A",
+         "reverses": false
+        },
+        {
+         "name": "R2",
+         "x": 20,
+         "kind": "line",
+         "R": 1,
+         "Rdist": 1,
+         "RP": 0,
+         "lineId": "dir-E-W-B",
+         "to": "2.B",
+         "reverses": false
+        }
+       ]
+      }
+     ],
+     "lines": [
+      {
+       "key": "dir-E-W-A",
+       "name": "A",
+       "label": "2.A",
+       "lineIds": [
+        "dir-E-W-A"
+       ],
+       "F": 1,
+       "sources": [
+        {
+         "from": "2.D1.R1",
+         "R": 1
+        }
+       ],
+       "fromAbove": [
+        {
+         "from": "R.A",
+         "pct": 100,
+         "V": 1.0526
+        },
+        {
+         "from": "R.B",
+         "pct": 60,
+         "V": 0.6316
+        }
+       ],
+       "V": 2.6842,
+       "goesTo": [
+        {
+         "text": "foundation"
+        }
+       ],
+       "ends": true,
+       "merged": false
+      },
+      {
+       "key": "dir-E-W-B",
+       "name": "B",
+       "label": "2.B",
+       "lineIds": [
+        "dir-E-W-B"
+       ],
+       "F": 1,
+       "sources": [
+        {
+         "from": "2.D1.R2",
+         "R": 1
+        }
+       ],
+       "fromAbove": [],
+       "V": 1,
+       "goesTo": [
+        {
+         "text": "foundation"
+        }
+       ],
+       "ends": true,
+       "merged": false
+      }
+     ],
+     "sumF": 2,
+     "sumV": 3.6842,
+     "ended": 3.6842,
+     "lost": 0,
+     "cumF": 4.1053,
+     "cumEnded": 3.6842
+    }
+   ],
+   "checks": [
+    {
+     "id": "D1",
+     "label": "Each diaphragm: ΣR = ΣW + ΣP",
+     "status": "pass",
+     "items": []
+    },
+    {
+     "id": "D2",
+     "label": "Each level: Σ reactions to wall lines = F_x + Σ manual P",
+     "status": "fail",
+     "items": [
+      "Roof: Σ reactions to wall lines = 2.1053 k ≠ F_x + Σ manual P = 4 k"
+     ]
+    },
+    {
+     "id": "D3",
+     "label": "Geometry valid and every support assigned",
+     "status": "fail",
+     "items": [
+      "R.D2: in a support loop — not solved",
+      "R.D3: in a support loop — not solved",
+      "R.D4: R2 has no target (wall line or diaphragm)",
+      "R.D5: R1 must be left of R2 (x₁ < x₂)"
+     ]
+    },
+    {
+     "id": "D4",
+     "label": "No support loops; links stay within the level",
+     "status": "fail",
+     "items": [
+      "Roof: diaphragms rest on each other in a loop (R.D2, R.D3)"
+     ]
+    },
+    {
+     "id": "D5",
+     "label": "Split percentages add to 100 %",
+     "status": "fail",
+     "items": [
+      "R.B → split adds to 60 % (must be 100 %)"
+     ]
+    },
+    {
+     "id": "D6",
+     "label": "Every wall line has a place to go at the level below",
+     "status": "pass",
+     "items": []
+    },
+    {
+     "id": "D7",
+     "label": "Each level: ΣV = ΣF at and above − force resisted above",
+     "status": "fail",
+     "items": [
+      "2nd Floor: ΣV = 3.6842 k ≠ ΣF at and above − ended above = 4.1053 k"
+     ]
+    },
+    {
+     "id": "D8",
+     "label": "F_x and diaphragm area present (q > 0)",
+     "status": "pass",
+     "items": []
+    },
+    {
+     "id": "D9",
+     "label": "Merged lines: each line is in at most one merge per level",
+     "status": "pass",
+     "items": []
+    }
+   ]
+  }
+ ],
+ "status": "fail"
+}

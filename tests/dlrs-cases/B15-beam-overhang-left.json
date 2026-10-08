@@ -1,0 +1,126 @@
+{
+  "id": "B15",
+  "title": "Beam check — overhang on the left (mirror of B11)",
+  "intent": "L 25 on supports 5 / 25 (5 ft overhang on the left), w = 200 plf. R1 and R2 are B11 swapped. Hand calc: docs/diaphragm-to-lrs-beam-check.md",
+  "covers": [
+    "Left overhang",
+    "Mirror"
+  ],
+  "handCalc": [
+    {
+      "step": 1,
+      "text": "Method 1: left overhang (e 2.5) 1.1250 / −0.1250 + span 2.0 / 2.0 → R1 = 3.1250, R2 = 1.8750 k."
+    },
+    {
+      "step": 2,
+      "text": "Method 2: W = 5 k at 12.5 → R2 = 5 × 7.5 / 20 = 1.8750; R1 = 5 − 1.875 = 3.1250 k."
+    }
+  ],
+  "expect": [
+    {
+      "label": "R1 (k)",
+      "at": "dia:E-W/R.D1",
+      "field": "R1",
+      "value": 3.125,
+      "step": 1
+    },
+    {
+      "label": "R2 (k)",
+      "at": "dia:E-W/R.D1",
+      "field": "R2",
+      "value": 1.875,
+      "step": 1
+    },
+    {
+      "label": "left overhang piece R2 (k)",
+      "at": "dia:E-W/R.D1",
+      "field": "rows[0].R2",
+      "value": -0.125,
+      "step": 1
+    }
+  ],
+  "beam": {
+    "L": 25,
+    "x1": 5,
+    "x2": 25,
+    "parts": [
+      {
+        "id": "p1",
+        "label": "part 1",
+        "a": 0,
+        "b": 25,
+        "w": 0.2
+      }
+    ],
+    "points": []
+  },
+  "inputs": {
+    "loadType": "seismic",
+    "pdfReport": "detailed",
+    "refs": {},
+    "notes": "",
+    "levels": [
+      {
+        "id": "lv-Roof",
+        "name": "Roof",
+        "tag": "",
+        "fx": "5"
+      }
+    ],
+    "directions": [
+      {
+        "id": "dir-E-W",
+        "name": "E-W",
+        "lines": [
+          {
+            "id": "dir-E-W-A",
+            "name": "A"
+          },
+          {
+            "id": "dir-E-W-B",
+            "name": "B"
+          }
+        ],
+        "groups": [],
+        "down": {},
+        "diaphragms": [
+          {
+            "id": "dir-E-W-lv-Roof-D1",
+            "levelId": "lv-Roof",
+            "mark": "D1",
+            "length": "25",
+            "supports": [
+              {
+                "x": "5",
+                "kind": "line",
+                "lineId": "dir-E-W-A",
+                "diaphragmId": "",
+                "atX": ""
+              },
+              {
+                "x": "25",
+                "kind": "line",
+                "lineId": "dir-E-W-B",
+                "diaphragmId": "",
+                "atX": ""
+              }
+            ],
+            "parts": [
+              {
+                "id": "dir-E-W-lv-Roof-D1-p1",
+                "a": "0",
+                "b": "25",
+                "d": "20"
+              }
+            ],
+            "pointLoads": []
+          }
+        ]
+      }
+    ]
+  },
+  "expectChecks": {
+    "fail": []
+  },
+  "schemaVersion": 1
+}

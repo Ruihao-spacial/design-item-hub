@@ -1,0 +1,224 @@
+{
+  "id": "B19",
+  "title": "Beam check — everything combined",
+  "intent": "Overhangs on both sides, three parts (one over R2), two span point loads and one at the tip. Hand calc: docs/diaphragm-to-lrs-beam-check.md",
+  "covers": [
+    "Overhangs both sides",
+    "Part over a support",
+    "Stacked parts",
+    "Span + tip point loads",
+    "Superposition"
+  ],
+  "handCalc": [
+    {
+      "step": 1,
+      "text": "Method 1 (each load): uniform R1 2.4500 / R2 2.9500; points R1 0.7000 / R2 1.7000 → R1 = 3.1500, R2 = 4.6500 k."
+    },
+    {
+      "step": 2,
+      "text": "Method 2: ΣM about R1 = 33.0 + 18.0 + 8.0 + 6.0 + 7.2 + 20.8 = 93.0 → R2 = 4.6500; R1 = 7.8 − 4.65 = 3.1500 k."
+    }
+  ],
+  "expect": [
+    {
+      "label": "R1 (k)",
+      "at": "dia:E-W/R.D1",
+      "field": "R1",
+      "value": 3.15,
+      "step": 1
+    },
+    {
+      "label": "R2 (k)",
+      "at": "dia:E-W/R.D1",
+      "field": "R2",
+      "value": 4.65,
+      "step": 1
+    },
+    {
+      "label": "R1 from uniform (k)",
+      "at": "dia:E-W/R.D1",
+      "field": "R1dist",
+      "value": 2.45,
+      "step": 1
+    },
+    {
+      "label": "R2 from uniform (k)",
+      "at": "dia:E-W/R.D1",
+      "field": "R2dist",
+      "value": 2.95,
+      "step": 1
+    },
+    {
+      "label": "R1 from point loads (k)",
+      "at": "dia:E-W/R.D1",
+      "field": "R1P",
+      "value": 0.7,
+      "step": 1
+    },
+    {
+      "label": "R2 from point loads (k)",
+      "at": "dia:E-W/R.D1",
+      "field": "R2P",
+      "value": 1.7,
+      "step": 1
+    },
+    {
+      "label": "number of rows",
+      "at": "dia:E-W/R.D1",
+      "field": "rows.length",
+      "value": 9,
+      "step": 1
+    }
+  ],
+  "beam": {
+    "L": 30,
+    "x1": 4,
+    "x2": 24,
+    "parts": [
+      {
+        "id": "p1",
+        "label": "part 1",
+        "a": 0,
+        "b": 30,
+        "w": 0.1
+      },
+      {
+        "id": "p2",
+        "label": "part 2",
+        "a": 8,
+        "b": 10,
+        "w": 0.2
+      },
+      {
+        "id": "p3",
+        "label": "part 3",
+        "a": 20,
+        "b": 8,
+        "w": 0.05
+      }
+    ],
+    "points": [
+      {
+        "id": "m1",
+        "label": "P1",
+        "x": 10,
+        "P": 1,
+        "manual": true
+      },
+      {
+        "id": "m2",
+        "label": "P2",
+        "x": 16,
+        "P": 0.6,
+        "manual": true
+      },
+      {
+        "id": "m3",
+        "label": "P3",
+        "x": 30,
+        "P": 0.8,
+        "manual": true
+      }
+    ]
+  },
+  "inputs": {
+    "loadType": "seismic",
+    "pdfReport": "detailed",
+    "refs": {},
+    "notes": "",
+    "levels": [
+      {
+        "id": "lv-Roof",
+        "name": "Roof",
+        "tag": "",
+        "fx": "5.4"
+      }
+    ],
+    "directions": [
+      {
+        "id": "dir-E-W",
+        "name": "E-W",
+        "lines": [
+          {
+            "id": "dir-E-W-A",
+            "name": "A"
+          },
+          {
+            "id": "dir-E-W-B",
+            "name": "B"
+          }
+        ],
+        "groups": [],
+        "down": {},
+        "diaphragms": [
+          {
+            "id": "dir-E-W-lv-Roof-D1",
+            "levelId": "lv-Roof",
+            "mark": "D1",
+            "length": "30",
+            "supports": [
+              {
+                "x": "4",
+                "kind": "line",
+                "lineId": "dir-E-W-A",
+                "diaphragmId": "",
+                "atX": ""
+              },
+              {
+                "x": "24",
+                "kind": "line",
+                "lineId": "dir-E-W-B",
+                "diaphragmId": "",
+                "atX": ""
+              }
+            ],
+            "parts": [
+              {
+                "id": "dir-E-W-lv-Roof-D1-p1",
+                "a": "0",
+                "b": "30",
+                "d": "10"
+              },
+              {
+                "id": "dir-E-W-lv-Roof-D1-p2",
+                "a": "8",
+                "b": "10",
+                "d": "20"
+              },
+              {
+                "id": "dir-E-W-lv-Roof-D1-p3",
+                "a": "20",
+                "b": "8",
+                "d": "5"
+              }
+            ],
+            "pointLoads": [
+              {
+                "id": "dir-E-W-lv-Roof-D1-m1",
+                "x": "10",
+                "p": "1",
+                "note": "P1"
+              },
+              {
+                "id": "dir-E-W-lv-Roof-D1-m2",
+                "x": "16",
+                "p": "0.6",
+                "note": "P2"
+              },
+              {
+                "id": "dir-E-W-lv-Roof-D1-m3",
+                "x": "30",
+                "p": "0.8",
+                "note": "P3"
+              }
+            ]
+          }
+        ]
+      }
+    ]
+  },
+  "expectChecks": {
+    "fail": []
+  },
+  "schemaVersion": 1
+}

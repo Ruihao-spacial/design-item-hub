@@ -1,0 +1,1373 @@
+{
+ "calcVersion": "v2",
+ "levels": [
+  {
+   "id": "lv-Roof",
+   "name": "Roof",
+   "tag": "R",
+   "fx": 22.6,
+   "sumA": {
+    "dir-E-W": 1856.91
+   }
+  },
+  {
+   "id": "lv-2ndFloor",
+   "name": "2nd Floor",
+   "tag": "2",
+   "fx": 6.43,
+   "sumA": {
+    "dir-E-W": 1353.09
+   }
+  }
+ ],
+ "perDirection": [
+  {
+   "id": "dir-E-W",
+   "name": "E-W",
+   "perLevel": [
+    {
+     "levelId": "lv-Roof",
+     "name": "Roof",
+     "tag": "R",
+     "fx": 22.6,
+     "sumA": 1856.91,
+     "q": 0.01217076,
+     "qPsf": 12.1708,
+     "sumManual": 0,
+     "sumToLines": 22.6,
+     "diaphragms": [
+      {
+       "id": "dir-E-W-lv-Roof-D1",
+       "mark": "D1",
+       "label": "R.D1",
+       "errors": [],
+       "L": 18.25,
+       "x1": 0,
+       "x2": 18.25,
+       "l": 18.25,
+       "parts": [
+        {
+         "id": "dir-E-W-lv-Roof-D1-p1",
+         "label": "part 1",
+         "a": 0,
+         "b": 18.25,
+         "c": 0,
+         "d": 25.67,
+         "A": 468.4775,
+         "w": 0.3124,
+         "wPlf": 312.4233
+        }
+       ],
+       "points": [
+        {
+         "id": "in-dir-E-W-lv-Roof-D2-0",
+         "label": "P1",
+         "x": 2,
+         "P": 1.4171,
+         "source": "R.D2.R1",
+         "manual": false,
+         "note": ""
+        }
+       ],
+       "rows": [
+        {
+         "kind": "uniform",
+         "partId": "dir-E-W-lv-Roof-D1-p1",
+         "label": "part 1",
+         "region": "span",
+         "u": 0,
+         "v": 18.25,
+         "w": 0.3124,
+         "W": 5.7017,
+         "xbar": 9.125,
+         "lever1": 9.125,
+         "lever2": 9.125,
+         "R1": 2.8509,
+         "R2": 2.8509
+        },
+        {
+         "kind": "point",
+         "pointId": "in-dir-E-W-lv-Roof-D2-0",
+         "label": "P",
+         "source": "R.D2.R1",
+         "manual": false,
+         "region": "span",
+         "x": 2,
+         "P": 1.4171,
+         "lever1": 16.25,
+         "lever2": 2,
+         "R1": 1.2618,
+         "R2": 0.1553
+        }
+       ],
+       "sumW": 5.7017,
+       "sumP": 1.4171,
+       "supports": [
+        {
+         "name": "R1",
+         "x": 0,
+         "kind": "line",
+         "R": 4.1126,
+         "Rdist": 2.8509,
+         "RP": 1.2618,
+         "lineId": "dir-E-W-A",
+         "to": "R.A",
+         "reverses": false
+        },
+        {
+         "name": "R2",
+         "x": 18.25,
+         "kind": "line",
+         "R": 3.0062,
+         "Rdist": 2.8509,
+         "RP": 0.1553,
+         "lineId": "dir-E-W-C",
+         "to": "R.C",
+         "reverses": false
+        }
+       ]
+      },
+      {
+       "id": "dir-E-W-lv-Roof-D2",
+       "mark": "D2",
+       "label": "R.D2",
+       "errors": [],
+       "L": 16.25,
+       "x1": 0,
+       "x2": 16.25,
+       "l": 16.25,
+       "parts": [
+        {
+         "id": "dir-E-W-lv-Roof-D2-p1",
+         "label": "part 1",
+         "a": 0,
+         "b": 16.25,
+         "c": 0,
+         "d": 14.33,
+         "A": 232.8625,
+         "w": 0.1744,
+         "wPlf": 174.4069
+        }
+       ],
+       "points": [],
+       "rows": [
+        {
+         "kind": "uniform",
+         "partId": "dir-E-W-lv-Roof-D2-p1",
+         "label": "part 1",
+         "region": "span",
+         "u": 0,
+         "v": 16.25,
+         "w": 0.1744,
+         "W": 2.8341,
+         "xbar": 8.125,
+         "lever1": 8.125,
+         "lever2": 8.125,
+         "R1": 1.4171,
+         "R2": 1.4171
+        }
+       ],
+       "sumW": 2.8341,
+       "sumP": 0,
+       "supports": [
+        {
+         "name": "R1",
+         "x": 0,
+         "kind": "diaphragm",
+         "R": 1.4171,
+         "Rdist": 1.4171,
+         "RP": 0,
+         "diaphragmId": "dir-E-W-lv-Roof-D1",
+         "to": "R.D1",
+         "atX": 2,
+         "reverses": false
+        },
+        {
+         "name": "R2",
+         "x": 16.25,
+         "kind": "line",
+         "R": 1.4171,
+         "Rdist": 1.4171,
+         "RP": 0,
+         "lineId": "dir-E-W-C",
+         "to": "R.C",
+         "reverses": false
+        }
+       ]
+      },
+      {
+       "id": "dir-E-W-lv-Roof-D3",
+       "mark": "D3",
+       "label": "R.D3",
+       "errors": [],
+       "L": 3.5,
+       "x1": 0,
+       "x2": 3.5,
+       "l": 3.5,
+       "parts": [
+        {
+         "id": "dir-E-W-lv-Roof-D3-p1",
+         "label": "part 1",
+         "a": 0,
+         "b": 3.5,
+         "c": 0,
+         "d": 40,
+         "A": 140,
+         "w": 0.4868,
+         "wPlf": 486.8303
+        }
+       ],
+       "points": [],
+       "rows": [
+        {
+         "kind": "uniform",
+         "partId": "dir-E-W-lv-Roof-D3-p1",
+         "label": "part 1",
+         "region": "span",
+         "u": 0,
+         "v": 3.5,
+         "w": 0.4868,
+         "W": 1.7039,
+         "xbar": 1.75,
+         "lever1": 1.75,
+         "lever2": 1.75,
+         "R1": 0.852,
+         "R2": 0.852
+        }
+       ],
+       "sumW": 1.7039,
+       "sumP": 0,
+       "supports": [
+        {
+         "name": "R1",
+         "x": 0,
+         "kind": "line",
+         "R": 0.852,
+         "Rdist": 0.852,
+         "RP": 0,
+         "lineId": "dir-E-W-C",
+         "to": "R.C",
+         "reverses": false
+        },
+        {
+         "name": "R2",
+         "x": 3.5,
+         "kind": "line",
+         "R": 0.852,
+         "Rdist": 0.852,
+         "RP": 0,
+         "lineId": "dir-E-W-D",
+         "to": "R.D",
+         "reverses": false
+        }
+       ]
+      },
+      {
+       "id": "dir-E-W-lv-Roof-D4",
+       "mark": "D4",
+       "label": "R.D4",
+       "errors": [],
+       "L": 14.75,
+       "x1": 0,
+       "x2": 14.75,
+       "l": 14.75,
+       "parts": [
+        {
+         "id": "dir-E-W-lv-Roof-D4-p1",
+         "label": "part 1",
+         "a": 0,
+         "b": 14.75,
+         "c": 0,
+         "d": 34,
+         "A": 501.5,
+         "w": 0.4138,
+         "wPlf": 413.8057
+        }
+       ],
+       "points": [
+        {
+         "id": "in-dir-E-W-lv-Roof-D5-1",
+         "label": "P1",
+         "x": 7.25,
+         "P": 0.2647,
+         "source": "R.D5.R2",
+         "manual": false,
+         "note": ""
+        }
+       ],
+       "rows": [
+        {
+         "kind": "uniform",
+         "partId": "dir-E-W-lv-Roof-D4-p1",
+         "label": "part 1",
+         "region": "span",
+         "u": 0,
+         "v": 14.75,
+         "w": 0.4138,
+         "W": 6.1036,
+         "xbar": 7.375,
+         "lever1": 7.375,
+         "lever2": 7.375,
+         "R1": 3.0518,
+         "R2": 3.0518
+        },
+        {
+         "kind": "point",
+         "pointId": "in-dir-E-W-lv-Roof-D5-1",
+         "label": "P",
+         "source": "R.D5.R2",
+         "manual": false,
+         "region": "span",
+         "x": 7.25,
+         "P": 0.2647,
+         "lever1": 7.5,
+         "lever2": 7.25,
+         "R1": 0.1346,
+         "R2": 0.1301
+        }
+       ],
+       "sumW": 6.1036,
+       "sumP": 0.2647,
+       "supports": [
+        {
+         "name": "R1",
+         "x": 0,
+         "kind": "line",
+         "R": 3.1864,
+         "Rdist": 3.0518,
+         "RP": 0.1346,
+         "lineId": "dir-E-W-D",
+         "to": "R.D",
+         "reverses": false
+        },
+        {
+         "name": "R2",
+         "x": 14.75,
+         "kind": "line",
+         "R": 3.1819,
+         "Rdist": 3.0518,
+         "RP": 0.1301,
+         "lineId": "dir-E-W-F",
+         "to": "R.F",
+         "reverses": false
+        }
+       ]
+      },
+      {
+       "id": "dir-E-W-lv-Roof-D5",
+       "mark": "D5",
+       "label": "R.D5",
+       "errors": [],
+       "L": 7.25,
+       "x1": 0,
+       "x2": 7.25,
+       "l": 7.25,
+       "parts": [
+        {
+         "id": "dir-E-W-lv-Roof-D5-p1",
+         "label": "part 1",
+         "a": 0,
+         "b": 7.25,
+         "c": 0,
+         "d": 6,
+         "A": 43.5,
+         "w": 0.073,
+         "wPlf": 73.0245
+        }
+       ],
+       "points": [],
+       "rows": [
+        {
+         "kind": "uniform",
+         "partId": "dir-E-W-lv-Roof-D5-p1",
+         "label": "part 1",
+         "region": "span",
+         "u": 0,
+         "v": 7.25,
+         "w": 0.073,
+         "W": 0.5294,
+         "xbar": 3.625,
+         "lever1": 3.625,
+         "lever2": 3.625,
+         "R1": 0.2647,
+         "R2": 0.2647
+        }
+       ],
+       "sumW": 0.5294,
+       "sumP": 0,
+       "supports": [
+        {
+         "name": "R1",
+         "x": 0,
+         "kind": "line",
+         "R": 0.2647,
+         "Rdist": 0.2647,
+         "RP": 0,
+         "lineId": "dir-E-W-D",
+         "to": "R.D",
+         "reverses": false
+        },
+        {
+         "name": "R2",
+         "x": 7.25,
+         "kind": "diaphragm",
+         "R": 0.2647,
+         "Rdist": 0.2647,
+         "RP": 0,
+         "diaphragmId": "dir-E-W-lv-Roof-D4",
+         "to": "R.D4",
+         "atX": 7.25,
+         "reverses": false
+        }
+       ]
+      },
+      {
+       "id": "dir-E-W-lv-Roof-D6",
+       "mark": "D6",
+       "label": "R.D6",
+       "errors": [],
+       "L": 19.17,
+       "x1": 0,
+       "x2": 19.17,
+       "l": 19.17,
+       "parts": [
+        {
+         "id": "dir-E-W-lv-Roof-D6-p1",
+         "label": "part 1",
+         "a": 0,
+         "b": 19.17,
+         "c": 0,
+         "d": 21,
+         "A": 402.57,
+         "w": 0.2556,
+         "wPlf": 255.5859
+        }
+       ],
+       "points": [
+        {
+         "id": "in-dir-E-W-lv-Roof-D7-1",
+         "label": "P1",
+         "x": 8.5,
+         "P": 0.4138,
+         "source": "R.D7.R2",
+         "manual": false,
+         "note": ""
+        }
+       ],
+       "rows": [
+        {
+         "kind": "uniform",
+         "partId": "dir-E-W-lv-Roof-D6-p1",
+         "label": "part 1",
+         "region": "span",
+         "u": 0,
+         "v": 19.17,
+         "w": 0.2556,
+         "W": 4.8996,
+         "xbar": 9.585,
+         "lever1": 9.585,
+         "lever2": 9.585,
+         "R1": 2.4498,
+         "R2": 2.4498
+        },
+        {
+         "kind": "point",
+         "pointId": "in-dir-E-W-lv-Roof-D7-1",
+         "label": "P",
+         "source": "R.D7.R2",
+         "manual": false,
+         "region": "span",
+         "x": 8.5,
+         "P": 0.4138,
+         "lever1": 10.67,
+         "lever2": 8.5,
+         "R1": 0.2303,
+         "R2": 0.1835
+        }
+       ],
+       "sumW": 4.8996,
+       "sumP": 0.4138,
+       "supports": [
+        {
+         "name": "R1",
+         "x": 0,
+         "kind": "line",
+         "R": 2.6801,
+         "Rdist": 2.4498,
+         "RP": 0.2303,
+         "lineId": "dir-E-W-F",
+         "to": "R.F",
+         "reverses": false
+        },
+        {
+         "name": "R2",
+         "x": 19.17,
+         "kind": "line",
+         "R": 2.6333,
+         "Rdist": 2.4498,
+         "RP": 0.1835,
+         "lineId": "dir-E-W-H",
+         "to": "R.H",
+         "reverses": false
+        }
+       ]
+      },
+      {
+       "id": "dir-E-W-lv-Roof-D7",
+       "mark": "D7",
+       "label": "R.D7",
+       "errors": [],
+       "L": 8.5,
+       "x1": 0,
+       "x2": 8.5,
+       "l": 8.5,
+       "parts": [
+        {
+         "id": "dir-E-W-lv-Roof-D7-p1",
+         "label": "part 1",
+         "a": 0,
+         "b": 8.5,
+         "c": 0,
+         "d": 8,
+         "A": 68,
+         "w": 0.0974,
+         "wPlf": 97.3661
+        }
+       ],
+       "points": [],
+       "rows": [
+        {
+         "kind": "uniform",
+         "partId": "dir-E-W-lv-Roof-D7-p1",
+         "label": "part 1",
+         "region": "span",
+         "u": 0,
+         "v": 8.5,
+         "w": 0.0974,
+         "W": 0.8276,
+         "xbar": 4.25,
+         "lever1": 4.25,
+         "lever2": 4.25,
+         "R1": 0.4138,
+         "R2": 0.4138
+        }
+       ],
+       "sumW": 0.8276,
+       "sumP": 0,
+       "supports": [
+        {
+         "name": "R1",
+         "x": 0,
+         "kind": "line",
+         "R": 0.4138,
+         "Rdist": 0.4138,
+         "RP": 0,
+         "lineId": "dir-E-W-F",
+         "to": "R.F",
+         "reverses": false
+        },
+        {
+         "name": "R2",
+         "x": 8.5,
+         "kind": "diaphragm",
+         "R": 0.4138,
+         "Rdist": 0.4138,
+         "RP": 0,
+         "diaphragmId": "dir-E-W-lv-Roof-D6",
+         "to": "R.D6",
+         "atX": 8.5,
+         "reverses": false
+        }
+       ]
+      }
+     ],
+     "lines": [
+      {
+       "key": "dir-E-W-A",
+       "name": "A",
+       "label": "R.A",
+       "lineIds": [
+        "dir-E-W-A"
+       ],
+       "F": 4.1126,
+       "sources": [
+        {
+         "from": "R.D1.R1",
+         "R": 4.1126
+        }
+       ],
+       "fromAbove": [],
+       "V": 4.1126,
+       "goesTo": [
+        {
+         "text": "2.A",
+         "pending": true
+        }
+       ],
+       "ends": false,
+       "merged": false
+      },
+      {
+       "key": "g:g-CD",
+       "name": "C+D",
+       "label": "R.C+R.D",
+       "lineIds": [
+        "dir-E-W-C",
+        "dir-E-W-D"
+       ],
+       "F": 9.5783,
+       "sources": [
+        {
+         "from": "R.D2.R2",
+         "R": 1.4171
+        },
+        {
+         "from": "R.D3.R1",
+         "R": 0.852
+        },
+        {
+         "from": "R.D1.R2",
+         "R": 3.0062
+        },
+        {
+         "from": "R.D3.R2",
+         "R": 0.852
+        },
+        {
+         "from": "R.D5.R1",
+         "R": 0.2647
+        },
+        {
+         "from": "R.D4.R1",
+         "R": 3.1864
+        }
+       ],
+       "fromAbove": [],
+       "V": 9.5783,
+       "goesTo": [
+        {
+         "text": "2.C+2.D",
+         "pending": true
+        }
+       ],
+       "ends": false,
+       "merged": true
+      },
+      {
+       "key": "dir-E-W-F",
+       "name": "F",
+       "label": "R.F",
+       "lineIds": [
+        "dir-E-W-F"
+       ],
+       "F": 6.2759,
+       "sources": [
+        {
+         "from": "R.D7.R1",
+         "R": 0.4138
+        },
+        {
+         "from": "R.D4.R2",
+         "R": 3.1819
+        },
+        {
+         "from": "R.D6.R1",
+         "R": 2.6801
+        }
+       ],
+       "fromAbove": [],
+       "V": 6.2759,
+       "goesTo": [
+        {
+         "text": "2.F",
+         "pending": true
+        }
+       ],
+       "ends": false,
+       "merged": false
+      },
+      {
+       "key": "dir-E-W-H",
+       "name": "H",
+       "label": "R.H",
+       "lineIds": [
+        "dir-E-W-H"
+       ],
+       "F": 2.6333,
+       "sources": [
+        {
+         "from": "R.D6.R2",
+         "R": 2.6333
+        }
+       ],
+       "fromAbove": [],
+       "V": 2.6333,
+       "goesTo": [
+        {
+         "text": "resisted at Roof"
+        }
+       ],
+       "ends": true,
+       "merged": false
+      }
+     ],
+     "sumF": 22.6,
+     "sumV": 22.6,
+     "ended": 2.6333,
+     "lost": 0,
+     "cumF": 22.6,
+     "cumEnded": 2.6333
+    },
+    {
+     "levelId": "lv-2ndFloor",
+     "name": "2nd Floor",
+     "tag": "2",
+     "fx": 6.43,
+     "sumA": 1353.09,
+     "q": 0.00475209,
+     "qPsf": 4.7521,
+     "sumManual": 0,
+     "sumToLines": 6.43,
+     "diaphragms": [
+      {
+       "id": "dir-E-W-lv-2ndFloor-D1",
+       "mark": "D1",
+       "label": "2.D1",
+       "errors": [],
+       "L": 18.25,
+       "x1": 0,
+       "x2": 18.25,
+       "l": 18.25,
+       "parts": [
+        {
+         "id": "dir-E-W-lv-2ndFloor-D1-p1",
+         "label": "part 1",
+         "a": 0,
+         "b": 18.25,
+         "c": 0,
+         "d": 25.67,
+         "A": 468.4775,
+         "w": 0.122,
+         "wPlf": 121.986
+        }
+       ],
+       "points": [
+        {
+         "id": "in-dir-E-W-lv-2ndFloor-D2-0",
+         "label": "P1",
+         "x": 2,
+         "P": 0.5533,
+         "source": "2.D2.R1",
+         "manual": false,
+         "note": ""
+        }
+       ],
+       "rows": [
+        {
+         "kind": "uniform",
+         "partId": "dir-E-W-lv-2ndFloor-D1-p1",
+         "label": "part 1",
+         "region": "span",
+         "u": 0,
+         "v": 18.25,
+         "w": 0.122,
+         "W": 2.2262,
+         "xbar": 9.125,
+         "lever1": 9.125,
+         "lever2": 9.125,
+         "R1": 1.1131,
+         "R2": 1.1131
+        },
+        {
+         "kind": "point",
+         "pointId": "in-dir-E-W-lv-2ndFloor-D2-0",
+         "label": "P",
+         "source": "2.D2.R1",
+         "manual": false,
+         "region": "span",
+         "x": 2,
+         "P": 0.5533,
+         "lever1": 16.25,
+         "lever2": 2,
+         "R1": 0.4927,
+         "R2": 0.0606
+        }
+       ],
+       "sumW": 2.2262,
+       "sumP": 0.5533,
+       "supports": [
+        {
+         "name": "R1",
+         "x": 0,
+         "kind": "line",
+         "R": 1.6058,
+         "Rdist": 1.1131,
+         "RP": 0.4927,
+         "lineId": "dir-E-W-A",
+         "to": "2.A",
+         "reverses": false
+        },
+        {
+         "name": "R2",
+         "x": 18.25,
+         "kind": "line",
+         "R": 1.1738,
+         "Rdist": 1.1131,
+         "RP": 0.0606,
+         "lineId": "dir-E-W-C",
+         "to": "2.C",
+         "reverses": false
+        }
+       ]
+      },
+      {
+       "id": "dir-E-W-lv-2ndFloor-D2",
+       "mark": "D2",
+       "label": "2.D2",
+       "errors": [],
+       "L": 16.25,
+       "x1": 0,
+       "x2": 16.25,
+       "l": 16.25,
+       "parts": [
+        {
+         "id": "dir-E-W-lv-2ndFloor-D2-p1",
+         "label": "part 1",
+         "a": 0,
+         "b": 16.25,
+         "c": 0,
+         "d": 14.33,
+         "A": 232.8625,
+         "w": 0.0681,
+         "wPlf": 68.0974
+        }
+       ],
+       "points": [],
+       "rows": [
+        {
+         "kind": "uniform",
+         "partId": "dir-E-W-lv-2ndFloor-D2-p1",
+         "label": "part 1",
+         "region": "span",
+         "u": 0,
+         "v": 16.25,
+         "w": 0.0681,
+         "W": 1.1066,
+         "xbar": 8.125,
+         "lever1": 8.125,
+         "lever2": 8.125,
+         "R1": 0.5533,
+         "R2": 0.5533
+        }
+       ],
+       "sumW": 1.1066,
+       "sumP": 0,
+       "supports": [
+        {
+         "name": "R1",
+         "x": 0,
+         "kind": "diaphragm",
+         "R": 0.5533,
+         "Rdist": 0.5533,
+         "RP": 0,
+         "diaphragmId": "dir-E-W-lv-2ndFloor-D1",
+         "to": "2.D1",
+         "atX": 2,
+         "reverses": false
+        },
+        {
+         "name": "R2",
+         "x": 16.25,
+         "kind": "line",
+         "R": 0.5533,
+         "Rdist": 0.5533,
+         "RP": 0,
+         "lineId": "dir-E-W-C",
+         "to": "2.C",
+         "reverses": false
+        }
+       ]
+      },
+      {
+       "id": "dir-E-W-lv-2ndFloor-D3.1",
+       "mark": "D3.1",
+       "label": "2.D3.1",
+       "errors": [],
+       "L": 3.5,
+       "x1": 0,
+       "x2": 3.5,
+       "l": 3.5,
+       "parts": [
+        {
+         "id": "dir-E-W-lv-2ndFloor-D3.1-p1",
+         "label": "part 1",
+         "a": 0,
+         "b": 3.5,
+         "c": 0,
+         "d": 21,
+         "A": 73.5,
+         "w": 0.0998,
+         "wPlf": 99.7938
+        }
+       ],
+       "points": [],
+       "rows": [
+        {
+         "kind": "uniform",
+         "partId": "dir-E-W-lv-2ndFloor-D3.1-p1",
+         "label": "part 1",
+         "region": "span",
+         "u": 0,
+         "v": 3.5,
+         "w": 0.0998,
+         "W": 0.3493,
+         "xbar": 1.75,
+         "lever1": 1.75,
+         "lever2": 1.75,
+         "R1": 0.1746,
+         "R2": 0.1746
+        }
+       ],
+       "sumW": 0.3493,
+       "sumP": 0,
+       "supports": [
+        {
+         "name": "R1",
+         "x": 0,
+         "kind": "line",
+         "R": 0.1746,
+         "Rdist": 0.1746,
+         "RP": 0,
+         "lineId": "dir-E-W-C",
+         "to": "2.C",
+         "reverses": false
+        },
+        {
+         "name": "R2",
+         "x": 3.5,
+         "kind": "line",
+         "R": 0.1746,
+         "Rdist": 0.1746,
+         "RP": 0,
+         "lineId": "dir-E-W-D",
+         "to": "2.D",
+         "reverses": false
+        }
+       ]
+      },
+      {
+       "id": "dir-E-W-lv-2ndFloor-D3.2",
+       "mark": "D3.2",
+       "label": "2.D3.2",
+       "errors": [],
+       "L": 3.5,
+       "x1": 0,
+       "x2": 3.5,
+       "l": 3.5,
+       "parts": [
+        {
+         "id": "dir-E-W-lv-2ndFloor-D3.2-p1",
+         "label": "part 1",
+         "a": 0,
+         "b": 3.5,
+         "c": 0,
+         "d": 9.5,
+         "A": 33.25,
+         "w": 0.0451,
+         "wPlf": 45.1448
+        }
+       ],
+       "points": [],
+       "rows": [
+        {
+         "kind": "uniform",
+         "partId": "dir-E-W-lv-2ndFloor-D3.2-p1",
+         "label": "part 1",
+         "region": "span",
+         "u": 0,
+         "v": 3.5,
+         "w": 0.0451,
+         "W": 0.158,
+         "xbar": 1.75,
+         "lever1": 1.75,
+         "lever2": 1.75,
+         "R1": 0.079,
+         "R2": 0.079
+        }
+       ],
+       "sumW": 0.158,
+       "sumP": 0,
+       "supports": [
+        {
+         "name": "R1",
+         "x": 0,
+         "kind": "line",
+         "R": 0.079,
+         "Rdist": 0.079,
+         "RP": 0,
+         "lineId": "dir-E-W-C",
+         "to": "2.C",
+         "reverses": false
+        },
+        {
+         "name": "R2",
+         "x": 3.5,
+         "kind": "line",
+         "R": 0.079,
+         "Rdist": 0.079,
+         "RP": 0,
+         "lineId": "dir-E-W-D",
+         "to": "2.D",
+         "reverses": false
+        }
+       ]
+      },
+      {
+       "id": "dir-E-W-lv-2ndFloor-D4",
+       "mark": "D4",
+       "label": "2.D4",
+       "errors": [],
+       "L": 14.75,
+       "x1": 0,
+       "x2": 14.75,
+       "l": 14.75,
+       "parts": [
+        {
+         "id": "dir-E-W-lv-2ndFloor-D4-p1",
+         "label": "part 1",
+         "a": 0,
+         "b": 14.75,
+         "c": 0,
+         "d": 34,
+         "A": 501.5,
+         "w": 0.1616,
+         "wPlf": 161.5709
+        }
+       ],
+       "points": [
+        {
+         "id": "in-dir-E-W-lv-2ndFloor-D5-1",
+         "label": "P1",
+         "x": 7.25,
+         "P": 0.1034,
+         "source": "2.D5.R2",
+         "manual": false,
+         "note": ""
+        }
+       ],
+       "rows": [
+        {
+         "kind": "uniform",
+         "partId": "dir-E-W-lv-2ndFloor-D4-p1",
+         "label": "part 1",
+         "region": "span",
+         "u": 0,
+         "v": 14.75,
+         "w": 0.1616,
+         "W": 2.3832,
+         "xbar": 7.375,
+         "lever1": 7.375,
+         "lever2": 7.375,
+         "R1": 1.1916,
+         "R2": 1.1916
+        },
+        {
+         "kind": "point",
+         "pointId": "in-dir-E-W-lv-2ndFloor-D5-1",
+         "label": "P",
+         "source": "2.D5.R2",
+         "manual": false,
+         "region": "span",
+         "x": 7.25,
+         "P": 0.1034,
+         "lever1": 7.5,
+         "lever2": 7.25,
+         "R1": 0.0526,
+         "R2": 0.0508
+        }
+       ],
+       "sumW": 2.3832,
+       "sumP": 0.1034,
+       "supports": [
+        {
+         "name": "R1",
+         "x": 0,
+         "kind": "line",
+         "R": 1.2441,
+         "Rdist": 1.1916,
+         "RP": 0.0526,
+         "lineId": "dir-E-W-D",
+         "to": "2.D",
+         "reverses": false
+        },
+        {
+         "name": "R2",
+         "x": 14.75,
+         "kind": "line",
+         "R": 1.2424,
+         "Rdist": 1.1916,
+         "RP": 0.0508,
+         "lineId": "dir-E-W-F",
+         "to": "2.F",
+         "reverses": false
+        }
+       ]
+      },
+      {
+       "id": "dir-E-W-lv-2ndFloor-D5",
+       "mark": "D5",
+       "label": "2.D5",
+       "errors": [],
+       "L": 7.25,
+       "x1": 0,
+       "x2": 7.25,
+       "l": 7.25,
+       "parts": [
+        {
+         "id": "dir-E-W-lv-2ndFloor-D5-p1",
+         "label": "part 1",
+         "a": 0,
+         "b": 7.25,
+         "c": 0,
+         "d": 6,
+         "A": 43.5,
+         "w": 0.0285,
+         "wPlf": 28.5125
+        }
+       ],
+       "points": [],
+       "rows": [
+        {
+         "kind": "uniform",
+         "partId": "dir-E-W-lv-2ndFloor-D5-p1",
+         "label": "part 1",
+         "region": "span",
+         "u": 0,
+         "v": 7.25,
+         "w": 0.0285,
+         "W": 0.2067,
+         "xbar": 3.625,
+         "lever1": 3.625,
+         "lever2": 3.625,
+         "R1": 0.1034,
+         "R2": 0.1034
+        }
+       ],
+       "sumW": 0.2067,
+       "sumP": 0,
+       "supports": [
+        {
+         "name": "R1",
+         "x": 0,
+         "kind": "line",
+         "R": 0.1034,
+         "Rdist": 0.1034,
+         "RP": 0,
+         "lineId": "dir-E-W-D",
+         "to": "2.D",
+         "reverses": false
+        },
+        {
+         "name": "R2",
+         "x": 7.25,
+         "kind": "diaphragm",
+         "R": 0.1034,
+         "Rdist": 0.1034,
+         "RP": 0,
+         "diaphragmId": "dir-E-W-lv-2ndFloor-D4",
+         "to": "2.D4",
+         "atX": 7.25,
+         "reverses": false
+        }
+       ]
+      }
+     ],
+     "lines": [
+      {
+       "key": "dir-E-W-A",
+       "name": "A",
+       "label": "2.A",
+       "lineIds": [
+        "dir-E-W-A"
+       ],
+       "F": 1.6058,
+       "sources": [
+        {
+         "from": "2.D1.R1",
+         "R": 1.6058
+        }
+       ],
+       "fromAbove": [
+        {
+         "from": "R.A",
+         "pct": 100,
+         "V": 4.1126
+        }
+       ],
+       "V": 5.7184,
+       "goesTo": [
+        {
+         "text": "foundation"
+        }
+       ],
+       "ends": true,
+       "merged": false
+      },
+      {
+       "key": "g:g-CD",
+       "name": "C+D",
+       "label": "2.C+2.D",
+       "lineIds": [
+        "dir-E-W-C",
+        "dir-E-W-D"
+       ],
+       "F": 3.5818,
+       "sources": [
+        {
+         "from": "2.D2.R2",
+         "R": 0.5533
+        },
+        {
+         "from": "2.D3.1.R1",
+         "R": 0.1746
+        },
+        {
+         "from": "2.D3.2.R1",
+         "R": 0.079
+        },
+        {
+         "from": "2.D1.R2",
+         "R": 1.1738
+        },
+        {
+         "from": "2.D3.1.R2",
+         "R": 0.1746
+        },
+        {
+         "from": "2.D3.2.R2",
+         "R": 0.079
+        },
+        {
+         "from": "2.D5.R1",
+         "R": 0.1034
+        },
+        {
+         "from": "2.D4.R1",
+         "R": 1.2441
+        }
+       ],
+       "fromAbove": [
+        {
+         "from": "R.C+R.D",
+         "pct": 100,
+         "V": 9.5783
+        }
+       ],
+       "V": 13.1601,
+       "goesTo": [
+        {
+         "text": "foundation"
+        }
+       ],
+       "ends": true,
+       "merged": true
+      },
+      {
+       "key": "dir-E-W-F",
+       "name": "F",
+       "label": "2.F",
+       "lineIds": [
+        "dir-E-W-F"
+       ],
+       "F": 1.2424,
+       "sources": [
+        {
+         "from": "2.D4.R2",
+         "R": 1.2424
+        }
+       ],
+       "fromAbove": [
+        {
+         "from": "R.F",
+         "pct": 100,
+         "V": 6.2759
+        }
+       ],
+       "V": 7.5182,
+       "goesTo": [
+        {
+         "text": "foundation"
+        }
+       ],
+       "ends": true,
+       "merged": false
+      }
+     ],
+     "sumF": 6.43,
+     "sumV": 26.3967,
+     "ended": 26.3967,
+     "lost": 0,
+     "cumF": 29.03,
+     "cumEnded": 29.03
+    }
+   ],
+   "checks": [
+    {
+     "id": "D1",
+     "label": "Each diaphragm: ΣR = ΣW + ΣP",
+     "status": "pass",
+     "items": []
+    },
+    {
+     "id": "D2",
+     "label": "Each level: Σ reactions to wall lines = F_x + Σ manual P",
+     "status": "pass",
+     "items": []
+    },
+    {
+     "id": "D3",
+     "label": "Geometry valid and every support assigned",
+     "status": "pass",
+     "items": []
+    },
+    {
+     "id": "D4",
+     "label": "No support loops; links stay within the level",
+     "status": "pass",
+     "items": []
+    },
+    {
+     "id": "D5",
+     "label": "Split percentages add to 100 %",
+     "status": "pass",
+     "items": []
+    },
+    {
+     "id": "D6",
+     "label": "Every wall line has a place to go at the level below",
+     "status": "pass",
+     "items": []
+    },
+    {
+     "id": "D7",
+     "label": "Each level: ΣV = ΣF at and above − force resisted above",
+     "status": "pass",
+     "items": []
+    },
+    {
+     "id": "D8",
+     "label": "F_x and diaphragm area present (q > 0)",
+     "status": "pass",
+     "items": []
+    },
+    {
+     "id": "D9",
+     "label": "Merged lines: each line is in at most one merge per level",
+     "status": "pass",
+     "items": []
+    }
+   ]
+  }
+ ],
+ "status": "pass"
+}

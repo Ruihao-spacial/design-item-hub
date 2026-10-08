@@ -45,7 +45,13 @@ function chain() {
   elfIn.levels = massOut.perLevel.map(m => ({ name: m.label, wx: String(m.seismicWeight), hx: String(m.hx), wpx: '' }));
   for (const k of ['sds', 'cs', 'ie', 'omega0', 'k']) elfIn[k] = String(bsOut[k]);
   const elf = itemOf('elf-1', 'elf_diaphragm_collector', elfIn);
-  return { flat, mass, bs, elf, items: [flat, mass, bs, elf], tab, psf };
+
+  const dlIn = defaultsOf('diaphragm_to_lrs');
+  dlIn.refs = { elfSource: 'elf-1' };
+  const elfOut = getModule('elf_diaphragm_collector').calc(elfIn);
+  dlIn.levels = elfOut.elfTable.map((r, i) => ({ id: 'dl-lv' + i, name: r.level, tag: '', fx: String(r.fx) }));
+  const dl = itemOf('dl-1', 'diaphragm_to_lrs', dlIn);
+  return { flat, mass, bs, elf, dl, items: [flat, mass, bs, elf, dl], tab, psf };
 }
 
 test('Every module regenerates results from its definition; results + PDF render', () => {
@@ -116,6 +122,18 @@ test('Mass Takeoff level list change is reported as one change and rebuilt on Up
   elf.inputs = applyLinkUpdates(elfMod, elf.inputs, items, elf.id);
   assert.equal(elf.inputs.levels.length, mass.inputs.levels.length);
   assert.deepEqual(linkChanges(elfMod, elf, items), []);
+});
+
+test('ELF F_x change → Diaphragm to LRS notice → Update clears it, level ids kept', () => {
+  const { dl, items } = chain();
+  const mod = getModule('diaphragm_to_lrs');
+  const id0 = dl.inputs.levels[0].id;
+  dl.inputs.levels[0].fx = String(parseFloat(dl.inputs.levels[0].fx) + 1);
+  const ch = linkChanges(mod, dl, items);
+  assert.ok(ch.length === 1 && / Fx$/.test(ch[0].label), JSON.stringify(ch));
+  dl.inputs = applyLinkUpdates(mod, dl.inputs, items, dl.id);
+  assert.deepEqual(linkChanges(mod, dl, items), []);
+  assert.equal(dl.inputs.levels[0].id, id0, 'level id kept (diaphragms stay on their level)');
 });
 
 test('Cycles and missing upstream items are ignored', () => {

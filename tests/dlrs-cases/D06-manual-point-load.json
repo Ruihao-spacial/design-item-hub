@@ -1,0 +1,125 @@
+{
+  "id": "D06",
+  "title": "Manual point load (extra load)",
+  "intent": "A manual point load is added on top of F_x. The level check becomes Σ line reactions = F_x + ΣP, and the summary shows ΣF = F_x + manual P.",
+  "covers": [
+    "Manual P (Case 8)",
+    "D2 with manual P"
+  ],
+  "handCalc": [
+    {
+      "step": 1,
+      "text": "ΣA = 16 × 25 = 400 sf → q = 0.01 k/sf, w = 250 plf: Case 1 → 2.0 / 2.0 k."
+    },
+    {
+      "step": 2,
+      "text": "P = 1.2 k at a = 4, b = 12 (Case 8): 0.9 / 0.3 k → R1 = 2.9000, R2 = 2.3000 k; Σ = 5.2 = F_x 4.0 + P 1.2."
+    }
+  ],
+  "expect": [
+    {
+      "label": "R.D1 R1 (k)",
+      "at": "dia:E-W/R.D1",
+      "field": "R1",
+      "value": 2.9,
+      "step": 2
+    },
+    {
+      "label": "R.D1 R2 (k)",
+      "at": "dia:E-W/R.D1",
+      "field": "R2",
+      "value": 2.3,
+      "step": 2
+    },
+    {
+      "label": "Σ manual P at the level (k)",
+      "at": "level:E-W/Roof",
+      "field": "sumManual",
+      "value": 1.2,
+      "step": 2
+    },
+    {
+      "label": "ΣF at the level (k)",
+      "at": "level:E-W/Roof",
+      "field": "sumF",
+      "value": 5.2,
+      "step": 2
+    }
+  ],
+  "expectChecks": {
+    "fail": []
+  },
+  "inputs": {
+    "loadType": "seismic",
+    "pdfReport": "detailed",
+    "refs": {},
+    "notes": "",
+    "levels": [
+      {
+        "id": "lv-Roof",
+        "name": "Roof",
+        "tag": "",
+        "fx": "4"
+      }
+    ],
+    "directions": [
+      {
+        "id": "dir-E-W",
+        "name": "E-W",
+        "lines": [
+          {
+            "id": "dir-E-W-A",
+            "name": "A"
+          },
+          {
+            "id": "dir-E-W-B",
+            "name": "B"
+          }
+        ],
+        "groups": [],
+        "down": {},
+        "diaphragms": [
+          {
+            "id": "dir-E-W-lv-Roof-D1",
+            "levelId": "lv-Roof",
+            "mark": "D1",
+            "length": "16",
+            "supports": [
+              {
+                "x": "",
+                "kind": "line",
+                "lineId": "dir-E-W-A",
+                "diaphragmId": "",
+                "atX": ""
+              },
+              {
+                "x": "",
+                "kind": "line",
+                "lineId": "dir-E-W-B",
+                "diaphragmId": "",
+                "atX": ""
+              }
+            ],
+            "parts": [
+              {
+                "id": "dir-E-W-lv-Roof-D1-p1",
+                "a": "0",
+                "b": "16",
+                "d": "25"
+              }
+            ],
+            "pointLoads": [
+              {
+                "id": "dir-E-W-lv-Roof-D1-m1",
+                "x": "4",
+                "p": "1.2",
+                "note": "rooftop unit, not in F_x"
+              }
+            ]
+          }
+        ]
+      }
+    ]
+  },
+  "schemaVersion": 1
+}
