@@ -5,7 +5,8 @@ const h = 9, F2 = 0.8, F1 = 1.0, dfl = 12;
 // Simpson C-L-SW26: Table 03 (p. 50) WSWH18x9 2nd story: H_e 105.25 in, V_ASD,S 1,095 lb, Δ 0.44 in
 // Table 01 (p. 40) WSWH18x9 at P = 4,000 lb, f'c 2,500 psi (stack base, README §5): V₀ = 2,575 lb, Δ₀ = 0.45 in, H_e 105.25 in
 // Table 02 (p. 47) WSWH18x9 raised floor: H_e 105.25 in, V_ASD,S 1,475 lb, Δ 0.43 in; Table 05-C: B = 12.5 in (concrete), 14.0 in (raised)
-const up = { He: 105.25, V: 1095, D: 0.44 }, base = { He: 105.25, V0: 2575, D0: 0.45 }, rf = { He: 105.25, V: 1475, D: 0.43, B: 14.0 };
+// LRFD cap with its drift (derived columns of the same rows): T03 1,565 lb / 0.63 in, T01 3,680 lb / 0.64 in, T02 2,105 lb / 0.61 in
+const up = { He: 105.25, V: 1095, D: 0.44, VL: 1565, DL: 0.63 }, base = { He: 105.25, V0: 2575, D0: 0.45, V0L: 3680, D0L: 0.64 }, rf = { He: 105.25, V: 1475, D: 0.43, B: 14.0, VL: 2105, DL: 0.61 };
 const B = 12.5, ROD = 36800;
 const V2 = F2, V1 = F2 + F1;                    // 1.0-level shears (k): 2nd story panel, 1st story panel (story shear)
 const V2a = 0.7 * V2 * 1000, V1a = 0.7 * V1 * 1000;   // ASD (lb)
@@ -19,12 +20,13 @@ const Tbase = 0.7 * otm1 / (B / 12);
 // Table 06-A (2,500 psi, cracked), SDC D → E rows: STD 16,000 / 17,100, HS 34,100 (W 52, d_e 18), HS 36,800
 const E6 = [[16000, 'STD', 33, 11], [17100, 'STD', 35, 12], [34100, 'HS', 52, 18], [36800, 'HS', 55, 19]];
 const anc = E6.find(r => r[0] >= Tbase * 1000);
-const dUp = up.D * V2 * 1000 / up.V;
-const dBase = base.D0 * (otm1 * 1000) / Mallow;  // Δ₁ = Δ₀·M(1.0)/M_allow
+const dUp = up.DL * V2 * 1000 / up.VL;
+const MallowL = base.V0L * base.He / 12;
+const dBase = base.D0L * (otm1 * 1000) / MallowL;  // Δ₁ = Δ₀,LRFD·M(1.0)/M_allow,LRFD
 const Vr = F1, dcR = 0.7 * Vr * 1000 / rf.V, Tr = 0.7 * Vr * rf.He / rf.B;
-// Story drift (Cd 4, Ie 1.0, RC II): WSWH panels use their table drift, not Eq. 4.3-1 — Δ = Δ_ASDcap,S × V(1.0E) / V_ASDcap,S
-// (ASD seismic column scaled linearly to the 1.0-level share); the stack base Δ₁ = Δ₀ × M(1.0) / M_allow (README §5).
-const dR = rf.D * Vr * 1000 / rf.V;
+// Story drift (Cd 4, Ie 1.0, RC II): WSWH panels use their table drift, not Eq. 4.3-1 — Δ = Δ_LRFD × V(1.0E) / V_LRFD
+// (LRFD seismic column, linear; user 2026-10-13); the stack base Δ₁ = Δ₀,LRFD × M(1.0) / M_allow,LRFD (README §5).
+const dR = rf.DL * Vr * 1000 / rf.VL;
 const aL2 = storyDrift('Level 2', h, [{ mark: 'SW-1', delta: dUp }]);
 const aL1 = storyDrift('Level 1', h, [{ mark: 'SW-2', delta: dBase }]);
 const bL1 = storyDrift('Level 1', h, [{ mark: 'SW-3', delta: dR }]);
@@ -40,11 +42,11 @@ export default {
     'M_d = [V₁·H₁ + V₂·(H₁ + d_fl + H₂)]/12 = [' + V1a + ' × 105.25 + ' + V2a + ' × (105.25 + ' + dfl + ' + 105.25)]/12 = ' + f2(Md) + ' lb-ft → D/C = M_d/M_allow = ' + f3(Md / Mallow) + '. Available V₁ = (M_allow − V₂·(H₁ + d_fl + H₂)/12)·12/H₁ = ' + f2(V1avail) + ' lb ≥ ' + V1a + ' → OK.',
     '2nd-story hold-down: T = 0.7·V₂·H₂/B = 0.7 × ' + f2(V2) + ' × 105.25/12.5 = ' + f3(Trod) + ' k (B = concrete B, Table 05-C, tool note) ≤ TSS rod 36,800 lb → rod.',
     'Stack base anchors: M(1.0) = (V₁·H₁ + V₂·(H₁ + d_fl + H₂))/12 = (' + f2(V1) + ' × 105.25 + ' + f2(V2) + ' × 222.5)/12 = ' + f3(otm1) + ' k·ft → T = 0.7 × ' + f3(otm1) + ' / (12.5/12) = ' + f3(Tbase) + ' k = ' + Math.round(Tbase * 1000) + ' lb. Table 06-A, SDC D, E rows: STD 16,000 / 17,100 < T → HS ' + anc[0] + ' lb, W = ' + anc[2] + ' in, d_e = ' + anc[3] + ' in.',
-    'Drift: 2nd story Δ = 0.44 × 800/1095 = ' + f3(dUp) + ' in; base Δ₁ = Δ₀·M(1.0)/M_allow = 0.45 × ' + f2(otm1 * 1000) + '/' + f2(Mallow) + ' = ' + f3(dBase) + ' in.',
+    'Drift (LRFD cap with its drift): 2nd story Δ = 0.63 × 800/1565 = ' + f3(dUp) + ' in; base Δ₁ = Δ₀,LRFD·M(1.0)/M_allow,LRFD = 0.64 × ' + f2(otm1 * 1000) + '/' + f2(MallowL) + ' = ' + f3(dBase) + ' in (M_allow,LRFD = 3680 × 105.25/12).',
     'Line B raised floor (Table 02, WSWH18x9, joist ≤ 12"): V_allow = 1,475 lb; V = ' + f2(Vr) + ' k → D/C = 700/1475 = ' + f3(dcR) + '. T = 0.7·V·H_e/B = 0.7 × ' + f2(Vr) + ' × 105.25/14.0 = ' + f3(Tr) + ' k (B raised = 14.0 in) — reported; anchorage by the RDP.',
     'Line checks G1–G12 pass on both lines; the 2nd-story panel end forces are absorbed into the stack base moment (not delivered as wall-end loads).',
-    'Story drift, Line A (each story has one panel; table drift, ASD seismic column scaled to the 1.0E share, step 7). ' + aL2.text + ' ' + aL1.text + ' The stack base carries the moment of both stories, so its Δ₁ (' + f3(dBase) + ' in) is larger than the 2nd-story panel Δ.',
-    'Story drift, Line B: SW-3 Δ = 0.43 × ' + f2(Vr * 1000) + ' / 1475 = ' + f3(dR) + ' in (Table 02). ' + bL1.text,
+    'Story drift, Line A (each story has one panel; table drift, LRFD seismic column scaled to the 1.0E share, step 7). ' + aL2.text + ' ' + aL1.text + ' The stack base carries the moment of both stories, so its Δ₁ (' + f3(dBase) + ' in) is larger than the 2nd-story panel Δ.',
+    'Story drift, Line B: SW-3 Δ = 0.61 × ' + f2(Vr * 1000) + ' / 2105 = ' + f3(dR) + ' in (Table 02). ' + bL1.text,
   ],
   expect: [
     { ...ex('SW-1 table', 'wall:SW-1', 'wswh.table', 'T03', 2), line: 'Line A' },

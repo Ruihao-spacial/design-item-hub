@@ -16,12 +16,12 @@ for (const w of walls) {
   w.C = a.dn * w.R + 0.7 * w.N;
   w.hd = pickHD(w.T);
   w.post = POSTS4.filter(p => p.d2 >= 3.0).find(p => postCap(p, h).cap >= w.C);
-  // Eq. 4.3-1 at 1.0E (ρ = 1): v1 = V/L, T1 = C1 = V·h/L
-  w.v1 = w.V * 1000 / w.L; w.T1 = w.N * 1000; w.A = w.post.A; w.Ga = NAIL.find(x => x.id === w.n.id).gaPLY;
+  // Eq. 4.3-1 at 1.0E (ρ = 1), lateral end forces only (user 2026-10-14): v1 = V/L; T1 = C1 = V·h/L
+  w.v1 = w.V * 1000 / w.L; w.T1 = w.N * 1000; w.C1 = w.N * 1000; w.A = w.post.A; w.Ga = NAIL.find(x => x.id === w.n.id).gaPLY;
   w.t1 = 8 * w.v1 * h ** 3 / (E * w.A * w.L);
   w.t2 = w.v1 * h / (1000 * w.Ga);
-  w.dHD = w.hd.delta * w.T1 / w.hd.cap;
-  w.r = w.T1 / (w.A * Fcp);
+  w.dHD = w.hd.delta * w.T1 / w.hd.lrfdCap; // linear from the LRFD pair (2026-10-14)
+  w.r = w.C1 / (w.A * Fcp);
   w.dC = 0.02 * (w.r < 0.73 ? w.r / 0.73 : w.r <= 1 ? 1 + (w.r - 0.73) / 0.27 : 2 * w.r ** 3);
   w.t3 = h * (w.dHD + w.dC) / w.L;
   w.delta = w.t1 + w.t2 + w.t3;
@@ -29,14 +29,14 @@ for (const w of walls) {
 const [w1, w2] = walls;
 const gov = w1.delta >= w2.delta ? w1 : w2;
 const dxe = gov.delta, dx = Cd * dxe / Ie, Da = limit * h * 12;
-const defl = (w) => w.mark + ': v = ' + f2(w.v1) + ' plf, T = C = ' + f2(w.T1) + ' lb, A = ' + w.A + ' in², G_a = ' + w.Ga + ' k/in → 8vh³/(EAb) = 8 × ' + f2(w.v1) + ' × ' + h + '³ / (1,700,000 × ' + w.A + ' × ' + w.L + ') = ' + f4(w.t1)
-  + '; vh/(1000G_a) = ' + f2(w.v1) + ' × ' + h + ' / (1000 × ' + w.Ga + ') = ' + f4(w.t2) + '; Δ_HD = ' + w.hd.delta + ' × ' + f2(w.T1) + ' / ' + w.hd.cap + ' = ' + f4(w.dHD)
-  + '; r = ' + f2(w.T1) + ' / (' + w.A + ' × 625) = ' + f4(w.r) + ' < 0.73 → Δ_c = 0.02 × r / 0.73 = ' + f4(w.dC) + '; h·Δa/b = ' + h + ' × (' + f4(w.dHD) + ' + ' + f4(w.dC) + ') / ' + w.L + ' = ' + f4(w.t3) + ' → δ = ' + f4(w.delta) + ' in.';
+const defl = (w) => w.mark + ': v = ' + f2(w.v1) + ' plf, T = C = V·h/L = ' + f2(w.T1) + ' lb (1.0E, lateral only), A = ' + w.A + ' in², G_a = ' + w.Ga + ' k/in → 8vh³/(EAb) = 8 × ' + f2(w.v1) + ' × ' + h + '³ / (1,700,000 × ' + w.A + ' × ' + w.L + ') = ' + f4(w.t1)
+  + '; vh/(1000G_a) = ' + f2(w.v1) + ' × ' + h + ' / (1000 × ' + w.Ga + ') = ' + f4(w.t2) + '; Δ_HD = δ_LRFD × T / T_LRFD of ' + w.hd.id + ' = ' + w.hd.delta + ' × ' + f2(w.T1) + ' / ' + w.hd.lrfdCap + ' = ' + f4(w.dHD)
+  + '; r = ' + f2(w.C1) + ' / (' + w.A + ' × 625) = ' + f4(w.r) + ' → Δ_c = ' + f4(w.dC) + '; h·Δa/b = ' + h + ' × (' + f4(w.dHD) + ' + ' + f4(w.dC) + ') / ' + w.L + ' = ' + f4(w.t3) + ' → δ = ' + f4(w.delta) + ' in.';
 
 export default {
   id: 'V15', title: 'Deflection and story drift', slug: 'deflection-drift',
   intent: 'Two unequal walls at one story with Cd, Ie and risk category entered. Checks every SDPWS Eq. 4.3-1 term (bending, shear, holdown slip, crushing) at 1.0E, that the story drift uses the largest wall δ, and δx = Cd·δxe/Ie against Δa = 0.020·h_sx (ASCE 7-22 Table 12.12-1, RC II). Passing case — no drift sizing.',
-  covers: ['SDPWS 2021 Eq. 4.3-1', 'ASCE 7-22 §12.8.6', 'ASCE 7-22 Table 12.12-1', 'HDUE slip δ·T/cap', 'Plate crushing (r < 0.73)'],
+  covers: ['SDPWS 2021 Eq. 4.3-1', 'ASCE 7-22 §12.8.6', 'ASCE 7-22 Table 12.12-1', 'HDUE Δ = δ_LRFD × T / T_LRFD (LRFD pair)', 'Plate crushing (r < 0.73)'],
   handCalc: [
     'Capacity distribution: both walls start at the same nailing, so V splits by length: V_1 = ' + V + ' × ' + w1.L + '/' + sumL + ' = ' + f3(w1.V) + ' k, V_2 = ' + V + ' × ' + w2.L + '/' + sumL + ' = ' + f3(w2.V) + ' k.',
     'ASD unit shear v = 0.7·V/L = ' + f2(w1.v) + ' plf on both walls (equal by construction) ≤ 312 plf → 6" o.c., D/C = ' + f3(w1.v / 312) + '. h/b = 1.0 and 1.25 ≤ 2 → C_hb = 1.',

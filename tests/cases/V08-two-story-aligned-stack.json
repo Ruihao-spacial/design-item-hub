@@ -53,19 +53,19 @@
     },
     {
       "step": 11,
-      "text": "SW-1 (Eq. 4.3-1, → governs): v = 1000 × 3.000 / 10 = 300.00 plf, A = 10.5 in², G_a = 16 k/in → 8vh³/(EAb) = 0.0098; vh/(1000G_a) = 0.1688; Δ_HD = 0.0808 × 2700.00 / 1535/0.7 = 0.0995 (MSTC28, T = 2700.00 lb); r = 2700.00 / (10.5 × 625) = 0.4114 → Δ_c = 0.0113; h·Δa/b = 9 × (0.0995 + 0.0113) / 10 = 0.0997 → δ = 0.2782 in. (strap slip at its LRFD cap = cap / 0.7.)"
+      "text": "SW-1 (Eq. 4.3-1, → governs): v = 1000 × 3.000 / 10 = 300.00 plf, A = 10.5 in², G_a = 16 k/in → 8vh³/(EAb) = 0.0098; vh/(1000G_a) = 0.1688; uplift end T = 2700.00 lb (lateral); Δ_HD = δ_LRFD × T / T_LRFD = 0.081 × 2700.00 / 2193 = 0.0997 (MSTC28, T > LRFD cap: extrapolated, warning); r = 2700.00 / (10.5 × 625) = 0.4114 → Δ_c = 0.0113; h·Δa/b = 9 × (0.0997 + 0.0113) / 10 = 0.0999 → δ = 0.2785 in. (strap slip at its LRFD cap = cap / 0.7.)"
     },
     {
       "step": 12,
-      "text": "SW-2 (Eq. 4.3-1, → governs): v = 1000 × 7.000 / 10 = 700.00 plf, A = 19.25 in², G_a = 22 k/in → 8vh³/(EAb) = 0.0171; vh/(1000G_a) = 0.3182; Δ_HD = 0.154 × 9700.00 / 7015 (ASD cap) = 0.2129 (HDUE7, T = 9700.00 lb); r = 9700.00 / (19.25 × 625) = 0.8062 → Δ_c = 0.0256; h·Δa/b = 10 × (0.2129 + 0.0256) / 10 = 0.2386 → δ = 0.5739 in. (T = C = N_B + N_T = 7.000 + 2.700 = 9.700 k: the SW-1 end force adds to SW-2's own.)"
+      "text": "SW-2 (Eq. 4.3-1, → governs): v = 1000 × 7.000 / 10 = 700.00 plf, A = 19.25 in², G_a = 22 k/in → 8vh³/(EAb) = 0.0171; vh/(1000G_a) = 0.3182; uplift end T = 9700.00 lb (lateral); Δ_HD = δ_LRFD × T / T_LRFD = 0.216 × 9700.00 / 9821 = 0.2133 (HDUE7); r = 9700.00 / (19.25 × 625) = 0.8062 → Δ_c = 0.0256; h·Δa/b = 10 × (0.2133 + 0.0256) / 10 = 0.2390 → δ = 0.5743 in. (T = C = N_B + N_T = 7.000 + 2.700 = 9.700 k: the SW-1 end force adds to SW-2's own.)"
     },
     {
       "step": 13,
-      "text": "Story drift Roof: δxe = the largest wall δ = SW-1 0.2782 in → δx = Cd·δxe/Ie = 4 × 0.2782 / 1.0 = 1.113 in vs Δa = 0.020 × 9 × 12 = 2.160 in → OK."
+      "text": "Story drift Roof: δxe = the largest wall δ = SW-1 0.2785 in → δx = Cd·δxe/Ie = 4 × 0.2785 / 1.0 = 1.114 in vs Δa = 0.020 × 9 × 12 = 2.160 in → OK."
     },
     {
       "step": 14,
-      "text": "Story drift Level 1: δxe = the largest wall δ = SW-2 0.5739 in → δx = Cd·δxe/Ie = 4 × 0.5739 / 1.0 = 2.296 in vs Δa = 0.020 × 10 × 12 = 2.400 in → OK."
+      "text": "Story drift Level 1: δxe = the largest wall δ = SW-2 0.5743 in → δx = Cd·δxe/Ie = 4 × 0.5743 / 1.0 = 2.297 in vs Δa = 0.020 × 10 × 12 = 2.400 in → OK."
     }
   ],
   "expect": [
@@ -129,7 +129,7 @@
       "label": "SW-1 δ at 1.0E (in)",
       "at": "wall:SW-1",
       "field": "deflection.E.delta",
-      "value": 0.27823447521831457,
+      "value": 0.27845025673219276,
       "tol": 0.0005,
       "step": 11
     },
@@ -137,7 +137,7 @@
       "label": "SW-2 δ at 1.0E, incl. SW-1 end forces (in)",
       "at": "wall:SW-2",
       "field": "deflection.E.delta",
-      "value": 0.5738847553823865,
+      "value": 0.574279827167337,
       "tol": 0.0005,
       "step": 12
     },
@@ -145,7 +145,7 @@
       "label": "Story δxe, Roof (in)",
       "at": "drift:Roof",
       "field": "seismic.deltaXE",
-      "value": 0.27823447521831457,
+      "value": 0.27845025673219276,
       "tol": 0.0005,
       "step": 13
     },
@@ -160,7 +160,7 @@
       "label": "δx = Cd·δxe/Ie, Roof (in)",
       "at": "drift:Roof",
       "field": "seismic.deltaX",
-      "value": 1.1129379008732583,
+      "value": 1.113801026928771,
       "tol": 0.002,
       "step": 13
     },
@@ -175,7 +175,7 @@
       "label": "Story δxe, Level 1 (in)",
       "at": "drift:Level 1",
       "field": "seismic.deltaXE",
-      "value": 0.5738847553823865,
+      "value": 0.574279827167337,
       "tol": 0.0005,
       "step": 14
     },
@@ -190,7 +190,7 @@
       "label": "δx = Cd·δxe/Ie, Level 1 (in)",
       "at": "drift:Level 1",
       "field": "seismic.deltaX",
-      "value": 2.295539021529546,
+      "value": 2.297119308669348,
       "tol": 0.002,
       "step": 14
     },
@@ -222,12 +222,14 @@
       "postR": "6x4"
     }
   },
-  "schemaVersion": 12,
+  "schemaVersion": 13,
   "inputs": {
     "sds": "1",
     "loadType": "seismic",
     "wallThickness": "4",
+    "species": "DF-L",
     "woodGrade": "dfir_no1",
+    "postGrade": "dfir_pt_no1",
     "sheathing": "ply",
     "distribution": "capacity",
     "cd": "4",

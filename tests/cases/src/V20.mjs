@@ -5,7 +5,7 @@ import { project, level, direction, line, wall, panel, gPoint, ex, pickNail, pic
 const Sds = 1.0, h = 9, V = 4, psf = 10, Lw = 8, Dp = 1.2;
 const a = asdE(Sds);
 // Table 01 (C-L-SW26 p. 40), WSWH18x9, f'c 2,500 psi: rows P = 1,000 and 4,000 lb both V_ASD,S = 2,575 lb, Δ = 0.45 in, H_e = 105.25 in
-const T01 = { He: 105.25, V_S: 2575, D_S: 0.45 };
+const T01 = { He: 105.25, V_S: 2575, D_S: 0.45, VL_S: 3680, DL_S: 0.64 }; // + LRFD cap 3,680 lb with Δ 0.64 in (derived columns)
 const B = 12.5;                                 // Table 05 / T01 p. 41 n.11: B = 12½" for WSWH18 on concrete
 const P_E = Math.max(a.dn * Dp * 1000, a.d6 * Dp * 1000); // ASD vertical load acting with the shear (no live)
 // Table 06-A (2,500 psi, cracked), SDC D → criteria E only; smallest W with T_ASDallow ≥ T
@@ -19,7 +19,7 @@ const M = Vp * T01.He / 12;                     // 1.0E OTM of the panel (k·ft)
 const Np = M / (B / 12);                        // 1.0E end force over the anchor arm B
 const Tp = 0.7 * Np - a.up * Dp / 2;            // (0.6−0.14SDS)D + 0.7E: T = 0.7V·H_e/B − 0.46·P/2
 const anc = T06E.filter(r => r.T >= Tp * 1000).sort((x, y) => x.W - y.W || x.de - y.de)[0];
-const delta = T01.D_S * Vp * 1000 / T01.V_S;    // Δ linear in V at the 1.0 level
+const delta = T01.DL_S * Vp * 1000 / T01.VL_S;  // Δ at the 1.0 level, linear from the LRFD cap (user 2026-10-13)
 const Rw = psf * Lw * h / 2000, Nw = Vw * h / Lw, Tw = 0.7 * Nw - a.up * Rw;
 // Story drift (Cd 4, Ie 1.0, RC II): the panel uses its table drift (not Eq. 4.3-1) — Δ = Δ_ASDcap,S × V(1.0E) / V_ASDcap,S,
 // the ASD seismic column scaled linearly to the 1.0-level share (= the LRFD-equivalent column, both carry the same Δ/V
@@ -39,9 +39,9 @@ export default {
     'Panel D/C = V_ASD / V_allow = 0.7 × ' + f3(Vp) + ' × 1000 / 2575 = ' + Math.round(Vd) + ' / 2575 = ' + f3(dc) + '.',
     'Panel anchor tension, (0.6 − 0.14S_DS)D + 0.7E: T = 0.7·V·H_e/B − 0.46·D/2 = 0.7 × ' + f3(Vp) + ' × 105.25/12.5 − 0.46 × ' + f2(Dp / 2) + ' = ' + f3(Tp) + ' k = ' + Math.round(Tp * 1000) + ' lb.',
     'Table 06-A (2,500 psi, cracked), SDC D → criteria E only. Rows with T_ASDallow ≥ ' + Math.round(Tp * 1000) + ' lb, smallest W then d_e: STD 16,000 lb, W = 33 in, d_e = 11 in (L_ftg = 47 in for WSWH18) → WSWH-AB STD (E), D/C = ' + f3(Tp * 1000 / 16000) + '.',
-    'Panel drift at 1.0E: Δ = Δ_cap·V/V_cap = 0.45 × ' + f2(Vp * 1000) + ' / 2575 = ' + f3(delta) + ' in (linear, Table 01 n.7).',
+    'Panel drift at 1.0E: Δ = Δ_LRFD·V/V_LRFD = 0.64 × ' + f2(Vp * 1000) + ' / 3680 = ' + f3(delta) + ' in (linear from the LRFD cap with its drift; V ≤ V_LRFD → no warning).',
     'Line checks G1–G12 pass (the panel load goes straight to the foundation).',
-    'Story drift inputs: SW-1 (WSWH) δ = the table drift of step 8 (ASD seismic column Δ_cap = 0.45 in at V_cap = 2,575 lb, scaled to the 1.0E share ' + f2(Vp * 1000) + ' lb) = ' + f3(delta) + ' in. ' + wSW2.text,
+    'Story drift inputs: SW-1 (WSWH) δ = the table drift of step 8 (LRFD seismic column Δ_LRFD = 0.64 in at V_LRFD = 3,680 lb, scaled to the 1.0E share ' + f2(Vp * 1000) + ' lb) = ' + f3(delta) + ' in. ' + wSW2.text,
     d1.text,
   ],
   expect: [

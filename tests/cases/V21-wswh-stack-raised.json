@@ -36,7 +36,7 @@
     },
     {
       "step": 7,
-      "text": "Drift: 2nd story Δ = 0.44 × 800/1095 = 0.321 in; base Δ₁ = Δ₀·M(1.0)/M_allow = 0.45 × 30620.83/22584.90 = 0.610 in."
+      "text": "Drift (LRFD cap with its drift): 2nd story Δ = 0.63 × 800/1565 = 0.322 in; base Δ₁ = Δ₀,LRFD·M(1.0)/M_allow,LRFD = 0.64 × 30620.83/32276.67 = 0.607 in (M_allow,LRFD = 3680 × 105.25/12)."
     },
     {
       "step": 8,
@@ -48,11 +48,11 @@
     },
     {
       "step": 10,
-      "text": "Story drift, Line A (each story has one panel; table drift, ASD seismic column scaled to the 1.0E share, step 7). Story drift Level 2: δxe = the largest wall δ = SW-1 0.3215 in → δx = Cd·δxe/Ie = 4 × 0.3215 / 1.0 = 1.286 in vs Δa = 0.020 × 9 × 12 = 2.160 in → OK. Story drift Level 1: δxe = the largest wall δ = SW-2 0.6101 in → δx = Cd·δxe/Ie = 4 × 0.6101 / 1.0 = 2.440 in vs Δa = 0.020 × 9 × 12 = 2.160 in → NG — over the limit (design pinned, so drift sizing does not change it; the line reports drift NG). The stack base carries the moment of both stories, so its Δ₁ (0.610 in) is larger than the 2nd-story panel Δ."
+      "text": "Story drift, Line A (each story has one panel; table drift, LRFD seismic column scaled to the 1.0E share, step 7). Story drift Level 2: δxe = the largest wall δ = SW-1 0.3220 in → δx = Cd·δxe/Ie = 4 × 0.3220 / 1.0 = 1.288 in vs Δa = 0.020 × 9 × 12 = 2.160 in → OK. Story drift Level 1: δxe = the largest wall δ = SW-2 0.6072 in → δx = Cd·δxe/Ie = 4 × 0.6072 / 1.0 = 2.429 in vs Δa = 0.020 × 9 × 12 = 2.160 in → NG — over the limit (design pinned, so drift sizing does not change it; the line reports drift NG). The stack base carries the moment of both stories, so its Δ₁ (0.607 in) is larger than the 2nd-story panel Δ."
     },
     {
       "step": 11,
-      "text": "Story drift, Line B: SW-3 Δ = 0.43 × 1000.00 / 1475 = 0.292 in (Table 02). Story drift Level 1: δxe = the largest wall δ = SW-3 0.2915 in → δx = Cd·δxe/Ie = 4 × 0.2915 / 1.0 = 1.166 in vs Δa = 0.020 × 9 × 12 = 2.160 in → OK."
+      "text": "Story drift, Line B: SW-3 Δ = 0.61 × 1000.00 / 2105 = 0.290 in (Table 02). Story drift Level 1: δxe = the largest wall δ = SW-3 0.2898 in → δx = Cd·δxe/Ie = 4 × 0.2898 / 1.0 = 1.159 in vs Δa = 0.020 × 9 × 12 = 2.160 in → OK."
     }
   ],
   "expect": [
@@ -157,7 +157,7 @@
       "label": "SW-2 Δ₁ (in)",
       "at": "wall:SW-2",
       "field": "deflection.E.delta",
-      "value": 0.6101146138412934,
+      "value": 0.6071672002478571,
       "tol": 0.0005,
       "step": 7,
       "line": "Line A"
@@ -193,7 +193,7 @@
       "label": "Line A — Story δxe, Level 2 (in)",
       "at": "drift:Level 2",
       "field": "seismic.deltaXE",
-      "value": 0.3214611872146119,
+      "value": 0.32204472843450477,
       "tol": 0.0005,
       "step": 10,
       "line": "Line A"
@@ -210,7 +210,7 @@
       "label": "Line A — δx = Cd·δxe/Ie, Level 2 (in)",
       "at": "drift:Level 2",
       "field": "seismic.deltaX",
-      "value": 1.2858447488584477,
+      "value": 1.288178913738019,
       "tol": 0.002,
       "step": 10,
       "line": "Line A"
@@ -227,7 +227,7 @@
       "label": "Line A — Story δxe, Level 1 (in)",
       "at": "drift:Level 1",
       "field": "seismic.deltaXE",
-      "value": 0.6101146138412934,
+      "value": 0.6071672002478571,
       "tol": 0.0005,
       "step": 10,
       "line": "Line A"
@@ -244,7 +244,7 @@
       "label": "Line A — δx = Cd·δxe/Ie, Level 1 (in)",
       "at": "drift:Level 1",
       "field": "seismic.deltaX",
-      "value": 2.4404584553651736,
+      "value": 2.4286688009914283,
       "tol": 0.002,
       "step": 10,
       "line": "Line A"
@@ -261,7 +261,7 @@
       "label": "SW-3 Δ (in)",
       "at": "wall:SW-3",
       "field": "deflection.E.delta",
-      "value": 0.29152542372881357,
+      "value": 0.28978622327790976,
       "tol": 0.0005,
       "step": 11,
       "line": "Line B"
@@ -270,7 +270,7 @@
       "label": "Line B — Story δxe, Level 1 (in)",
       "at": "drift:Level 1",
       "field": "seismic.deltaXE",
-      "value": 0.29152542372881357,
+      "value": 0.28978622327790976,
       "tol": 0.0005,
       "step": 11,
       "line": "Line B"
@@ -287,7 +287,7 @@
       "label": "Line B — δx = Cd·δxe/Ie, Level 1 (in)",
       "at": "drift:Level 1",
       "field": "seismic.deltaX",
-      "value": 1.1661016949152543,
+      "value": 1.159144893111639,
       "tol": 0.002,
       "step": 11,
       "line": "Line B"
@@ -312,12 +312,14 @@
     },
     "Line B/SW-3": {}
   },
-  "schemaVersion": 12,
+  "schemaVersion": 13,
   "inputs": {
     "sds": "1.0",
     "loadType": "seismic",
     "wallThickness": "4",
+    "species": "DF-L",
     "woodGrade": "dfir_no1",
+    "postGrade": "dfir_pt_no1",
     "sheathing": "ply",
     "distribution": "capacity",
     "cd": "4",

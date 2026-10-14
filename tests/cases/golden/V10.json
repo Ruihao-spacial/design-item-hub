@@ -1,5 +1,5 @@
 {
-  "calcVersion": "v18",
+  "calcVersion": "v23",
   "lines": [
     {
       "line": "N-S / Line A",
@@ -56,7 +56,7 @@
             "(2)2x4",
             "(2)2x4"
           ],
-          "deltaE": 0.462
+          "deltaE": 0.463
         }
       ],
       "posts": [
@@ -102,7 +102,7 @@
         },
         {
           "level": "Level 1",
-          "dx": 1.849,
+          "dx": 1.85,
           "pass": true
         }
       ],

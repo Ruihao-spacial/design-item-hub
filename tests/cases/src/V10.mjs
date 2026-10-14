@@ -26,9 +26,9 @@ const pst = POSTS4.filter(p => p.d2 >= 3.0).find(p => postCap(p, hB).cap >= Math
 // SW-6 (Level 1 lateral wall)
 const V6 = F_roof + F_1, v6 = 0.7 * V6 * 1000 / 10;
 // Story drift (Cd 4, Ie 1.0, RC II): SW-5 on the beam (beam / post deflection not included, tool rule P5); SW-6 gets
-// nothing from above (SW-5's ends land on BM-1) → own V·h/L only
+// nothing from above (SW-5's ends land on BM-1) → own V·h/L and own self-weight only (1.0D + 0.5L + 1.0E)
 const dR = storyDrift('Roof', hT, [eq431({ mark: 'SW-5', L: LW, h: hT, nail: '6', hdL: 'MSTC40', hdR: 'MSTC40', postL: '(2)2x4', postR: '(2)2x4', Vk: F_roof, TL: NW, CR: NW })]);
-const N6 = V6 * hB / 10;
+const N6 = V6 * hB / 10, R6 = psf * 10 * hB / 2000; // SW-6 self-weight, ½ each end (no gravity load over 16–26 ft)
 const d1 = storyDrift('Level 1', hB, [eq431({ mark: 'SW-6', L: 10, h: hB, nail: '4', hdL: 'HDUE3', hdR: 'HDUE3', postL: '(2)2x4', postR: '(2)2x4', Vk: V6, TL: N6, CR: N6 })]);
 
 export default {

@@ -335,7 +335,10 @@ export function createFTAO(input) {
         const t1 = (8 * pr.v * hh ** 3) / (E * A * b);
         const t2 = (pr.v * hh) / (1000 * Ga);
         const Tpier = pr.v * hh;
-        const dHD = p.d_a * (Tpier / p.HD_allow);
+        // Local change (Design Item Hub, user 2026-10-14): HD_lrfd > 0 → d_a is δ @ LRFD cap and scales with the LRFD
+        // pair, d_a × T / HD_lrfd (T at the 1.0 / α_s level, the same level as the LRFD pair). daConstant (2026-10-13,
+        // no longer used by the hub) keeps d_a fixed. Neither set → the original d_a × T / HD_allow (APA regression).
+        const dHD = p.daConstant ? (Tpier > 0 ? p.d_a : 0) : p.HD_lrfd > 0 ? p.d_a * (Tpier / p.HD_lrfd) : p.d_a * (Tpier / p.HD_allow);
         let dC = 0, r = null;
         if (fullHeight && p.includeDeltaC) {
           r = Cend / (A * FcpPrime);
@@ -343,7 +346,9 @@ export function createFTAO(input) {
         }
         const Da = dHD + dC;
         const t3 = (hh * Da) / b;
-        if (Tpier > p.HD_allow + EPS) wWarn.push(`Pier ${pr.i}-${dir}: T_defl = ${round(Tpier, 0)} lbf > HD_allow — d_a extrapolated linearly beyond manufacturer tested load.`);
+        if (p.daConstant || p.HD_lrfd > 0) {
+          if (p.HD_lrfd > 0 && Tpier > p.HD_lrfd + EPS) wWarn.push(`⚠ Pier ${pr.i}-${dir}: T_defl = ${round(Tpier, 0)} lbf > LRFD cap ${round(p.HD_lrfd, 0)} lbf — d_a extrapolated linearly beyond the LRFD cap.`);
+        } else if (Tpier > p.HD_allow + EPS) wWarn.push(`Pier ${pr.i}-${dir}: T_defl = ${round(Tpier, 0)} lbf > HD_allow — d_a extrapolated linearly beyond manufacturer tested load.`);
         if (r != null && r > 1.0) wWarn.push(`Pier ${pr.i}-${dir}: plate bearing r = ${round(r, 2)} > 1.0 at V_defl — crushing beyond NDS §4.2.6 reference deformation.`);
         cases.push({ pier: pr.i, dir, h: hh, v: pr.v, E, A, b, term1_bending: t1, term2_shear: t2, dHD, dC, r, Da, term3_anchorage: t3, sum: t1 + t2 + t3 });
       }

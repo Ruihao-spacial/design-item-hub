@@ -1,5 +1,5 @@
 {
-  "calcVersion": "v18",
+  "calcVersion": "v23",
   "lines": [
     {
       "line": "N-S / Line A",
@@ -87,7 +87,7 @@
         },
         {
           "level": "Level 1",
-          "dx": 1.818,
+          "dx": 1.819,
           "pass": true
         }
       ],

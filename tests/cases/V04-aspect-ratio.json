@@ -35,19 +35,19 @@
     },
     {
       "step": 7,
-      "text": "SW-1 (Eq. 4.3-1, → governs): v = 1000 × 1.355 / 3.5 = 387.10 plf, A = 10.5 in², G_a = 16 k/in → 8vh³/(EAb) = 0.0170; vh/(1000G_a) = 0.1694; Δ_HD = 0.127 × 2709.68 / 3790 (ASD cap) = 0.0908 (HDUE3, T = 2709.68 lb); r = 2709.68 / (10.5 × 625) = 0.4129 → Δ_c = 0.0113; h·Δa/b = 7 × (0.0908 + 0.0113) / 3.5 = 0.2042 → δ = 0.3906 in."
+      "text": "SW-1 (Eq. 4.3-1, → governs): v = 1000 × 1.355 / 3.5 = 387.10 plf, A = 10.5 in², G_a = 16 k/in → 8vh³/(EAb) = 0.0170; vh/(1000G_a) = 0.1694; uplift end T = 2709.68 lb (lateral); Δ_HD = δ_LRFD × T / T_LRFD = 0.178 × 2709.68 / 5306 = 0.0909 (HDUE3); r = 2709.68 / (10.5 × 625) = 0.4129 → Δ_c = 0.0113; h·Δa/b = 7 × (0.0909 + 0.0113) / 3.5 = 0.2044 → δ = 0.3908 in."
     },
     {
       "step": 8,
-      "text": "SW-2 (Eq. 4.3-1, → governs): v = 1000 × 1.016 / 2.8 = 362.90 plf, A = 10.5 in², G_a = 16 k/in → 8vh³/(EAb) = 0.0199; vh/(1000G_a) = 0.1588; Δ_HD = 0.127 × 2540.32 / 3790 (ASD cap) = 0.0851 (HDUE3, T = 2540.32 lb); r = 2540.32 / (10.5 × 625) = 0.3871 → Δ_c = 0.0106; h·Δa/b = 7 × (0.0851 + 0.0106) / 2.8 = 0.2393 → δ = 0.4180 in."
+      "text": "SW-2 (Eq. 4.3-1, → governs): v = 1000 × 1.016 / 2.8 = 362.90 plf, A = 10.5 in², G_a = 16 k/in → 8vh³/(EAb) = 0.0199; vh/(1000G_a) = 0.1588; uplift end T = 2540.32 lb (lateral); Δ_HD = δ_LRFD × T / T_LRFD = 0.178 × 2540.32 / 5306 = 0.0852 (HDUE3); r = 2540.32 / (10.5 × 625) = 0.3871 → Δ_c = 0.0106; h·Δa/b = 7 × (0.0852 + 0.0106) / 2.8 = 0.2396 → δ = 0.4183 in."
     },
     {
       "step": 9,
-      "text": "SW-3 (Eq. 4.3-1, → governs): v = 1000 × 0.629 / 2 = 314.52 plf, A = 10.5 in², G_a = 16 k/in → 8vh³/(EAb) = 0.0242; vh/(1000G_a) = 0.1376; Δ_HD = 0.127 × 2201.61 / 3790 (ASD cap) = 0.0738 (HDUE3, T = 2201.61 lb); r = 2201.61 / (10.5 × 625) = 0.3355 → Δ_c = 0.0092; h·Δa/b = 7 × (0.0738 + 0.0092) / 2 = 0.2904 → δ = 0.4522 in."
+      "text": "SW-3 (Eq. 4.3-1, → governs): v = 1000 × 0.629 / 2 = 314.52 plf, A = 10.5 in², G_a = 16 k/in → 8vh³/(EAb) = 0.0242; vh/(1000G_a) = 0.1376; uplift end T = 2201.61 lb (lateral); Δ_HD = δ_LRFD × T / T_LRFD = 0.178 × 2201.61 / 5306 = 0.0739 (HDUE3); r = 2201.61 / (10.5 × 625) = 0.3355 → Δ_c = 0.0092; h·Δa/b = 7 × (0.0739 + 0.0092) / 2 = 0.2907 → δ = 0.4524 in."
     },
     {
       "step": 10,
-      "text": "SW-4 (h/b 4.00 > 3.5) is not a shear wall: no share, no deflection, not part of the story drift. Story drift Level 1: δxe = the largest wall δ = SW-3 0.4522 in → δx = Cd·δxe/Ie = 4 × 0.4522 / 1.0 = 1.809 in vs Δa = 0.020 × 7 × 12 = 1.680 in → NG — over the limit (design pinned, so drift sizing does not change it; the line reports drift NG). The short walls deflect most for their shear (the 8vh³/EAb and h·Δa/b terms grow with h/b): this case keeps its pinned design and verifies the drift NG."
+      "text": "SW-4 (h/b 4.00 > 3.5) is not a shear wall: no share, no deflection, not part of the story drift. Story drift Level 1: δxe = the largest wall δ = SW-3 0.4524 in → δx = Cd·δxe/Ie = 4 × 0.4524 / 1.0 = 1.810 in vs Δa = 0.020 × 7 × 12 = 1.680 in → NG — over the limit (design pinned, so drift sizing does not change it; the line reports drift NG). The short walls deflect most for their shear (the 8vh³/EAb and h·Δa/b terms grow with h/b): this case keeps its pinned design and verifies the drift NG."
     }
   ],
   "expect": [
@@ -166,7 +166,7 @@
       "label": "SW-1 δ at 1.0E (in)",
       "at": "wall:SW-1",
       "field": "deflection.E.delta",
-      "value": 0.39058000444291757,
+      "value": 0.3907842771469775,
       "tol": 0.0005,
       "step": 7
     },
@@ -174,7 +174,7 @@
       "label": "SW-2 δ at 1.0E (in)",
       "at": "wall:SW-2",
       "field": "deflection.E.delta",
-      "value": 0.4180184023839634,
+      "value": 0.4182577844590337,
       "tol": 0.0005,
       "step": 8
     },
@@ -182,7 +182,7 @@
       "label": "SW-3 δ at 1.0E (in)",
       "at": "wall:SW-3",
       "field": "deflection.E.delta",
-      "value": 0.45215533897856375,
+      "value": 0.45244578922964895,
       "tol": 0.0005,
       "step": 9
     },
@@ -190,7 +190,7 @@
       "label": "Story δxe, Level 1 (in)",
       "at": "drift:Level 1",
       "field": "seismic.deltaXE",
-      "value": 0.45215533897856375,
+      "value": 0.45244578922964895,
       "tol": 0.0005,
       "step": 10
     },
@@ -205,7 +205,7 @@
       "label": "δx = Cd·δxe/Ie, Level 1 (in)",
       "at": "drift:Level 1",
       "field": "seismic.deltaX",
-      "value": 1.808621355914255,
+      "value": 1.8097831569185958,
       "tol": 0.002,
       "step": 10
     },
@@ -254,12 +254,14 @@
       "postR": "(2)2x4"
     }
   },
-  "schemaVersion": 12,
+  "schemaVersion": 13,
   "inputs": {
     "sds": "1.0",
     "loadType": "seismic",
     "wallThickness": "4",
+    "species": "DF-L",
     "woodGrade": "dfir_no1",
+    "postGrade": "dfir_pt_no1",
     "sheathing": "ply",
     "distribution": "capacity",
     "cd": "4",

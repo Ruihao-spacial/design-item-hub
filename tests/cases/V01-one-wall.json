@@ -41,11 +41,11 @@
     },
     {
       "step": 8,
-      "text": "Deflection at 1.0E: v = 500 plf, A = 10.5 in², G_a = 20 k/in. 8vh³/(EAb) = 8 × 500 × 10³ / (1,700,000 × 10.5 × 10) = 0.0224; vh/(1000G_a) = 500 × 10 / (1000 × 20) = 0.2500; holdown slip = 0.127 × 5000 / 3790 = 0.1675; crushing r = 5000 / (10.5 × 625) = 0.7619 → Δ_c = 0.0224; h·Δa/b = 0.1899 → δ = 0.4623 in."
+      "text": "Deflection at 1.0E (lateral end forces only): v = 500 plf, end forces T = C = V·h/L = 5.00 k, A = 10.5 in², G_a = 20 k/in. 8vh³/(EAb) = 8 × 500 × 10³ / (1,700,000 × 10.5 × 10) = 0.0224; vh/(1000G_a) = 500 × 10 / (1000 × 20) = 0.2500; holdown Δ = δ_LRFD × T / T_LRFD of HDUE3 = 0.178 × 5000 / 5306 = 0.1677; crushing r = 5000 / (10.5 × 625) = 0.7619 → Δ_c = 0.0224; h·Δa/b = 0.1901 → δ = 0.4625 in."
     },
     {
       "step": 9,
-      "text": "Story drift Level 1: δxe = the largest wall δ = SW-1 0.4623 in → δx = Cd·δxe/Ie = 4 × 0.4623 / 1.0 = 1.849 in vs Δa = 0.020 × 10 × 12 = 2.400 in → OK."
+      "text": "Story drift Level 1: δxe = the largest wall δ = SW-1 0.4625 in → δx = Cd·δxe/Ie = 4 × 0.4625 / 1.0 = 1.850 in vs Δa = 0.020 × 10 × 12 = 2.400 in → OK."
     },
     {
       "step": 10,
@@ -121,7 +121,7 @@
       "label": "SW-1 δ at 1.0E (in)",
       "at": "wall:SW-1",
       "field": "deflection.E.delta",
-      "value": 0.4623184534245634,
+      "value": 0.46250691931223775,
       "tol": 0.0005,
       "step": 8
     },
@@ -129,7 +129,7 @@
       "label": "Story δxe, Level 1 (in)",
       "at": "drift:Level 1",
       "field": "seismic.deltaXE",
-      "value": 0.4623184534245634,
+      "value": 0.46250691931223775,
       "tol": 0.0005,
       "step": 9
     },
@@ -144,7 +144,7 @@
       "label": "δx = Cd·δxe/Ie, Level 1 (in)",
       "at": "drift:Level 1",
       "field": "seismic.deltaX",
-      "value": 1.8492738136982536,
+      "value": 1.850027677248951,
       "tol": 0.002,
       "step": 9
     },
@@ -169,12 +169,14 @@
       "postR": "(2)2x4"
     }
   },
-  "schemaVersion": 12,
+  "schemaVersion": 13,
   "inputs": {
     "sds": "1",
     "loadType": "seismic",
     "wallThickness": "4",
+    "species": "DF-L",
     "woodGrade": "dfir_no1",
+    "postGrade": "dfir_pt_no1",
     "sheathing": "ply",
     "distribution": "capacity",
     "cd": "4",

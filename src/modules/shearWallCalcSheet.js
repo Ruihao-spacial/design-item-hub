@@ -3,8 +3,8 @@
 // Sign convention: N = vertical force at a wall end (k), + = compression, − = uplift; N = C − T.
 // Load cases 1.0D, 1.0L, 1.0Lr, 1.0E, 1.0W are unfactored; the combinations are their factored sums
 // (superposition — check G12). → = shear toward the right end (left end uplift), ← = toward the left end.
-import { NAILING_TABLE, FOOTNOTE_10_FACTOR, sheathingLabel } from './shearWallNailing.js';
-import { HDUE_TABLE, MSTC_TABLE, hdueMinPost, deltaBasisLoad } from './shearWallHardware.js';
+import { nailingTable, nailingCG, FOOTNOTE_10_FACTOR, sheathingLabel } from './shearWallNailing.js';
+import { hdueTable, mstcTable, hdueMinPost, groupLabel } from './shearWallHardware.js';
 import { postArea } from './shearWallDeflection.js';
 
 const f2 = (v) => (v == null || !isFinite(v) ? '—' : (+v).toFixed(2));
@@ -71,12 +71,15 @@ export function aspectFactorText(h, L) {
 // lt: 'E' | 'W'
 export function capacityRows(w, lts = ['E']) {
   if (w.method !== 'wall') return [];
-  const n = NAILING_TABLE.find(x => x.id === (w.nailing && w.nailing.id));
+  const n = nailingTable(w.woodGroup).find(x => x.id === (w.nailing && w.nailing.id));
   if (!n) return [['Nailing', 'not found']];
+  const cg = nailingCG(w.woodGroup);
   const ar = aspectFactorText(w.floorH || 0, w.length || 0);
   const rows = [
     ['Nailing', n.label + (n.sides === 2 ? ', both sides' : ', one side') + ' — 15/32" WSP Structural 1, 10d common (SDPWS 2021 Table 4.3A)'],
-    ['Nominal unit shear v_n', f0(n.vn) + ' plf'],
+    cg !== 1
+      ? ['Nominal unit shear v_n × C_G', f0(n.vn) + ' plf (' + groupLabel(w.woodGroup) + ' framing, C_G = ' + cg + ', SDPWS Table 4.3A)']
+      : ['Nominal unit shear v_n', f0(n.vn) + ' plf'],
   ];
   for (const lt of lts) {
     const div = lt === 'E' ? 2.8 : 2.0, tab = lt === 'E' ? n.asdE : n.asdW;
@@ -97,6 +100,7 @@ export function nailingTraceRows(w, rho, lts = ['E']) {
   if (!(L > 0)) return [];
   const ar = aspectFactorText(w.floorH || 0, L);
   const v = { E: 0.7 * (rho || 1) * (w.shareExact_1E || 0) * 1000 / L, W: 0.6 * (w.shareExact_1W || 0) * 1000 / L };
+  const NAILING_TABLE = nailingTable(w.woodGroup);
   const used = NAILING_TABLE.findIndex(x => x.id === (w.nailing && w.nailing.id));
   const strength = w.strengthNailing ? NAILING_TABLE.findIndex(x => x.id === w.strengthNailing.id) : used;
   const rows = [];
@@ -240,26 +244,28 @@ function crushingText(r) {
 }
 export function deflectionSubstitutionRows(w, ctx = {}) {
   const rows = [];
-  const Fcperp = ctx.grade && ctx.grade.Fcperp;
   for (const [lt, d] of Object.entries(w.deflection || {})) {
     if (!d) continue;
     const name = lt === 'E' ? '1.0E' : 'α_s·W';
     if (!d.dirs) { rows.push([name, f3(d.delta) + ' in (' + (d.label || d.method || 'engine') + ')']); continue; }
-    rows.push([name + ' inputs', 'v = ' + d.v + ' plf (1.0 level), h = ' + f2(d.h) + ' ft, b = ' + f2(d.b) + ' ft, E = ' + d.E + ' psi, A = ' + d.A + ' in² (smaller end post), G_a = ' + d.Ga + ' k/in; T = ' + d.T + ' lb, C = ' + d.C + ' lb (lateral only)']);
+    const Fcperp = d.Fcperp || (ctx.grade && ctx.grade.Fcperp);
+    rows.push([name + ' inputs', 'v = ' + d.v + ' plf (1.0 level), h = ' + f2(d.h) + ' ft, b = ' + f2(d.b) + ' ft, E = ' + d.E + ' psi, A = ' + d.A + ' in² (end post with the smaller E·A), G_a = ' + d.Ga + ' k/in, sill F_c⊥ = ' + Fcperp + ' psi']);
+    rows.push([name + ' end forces', 'lateral only (' + (lt === 'E' ? '1.0E, ρ = 1' : 'α_s·1.0W') + '), own + from the walls above: T at the uplift end, C at the other end']);
     const gov = d.dirs.reduce((a, b) => (b.delta > a.delta ? b : a));
     for (const g of d.dirs) {
       const right = g.dir === '→';
       const anc = right ? w.anchorageLeft : w.anchorageRight;
-      const T = right ? d.T : d.C, C = right ? d.C : d.T;
+      const T = g.T, C = g.C;
       const cPost = right ? w.postRight : w.postLeft;
       const Ac = postArea(cPost, ctx.lineThickness || '4');
-      const basis = deltaBasisLoad(anc);
       const p = name + ' ' + g.dir + ' ';
       rows.push([p + '8vh³/(EAb)', '8 × ' + d.v + ' × ' + f2(d.h) + '³ / (' + d.E + ' × ' + d.A + ' × ' + f2(d.b) + ') = ' + f4(g.t1) + ' in']);
       rows.push([p + 'vh/(1000·G_a)', d.v + ' × ' + f2(d.h) + ' / (1000 × ' + d.Ga + ') = ' + f4(g.t2) + ' in']);
-      rows.push([p + 'Δ_HD slip (' + (right ? 'left' : 'right') + ' end)', anc && basis > 0
-        ? 'δ·T / P_δ = ' + anc.delta + ' × ' + T + ' / ' + f0(basis) + ' = ' + f4(g.dHD) + ' in (' + anc.id + '; P_δ = ' + (HDUE_TABLE.some(h => h.id === anc.id) ? 'ASD cap' : 'ASD cap / 0.7') + ')'
-        : '0 (no holdown / strap δ)']);
+      rows.push([p + 'T / C', 'T = ' + T + ' lb (' + (right ? 'left' : 'right') + ' end); C = ' + C + ' lb (' + (right ? 'right' : 'left') + ' end)']);
+      rows.push([p + 'Δ_HD (' + (right ? 'left' : 'right') + ' end)', anc && anc.deltaLrfd > 0 && anc.lrfdCap > 0 && T > 0
+        ? 'δ_LRFD × T / T_LRFD = ' + f3(anc.deltaLrfd) + ' × ' + T + ' / ' + anc.lrfdCap + ' = ' + f4(g.dHD) + ' in (' + anc.id + ', LRFD pair'
+          + (g.overLrfd ? ' — ⚠ T > LRFD cap: extrapolated linearly beyond the LRFD cap' : '') + ')'
+        : T > 0 ? '0 (no holdown / strap δ)' : '0 (no uplift)']);
       rows.push([p + 'Δ_c crushing (' + (right ? 'right' : 'left') + ' post)', Ac > 0 && Fcperp > 0
         ? 'r = C / (A_c·F_c⊥) = ' + C + ' / (' + Ac + ' × ' + Fcperp + ') = ' + f4(g.r) + '; Δ_c = ' + crushingText(g.r) + ' = ' + f4(g.dC) + ' in'
         : '0 (no post area / F_c⊥)']);
@@ -370,11 +376,9 @@ export function superpositionRows(w) {
 export const SUPERPOSITION_HEADERS = ['End', 'Governing ASD combination', 'N = Σ factor × load-case total (k)', 'Rule', 'Superposition (k)', 'Tool (k)', 'Difference (k)'];
 
 // === C6. Hardware and post selection trace ===
-function nextLighter(anc, floorSpan) {
+function nextLighter(anc, floorSpan, thickness) {
   if (!anc) return null;
-  const hd = HDUE_TABLE.findIndex(h => h.id === anc.id);
-  if (hd >= 0) return hd > 0 ? HDUE_TABLE[hd - 1] : null;
-  const tbl = MSTC_TABLE[String(floorSpan)] || MSTC_TABLE['16'];
+  const tbl = anc.family === 'HDUE' ? hdueTable(anc.group, thickness) : mstcTable(anc.group, anc.span || floorSpan);
   const i = tbl.findIndex(s => s.id === anc.id);
   return i > 0 ? tbl[i - 1] : null;
 }
@@ -388,11 +392,12 @@ export function hardwareTraceRows(w, ctx = {}) {
     const a = side === 'left' ? w.anchorageLeft : w.anchorageRight;
     const T = side === 'left' ? dem.tL : dem.tR;
     const ov = side === 'left' ? d.anchorageLeftOverride : d.anchorageRightOverride;
-    const kind = w.anchorageType === 'strap' ? 'MSTC strap (' + (ctx.floorSpan || '16') + '" floor span table)' : 'HDUE holdown';
+    const grp = groupLabel(w.woodGroup);
+    const kind = w.anchorageType === 'strap' ? 'MSTC strap (' + grp + ', ' + (ctx.floorSpan || '16') + '" floor span table)' : 'HDUE holdown (' + grp + ', ' + (ctx.lineThickness || '4') + '" wall table)';
     if (!a) { rows.push(['Anchorage ' + S, 'T = ' + f2(T) + ' k → OVER: no ' + kind + ' carries ' + f0(T * 1000) + ' lb']); continue; }
     const basis = w.anchorageBasis && w.anchorageBasis[side];
     const drift = !ov && basis && basis.basis === 'drift';
-    const lighter = ov || drift ? null : nextLighter(a, ctx.floorSpan);
+    const lighter = ov || drift ? null : nextLighter(a, ctx.floorSpan, ctx.lineThickness || '4');
     rows.push(['Anchorage ' + S, 'T = ' + f2(T) + ' k = ' + f0(T * 1000) + ' lb → ' + a.id + (ov ? ' ✎ (override)' : '') + ' cap ' + a.cap + ' lb, D/C ' + f2(a.cap > 0 ? T * 1000 / a.cap : null)
       + (drift ? '; raised for drift (strength pick ' + (basis.strength || 'OVER') + ') — see the Drift tab, drift sizing steps'
         : lighter ? '; lighter ' + lighter.id + ' ' + lighter.cap + ' lb < ' + f0(T * 1000) + ' lb' : !ov ? '; lightest in the ' + kind + ' table' : '')]);
@@ -403,7 +408,7 @@ export function hardwareTraceRows(w, ctx = {}) {
     const a = side === 'left' ? w.anchorageLeft : w.anchorageRight;
     if (!p) { rows.push(['Post ' + S, 'C = ' + f2(C) + ' k → OVER: no post in the ' + (ctx.lineThickness || '4') + '" wall carries it']); continue; }
     const min = hdueMinPost(a, ctx.lineThickness || '4');
-    rows.push(['Post ' + S, 'C = ' + f2(C) + ' k → ' + p.postLabel + ', cap ' + f2(p.capacityKips) + ' k, D/C ' + f2(p.capacityKips > 0 ? C / p.capacityKips : null) + (min ? '; anchorage minimum post ' + min.label : '')]);
+    rows.push(['Post ' + S, 'C = ' + f2(C) + ' k → ' + p.postLabel + (p.gradeLabel ? ' (' + p.gradeLabel + ', NDS Table ' + p.table + ')' : '') + ', cap ' + f2(p.capacityKips) + ' k, D/C ' + f2(p.capacityKips > 0 ? C / p.capacityKips : null) + (min ? '; anchorage minimum post ' + min.label : '')]);
   }
   // S3: the NDS 2018 column derivation is in the Hardware tab, not repeated here
   if (w.postLeft || w.postRight) {

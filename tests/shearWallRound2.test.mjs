@@ -5,7 +5,7 @@ import { checkShearWallItem } from '../scripts/lib/shearWallLoadCheck.mjs'; // s
 import { calcAll, computeWallTC, resolveGravityAtWall } from '../src/modules/shearWallCalc.js';
 import { shearWallDesign, renderLineResults, migrateV6toV7, lcTableRows, loadCaseTableRows } from '../src/modules/shearWallDesign.js';
 import { renderElevation, renderElevationForPdf } from '../src/modules/shearWallElevation.js';
-import { HDUE_TABLE, MSTC_TABLE, hdueMinPost, meetsMinPost, autoSelectPost, getGradeById } from '../src/modules/shearWallHardware.js';
+import { HDUE_TABLE, MSTC_TABLE, hdueTable, hdueMinPost, meetsMinPost, autoSelectPost, getGradeById } from '../src/modules/shearWallHardware.js';
 import { lookupWswh, selectWswhAnchor, permittedCriteria, WSWH_ROD } from '../src/modules/shearWallWswh.js';
 import { validateEngineeringInputs } from '../src/validation.js';
 
@@ -40,9 +40,12 @@ const wallsOf = (out) => lineOf(out).perLevel.flatMap(p => p.walls);
 // === P9: HDUE minimum post ===
 
 test('P9: anchorage minimum post by thickness; MSTC floor straps (2)2x (user rule 2026-09-30)', () => {
-  assert.equal(hdueMinPost(HDUE_TABLE[0], '4').id, '(2)2x4');
-  assert.equal(hdueMinPost(HDUE_TABLE[0], '6').id, '(2)2x6');
-  assert.equal(hdueMinPost(HDUE_TABLE.find(h => h.id === 'HDUE9'), '4').id, '4x4');
+  // HDUE tables per framing group and wall width (data 2026-10-13): the min post comes from the line's wall-width table
+  assert.equal(hdueMinPost(hdueTable('dfsp', '4')[0], '4').id, '(2)2x4');
+  assert.equal(hdueMinPost(hdueTable('dfsp', '6')[0], '6').id, '(2)2x6');
+  assert.equal(hdueMinPost(hdueTable('dfsp', '4').find(h => h.id === 'HDUE9'), '4').id, '6x4');
+  assert.equal(hdueMinPost(hdueTable('dfsp', '6').find(h => h.id === 'HDUE9'), '6').id, '6x6');
+  assert.equal(hdueMinPost(hdueTable('spfhf', '4').find(h => h.id === 'HDUE13'), '4').id, '8x4');
   for (const t of Object.values(MSTC_TABLE)) for (const s of t) {
     assert.equal(hdueMinPost(s, '4').id, '(2)2x4');
     assert.equal(hdueMinPost(s, '6').id, '(2)2x6');
@@ -244,7 +247,12 @@ test('WSWH on concrete: D/C = V_ASD / V_allow; T = 0.7ρV·H_e/B − (0.6−0.14
   near(w.governingTensionLeft, 0.7 * 2 * 105.25 / 12.5, 0.01);
   assert.equal(w.anchorageLeft.rowId, 'E STD 16000');
   assert.equal(w.postLeft.postLabel, 'WSWH panel');
-  near(w.deflection.E.delta, 0.45 * 2000 / 2575, 1e-3); // 1.0E, linear in V
+  near(w.deflection.E.delta, 0.64 * 2000 / 3680, 1e-4); // 1.0E, linear from the LRFD cap with its drift (option B, 2026-10-13)
+  near(w.deltaShare.E, 0.64 * 2000 / 3680, 1e-4); // the distribution's δ(V) = the reported drift line (1.0 level)
+  assert.equal(w.deflection.E.overLrfd, false);
+  // V(1.0E) = 4,000 lb > V_LRFD 3,680 lb → warning sign (Δ_LRFD not valid above it)
+  const lnO = calcAll(oneStory([panel('w-1', 0)], { seismic: 4, floorH: 9 })).perDirection[0].perLine[0];
+  assert.ok(lnO.deflWarnings.some(x => /WSWH, 1\.0E\): V above V_LRFD 3680 lb/.test(x.message)), JSON.stringify(lnO.deflWarnings));
   // with 1 k of dead load: P = (1+0.14)·1000 for the lookup; uplift uses (0.6−0.14)·D/2
   const g = { 'lvl-1': { uniform: [], point: [{ id: 'pl-1', position: 0.75, dlKips: 1 }] } };
   const w2 = wallsOf(calcAll(oneStory([panel('w-1', 0)], { seismic: 2, floorH: 9, gravity: g })))[0];

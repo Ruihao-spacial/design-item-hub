@@ -3,42 +3,42 @@
   "title": "Deflection distribution — closed form and a starved stacked wall (F-DD1)",
   "intent": "Line A: two walls (6 ft and 12 ft) share the story shear by stiffness, k = V/δ from SDPWS Eq. 4.3-1, iterated until the wall δ are within 5 %. With linear δ (no plate crushing beyond r = 0.73, fixed hardware) the converged split has a closed form, which is checked here. Line B (finding F-DD1, pinned design): a 4 ft Level 1 wall (SW-6) under a 4 ft wall (SW-4). The δ of SW-6 includes the holdown slip and crushing from the end force SW-4 sends down, which does not depend on the own share of SW-6 — an offset. Equal δ at Level 1 then gives SW-6 only a few percent of the story shear (starved), although its capacity share is about a third. The tool converges to that split; this case fixes the numbers for the F-DD1 solver work.",
   "covers": [
-    "Deflection distribution (k = V/δ, 5 % spread, 20 passes)",
+    "Deflection distribution (equal δ at the 1.0 level, 5 % spread, 20 passes)",
     "SDPWS Eq. 4.3-1",
     "Stacked walls: offset from the forces above (F-DD1)"
   ],
   "handCalc": [
     {
       "step": 1,
-      "text": "Line A, both walls 6\" o.c. (G_a = 16 k/in), HDUE3 (δ 0.127 in at 3790 lb), (2)2x4 end posts (A = 10.5 in²), h = 10 ft. δ per kip of wall shear: c = 8,000,000/(E·A·L²) + h/(L·G_a) + (h/L)·[0.127·(1000h/L)/3790 + 0.02·(1000h/L)/(A·625)/0.73]."
+      "text": "Line A, both walls 6\" o.c. (G_a = 16 k/in), HDUE3 (δ_LRFD 0.178 in at T_LRFD 5306 lb), (2)2x4 end posts (A = 10.5 in²), h = 10 ft, lateral end forces only. Each wall is linear: δ = c·V with c = 8,000,000/(E·A·L²) + h/(L·G_a) + (h/L)·0.178·(1000h/L)/5306 + (h/L)·0.02·(1000h/L)/(A·625)/0.73 (in/k: bending, shear, holdown Δ_a = δ_LRFD × T / T_LRFD, crushing)."
     },
     {
       "step": 2,
-      "text": "SW-1 (L = 6): c_1 = 0.0124 + 0.1042 + 0.1047 = 0.2213 in/k → k_1 = 4.519 k/in. SW-2 (L = 12): c_2 = 0.0031 + 0.0521 + 0.0262 = 0.0814 in/k → k_2 = 12.290 k/in."
+      "text": "SW-1 (L = 6): c_1 = 0.0124 + 0.1042 + 0.0932 + 0.0116 = 0.2214 in/k. SW-2 (L = 12): c_2 = 0.0031 + 0.0521 + 0.0233 + 0.0029 = 0.0814 in/k."
     },
     {
       "step": 3,
-      "text": "Converged split V_i = V·k_i/Σk: V_1 = 6 × 4.519/16.809 = 1.613 k, V_2 = 4.387 k (by length it would be 2.00 / 4.00 k — the long wall is stiffer than its length share)."
+      "text": "Equal δ: c_1·V_1 = c_2·V_2, V_1 + V_2 = 6 → V_1 = 6 × 0.0814 / (0.2214 + 0.0814) = 1.613 k, V_2 = 4.387 k (by length it would be 2.00 / 4.00 k — the long wall is stiffer than its length share)."
     },
     {
       "step": 4,
-      "text": "Every wall deflects δ = V/Σk = 6/16.809 = 0.3569 in → spread 0 (well inside 5 %). Stiffness reported as k = V·1000/δ: 4519 and 12290 lb/in."
+      "text": "Every wall deflects δ = c_1·V_1 = 0.3571 in at its share (the Distribution tab's δ at share) → spread 0."
     },
     {
       "step": 5,
-      "text": "Check the assumptions: v = 188.18 / 255.91 plf ≤ 312 → 6\" o.c. on both; SW-2 T = 0.7 × 4.387 × 10/12 − 0.46 × 0.60 = 2.283 k ≤ 3.79 → HDUE3; crushing r = 0.410 / 0.557 < 0.73 → linear."
+      "text": "Check the assumptions: v = 188.16 / 255.92 plf ≤ 312 → 6\" o.c. on both; SW-2 T = 0.7 × 4.387 × 10/12 − 0.46 × 0.60 = 2.283 k ≤ 3.79 → HDUE3; crushing r = 0.410 / 0.557 < 0.73 → linear."
     },
     {
       "step": 6,
-      "text": "Line B: 2nd story SW-3 (8 ft) and SW-4 (4 ft) over SW-5 (8 ft) / SW-6 (4 ft), all 2\" o.c. both sides (G_a = 56); 1.0E = 7 k at Level 2 only, so both stories carry 7 k. Pinned: SW-3 MSTC66 + (3)2x4, SW-4 MSTC40 + (2)2x4, SW-5 HDUE13 + 8x4, SW-6 HDUE3 + (2)2x4. δ(V, T_above) = 8vh³/(EAb) + vh/(1000G_a) + (h/b)·[δ_cap·T/P_δ + Δ_c(r)], T = 1000·V·h/L + T_above (MSTC P_δ = cap/0.7, HDUE P_δ = cap)."
+      "text": "Line B: 2nd story SW-3 (8 ft) and SW-4 (4 ft) over SW-5 (8 ft) / SW-6 (4 ft), all 2\" o.c. both sides (G_a = 56); 1.0E = 7 k at Level 2 only, so both stories carry 7 k. Pinned: SW-3 MSTC66 + (3)2x4, SW-4 MSTC40 + (2)2x4, SW-5 HDUE13 + 8x4, SW-6 HDUE3 + (2)2x4. δ(V, T_above) = 8vh³/(EAb) + vh/(1000G_a) + (h/b)·[δ_LRFD × T / T_LRFD + Δ_c(r)], T = C = 1000·V·h/L + T_above (lateral only; LRFD pairs: HDUE3 0.178 in / 5306 lb, HDUE13 0.203 / 18130, MSTC40 0.097 / 4386, MSTC66 0.129 / 8357)."
     },
     {
       "step": 7,
-      "text": "Level 2 (nothing above): equal δ → V_3 = 5.670 k, V_4 = 1.330 k, δ = 0.3151 in at both walls. The 1.0E end forces sent down: SW-3 T = 7088 lb onto SW-5, SW-4 T = 3324 lb onto SW-6."
+      "text": "Level 2 (nothing above): equal δ → V_3 = 5.672 k, V_4 = 1.328 k, δ = 0.3146 in at both walls. The 1.0E end forces sent down: SW-3 T = 7091 lb onto SW-5, SW-4 T = 3319 lb onto SW-6."
     },
     {
       "step": 8,
-      "text": "Level 1 offsets: SW-6 at zero own share already deflects d_6 = δ(0, 3324 lb) = 0.3132 in (its HDUE3 slip and crushing under the force from SW-4, × h/b = 2.5). SW-5 carrying the whole 7 k deflects 0.4443 in > d_6, so an equal-δ split exists."
+      "text": "Level 1 offsets: SW-6 at zero own share already deflects d_6 = δ(0, 3319 lb) = 0.3130 in (its HDUE3 Δ and crushing under the force from SW-4, × h/b = 2.5). SW-5 carrying the whole 7 k deflects 0.4444 in > d_6, so an equal-δ split exists."
     },
     {
       "step": 9,
@@ -46,15 +46,15 @@
     },
     {
       "step": 10,
-      "text": "Offset check (note in G3): δ_6(0)/δ = 0.3132 / 0.4261 = 0.73 > 0.5 → SW-6 is noted: most of its deflection comes from the force of SW-4 above; δ_5(0)/δ = 0.1140 / 0.4261 = 0.27 → no note."
+      "text": "Offset check (note in G3): δ_6(0)/δ = 0.3130 / 0.4261 = 0.73 > 0.5 → SW-6 is noted: most of its deflection comes from the force of SW-4 above; δ_5(0)/δ = 0.1140 / 0.4261 = 0.27 → no note."
     },
     {
       "step": 11,
-      "text": "Line A drift (Cd 4, Ie 1.0, RC II): the two walls give the same δ at their shares (0.3569 in), so δxe = the story δ and either wall can be named as governing. Story drift Level 1: δxe = the largest wall δ = SW-2 0.3569 in → δx = Cd·δxe/Ie = 4 × 0.3569 / 1.0 = 1.428 in vs Δa = 0.020 × 10 × 12 = 2.400 in → OK."
+      "text": "Line A drift (Cd 4, Ie 1.0, RC II): the two walls give the same δ at their shares (0.3571 in), so δxe = the story δ and either wall can be named as governing. Story drift Level 1: δxe = the largest wall δ = SW-1 0.3571 in → δx = Cd·δxe/Ie = 4 × 0.3571 / 1.0 = 1.428 in vs Δa = 0.020 × 10 × 12 = 2.400 in → OK."
     },
     {
       "step": 12,
-      "text": "Line B drift: Level 2 δ = 0.3151 in, Level 1 δ = 0.4261 in (equal δ at each story, end forces from above included). Story drift Level 2: δxe = the largest wall δ = SW-4 0.3151 in → δx = Cd·δxe/Ie = 4 × 0.3151 / 1.0 = 1.260 in vs Δa = 0.020 × 10 × 12 = 2.400 in → OK. Story drift Level 1: δxe = the largest wall δ = SW-6 0.4261 in → δx = Cd·δxe/Ie = 4 × 0.4261 / 1.0 = 1.704 in vs Δa = 0.020 × 10 × 12 = 2.400 in → OK."
+      "text": "Line B drift: Level 2 δ = 0.3146 in, Level 1 δ = 0.4261 in (equal δ at each story, end forces from above included). Story drift Level 2: δxe = the largest wall δ = SW-4 0.3146 in → δx = Cd·δxe/Ie = 4 × 0.3146 / 1.0 = 1.258 in vs Δa = 0.020 × 10 × 12 = 2.400 in → OK. Story drift Level 1: δxe = the largest wall δ = SW-6 0.4261 in → δx = Cd·δxe/Ie = 4 × 0.4261 / 1.0 = 1.705 in vs Δa = 0.020 × 10 × 12 = 2.400 in → OK."
     }
   ],
   "expect": [
@@ -62,7 +62,7 @@
       "label": "SW-1 share V (1.0E)",
       "at": "wall:SW-1",
       "field": "shareExact_1E",
-      "value": 1.6130057902314143,
+      "value": 1.6128272710986409,
       "tol": 0.005,
       "step": 3,
       "line": "Line A"
@@ -71,26 +71,26 @@
       "label": "SW-2 share V (1.0E)",
       "at": "wall:SW-2",
       "field": "shareExact_1E",
-      "value": 4.386994209768587,
+      "value": 4.387172728901359,
       "tol": 0.005,
       "step": 3,
       "line": "Line A"
     },
     {
-      "label": "SW-1 stiffness k (lb/in)",
+      "label": "SW-1 δ at its share (in)",
       "at": "wall:SW-1",
-      "field": "stiffness.E",
-      "value": 4518.874879516565,
-      "tol": 22.594374397582826,
+      "field": "deltaShare.E",
+      "value": 0.3570779029730934,
+      "tol": 0.001,
       "step": 4,
       "line": "Line A"
     },
     {
-      "label": "SW-2 stiffness k (lb/in)",
+      "label": "SW-2 δ at its share (in)",
       "at": "wall:SW-2",
-      "field": "stiffness.E",
-      "value": 12290.270779662695,
-      "tol": 61.45135389831347,
+      "field": "deltaShare.E",
+      "value": 0.3570779029730934,
+      "tol": 0.001,
       "step": 4,
       "line": "Line A"
     },
@@ -98,7 +98,7 @@
       "label": "SW-1 δ (in)",
       "at": "wall:SW-1",
       "field": "deflection.E.delta",
-      "value": 0.35694853989937775,
+      "value": 0.3570779029730934,
       "tol": 0.001,
       "step": 4,
       "line": "Line A"
@@ -107,7 +107,7 @@
       "label": "SW-2 δ (in)",
       "at": "wall:SW-2",
       "field": "deflection.E.delta",
-      "value": 0.35694853989937775,
+      "value": 0.3570779029730934,
       "tol": 0.001,
       "step": 4,
       "line": "Line A"
@@ -133,7 +133,7 @@
       "label": "Line B SW-3 share, Level 2 (k)",
       "at": "wall:SW-3",
       "field": "shareExact_1E",
-      "value": 5.670354709655072,
+      "value": 5.672480996326296,
       "tol": 0.01,
       "step": 7,
       "line": "Line B"
@@ -142,7 +142,7 @@
       "label": "Line B SW-4 share, Level 2 (k)",
       "at": "wall:SW-4",
       "field": "shareExact_1E",
-      "value": 1.3296452903449278,
+      "value": 1.3275190036737037,
       "tol": 0.01,
       "step": 7,
       "line": "Line B"
@@ -151,7 +151,7 @@
       "label": "Line B SW-4 δ, Level 2 (in)",
       "at": "wall:SW-4",
       "field": "deflection.E.delta",
-      "value": 0.3150987950596984,
+      "value": 0.3145829544555855,
       "tol": 0.002,
       "step": 7,
       "line": "Line B"
@@ -160,7 +160,7 @@
       "label": "Line B SW-6 share, Level 1 — starved (k)",
       "at": "wall:SW-6",
       "field": "shareExact_1E",
-      "value": 0.36650746642919074,
+      "value": 0.36693728236525924,
       "tol": 0.005,
       "step": 9,
       "line": "Line B"
@@ -169,7 +169,7 @@
       "label": "Line B SW-5 share, Level 1 (k)",
       "at": "wall:SW-5",
       "field": "shareExact_1E",
-      "value": 6.633492533570809,
+      "value": 6.633062717634741,
       "tol": 0.005,
       "step": 9,
       "line": "Line B"
@@ -178,7 +178,7 @@
       "label": "Line B SW-5 δ, Level 1 (in)",
       "at": "wall:SW-5",
       "field": "deflection.E.delta",
-      "value": 0.4261152218257285,
+      "value": 0.4261460718515847,
       "tol": 0.0005,
       "step": 9,
       "line": "Line B"
@@ -187,7 +187,7 @@
       "label": "Line B SW-6 δ, Level 1 (in)",
       "at": "wall:SW-6",
       "field": "deflection.E.delta",
-      "value": 0.4261152218257285,
+      "value": 0.4261460718515847,
       "tol": 0.0005,
       "step": 9,
       "line": "Line B"
@@ -196,7 +196,7 @@
       "label": "Line B SW-6 δ(0)/δ* (from above)",
       "at": "line",
       "field": "distribution.levels[1].walls[1].fromAboveRatio",
-      "value": 0.7349307222649777,
+      "value": 0.7344362275566269,
       "tol": 0.002,
       "step": 10,
       "line": "Line B"
@@ -213,7 +213,7 @@
       "label": "Line A — Story δxe, Level 1 (in)",
       "at": "drift:Level 1",
       "field": "seismic.deltaXE",
-      "value": 0.3569485398993778,
+      "value": 0.3570779029730934,
       "tol": 0.0005,
       "step": 11,
       "line": "Line A"
@@ -222,7 +222,7 @@
       "label": "Line A — δx = Cd·δxe/Ie, Level 1 (in)",
       "at": "drift:Level 1",
       "field": "seismic.deltaX",
-      "value": 1.4277941595975112,
+      "value": 1.4283116118923735,
       "tol": 0.002,
       "step": 11,
       "line": "Line A"
@@ -239,7 +239,7 @@
       "label": "Line B — Story δxe, Level 2 (in)",
       "at": "drift:Level 2",
       "field": "seismic.deltaXE",
-      "value": 0.3150987950596985,
+      "value": 0.3145829544555856,
       "tol": 0.0005,
       "step": 12,
       "line": "Line B"
@@ -248,7 +248,7 @@
       "label": "Line B — δx = Cd·δxe/Ie, Level 2 (in)",
       "at": "drift:Level 2",
       "field": "seismic.deltaX",
-      "value": 1.260395180238794,
+      "value": 1.2583318178223424,
       "tol": 0.002,
       "step": 12,
       "line": "Line B"
@@ -265,7 +265,7 @@
       "label": "Line B — Story δxe, Level 1 (in)",
       "at": "drift:Level 1",
       "field": "seismic.deltaXE",
-      "value": 0.4261152218257287,
+      "value": 0.4261460718515848,
       "tol": 0.0005,
       "step": 12,
       "line": "Line B"
@@ -274,7 +274,7 @@
       "label": "Line B — δx = Cd·δxe/Ie, Level 1 (in)",
       "at": "drift:Level 1",
       "field": "seismic.deltaX",
-      "value": 1.7044608873029148,
+      "value": 1.7045842874063393,
       "tol": 0.002,
       "step": 12,
       "line": "Line B"
@@ -336,12 +336,14 @@
       "postR": "(2)2x4"
     }
   },
-  "schemaVersion": 12,
+  "schemaVersion": 13,
   "inputs": {
     "sds": "1.0",
     "loadType": "seismic",
     "wallThickness": "4",
+    "species": "DF-L",
     "woodGrade": "dfir_no1",
+    "postGrade": "dfir_pt_no1",
     "sheathing": "ply",
     "distribution": "deflection",
     "cd": "4",

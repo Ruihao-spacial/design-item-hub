@@ -7,7 +7,8 @@ import {
 import { calcAll, CALC_VERSION, DISTRIBUTION_METHODS, lineDistribution, lineDriftMode, DEFAULT_OMEGA0, omega0Of, windLimitDen } from './shearWallCalc.js';
 import { renderElevation, renderElevationForPdf, pdfElevationAspect, planPdfElevation, pdfElevationPartSize } from './shearWallElevation.js';
 import { NAILING_TABLE, SHEATHING_TYPES, FOOTNOTE_10_NOTE, sheathingLabel } from './shearWallNailing.js';
-import { NDS_GRADES, HDUE_TABLE, MSTC_TABLE, POST_SIZES, computePostCapacity, FTAO_STRAP_TABLE, strapNailing, lrfdCap, getGradeById } from './shearWallHardware.js';
+import { renderHardwareTab as renderHardwareTabView } from './shearWallHardwareTab.js';
+import { lrfdCap, getGradeById, woodBasis, sillProps, SPECIES, speciesOf, dimGrades, ptGrades, groupLabel } from './shearWallHardware.js';
 import { DRIFT_ROWS, driftLimit } from './shearWallDeflection.js';
 import { WSWH_NOTES, WSWH_FC, conditionLabel } from './shearWallWswh.js';
 import { assemblyLoads, assemblyPsf } from './shearWallGravity.js';
@@ -38,7 +39,7 @@ function linkedGravityRows(inputs) {
 export const shearWallDesign = {
   id: 'shear_wall_design',
   label: 'Shear Wall Design',
-  schemaVersion: 12,
+  schemaVersion: 13,
   calcVersion: CALC_VERSION,
   noNewPrefix: true,
   noOutputSection: false,
@@ -131,6 +132,7 @@ export const shearWallDesign = {
     let resultsTimer = null;
     let activeDirLineTabs = {};
     let elevationHandle = null;
+    const hardwareView = { species: null, wswhLoad: 'S' }; // Hardware tab toggles (not saved)
 
     function notifyChange() {
       if (onInputChange) onInputChange();
@@ -208,15 +210,27 @@ export const shearWallDesign = {
       row1.appendChild(el('div', { className: 'form-group', style: { marginBottom: 0 } },
         el('label', { className: 'form-label' }, 'Default Wall'),
         el('div', { style: { display: 'flex', gap: '2px' } }, thicknessBtn('4', '2x4'), thicknessBtn('6', '2x6'))));
-      const gradeSelect = el('select', { className: 'form-select', style: { width: '180px' },
-        onChange(e) { inputs.woodGrade = e.target.value; notifyChange(); } });
-      NDS_GRADES.forEach(g => {
-        const opt = el('option', { value: g.id }, g.label);
-        if (inputs.woodGrade === g.id) opt.selected = true;
-        gradeSelect.appendChild(opt);
-      });
+      // Wood (schema 13, user 2026-10-13): species (sets the DF/SP or SPF/HF hardware tables), the dimension-lumber
+      // grade (NDS Table 4A / 4B: studs, plates, 2x / 4x posts) and the posts & timbers grade (Table 4D: 6x6, 8x6)
+      const wood = woodBasis(inputs);
+      const woodSelect = (list, value, width, onPick) => {
+        const sel = el('select', { className: 'form-select', style: { width }, onChange(e) { onPick(e.target.value); } });
+        list.forEach(o => sel.appendChild(el('option', { value: o.id, selected: o.id === value }, o.label)));
+        return sel;
+      };
       row1.appendChild(el('div', { className: 'form-group', style: { marginBottom: 0 } },
-        el('label', { className: 'form-label' }, 'Wood Grade'), gradeSelect));
+        el('label', { className: 'form-label' }, 'Species (hardware ' + groupLabel(wood.group) + ')'),
+        woodSelect(SPECIES, wood.species, '200px', (id) => {
+          const sp = speciesOf(id);
+          inputs.species = id; inputs.woodGrade = sp.defaults[0]; inputs.postGrade = sp.defaults[1];
+          notifyChange(); renderAll();
+        })));
+      row1.appendChild(el('div', { className: 'form-group', style: { marginBottom: 0 } },
+        el('label', { className: 'form-label' }, 'Grade — dimension lumber (NDS ' + wood.dim.table + ')'),
+        woodSelect(dimGrades(wood.species), wood.dim.id, '200px', (id) => { inputs.woodGrade = id; notifyChange(); })));
+      row1.appendChild(el('div', { className: 'form-group', style: { marginBottom: 0 } },
+        el('label', { className: 'form-label' }, 'Grade — posts & timbers 6x6, 8x6 (NDS 4D)'),
+        woodSelect(ptGrades(wood.species), wood.pt.id, '200px', (id) => { inputs.postGrade = id; notifyChange(); })));
       const distSelect = el('select', { className: 'form-select', style: { width: '270px' },
         onChange(e) { inputs.distribution = e.target.value; notifyChange(); } });
       DISTRIBUTION_METHODS.forEach(m => {
@@ -453,84 +467,7 @@ export const shearWallDesign = {
     }
 
     function renderHardwareTab() {
-      const sec = el('div');
-
-      sec.appendChild(el('div', { className: 'section-header' }, 'Shearwall Nailing Capacity — SDPWS Table 4.3A'));
-      sec.appendChild(el('div', { style: { fontSize: '0.8rem', color: 'var(--ink-secondary)', marginBottom: '0.5rem' } }, '15/32 WSP Structural 1, 10d common nail. ' + FOOTNOTE_10_NOTE + ' ASD: E = V_n/2.8, W = V_n/2.0. LRFD (SDPWS 2021 §4.1.4): φ = 0.5 seismic, 0.8 wind. Ga for deflection uses the ' + sheathingLabel(inputs.sheathing) + ' column (Summary tab).'));
-      const nTbl = el('table', { className: 'data-table', style: { fontSize: '0.85rem' } });
-      nTbl.appendChild(el('tr', null, el('th', null, 'E.N.'), el('th', null, 'Sides'), el('th', { className: 'num' }, 'V_n (plf)'),
-        el('th', { className: 'num' }, 'ASD E (plf)'), el('th', { className: 'num' }, 'ASD W (plf)'),
-        el('th', { className: 'num' }, 'LRFD E (plf)'), el('th', { className: 'num' }, 'LRFD W (plf)'),
-        el('th', { className: 'num' }, 'Ga OSB (k/in)'), el('th', { className: 'num' }, 'Ga PLY (k/in)')));
-      for (const n of NAILING_TABLE) {
-        nTbl.appendChild(el('tr', null, el('td', { className: 'mono' }, n.id), el('td', null, n.sides === 2 ? 'Both' : '1'),
-          el('td', { className: 'num mono' }, n.vn), el('td', { className: 'num mono' }, n.asdE), el('td', { className: 'num mono' }, n.asdW),
-          el('td', { className: 'num mono' }, n.lrfdE), el('td', { className: 'num mono' }, n.lrfdW),
-          el('td', { className: 'num mono' }, n.gaOSB), el('td', { className: 'num mono' }, n.gaPLY)));
-      }
-      sec.appendChild(el('div', { className: 'table-scroll', style: { marginBottom: '1rem' } }, nTbl));
-
-      sec.appendChild(el('div', { className: 'section-header' }, 'HDUE Holdown Catalog (Concrete Anchorage)'));
-      const hTbl = el('table', { className: 'data-table', style: { fontSize: '0.85rem' } });
-      hTbl.appendChild(el('tr', null, el('th', null, 'Model'), el('th', { className: 'num' }, 'ASD Cap (lb)'), el('th', { className: 'num' }, 'LRFD Cap (lb)'), el('th', null, 'Min Post (4")'), el('th', null, 'Min Post (6")'), el('th', { className: 'num' }, 'δ @ ASD cap (in)')));
-      for (const hd of HDUE_TABLE) {
-        hTbl.appendChild(el('tr', null, el('td', { className: 'mono' }, hd.id), el('td', { className: 'num mono' }, hd.cap), el('td', { className: 'num mono' }, lrfdCap(hd)),
-          el('td', { className: 'mono' }, hd.minPost['4']), el('td', { className: 'mono' }, hd.minPost['6']), el('td', { className: 'num mono' }, hd.delta)));
-      }
-      sec.appendChild(el('div', { className: 'table-scroll', style: { marginBottom: '0.25rem' } }, hTbl));
-      sec.appendChild(el('div', { style: { fontSize: '0.8rem', color: 'var(--ink-secondary)', marginBottom: '1rem' } }, 'LRFD cap = 1.4 × ASD cap (reported with LRFD forces only). δ is at the ASD cap; deflection uses Δa = δ·T(1.0)/cap.'));
-
-      sec.appendChild(el('div', { className: 'section-header' }, 'MSTC Strap Catalog (Floor-to-Floor)'));
-      sec.appendChild(el('div', { style: { fontSize: '0.8rem', color: 'var(--ink-secondary)', marginBottom: '0.5rem' } }, 'δ is at the strap LRFD cap = ASD cap / 0.7 (deflection only); Δa = δ·T(1.0)/(cap/0.7). No LRFD design check for straps. Minimum post at every strap end: (2)2x4 (4" wall) / (2)2x6 (6" wall).'));
-      for (const [span, table] of Object.entries(MSTC_TABLE)) {
-        sec.appendChild(el('div', { style: { fontWeight: '500', fontSize: '0.85rem', marginBottom: '0.25rem' } }, span + '" Clear Span'));
-        const sTbl = el('table', { className: 'data-table', style: { fontSize: '0.85rem' } });
-        sTbl.appendChild(el('tr', null, el('th', null, 'Model'), el('th', { className: 'num' }, 'ASD Cap (lb)'), el('th', { className: 'num' }, 'δ (in)')));
-        for (const s of table) {
-          sTbl.appendChild(el('tr', null, el('td', { className: 'mono' }, s.id), el('td', { className: 'num mono' }, s.cap), el('td', { className: 'num mono' }, s.delta)));
-        }
-        sec.appendChild(el('div', { className: 'table-scroll', style: { marginBottom: '0.75rem' } }, sTbl));
-      }
-
-      sec.appendChild(el('div', { className: 'section-header' }, 'FTAO Wall Straps (above / below openings)'));
-      sec.appendChild(el('div', { style: { fontSize: '0.8rem', color: 'var(--ink-secondary)', marginBottom: '0.5rem' } }, 'ASD allowable tension. Fasteners and end length shown for DF/SP framing, 0.148" nails (lightest strap ≥ F_max is selected; straps run the full wall length above and below the openings).'));
-      const fsTbl = el('table', { className: 'data-table', style: { fontSize: '0.85rem' } });
-      fsTbl.appendChild(el('tr', null, el('th', null, 'Model'), el('th', { className: 'num' }, 'Ga.'), el('th', { className: 'num' }, 'ASD Cap (lb)'), el('th', null, 'Fasteners (total)'), el('th', { className: 'num' }, 'End length (in)')));
-      for (const st of FTAO_STRAP_TABLE) {
-        const nl = strapNailing(st);
-        fsTbl.appendChild(el('tr', null, el('td', { className: 'mono' }, st.id), el('td', { className: 'num mono' }, st.gauge), el('td', { className: 'num mono' }, st.cap),
-          el('td', { className: 'mono' }, '(' + nl.count + ') ' + nl.d), el('td', { className: 'num mono' }, nl.endLength)));
-      }
-      sec.appendChild(el('div', { className: 'table-scroll', style: { marginBottom: '1rem' } }, fsTbl));
-
-      const gradeObj = NDS_GRADES.find(g => g.id === inputs.woodGrade) || NDS_GRADES[2];
-      // project wall thickness plus any line override (the calc sheets reference these tables)
-      const thicknesses = [...new Set([inputs.wallThickness || '4', ...inputs.directions.flatMap(d => d.lines.map(l => l.wallThickness).filter(Boolean))])];
-      const heights = [...new Set(inputs.levels.map(l => parseFloat(l.floorToFloor) || 0).filter(h => h > 0))];
-      if (heights.length === 0) heights.push(10);
-      for (const thickness of thicknesses) {
-        const posts = POST_SIZES[thickness] || POST_SIZES['4'];
-        sec.appendChild(el('div', { className: 'section-header', style: { marginTop: '0.5rem' } }, 'Post Compression Capacity — ' + gradeObj.label + ', ' + thickness + '" Wall'));
-        sec.appendChild(el('div', { style: { fontSize: '0.8rem', color: 'var(--ink-secondary)', marginBottom: '0.5rem' } },
-          'NDS 2018 §3.7: CD=1.6, Ke=1.0, l2=6" (braced by sheathing). F_c* = F_c·C_D·C_F; F_cE = 0.822·E_min′/(l_e/d)², the smaller of both axes; C_P from F_cE/F_c* with c = 0.8; F_c′ = F_c*·C_P. Bearing F_c⊥′ = F_c⊥·C_b. Capacity = min(F_c′, F_c⊥′) × A. Heights from project levels. Sill plate bearing / crushing uses ' + gradeObj.species + ' Fc⊥ = ' + gradeObj.Fcperp + ' psi.'));
-        for (const h of heights) {
-          sec.appendChild(el('div', { style: { fontWeight: '500', fontSize: '0.85rem', marginBottom: '0.25rem' } }, 'Floor Height: ' + h + ' ft'));
-          const pTbl = el('table', { className: 'data-table', style: { fontSize: '0.85rem' } });
-          pTbl.appendChild(el('tr', null, el('th', null, 'Post'), el('th', { className: 'num' }, 'l_e/d'), el('th', { className: 'num' }, 'F_cE (psi)'), el('th', { className: 'num' }, 'F_c* (psi)'),
-            el('th', { className: 'num' }, 'C_P'), el('th', { className: 'num' }, 'FC\' (psi)'), el('th', { className: 'num' }, 'Fc⊥\' (psi)'),
-            el('th', { className: 'num' }, 'Governs'), el('th', { className: 'num' }, 'Capacity (k)')));
-          for (const p of posts) {
-            const r = computePostCapacity(p, gradeObj, h);
-            pTbl.appendChild(el('tr', null, el('td', { className: 'mono' }, p.label),
-              el('td', { className: 'num mono' }, r.ratio1), el('td', { className: 'num mono' }, r.FcE), el('td', { className: 'num mono' }, r.FcStar), el('td', { className: 'num mono' }, r.Cp),
-              el('td', { className: 'num mono' }, r.FcPrime), el('td', { className: 'num mono' }, r.FcPerpPrime),
-              el('td', null, r.governedBy === 'axial' ? 'Axial' : 'Bearing'), el('td', { className: 'num mono' }, r.capacityKips)));
-          }
-          sec.appendChild(el('div', { className: 'table-scroll', style: { marginBottom: '0.75rem' } }, pTbl));
-        }
-      }
-
-      return sec;
+      return renderHardwareTabView(inputs, hardwareView, renderAll);
     }
 
     function renderDirectionTab(dir) {
@@ -681,7 +618,7 @@ export const shearWallDesign = {
       elevationHandle = renderElevation(elevContainer, line, inputs.levels, inputs.wallDLTypes, {
         onWallChange() {}, onGravityChange() {},
         flatLoadAssemblies: () => flatLoadAssemblies(),
-        designContext: () => ({ wallThickness: inputs.wallThickness, woodGrade: inputs.woodGrade, loadType: inputs.loadType,
+        designContext: () => ({ wallThickness: inputs.wallThickness, wood: woodBasis(inputs), loadType: inputs.loadType,
           wswhFc: inputs.wswhFc, sdc: inputs.seismicDesignCategory, detached: !!inputs.detachedOneTwoFamily, bottomLevelId: (inputs.levels[inputs.levels.length - 1] || {}).id }),
         onInputChange() {
           notifyChange();
@@ -774,7 +711,7 @@ export const shearWallDesign = {
     const outputs = calcAll(inputs);
     const detailed = (inputs.pdfReport || 'summary') === 'detailed';
     const P = (rows) => rows.map(r => (r.cells || r).map(pdfCell));
-    const gradeLabel = (NDS_GRADES.find(g => g.id === inputs.woodGrade) || {}).label || inputs.woodGrade;
+    const wood = woodBasis(inputs);
 
     // === Front pages ===
     const configRows = [
@@ -783,9 +720,11 @@ export const shearWallDesign = {
       ['C_d / I_e / Risk Category', (inputs.cd || '—') + ' / ' + (inputs.ie || '—') + ' / ' + (inputs.riskCategory || '—') + ((inputs.refs || {}).baseShearSource ? ' (linked to Seismic Base Shear)' : '')],
       ['Ω_0 (forces only)', String(omega0Of(inputs))],
       ['Default Wall', (inputs.wallThickness || '4') + '" framing'],
-      ['Wood Grade', gradeLabel],
+      ['Species', wood.speciesLabel + ' — hardware tables ' + groupLabel(wood.group)],
+      ['Grade — dimension lumber', wood.dim.label + ' (NDS 2018 Table ' + wood.dim.table + '; studs, plates, 2x / 4x posts)'],
+      ['Grade — posts & timbers', wood.pt.label + ' (NDS 2018 Table 4D; 6x6, 8x6 posts)'],
       ['Sheathing (G_a)', sheathingLabel(inputs.sheathing)],
-      ['Sill plate', (getGradeById(inputs.woodGrade).species || '') + ', F_{c⊥} = ' + getGradeById(inputs.woodGrade).Fcperp + ' psi'],
+      ['Sill plate (crushing, post bearing)', 'F_{c⊥} = ' + sillProps(wood, '4').Fcperp + ' psi (2x4) / ' + sillProps(wood, '6').Fcperp + ' psi (2x6), ' + wood.dim.label + ', NDS Table ' + wood.dim.table],
       ['Drift limit', ((DRIFT_ROWS.find(r => r.id === inputs.driftRow) || DRIFT_ROWS[0]).label) + (driftLimit(inputs.driftRow, inputs.riskCategory) != null ? ' — ' + driftLimit(inputs.driftRow, inputs.riskCategory) + '·h_{sx}' : '')],
     ];
     if (inputs.loadType !== 'seismic') {
@@ -892,6 +831,7 @@ export const shearWallDesign = {
       const wd = windDriftRows(ln);
       if (wd.length) sections.push({ title: T('Story drift — wind, service level (h_{sx} / ' + ((ln.drift && ln.drift.windLimitDen) || 400) + ', report only)'), table: { headers: WIND_DRIFT_HEADERS, rows: P(wd), colWidths: [0.16, 0.08, 0.12, 0.17, 0.2, 0.12, 0.15] } });
       if (ln.drift && ln.drift.missing) sections.push({ title: T('Drift note'), text: ln.drift.missing });
+      if ((ln.deflWarnings || []).length) sections.push({ title: T('Deflection warnings — T above the LRFD cap (Δa extrapolated)'), rows: ln.deflWarnings.map(wn => [wn.mark + (wn.levelName ? ' (' + wn.levelName + ')' : ''), '⚠ ' + wn.message]) });
       // 7. elevation
       if (inLine.id) {
         sections.push(...elevationSections(inputs, inLine, ln, 'forces', T('Elevation — end forces, ASD envelope (largest T and C over LC1–LC' + asdLcCount(inputs) + ' at each end)')));
@@ -1213,8 +1153,9 @@ export const DEFL_DIST_HEADERS = ['Wall', 'Type', 'δ at its share — SDPWS Eq.
 // Stiffness basis of a wall for the deflection method
 function stiffnessBasis(w, lt) {
   if (w.hbNotPermitted) return 'not a shear wall';
-  if (w.method === 'wswh') return w.wswh.ok ? 'WSWH table: Δ_cap ' + f2(w.wswh.Dcap[lt]) + ' in at V_cap ' + f0(w.wswh.Vcap[lt]) + ' lb → k = V_cap / Δ_cap' : 'not tabulated';
-  if (w.method === 'ftao') return 'FTAO engine: SDPWS Eq. 4.3-1 over the APA T555 pier cases (average)';
+  if (w.method === 'wswh') return w.wswh.ok ? 'WSWH table: δ(V) = Δ_LRFD ' + f2(w.wswh.DcapL[lt]) + ' in × V / V_LRFD ' + f0(w.wswh.VcapL[lt]) + ' lb'
+    + (w.wswh.role === 'stackedLower' ? ' (stacked base: × M / M_allow,LRFD, upper panel held)' : '') : 'not tabulated';
+  if (w.method === 'ftao') return 'FTAO engine: δ(V) = SDPWS Eq. 4.3-1 over the APA T555 pier cases (average), 1.0 level';
   const d = (w.stiffnessDefl || {})[lt];
   if (!d) return '— (no deflection: missing post / nailing Ga)';
   const g = d.dirs.reduce((a, b) => (b.delta > a.delta ? b : a));
@@ -1226,12 +1167,12 @@ export function deflectionDistRows(pl, lt, dist) {
   const lvl = ((dist && dist.levels) || []).find(l => l.levelId === pl.levelId && l.loadType === lt);
   const V = lt === 'E' ? pl.storyShear_1E : pl.storyShear_1W;
   const rows = pl.walls.map(w => {
-    const k = ((w.stiffness || {})[lt]) || 0, Vw = shareOf(w, lt);
+    const dS = ((w.deltaShare || {})[lt]) || 0, Vw = shareOf(w, lt);
     const lw = lvl && lvl.walls.find(x => x.wallId === w.wallId);
     const zero = lw && lw.zeroShare;
     // free split (no V ≥ 0 limit, information only) where the story has a zero-share wall
     const free = lw && lw.freeShare != null ? ' (free ' + f2(lw.freeShare) + ')' : '';
-    return [w.mark, wallTypeOf(w), stiffnessBasis(w, lt), zero ? 'no share (see warning)' : k > 0 ? f3(Vw * 1000 / k) : '—',
+    return [w.mark, wallTypeOf(w), stiffnessBasis(w, lt), zero ? 'no share (see warning)' : dS > 0 ? f3(dS) : '—',
       V > 0 ? (100 * Vw / V).toFixed(1) + '%' : '—', f2(Vw) + free];
   });
   const freeTxt = lvl && lvl.free ? '; free split (shares without the V ≥ 0 limit, not used for design): δ = ' + f3(lvl.free.delta) + ' in' : '';
@@ -1514,7 +1455,7 @@ function lineTabForces(ln, state = {}) {
   box.appendChild(el('div', { style: { display: 'flex', gap: '0.5rem', alignItems: 'center', marginBottom: '0.5rem', flexWrap: 'wrap' } },
     el('span', { style: { fontSize: '0.85rem' } }, 'Load combination:'), sel));
   box.appendChild(el('div', { style: { fontSize: '0.8rem', color: 'var(--ink-secondary)', marginBottom: '0.35rem' } },
-    'End forces = the LC factors × the 1.0-level loads, own + from the walls above (T = uplift, C = compression). Cap / D/C: ASD cap for ASD LCs, HDUE LRFD cap (1.4 × ASD) for LRFD LCs; Ω₀ LCs and load cases are forces only. LC# definitions: Summary / Config → Load Combinations.'));
+    'End forces = the LC factors × the 1.0-level loads, own + from the walls above (T = uplift, C = compression). Cap / D/C: ASD cap for ASD LCs, LRFD cap of the hardware table (reported only, never a design check) for LRFD LCs; Ω₀ LCs and load cases are forces only. LC# definitions: Summary / Config → Load Combinations.'));
   const rows = forcesRows(ln, key);
   if (!rows.length) box.appendChild(emptyNote('No walls, posts or beams in this line yet.'));
   else box.appendChild(simpleTable(FORCES_HEADERS, rows, [3, 4, 6]));
@@ -1574,6 +1515,8 @@ function lineTabDrift(ln) {
     box.appendChild(simpleTable(WIND_DRIFT_HEADERS, wRows, [1, 3, 4]));
   }
   if (ln.drift && ln.drift.missing) box.appendChild(el('div', { style: { fontSize: '0.8rem', color: 'var(--stale, #b7791f)', marginBottom: '0.5rem' } }, 'ⓘ ' + ln.drift.missing + '.'));
+  // T above the LRFD cap (Δa extrapolated beyond its LRFD pair): warning sign only (no NG, no upsizing; user 2026-10-13)
+  for (const wn of ln.deflWarnings || []) box.appendChild(el('div', { style: { fontSize: '0.8rem', color: 'var(--stale, #b7791f)', marginBottom: '0.25rem' } }, '⚠ ' + wn.message + (wn.levelName ? ' (' + wn.levelName + ')' : '') + '.'));
   const details = el('details', { style: { marginTop: '0.25rem' } },
     el('summary', { style: { cursor: 'pointer', fontSize: '0.85rem' } }, 'Details — drift sizing steps, drift calcs, wall deflections'));
   driftDetails(ln, details);
@@ -1596,7 +1539,7 @@ function driftDetails(ln, box) {
         ds.log.map((l, i) => [String(i + 1), l.levelName, l.mark, l.deltaX != null ? l.deltaX.toFixed(3) : '—', l.allowable != null ? l.allowable.toFixed(3) : '—',
           l.saveNailing != null ? l.saveNailing.toFixed(4) : 'n/a', l.saveAnchorage != null ? l.saveAnchorage.toFixed(4) : 'n/a', l.detail]), [3, 4, 5, 6]));
       box.appendChild(el('div', { style: { fontSize: '0.8rem', color: 'var(--ink-secondary)', marginBottom: '0.5rem' } },
-        'Δδ nailing = vh/(1000·Ga)·(1 − Ga/Ga,new); Δδ HD / strap = (h/b)·(δ_cap·T/P_δ − δ_cap,new·T/P_δ,new), slip only. n/a = step not available (manual, override, heaviest / largest size, OVER). The line is recalculated after each step.'));
+        'Δδ nailing = vh/(1000·Ga)·(1 − Ga/Ga,new); Δδ HD / strap = (h/b)·T·(δ_LRFD/T_LRFD − δ_LRFD,new/T_LRFD,new), taken only when the larger size is stiffer (lower δ_LRFD/T_LRFD). n/a = step not available (manual, override, heaviest / largest size, OVER). The line is recalculated after each step.'));
     }
   }
   if (dr.length) {
@@ -1627,7 +1570,7 @@ function lineTabLrfd(ln) {
   const lr = lrfdRows(ln);
   if (!lr.length) { box.appendChild(emptyNote('No LRFD forces.')); return box; }
   box.appendChild(el('div', { style: { fontSize: '0.8rem', color: 'var(--ink-secondary)', marginBottom: '0.35rem' } },
-    'ASCE 7-22 §2.3.6 combinations, reported as forces only (e.g. for foundations); all design checks are ASD. HDUE LRFD cap = 1.4 × ASD.'));
+    'ASCE 7-22 §2.3.6 combinations, reported as forces only (e.g. for foundations); all design checks are ASD. LRFD caps (holdowns and straps) come from the hardware tables and are reported only.'));
   box.appendChild(simpleTable(LRFD_HEADERS, lr, [2, 3, 4, 5]));
   return box;
 }
@@ -1698,7 +1641,7 @@ function wallSheetBlocks(w, pl, dirOut, ln, defs) {
   const wallIn = (line.walls || []).find(x => x.id === w.wallId) || {};
   const lvl = (inputs.levels || []).find(l => l.id === pl.levelId) || {};
   const lineThickness = line.wallThickness || inputs.wallThickness || '4';
-  const grade = getGradeById(inputs.woodGrade);
+  const grade = woodBasis(inputs);
   const rho = dirOut && dirOut.rho != null ? dirOut.rho : 1;
   const loadType = inputs.loadType || (w.share_1W > 0 && !(w.share_1E > 0) ? 'wind' : 'seismic');
   const lts = loadType === 'both' ? ['E', 'W'] : loadType === 'wind' ? ['W'] : ['E'];
@@ -1852,8 +1795,9 @@ function lateralShareRows(w, pl, ln, inputs, line) {
     const parts = idx >= 0 ? lvls.slice(0, idx + 1).map(l => ({ n: l.name, v: parseFloat(((line.levelLoads || {})[l.id] || {})[key]) || 0 })).filter(p => p.v) : [];
     rows.push(['Story shear V_x (1.0' + lt + ')', (parts.length ? parts.map(p => 'F_' + p.n + ' ' + f2(p.v)).join(' + ') + ' = ' : '') + f2(V) + ' k']);
     if (ln.distribution && ln.distribution.method === 'deflection') {
-      const K = pl.walls.reduce((a, x) => a + ((x.stiffness || {})[lt] || 0), 0), k = (w.stiffness || {})[lt] || 0;
-      rows.push(['Share V_w (deflection)', 'V_x × k_w / Σk = ' + f2(V) + ' × ' + f0(k) + ' / ' + f0(K) + ' = ' + f2(share) + ' k (final pass)']);
+      const dS = (w.deltaShare || {})[lt], lvl = ((ln.distribution.levels || []).find(l => l.levelId === pl.levelId && l.loadType === lt)) || null;
+      rows.push(['Share V_w (deflection)', 'the share at which δ_w = story δ*' + (lvl ? ' = ' + f3(lvl.delta) + ' in' : '') + ': V_w = ' + f2(share) + ' k'
+        + (dS > 0 ? ', δ_w = ' + f3(dS) + ' in' : '') + ' (1.0 level, final pass; Distribution tab)']);
     } else {
       const tot = pl.walls.reduce((a, x) => a + ((x.capWeight || {})[lt] || 0), 0), wt = (w.capWeight || {})[lt] || 0;
       rows.push(['Share V_w (capacity)', 'V_x × wt_w / Σwt = ' + f2(V) + ' × ' + f0(wt) + ' / ' + f0(tot) + ' = ' + f2(share) + ' k  (wt = v_cap × L, Distribution tab)']);
@@ -1894,7 +1838,7 @@ function wswhSheetRows(w) {
   const an = (a, dc) => (!a ? 'OVER' : a.byRDP ? a.id : a.id + (a.cap ? ' ' + a.cap + ' lb' : '') + (a.W ? ', W ' + a.W + '" d_e ' + a.de + '" L_ftg ' + a.Lftg + '"' : '') + (dc != null ? ' (D/C ' + f2(dc) + ')' : ''));
   return [
     ['Panel', x.evalModel + (x.orderModel !== x.evalModel ? ' (order ' + x.orderModel + ', trimmed)' : '') + ' — ' + conditionLabel(x.role === 'stackedLower' ? 'concrete' : x.condition) + (x.role === 'stackedLower' ? ', stack base' : '') + (x.kit ? ', ' + x.kit : '')],
-    ['Table values', 'H_e ' + f2(x.He) + ' in, B ' + x.B + ' in; V_allow E ' + f0(x.Vcap.E) + ' / W ' + f0(x.Vcap.W) + ' lb; Δ_cap E ' + f2(x.Dcap.E) + ' / W ' + f2(x.Dcap.W) + ' in (' + x.table + ')'],
+    ['Table values', 'H_e ' + f2(x.He) + ' in, B ' + x.B + ' in; V_allow E ' + f0(x.Vcap.E) + ' / W ' + f0(x.Vcap.W) + ' lb; Δ_cap E ' + f2(x.Dcap.E) + ' / W ' + f2(x.Dcap.W) + ' in; V_LRFD E ' + f0(x.VcapL.E) + ' / W ' + f0(x.VcapL.W) + ' lb with Δ_LRFD E ' + f2(x.DcapL.E) + ' / W ' + f2(x.DcapL.W) + ' in — drift Δ = Δ_LRFD × V / V_LRFD (' + x.table + ')'],
     ['Vertical load P', 'E ' + f0(x.P.E) + ' lb = max((1.0+0.14SDS)D, (1.0+0.105SDS)D + 0.75L); W ' + f0(x.P.W) + ' lb = max(D, D + 0.75L + 0.75Lr)' + (x.fromAbove ? ' — incl. the panel above' : '')],
     ['Shear check', sc ? 'M_d ' + f0(sc.Md) + ' / M_allow ' + f0(sc.Mallow) + ' lb-ft → D/C ' + f2(w.dcRatio) : 'V_ASD ' + f0(x.Vd[lt]) + ' / V_allow ' + f0(x.Vcap[lt]) + ' lb → D/C ' + f2(w.dcRatio)],
     ['Anchors L / R', an(w.anchorageLeft, w.anchorageDCLeft) + ' / ' + an(w.anchorageRight, w.anchorageDCRight)],
@@ -2393,9 +2337,9 @@ function renderMethodFootnotes() {
   notes.appendChild(el('div', null,
     el('strong', null, 'Openings: '), 'Segmented walls are solid full-height walls and cannot have openings (model a window between solid walls as two walls). Openings are FTAO only: APA T555 (Diekmann) with the governing opening height; wall-end T/C still includes dead load, the FTAO H shown is gross (no dead load).'));
   notes.appendChild(el('div', null,
-    el('strong', null, 'Deflection: '), 'SDPWS 2021 Eq. 4.3-1 at 1.0E (ρ = 1) with lateral-only end forces; Δa = δ × T/P_δ, P_δ = load at which δ was measured (HDUE: ASD cap; MSTC: LRFD cap = ASD cap / 0.7) + sill plate crushing. δx = Cd·δxe/Ie vs ASCE 7-22 Table 12.12-1.'));
+    el('strong', null, 'Deflection: '), 'SDPWS 2021 Eq. 4.3-1 at 1.0E (ρ = 1; wind α_s·1.0W), lateral end forces only (own + from above); Δa = δ_LRFD × T / T_LRFD of the holdown / strap (linear from its LRFD pair; warning sign when T > LRFD cap) + sill plate crushing. FTAO: the same pair over the APA T555 pier cases; WSWH: Δ_LRFD × V / V_LRFD of the Simpson table. δx = Cd·δxe/Ie vs ASCE 7-22 Table 12.12-1.'));
   notes.appendChild(el('div', null,
-    el('strong', null, 'LRFD: '), 'ASCE 7-22 §2.3.6 combinations are reported as forces only (e.g. for foundations); all design checks are ASD. HDUE LRFD cap = 1.4 × ASD.'));
+    el('strong', null, 'LRFD: '), 'ASCE 7-22 §2.3.6 combinations are reported as forces only (e.g. for foundations); all design checks are ASD. LRFD caps (holdowns and straps) come from the hardware tables and are reported only.'));
   notes.appendChild(el('div', null,
     el('strong', null, 'T/C: '), 'ASCE 7-22 ASD Combos 5 & 8 with E', el('sub', null, 'v'),
     ' = 0.2S', el('sub', null, 'DS'), '×D (0.7 applied to full E including E', el('sub', null, 'v'), ').'));
@@ -2588,6 +2532,18 @@ export function migrateV11toV12(inp) {
   return inp;
 }
 
+// Schema v13 (user 2026-10-13): wood species (DF-L / SP / SPF / HF; sets the DF/SP or SPF/HF hardware tables) and the
+// posts & timbers grade (NDS Table 4D, 6x6 / 8x6 posts). Older items are DF-L; the P&T grade follows the dimension
+// grade (Select Structural → SS, No.1 & Btr / No.1 → No.1, No.2 / No.3 → No.2, the lowest P&T grade).
+const PT_FROM_DIM = { dfir_ss: 'dfir_pt_ss', dfir_no1btr: 'dfir_pt_no1', dfir_no1: 'dfir_pt_no1', dfir_no2: 'dfir_pt_no2', dfir_no3: 'dfir_pt_no2' };
+export function migrateV12toV13(inp) {
+  if (!inp) return inp;
+  if (!inp.woodGrade) inp.woodGrade = 'dfir_no1';
+  if (inp.species === undefined) inp.species = getGradeById(inp.woodGrade).species || 'DF-L';
+  if (inp.postGrade === undefined) inp.postGrade = PT_FROM_DIM[inp.woodGrade] || speciesOf(inp.species).defaults[1];
+  return inp;
+}
+
 const DEFINITION_MIGRATIONS = [
   { to: 4, up: migrateToV4 },
   { to: 5, up: migrateV4toV5 },
@@ -2598,6 +2554,7 @@ const DEFINITION_MIGRATIONS = [
   { to: 10, up: migrateV9toV10 },
   { to: 11, up: migrateV10toV11 },
   { to: 12, up: migrateV11toV12 },
+  { to: 13, up: migrateV12toV13 },
 ];
 const CURRENT_SCHEMA = DEFINITION_MIGRATIONS[DEFINITION_MIGRATIONS.length - 1].to;
 

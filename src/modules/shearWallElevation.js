@@ -1,8 +1,8 @@
 import { el, clearEl, numOrBlank } from '../utils.js';
 import { svgEl, newWall, newGravityLoad, newBeam, newBeamSupport, newSupportPost, newOpening } from './shearWallTypes.js';
 import { gravityRows, LOAD_SHAPES, LOAD_CASES, assemblyPsf } from './shearWallGravity.js';
-import { NAILING_TABLE } from './shearWallNailing.js';
-import { HDUE_TABLE, MSTC_TABLE, POST_SIZES, getGradeById, FTAO_STRAP_TABLE, jambPostOptions, hdueMinPost, meetsMinPost } from './shearWallHardware.js';
+import { nailingTable } from './shearWallNailing.js';
+import { hdueTable, mstcTable, POST_SIZES, woodBasis, FTAO_STRAP_TABLE, jambPostOptions, hdueMinPost, meetsMinPost } from './shearWallHardware.js';
 import { openingProblems, wallPiers, expandWalls, sortedOpenings, hasOpenings, wallMethod } from './shearWallOpenings.js';
 import { findAnchorage, findPost } from './shearWallCalc.js';
 import { lcRef } from './shearWallCombos.js';
@@ -929,9 +929,10 @@ function loadPathRelations(results, sel) {
   return { sources, receivers };
 }
 
-function hwOptionsFor(level) {
+// ctx: { group, thickness } — the project's framing group and the line's wall width
+function hwOptionsFor(level, ctx) {
   const span = (level && level.floorClearSpan) || '16';
-  return [...HDUE_TABLE, ...(MSTC_TABLE[span] || MSTC_TABLE['16'])];
+  return [...hdueTable(ctx.group, ctx.thickness), ...mstcTable(ctx.group, span)];
 }
 
 // ============================================================================================================
@@ -1432,7 +1433,8 @@ export function renderElevation(container, line, levels, wallDLTypes, callbacks)
   }
   function designCtx() {
     const c = (callbacks && callbacks.designContext && callbacks.designContext()) || {};
-    return { thickness: line.wallThickness || c.wallThickness || '4', grade: getGradeById(c.woodGrade || 'dfir_no1'), loadType: c.loadType || 'both',
+    const grade = c.wood || woodBasis(c);
+    return { thickness: line.wallThickness || c.wallThickness || '4', grade, group: grade.group, loadType: c.loadType || 'both',
       wswhFc: c.wswhFc || '2500', sdc: c.sdc || '', detached: !!c.detached, bottomLevelId: c.bottomLevelId || (levels[levels.length - 1] || {}).id };
   }
   const dcTxt = (dc) => dc == null ? '—' : dc.toFixed(2) + (dc > 1 ? ' ✗' : '');
@@ -1441,12 +1443,13 @@ export function renderElevation(container, line, levels, wallDLTypes, callbacks)
     const span = (lvl && lvl.floorClearSpan) || '16';
     const holdownFirst = li === levels.length - 1 || (lvl && lvl.anchorageType === 'holdown');
     const opt = (it) => {
-      const a = findAnchorage(it.id, span) || it;
+      const a = findAnchorage(it.id, span, designCtx().group, designCtx().thickness) || it;
       const dc = a.cap > 0 ? T * 1000 / a.cap : null;
       return { id: it.id, text: it.id + ' — ' + (T || 0).toFixed(2) + 'k / ' + (a.cap / 1000).toFixed(2) + 'k → ' + dcTxt(dc), dc };
     };
-    const hd = { label: 'Holdowns', items: HDUE_TABLE.map(opt) };
-    const st = { label: 'Straps (' + span + '" span)', items: (MSTC_TABLE[span] || MSTC_TABLE['16']).map(opt) };
+    const { group, thickness } = designCtx();
+    const hd = { label: 'Holdowns', items: hdueTable(group, thickness).map(opt) };
+    const st = { label: 'Straps (' + span + '" span)', items: mstcTable(group, span).map(opt) };
     return holdownFirst ? [hd, st] : [st, hd];
   }
   // Posts below the anchorage minimum post at a holdown / strap end are not offered (P9)
@@ -1463,7 +1466,7 @@ export function renderElevation(container, line, levels, wallDLTypes, callbacks)
   }
   function nailingGroups(wr) {
     const hb = wr.hbReductionFactor || 1;
-    return [{ label: 'Nailing (≈ at current load share)', items: NAILING_TABLE.map(n => {
+    return [{ label: 'Nailing (≈ at current load share)', items: nailingTable(designCtx().group).map(n => {
       const dcE = wr.unitShear_seismic > 0 ? wr.unitShear_seismic / (n.asdE * hb) : 0;
       const dcW = wr.unitShear_wind > 0 ? wr.unitShear_wind / (n.asdW * hb) : 0;
       const lt = designCtx().loadType; // same governing rule as the calc
@@ -2006,13 +2009,13 @@ export function renderElevation(container, line, levels, wallDLTypes, callbacks)
     else {
       const nailSel = el('select', { className: 'form-select', style: { width: '130px' }, onChange(e) { w.nailingPattern = e.target.value; markChanged(); } });
       nailSel.appendChild(el('option', { value: '' }, 'Auto'));
-      NAILING_TABLE.forEach(n => {
+      nailingTable(designCtx().group).forEach(n => {
         const opt = el('option', { value: n.id }, n.label + ' (' + n.asdE + '/' + n.asdW + ')');
         if (w.nailingPattern === n.id) opt.selected = true;
         nailSel.appendChild(opt);
       });
 
-      const ancItems = hwOptionsFor(levels[levelIndexOf(w.levelId)]);
+      const ancItems = hwOptionsFor(levels[levelIndexOf(w.levelId)], designCtx());
 
       propPanel.appendChild(panelRow(panelField('Nailing', nailSel)));
       propPanel.appendChild(panelSub('Hardware Overrides (blank = auto-select)'));
@@ -2175,7 +2178,7 @@ export function renderElevation(container, line, levels, wallDLTypes, callbacks)
       sTbl.appendChild(el('tr', null,
         el('td', null, el('input', { type: 'number', step: 'any', value: numOrBlank(s.position), style: { width: '70px' }, onChange(e) { s.position = e.target.value; refresh(); } })),
         el('td', null, typeSel),
-        el('td', null, hwSelect(s, 'anchorageOverride', hwOptionsFor(lvl), ancLabelFn, '100px')),
+        el('td', null, hwSelect(s, 'anchorageOverride', hwOptionsFor(lvl, designCtx()), ancLabelFn, '100px')),
         el('td', { className: 'mono', style: { fontSize: '0.8rem' } }, goesTo),
         el('td', { className: 'row-actions' }, el('button', { className: 'btn btn-ghost btn-sm', type: 'button', onClick() { b.supports.splice(i, 1); refresh(); } }, '×')),
       ));
@@ -2245,7 +2248,7 @@ export function renderElevation(container, line, levels, wallDLTypes, callbacks)
     propPanel.appendChild(panelRow(panelField('Mark', markInput), panelField('Position (ft)', posInput), panelField('Story', storySel)));
     propPanel.appendChild(panelSub('Hardware Overrides (blank = auto-select)'));
     propPanel.appendChild(panelRow(
-      panelField('Base HD/Strap', hwSelect(sp, 'anchorageOverride', hwOptionsFor(lvl), ancLabelFn)),
+      panelField('Base HD/Strap', hwSelect(sp, 'anchorageOverride', hwOptionsFor(lvl, designCtx()), ancLabelFn)),
       panelField('Post Size', hwSelect(sp, 'postOverride', postItemsFor(ppOf(sp) && ppOf(sp).anchorage), postLabelFn)),
     ));
 

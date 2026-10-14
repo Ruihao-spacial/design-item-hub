@@ -183,7 +183,7 @@ export function defaultInputs() {
     ...projectV8Defaults(),
     ...projectV9Defaults(),
     ...projectV12Defaults(),
-    woodGrade: 'dfir_no1',
+    species: 'DF-L', woodGrade: 'dfir_no1', postGrade: 'dfir_pt_no1', // schema 13: species + NDS 4A / 4B grade + 4D grade
     wallDLTypes: [wdt1, wdt2],
     levels: [lvl1, lvl2],
     directions: [dir1, dir2],
