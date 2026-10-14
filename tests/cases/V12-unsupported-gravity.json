@@ -39,11 +39,11 @@
     },
     {
       "step": 8,
-      "text": "SW-9 (Eq. 4.3-1, → governs): v = 1000 × 2.000 / 8 = 250.00 plf, A = 10.5 in², G_a = 16 k/in → 8vh³/(EAb) = 0.0140; vh/(1000G_a) = 0.1563; Δ_HD = 0.127 × 2500.00 / 3790 (ASD cap) = 0.0838 (HDUE3, T = 2500.00 lb); r = 2500.00 / (10.5 × 625) = 0.3810 → Δ_c = 0.0104; h·Δa/b = 10 × (0.0838 + 0.0104) / 8 = 0.1178 → δ = 0.2880 in. SW-10 is identical (same length, share and pinned design) → equal δ; the first listed governs."
+      "text": "SW-9 (Eq. 4.3-1, → governs): v = 1000 × 2.000 / 8 = 250.00 plf, A = 10.5 in², G_a = 16 k/in → 8vh³/(EAb) = 0.0140; vh/(1000G_a) = 0.1563; uplift end T = 2500.00 lb (lateral); Δ_HD = δ_LRFD × T / T_LRFD = 0.178 × 2500.00 / 5306 = 0.0839 (HDUE3); r = 2500.00 / (10.5 × 625) = 0.3810 → Δ_c = 0.0104; h·Δa/b = 10 × (0.0839 + 0.0104) / 8 = 0.1179 → δ = 0.2881 in. SW-10 is identical (same length, share and pinned design) → equal δ; the first listed governs."
     },
     {
       "step": 9,
-      "text": "Story drift Level 1: δxe = the largest wall δ = SW-9 0.2880 in → δx = Cd·δxe/Ie = 4 × 0.2880 / 1.0 = 1.152 in vs Δa = 0.020 × 10 × 12 = 2.400 in → OK."
+      "text": "Story drift Level 1: δxe = the largest wall δ = SW-9 0.2881 in → δx = Cd·δxe/Ie = 4 × 0.2881 / 1.0 = 1.153 in vs Δa = 0.020 × 10 × 12 = 2.400 in → OK."
     }
   ],
   "expect": [
@@ -136,7 +136,7 @@
       "label": "Story δxe, Level 1 (in)",
       "at": "drift:Level 1",
       "field": "seismic.deltaXE",
-      "value": 0.2880182754961239,
+      "value": 0.2881360666759204,
       "tol": 0.0005,
       "step": 9
     },
@@ -151,7 +151,7 @@
       "label": "δx = Cd·δxe/Ie, Level 1 (in)",
       "at": "drift:Level 1",
       "field": "seismic.deltaX",
-      "value": 1.1520731019844956,
+      "value": 1.1525442667036816,
       "tol": 0.002,
       "step": 9
     },
@@ -187,12 +187,14 @@
       "hd": "HDUE3"
     }
   },
-  "schemaVersion": 12,
+  "schemaVersion": 13,
   "inputs": {
     "sds": "1",
     "loadType": "seismic",
     "wallThickness": "4",
+    "species": "DF-L",
     "woodGrade": "dfir_no1",
+    "postGrade": "dfir_pt_no1",
     "sheathing": "ply",
     "distribution": "capacity",
     "cd": "4",

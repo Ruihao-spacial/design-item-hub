@@ -20,7 +20,7 @@ const Cpost = Math.max(...Object.values(Cp));
 const pst = POSTS4.filter(p => p.d2 >= 3.0).find(p => postCap(p, h).cap >= Cpost); // base HDUE3 (T = 0) → minimum (2)2x4
 // 1.0D bookkeeping
 const applied = 2 * psf * Lw * h / 1000 + wD * Ltot / 1000 + PD, found = 2 * D + PD;
-// Story drift (Cd 4, Ie 1.0, RC II): two equal walls → equal δ (1.0E is lateral only, gravity does not enter Eq. 4.3-1)
+// Story drift (Cd 4, Ie 1.0, RC II): two equal walls → equal δ; end forces 1.0D + 0.5L + 1.0E (ASCE 7-22 §12.8.6.1)
 const w431 = (mark) => eq431({ mark, L: Lw, h, nail: '6', hdL: 'HDUE3', hdR: 'HDUE3', postL: '(2)2x4', postR: '(2)2x4', Vk: Vw, TL: N, CR: N });
 const d1 = storyDrift('Level 1', h, [w431('SW-9'), w431('SW-10')]);
 

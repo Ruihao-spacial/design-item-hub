@@ -228,13 +228,14 @@ test('S2 deflection terms: the substituted numbers reproduce each Eq. 4.3-1 term
     }
   }
   assert.ok(n > 10, 'deflection cases checked: ' + n);
-  // Holdown slip = δ·T/P_δ with the catalog numbers
+  // Holdown Δ = δ_LRFD × T / T_LRFD, linear from the catalog's LRFD pair (2026-10-14)
   const w = lineOf(calcAll(tc2())).perLevel[0].walls[0];
   const d = w.deflection && w.deflection.E;
-  if (d && d.dirs && w.anchorageLeft) {
-    const row = deflectionSubstitutionRows(w, { lineThickness: '4', grade: { Fcperp: 625 } }).find(r => r[0] === '1.0E → Δ_HD slip (left end)');
-    assert.ok(row[1].startsWith('δ·T / P_δ = ' + w.anchorageLeft.delta + ' × ' + d.T + ' / '), row[1]);
-  }
+  assert.ok(d && d.dirs && w.anchorageLeft, 'TC-2 SW-1 has a deflection and a holdown');
+  const a = w.anchorageLeft, T = d.dirs[0].T;
+  const row = deflectionSubstitutionRows(w, { lineThickness: '4', grade: { Fcperp: 625 } }).find(r => r[0] === '1.0E → Δ_HD (left end)');
+  assert.ok(row[1].startsWith('δ_LRFD × T / T_LRFD = ' + a.deltaLrfd.toFixed(3) + ' × ' + T + ' / ' + a.lrfdCap + ' = ' + d.dirs[0].dHD.toFixed(4) + ' in (' + a.id + ', LRFD pair'), row[1]);
+  near(d.dirs[0].dHD, a.deltaLrfd * T / a.lrfdCap, 1e-4);
 });
 
 test('S3 posts: the calc sheet points to the Hardware tab; the Hardware tab shows F_cE, F_c*, C_P', () => {
@@ -246,7 +247,31 @@ test('S3 posts: the calc sheet points to the Hardware tab; the Hardware tab show
   const hw = [...c.querySelectorAll('button')].find(b => b.textContent === 'Hardware');
   hw.click();
   const txt = c.textContent;
-  assert.ok(txt.includes('F_cE (psi)') && txt.includes('F_c* (psi)') && txt.includes('C_P') && txt.includes('Floor Height: 10 ft'));
+  assert.ok(txt.includes('ƒ FcE (psi)') && txt.includes('ƒ Fc* (psi)') && txt.includes('ƒ CP') && txt.includes('Floor Height: 10 ft'));
+});
+
+test('Hardware tab (2026-10-13): source per table, tables from the reference .md files, DF/SP | SPF/HF toggle', () => {
+  const c = document.createElement('div');
+  shearWallDesign.renderForm(c, tc2(), () => {}, [], () => {});
+  [...c.querySelectorAll('button')].find(b => b.textContent === 'Hardware').click();
+  const txt = () => c.textContent;
+  for (const f of ['Shearwall_nailing_and_capacity_table.md', 'Floor_Anchorage_Holdown_Catalog.md', 'Floor_to_Floor_Strap_Catalog.md',
+    'FTAO/D2_FTAO_wall_strap_catalog.md', 'WSWH/01–03 *.md', 'Wood_grades_NDS_2018.md'])
+    assert.ok(txt().includes('Shearwall design reference/' + f), 'source file ' + f);
+  assert.ok(txt().includes('HDUE Holdowns — Concrete Anchorage — DF/SP') && txt().includes('ASD E (plf)') && txt().includes('Entered: Ruihao'));
+  // HDUE: one table per wall width (4", 6")
+  const rowsOf = (id) => [...c.querySelectorAll('tr')].filter(tr => tr.firstChild.textContent === id).map(tr => [...tr.children].map(td => td.textContent));
+  assert.deepEqual(rowsOf('HDUE13'), [['HDUE13', '12950', '18130', '0.203', '8x4', '0.145'], ['HDUE13', '13110', '18354', '0.189', '6x6', '0.135']]);
+  // FTAO: every nail row, with the species' fasteners
+  const ftao = () => [...c.querySelectorAll('tr')].filter(tr => tr.firstChild.textContent === 'CS16').map(tr => [...tr.children].map(td => td.textContent));
+  assert.deepEqual(ftao(), [['CS16', '16', '150', '0.148 x 2½', '20', '11', '1705'], ['CS16', '16', '150', '0.131 x 2½', '22', '13', '1705']]);
+  // SPF/HF tables; FTAO uses its SPF/HF columns; post capacity stays the project's (DF-L)
+  [...c.querySelectorAll('button')].find(b => b.textContent === 'SPF/HF').click();
+  assert.ok(txt().includes('Showing the SPF/HF tables; this project designs with DF/SP.') && txt().includes('Vn × CG (plf)'));
+  assert.deepEqual(rowsOf('HDUE5')[0], ['HDUE5', '4700', '6580', '0.205', '(2)2x4', '0.146']);
+  assert.deepEqual(rowsOf('2')[0].slice(2, 4), ['2240', '736']);
+  assert.deepEqual(ftao()[0], ['CS16', '16', '150', '0.148 x 2½', '22', '13', '1705']);
+  assert.ok(txt().includes('SPF — NDS Table 4D') && txt().includes('HF — NDS Table 4A') && txt().includes('Floor Height: 10 ft'));
 });
 
 test('S4 from-above references: each value names its source and equals the source wall C4 total at that end — all fixtures', () => {

@@ -1,5 +1,5 @@
-import { NAILING_TABLE, autoSelectNailing, getNailingById, gaFor } from './shearWallNailing.js';
-import { autoSelectHoldown, autoSelectStrap, autoSelectPost, hdueMinPost, meetsMinPost, getGradeById, HDUE_TABLE, MSTC_TABLE, POST_SIZES, computePostCapacity, lrfdCap, deltaBasisLoad } from './shearWallHardware.js';
+import { nailingTable, autoSelectNailing, getNailingById, gaFor } from './shearWallNailing.js';
+import { autoSelectHoldown, autoSelectStrap, autoSelectPost, hdueMinPost, meetsMinPost, woodBasis, hdueTable, mstcTable, postSizeById, computePostCapacity, lrfdCap, anchorageFlex } from './shearWallHardware.js';
 import { resolveVerticalLoadPath } from './shearWallLoadPath.js';
 import { comboDefs } from './shearWallCombos.js';
 import { gravityRows, wallGravity, gravityToElements } from './shearWallGravity.js';
@@ -11,7 +11,7 @@ import { lineChecks } from './shearWallChecks.js';
 import { isWswh, wswhWidthIn, wswhWidthFt, lookupWswh, stackedBaseCheck, selectWswhAnchor, RAISED_ANCHOR, WSWH_ROD, WSWH_PANEL_POST, conditionLabel } from './shearWallWswh.js';
 
 // Records which calc produced a stored results snapshot (results are always regenerated for display)
-export const CALC_VERSION = 'v18';
+export const CALC_VERSION = 'v23'; // v23 (2026-10-14): drift lateral only; Δa = δ_LRFD × T / T_LRFD (segmented + FTAO); δ(V) per wall type, no stored k
 
 export function accumulateStoryShear(levelLoads, levels) {
   const result = {};
@@ -252,6 +252,18 @@ function prepareWswh(allWalls, levels, line, wallDLTypes, inputs, gOpts) {
   return out;
 }
 
+// δ (in) of a WSWH panel at a 1.0-level share Vk (k) — the same line as its reported drift: Δ_LRFD × V / V_LRFD;
+// stacked base Δ₀,LRFD × M / M_allow,LRFD with M = [V·H₁ + V₂·(H₁ + d_fl + H₂)] / 12 (upper panel's V₂ held).
+export function wswhDeltaAt(x, lt, Vk) {
+  if (!x || !x.ok || !(x.VcapL[lt] > 0) || !(x.DcapL[lt] > 0)) return null;
+  const st = x.stacked && x.stacked[lt];
+  if (x.role === 'stackedLower' && st && st.MallowL > 0) {
+    const M = (Vk * 1000 * x.He + (st.V2k || 0) * 1000 * (x.He + (st.dfl || 0) + (st.H2 || 0))) / 12;
+    return x.DcapL[lt] * M / st.MallowL;
+  }
+  return x.DcapL[lt] * Vk * 1000 / x.VcapL[lt];
+}
+
 export function calcAll(inputs) {
   const levels = inputs.levels || [];
   const sds = inputs.sds;
@@ -261,18 +273,21 @@ export function calcAll(inputs) {
   const wind = loadType === 'wind' || loadType === 'both';
   const wallDLTypes = inputs.wallDLTypes || [];
   const globalThickness = inputs.wallThickness || '4';
-  const grade = getGradeById(inputs.woodGrade);
+  // Wood: species (hardware group DF/SP or SPF/HF), dimension-lumber grade, posts & timbers grade (schema 13)
+  const grade = woodBasis(inputs);
+  const group = grade.group;
+  const NAILING_TABLE = nailingTable(group);
   const sheathing = inputs.sheathing === 'osb' ? 'osb' : 'ply';
   const alphaS = parseFloat(inputs.alphaS) || 0;
   const bottomLevelId = levels.length > 0 ? levels[levels.length - 1].id : null;
   const floorHOf = (id) => parseFloat((levels.find(l => l.id === id) || {}).floorToFloor) || 0;
   const levelNameOf = (id) => (levels.find(l => l.id === id) || {}).name || '';
   // Anchorage catalog of a level: HDUE at the bottom story (or anchorage type 'holdown'), else the MSTC table of its floor span
-  const anchorageTableOfLevel = (id) => {
+  const anchorageTableOfLevel = (id, thickness) => {
     const lvl = levels.find(l => l.id === id) || {};
     const useHoldown = id === bottomLevelId || lvl.anchorageType === 'holdown';
     const floorSpan = lvl.floorClearSpan || '16';
-    return { useHoldown, floorSpan, table: anchorageTable(useHoldown, floorSpan) };
+    return { useHoldown, floorSpan, table: anchorageTable(useHoldown, floorSpan, group, thickness) };
   };
 
   const perDirection = (inputs.directions || []).map(dir => {
@@ -360,7 +375,7 @@ export function calcAll(inputs) {
       const strengthPick = {}; // lightest nailing that carries the shear (strength alone)
       const floorOf = (w) => NAILING_TABLE[Math.min(nailFloor[w.id] || 0, NAILING_TABLE.length - 1)];
       allWalls.forEach(w => {
-        const manual = w.nailingPattern ? getNailingById(w.nailingPattern) : null;
+        const manual = w.nailingPattern ? getNailingById(w.nailingPattern, group) : null;
         wallNailing[w.id] = manual || floorOf(w);
       });
 
@@ -391,7 +406,7 @@ export function calcAll(inputs) {
             } else {
               const vSeis = (eMap[w.id] || 0) * 0.7 * rhoN * 1000 / wLen;
               const vWind = (wMap[w.id] || 0) * 0.6 * 1000 / wLen;
-              selected = autoSelectNailing(vSeis, vWind, wallARs[w.id].reductionFactor, loadType);
+              selected = autoSelectNailing(vSeis, vWind, wallARs[w.id].reductionFactor, loadType, group);
             }
             const prev = wallNailing[w.id];
             if (!selected) selected = NAILING_TABLE[NAILING_TABLE.length - 1];
@@ -502,16 +517,16 @@ export function calcAll(inputs) {
 
           let anchorageLeft = null, anchorageRight = null;
           if (w.anchorageLeftOverride) {
-            anchorageLeft = findAnchorage(w.anchorageLeftOverride, floorSpan);
+            anchorageLeft = findAnchorage(w.anchorageLeftOverride, floorSpan, group, lineThickness);
           } else {
-            anchorageLeft = anchorageWithFloor(useHoldown ? autoSelectHoldown(tc.governingTensionLeft) : autoSelectStrap(tc.governingTensionLeft, floorSpan),
-              anchorageTable(useHoldown, floorSpan), ancFloor[w.id]);
+            anchorageLeft = anchorageWithFloor(useHoldown ? autoSelectHoldown(tc.governingTensionLeft, group, lineThickness) : autoSelectStrap(tc.governingTensionLeft, floorSpan, group),
+              anchorageTable(useHoldown, floorSpan, group, lineThickness), ancFloor[w.id]);
           }
           if (w.anchorageRightOverride) {
-            anchorageRight = findAnchorage(w.anchorageRightOverride, floorSpan);
+            anchorageRight = findAnchorage(w.anchorageRightOverride, floorSpan, group, lineThickness);
           } else {
-            anchorageRight = anchorageWithFloor(useHoldown ? autoSelectHoldown(tc.governingTensionRight) : autoSelectStrap(tc.governingTensionRight, floorSpan),
-              anchorageTable(useHoldown, floorSpan), ancFloor[w.id]);
+            anchorageRight = anchorageWithFloor(useHoldown ? autoSelectHoldown(tc.governingTensionRight, group, lineThickness) : autoSelectStrap(tc.governingTensionRight, floorSpan, group),
+              anchorageTable(useHoldown, floorSpan, group, lineThickness), ancFloor[w.id]);
           }
 
           const selL = selectEndPost(w.postLeftOverride, tc.governingComprLeft, lineThickness, grade, floorH, anchorageLeft);
@@ -576,8 +591,8 @@ export function calcAll(inputs) {
         wallHardware: (w, T, override) => {
           if (isWswh(w)) return wswhAnchorFor(w, wswh[w.id], T, inputs);
           if (override || ancFloor[w.id] == null) return undefined;
-          const t = anchorageTableOfLevel(w.levelId);
-          return anchorageWithFloor(t.useHoldown ? autoSelectHoldown(T) : autoSelectStrap(T, t.floorSpan), t.table, ancFloor[w.id]);
+          const t = anchorageTableOfLevel(w.levelId, lineThickness);
+          return anchorageWithFloor(t.useHoldown ? autoSelectHoldown(T, group, lineThickness) : autoSelectStrap(T, t.floorSpan, group), t.table, ancFloor[w.id]);
         },
       });
       loadPath.loadPathAudit.notes.push(...gdist.notes);
@@ -603,10 +618,10 @@ export function calcAll(inputs) {
       for (const w of allWalls) {
         const wr = wallResultsMap[w.id];
         if (!wr || isWswh(w)) continue;
-        const t = anchorageTableOfLevel(w.levelId);
+        const t = anchorageTableOfLevel(w.levelId, lineThickness);
         const basisOf = (ov, anc, T) => {
           if (ov) return { basis: 'manual', strength: null };
-          const str = t.useHoldown ? autoSelectHoldown(T) : autoSelectStrap(T, t.floorSpan);
+          const str = t.useHoldown ? autoSelectHoldown(T, group, lineThickness) : autoSelectStrap(T, t.floorSpan, group);
           return { basis: anc && str && anc.id !== str.id ? 'drift' : 'strength', strength: str ? str.id : null };
         };
         const d = wr.hwDemand || { tL: wr.governingTensionLeft, tR: wr.governingTensionRight };
@@ -635,10 +650,10 @@ export function calcAll(inputs) {
         const wr = wallResultsMap[w.id];
         if (!wr || !isFtao(w)) continue;
         const softer = [wr.anchorageLeft, wr.anchorageRight].filter(Boolean)
-          .sort((a, b) => (b.delta || 0) / b.cap - (a.delta || 0) / a.cap)[0] || null;
-        const size = (p) => { const A = postArea(p, lineThickness); return A ? { area: A } : null; };
+          .sort((a, b) => anchorageFlex(b) - anchorageFlex(a))[0] || null; // the more flexible LRFD pair (δ_LRFD / T_LRFD)
+        const size = (p) => { const A = postArea(p); return A ? { area: A, id: p.postId } : null; };
         try {
-          wr.ftao = ftaoDesign(w, ftaoCtx(w), getNailingById(wr.nailing.id), exactShares[w.id],
+          wr.ftao = ftaoDesign(w, ftaoCtx(w), getNailingById(wr.nailing.id, group), exactShares[w.id],
             { endPosts: [size(wr.postLeft), size(wr.postRight)], anchorage: softer, jambDL: jambDL(w) });
         } catch (e) { if (wr.ftao) wr.ftao.warnings.push('Final FTAO check failed: ' + ((e.errors || [e.message]).join('; '))); }
       }
@@ -648,12 +663,15 @@ export function calcAll(inputs) {
       for (const wr of Object.values(wallResultsMap)) {
         wr.lrfd = wr.accumLRFD || { tL: wr.lrfdTensionLeft, tR: wr.lrfdTensionRight, cL: wr.lrfdComprLeft, cR: wr.lrfdComprRight };
         wr.omega = wr.accumOmega || { asd: wr.omegaASD, lrfd: wr.omegaLRFD };
+        wr.woodGroup = group; // framing group of the nailing / hardware tables (DF/SP or SPF/HF)
         wr.lrfdCapLeft = lrfdCap(wr.anchorageLeft);
         wr.lrfdCapRight = lrfdCap(wr.anchorageRight);
         wr.deflection = {};
         if (wr.method === 'wswh') {
-          if (seismic && wr.wswh.delta1.E != null) wr.deflection.E = { method: 'WSWH table', label: 'WSWH table Δ (linear in V)', delta: r4(wr.wswh.delta1.E) };
-          if (wind && alphaS > 0 && wr.wswh.delta1.W != null) wr.deflection.W = { method: 'WSWH table', label: 'WSWH table Δ (linear in V)', delta: r4(alphaS * wr.wswh.delta1.W) };
+          const lbl = 'WSWH table Δ_LRFD × V / V_LRFD (linear)';
+          if (seismic && wr.wswh.delta1.E != null) wr.deflection.E = { method: 'WSWH table', label: lbl, delta: r4(wr.wswh.delta1.E), overLrfd: !!wr.wswh.overLrfd.E };
+          if (wind && alphaS > 0 && wr.wswh.delta1.W != null) wr.deflection.W = { method: 'WSWH table', label: lbl, delta: r4(alphaS * wr.wswh.delta1.W),
+            overLrfd: wr.wswh.VcapL.W > 0 && alphaS * wr.shareExact_1W * 1000 > wr.wswh.VcapL.W + 0.5 };
         } else if (wr.method === 'ftao') {
           for (const lt of ['E', 'W']) {
             const d = wr.ftao && wr.ftao.perType[lt] && wr.ftao.perType[lt].deflection;
@@ -664,46 +682,66 @@ export function calcAll(inputs) {
           if (wind && alphaS > 0) wr.deflection.W = wallDeflection(wr, 'W', alphaS, deflCtx);
         }
         wr.onBeam = loadPath.wallDeliveries.some(d => d.wallId === wr.wallId && d.receiver.type === 'beam');
-        // Stiffness k = V/δ (lb/in) at the 1.0 level — used by the deflection approach
-        wr.stiffness = {};
-        for (const lt of ftaoLoadTypes(loadType)) {
-          if (wr.method === 'wswh') {
-            if (wr.wswh.k[lt] > 0) wr.stiffness[lt] = wr.wswh.k[lt];
-          } else if (wr.method === 'ftao') {
-            const r = wr.ftao && wr.ftao.perType[lt];
-            if (r && r.stiffness > 0) wr.stiffness[lt] = r.stiffness;
-          } else {
-            const share = lt === 'E' ? wr.shareExact_1E : wr.shareExact_1W;
-            const d = lt === 'E' ? wr.deflection.E : wallDeflection(wr, 'W', 1.0, deflCtx);
-            if (d && d.delta > 0 && share > 0) wr.stiffness[lt] = share * 1000 / d.delta;
-            (wr.stiffnessDefl = wr.stiffnessDefl || {})[lt] = d || null; // Eq. 4.3-1 terms behind k (1.0 level)
-          }
-        }
-        // δ (in) of this wall at a trial share Vk (k), 1.0 level — the deflection distribution solves for equal δ with
-        // it. Sheathed walls: SDPWS Eq. 4.3-1 with the forces from above held; WSWH / FTAO: linear, δ = V/k.
-        // Not part of the stored results (non-enumerable).
-        // opt.signed: allow Vk < 0 (free split, information only); opt.trial: { anchorage, postLeft, postRight } to try
-        // on this wall instead of its own hardware (holdown check of a zero-share wall).
+        // δ (in) of this wall at a trial share Vk (k), 1.0 level (user 2026-10-14: one δ(V) per wall type, no stored
+        // stiffness k) — the deflection distribution solves for equal δ with it. Sheathed walls: SDPWS Eq. 4.3-1 with the
+        // forces from above held; FTAO: the engine at α_s = 1; WSWH: the table line Δ_LRFD × V / V_LRFD (stacked base:
+        // with the upper panel's moment held). Not part of the stored results (non-enumerable).
+        // opt.signed: allow Vk < 0 (free split, information only; FTAO / WSWH mirrored); opt.trial: { anchorage,
+        // postLeft, postRight } to try on this wall instead of its own hardware (holdown check of a zero-share wall).
         Object.defineProperty(wr, '_deltaAt', { enumerable: false, configurable: true, value: (lt, Vk, opt = {}) => {
-          if (wr.method === 'wswh' || wr.method === 'ftao') { const k = wr.stiffness[lt]; return k > 0 ? Vk * 1000 / k : null; }
+          if (wr.method === 'wswh' || wr.method === 'ftao') {
+            if (!Number.isFinite(Vk) || (Vk < 0 && !opt.signed)) return null;
+            const one = (v) => (wr.method === 'wswh' ? wswhDeltaAt(wr.wswh, lt, v) : wr.ftao && wr.ftao._deflAt ? wr.ftao._deflAt(lt, v) : null);
+            if (Vk >= 0) return one(Vk);
+            const d = one(-Vk);
+            return d == null ? null : -d;
+          }
           const w = opt.trial ? { ...wr, anchorageLeft: opt.trial.anchorage, anchorageRight: opt.trial.anchorage, postLeft: opt.trial.postLeft, postRight: opt.trial.postRight } : wr;
           const d = wallDeflectionAtShare(w, lt, Vk, deflCtx, !!opt.signed);
           return d ? d.deltaExact : null;
         } });
+        // δ at the wall's own share, 1.0 level (the distribution's δ; Eq. 4.3-1 terms behind it for sheathed walls)
+        wr.deltaShare = {};
+        for (const lt of ftaoLoadTypes(loadType)) {
+          const share = (lt === 'E' ? wr.shareExact_1E : wr.shareExact_1W) || 0;
+          const d = wr._deltaAt(lt, share);
+          wr.deltaShare[lt] = d != null && share > 0 ? r4(d) : null;
+          if (wr.method !== 'wswh' && wr.method !== 'ftao') {
+            (wr.stiffnessDefl = wr.stiffnessDefl || {})[lt] = lt === 'E' ? wr.deflection.E || null : wallDeflection(wr, 'W', 1.0, deflCtx);
+          }
+        }
         Object.defineProperty(wr, '_trials', { enumerable: false, configurable: true, value: () => anchorageTrials(wr, lineThickness) });
       }
       const drift = storyDrift(perLevel, inputs, { seismic, wind, alphaS });
+      // Warning sign only (user 2026-10-13): 1.0E / 1.0W tension above the LRFD cap — Δa extrapolated beyond its LRFD pair
+      const deflWarnings = [];
+      for (const w of allWalls) {
+        const wr = wallResultsMap[w.id];
+        if (!wr || !wr.deflection) continue;
+        for (const lt of ['E', 'W']) {
+          const d = wr.deflection[lt];
+          if (!d) continue;
+          for (const dr of d.dirs || []) {
+            if (dr.overLrfd) deflWarnings.push({ wallId: wr.wallId, mark: wr.mark, levelName: levelNameOf(w.levelId), loadType: lt,
+              message: wr.mark + ' (' + (lt === 'E' ? '1.0E' : '1.0W') + ', ' + dr.dir + '): T = ' + dr.T + ' lb > LRFD cap ' + dr.lrfdCap + ' lb of ' + dr.anchorageId + ' — Δa extrapolated linearly beyond the LRFD pair' });
+          }
+          if (wr.method === 'wswh' && d.overLrfd) deflWarnings.push({ wallId: wr.wallId, mark: wr.mark, levelName: levelNameOf(w.levelId), loadType: lt,
+            message: wr.mark + ' (WSWH, ' + (lt === 'E' ? '1.0E' : 'α_s·W') + '): ' + (wr.wswh.role === 'stackedLower' ? 'M = ' + Math.round(wr.wswh.stacked[lt].M1) + ' lb-ft > M_allow,LRFD ' + Math.round(wr.wswh.stacked[lt].MallowL) : 'V above V_LRFD ' + Math.round(wr.wswh.VcapL[lt]) + ' lb') + ' — Δ_LRFD is not valid above this load' });
+          const fd = wr.method === 'ftao' && wr.ftao && wr.ftao.perType[lt] && wr.ftao.perType[lt].deflection;
+          for (const m of (fd && fd.warnings) || []) if (m.startsWith('⚠')) deflWarnings.push({ wallId: wr.wallId, mark: wr.mark, levelName: levelNameOf(w.levelId), loadType: lt, message: wr.mark + ' (FTAO): ' + m.slice(2) });
+        }
+      }
 
       return {
         lineId: line.id, lineName: line.name || '', perLevel,
         beamTransfers: loadPath.beamTransfers, postPaths: loadPath.postPaths,
         wallDeliveries: loadPath.wallDeliveries, comboGroups: loadPath.comboGroups,
         loadPathAudit: loadPath.loadPathAudit,
-        drift,
+        drift, deflWarnings,
       };
     };
     const perLine = (dir.lines || []).map(line => {
-      const res = sizeForDrift(line, inputs, levels, (floor) => solveDistribution(line, inputs, levels, (ln, forced) => runLine(ln, forced, floor)), anchorageTableOfLevel);
+      const res = sizeForDrift(line, inputs, levels, (floor) => solveDistribution(line, inputs, levels, (ln, forced) => runLine(ln, forced, floor)), (id) => anchorageTableOfLevel(id, line.wallThickness || globalThickness), NAILING_TABLE, group);
       const ck = lineChecks(line, res, { inputs, levels, rho: dir.rho });
       res.checks = ck.checks; res.checksFailed = ck.failed;
       return res;
@@ -735,7 +773,9 @@ function wswhWallResult(w, info, sh, c) {
   const Vd = { E: f.E * V1.E * 1000, W: f.W * V1.W * 1000 };   // ASD demand (lb)
   const Vcap = { E: ok ? lk.E.V.E : 0, W: ok ? lk.W.V.W : 0 };
   const He = ok ? lk.E.He : 0, B = ok ? lk.E.B : 0;
-  const dc = {}, stacked = {}, otm1 = {}, delta1 = {}, k = {};
+  // LRFD cap with its drift (option B, user 2026-10-13): Δ at the 1.0 level = Δ_LRFD × V / V_LRFD, k = V_LRFD / Δ_LRFD
+  const VcapL = { E: ok ? lk.E.VL.E : 0, W: ok ? lk.W.VL.W : 0 }, DcapL = { E: ok ? lk.E.DL.E : 0, W: ok ? lk.W.DL.W : 0 };
+  const dc = {}, stacked = {}, otm1 = {}, delta1 = {}, overLrfd = {};
   for (const lt of ['E', 'W']) {
     const Heft = He / 12;
     otm1[lt] = V1[lt] * Heft;
@@ -749,15 +789,17 @@ function wswhWallResult(w, info, sh, c) {
       stacked[lt].V1k = V1[lt]; stacked[lt].V2k = V2; // 1.0-level shears (k) of the base and upper panel, for the M_OT breakdown
       otm1[lt] = (V1[lt] * He + V2 * (He + dfl + H2)) / 12;
       dc[lt] = stacked[lt].dc;
-      // Δ₁ = Δ₀·M_d/M_allow at the 1.0 level
+      // Δ₁ = Δ₀,LRFD·M_d/M_allow,LRFD at the 1.0 level (M_allow,LRFD = V₀,LRFD·H₁/12)
       const M1 = (V1[lt] * 1000 * He + V2 * 1000 * (He + dfl + H2)) / 12;
-      delta1[lt] = stacked[lt].Mallow > 0 ? lk[lt].D[lt] * M1 / stacked[lt].Mallow : null;
+      const MallowL = VcapL[lt] * He / 12;
+      stacked[lt].MallowL = MallowL; stacked[lt].M1 = M1;
+      delta1[lt] = MallowL > 0 ? DcapL[lt] * M1 / MallowL : null;
+      overLrfd[lt] = MallowL > 0 && M1 > MallowL + 0.5;
     } else {
       dc[lt] = Vcap[lt] > 0 ? Vd[lt] / Vcap[lt] : (Vd[lt] > 0 ? 9.99 : 0);
-      delta1[lt] = Vcap[lt] > 0 ? lk[lt].D[lt] * V1[lt] * 1000 / Vcap[lt] : null; // strength level: linear extrapolation
+      delta1[lt] = VcapL[lt] > 0 ? DcapL[lt] * V1[lt] * 1000 / VcapL[lt] : null; // 1.0 level, linear from the LRFD cap
+      overLrfd[lt] = VcapL[lt] > 0 && V1[lt] * 1000 > VcapL[lt] + 0.5;
     }
-    // Panel stiffness from the table (V_cap / Δ_cap, lb/in)
-    k[lt] = ok && lk[lt].D[lt] > 0 ? Vcap[lt] / lk[lt].D[lt] : 0;
   }
   const seismicDC = c.seismic ? r2(dc.E) : 0, windDC = c.wind ? r2(dc.W) : 0;
   let dcRatio, dcGoverning;
@@ -798,7 +840,7 @@ function wswhWallResult(w, info, sh, c) {
       ok, errors: info.errors, condition: info.condition, role: info.role, width: info.width,
       evalModel: ok ? ev.evalModel : null, orderModel: ok ? ev.orderModel : null, kit: ok ? ev.kit : '', table: ev.table,
       He, B, P: { E: r0(info.P.E), W: r0(info.P.W) }, Vd: { E: r0(Vd.E), W: r0(Vd.W) }, Vcap: { E: r0(Vcap.E), W: r0(Vcap.W) },
-      Dcap: { E: ok ? lk.E.D.E : null, W: ok ? lk.W.D.W : null }, dc: { E: r2(dc.E), W: r2(dc.W) }, stacked, delta1, k,
+      Dcap: { E: ok ? lk.E.D.E : null, W: ok ? lk.W.D.W : null }, VcapL, DcapL, overLrfd, dc: { E: r2(dc.E), W: r2(dc.W) }, stacked, delta1,
       notes: ok ? [...new Set([...lk.E.notes, ...lk.W.notes])] : [], upperId: info.upperId || null, lowerId: info.lowerId || null,
       fromAbove: info.fromAbove || null,
       floorDepth: parseFloat(w.wswhFloorDepth) || 0,
@@ -826,7 +868,7 @@ const DIST_MAX_PASSES = 20;
 const FROM_ABOVE_NOTE = 0.5;  // note a wall when δ(0)/δ* > 0.5: more than half its δ comes from the forces above
 
 // Deflection spread of a line result: per level and load type, (δmax − δmin) / δmax over the walls
-// carrying shear, with δ = V/k at the 1.0 level. Levels where a wall has no stiffness are skipped.
+// carrying shear, with δ = the wall's δ at its share (deltaShare, 1.0 level). Levels where a wall has no δ are skipped.
 function deflectionSpread(res, lts) {
   const rows = [];
   for (const pl of res.perLevel) {
@@ -836,9 +878,9 @@ function deflectionSpread(res, lts) {
       for (const w of pl.walls) {
         const V = (lt === 'E' ? w.shareExact_1E : w.shareExact_1W) || 0;
         if (w.hbNotPermitted || !(V > 0)) continue;
-        const k = w.stiffness && w.stiffness[lt];
-        if (!(k > 0)) { complete = false; continue; }
-        ds.push({ mark: w.mark, delta: V * 1000 / k });
+        const d = w.deltaShare && w.deltaShare[lt];
+        if (!(d > 0)) { complete = false; continue; }
+        ds.push({ mark: w.mark, delta: d });
       }
       if (!complete || ds.length < 2) continue;
       const max = ds.reduce((a, d) => (d.delta > a.delta ? d : a));
@@ -885,8 +927,8 @@ export function freeDeflectionSplit(V, fns) {
 // anchorage's minimum post when it is smaller. Sheathed walls only.
 export function anchorageTrials(wr, thickness) {
   if (wr.method !== 'wall' || !wr.anchorageLeft || !wr.anchorageRight || !wr.postLeft || !wr.postRight) return [];
-  const table = [HDUE_TABLE, ...Object.values(MSTC_TABLE)].find(t => t.includes(wr.anchorageLeft))
-    || [HDUE_TABLE, ...Object.values(MSTC_TABLE)].find(t => t.some(a => a.id === wr.anchorageLeft.id && a.cap === wr.anchorageLeft.cap));
+  const a0 = wr.anchorageLeft; // the larger sizes of its own table (family, framing group, wall width / floor span)
+  const table = a0.family === 'HDUE' ? hdueTable(a0.group, thickness) : a0.family === 'MSTC' ? mstcTable(a0.group, a0.span) : null;
   if (!table) return [];
   const cur = Math.max(wr.anchorageLeft.cap || 0, wr.anchorageRight.cap || 0);
   return table.filter(a => a.cap > cur).map(a => {
@@ -1051,8 +1093,8 @@ export function lineDriftMode(inputs, line) {
 const DRIFT_SIZING_MAX_STEPS = 40;
 
 // Anchorage catalog a wall end is picked from: HDUE, or the MSTC table of the floor clear span
-export function anchorageTable(useHoldown, floorSpan) {
-  return useHoldown ? HDUE_TABLE : (MSTC_TABLE[String(floorSpan)] || MSTC_TABLE['16']);
+export function anchorageTable(useHoldown, floorSpan, group = 'dfsp', thickness = '4') {
+  return useHoldown ? hdueTable(group, thickness) : mstcTable(group, floorSpan);
 }
 // Auto anchorage never below the drift-sizing floor (index in its table). OVER (null) stays OVER.
 export function anchorageWithFloor(pick, table, floorIdx) {
@@ -1067,11 +1109,11 @@ export function anchorageWithFloor(pick, table, floorIdx) {
 //   nailing   — the story's common-pattern step (every auto wall to the heaviest pattern among them, or one heavier
 //               once they are equal): Δδ = vh/(1000·Ga) · (1 − Ga / Ga,new) on the governing wall;
 //   anchorage — the governing wall's auto holdown / strap one size up at both ends:
-//               Δδ = (h/b) · (δ_cap·T/P_δ − δ_cap,new·T/P_δ,new) (slip only; a larger minimum post is not estimated).
+//               Δδ = (h/b) · T · (δ_LRFD/T_LRFD − δ_LRFD,new/T_LRFD,new) (slip only; a larger minimum post is not estimated).
 // The larger saving is applied; when one step is not available (manual, override, heaviest / largest size, OVER,
 // FTAO / WSWH) the other is used. The line is redesigned after each round, until every story passes or nothing is
 // left to raise. Nailing and anchorage are floors: strength can still pick heavier. h/b > 3.5 walls are left alone.
-function sizeForDrift(line, inputs, levels, solve, ancTableOf) {
+function sizeForDrift(line, inputs, levels, solve, ancTableOf, NAILING_TABLE, group) {
   const mode = lineDriftMode(inputs, line);
   const sheathing = inputs.sheathing === 'osb' ? 'osb' : 'ply';
   const floor = { nail: {}, anc: {} };
@@ -1102,7 +1144,7 @@ function sizeForDrift(line, inputs, levels, solve, ancTableOf) {
           if (target <= NAILING_TABLE.length - 1) {
             let save = 0;
             if (g && cands.includes(gov) && target > nIdx(gov.nailing.id)) {
-              const ga0 = gaFor(getNailingById(gov.nailing.id), sheathing), ga1 = gaFor(NAILING_TABLE[target], sheathing);
+              const ga0 = gaFor(getNailingById(gov.nailing.id, group), sheathing), ga1 = gaFor(NAILING_TABLE[target], sheathing);
               save = ga0 > 0 && ga1 > 0 ? g.t2 * (1 - ga0 / ga1) : 0;
             }
             nail = { target, save, walls: cands };
@@ -1117,13 +1159,16 @@ function sizeForDrift(line, inputs, levels, solve, ancTableOf) {
           const t = ancTableOf(row.levelId).table;
           const autoSides = ['left', 'right'].filter(sd => gov.anchorageBasis[sd].basis !== 'manual');
           const idxOf = (sd) => t.findIndex(a => a.id === ((sd === 'left' ? gov.anchorageLeft : gov.anchorageRight) || {}).id);
-          if (cur && autoSides.includes(side) && autoSides.every(sd => idxOf(sd) >= 0)) {
-            const next = Math.max(...autoSides.map(idxOf)) + 1;
-            if (next <= t.length - 1) {
-              const T = side === 'left' ? d.T : d.C; // lb at the tension end of the governing direction
-              const slip = (a) => { const b = deltaBasisLoad(a); return b > 0 && a.delta != null ? a.delta * T / b : 0; };
+          if (cur && g.dHD > 0 && autoSides.includes(side) && autoSides.every(sd => idxOf(sd) >= 0)) {
+            // Δa = δ_LRFD × T / T_LRFD (user 2026-10-14): a larger size helps only if its flexibility δ_LRFD / T_LRFD is
+            // lower — take the lightest larger size of the table that is stiffer than the current one
+            const flex = (a) => anchorageFlex(a);
+            const from = Math.max(...autoSides.map(idxOf));
+            let next = -1;
+            for (let i = from + 1; i < t.length; i++) if (flex(t[i]) < flex(cur) - 1e-15) { next = i; break; }
+            if (next >= 0) {
               const ends = autoSides.map(sd => (sd === 'left' ? 'L ' : 'R ') + ((sd === 'left' ? gov.anchorageLeft : gov.anchorageRight) || {}).id).join(' / ');
-              anc = { next, save: (d.h / d.b) * (slip(cur) - slip(t[next])), from: ends, to: t[next].id };
+              anc = { next, save: (d.h / d.b) * g.T * (flex(cur) - flex(t[next])), from: ends, to: t[next].id };
             }
           }
         }
@@ -1214,15 +1259,15 @@ function storyDrift(perLevel, inputs, { seismic, wind, alphaS }) {
   };
 }
 
-export function findAnchorage(id, floorSpan) {
-  const hd = HDUE_TABLE.find(h => h.id === id);
+// group / thickness: the project's framing group and the line's wall width (HDUE capacities depend on both)
+export function findAnchorage(id, floorSpan, group = 'dfsp', thickness = '4') {
+  const hd = hdueTable(group, thickness).find(h => h.id === id);
   if (hd) return hd;
   // Strap capacity depends on floor clear span — look in the level's span table first
-  const spanTable = MSTC_TABLE[String(floorSpan)] || MSTC_TABLE['16'];
-  const s1 = spanTable.find(t => t.id === id);
+  const s1 = mstcTable(group, floorSpan).find(t => t.id === id);
   if (s1) return s1;
-  for (const table of Object.values(MSTC_TABLE)) {
-    const s = table.find(t => t.id === id);
+  for (const span of ['16', '18', '24']) {
+    const s = mstcTable(group, span).find(t => t.id === id);
     if (s) return s;
   }
   return null;
@@ -1241,8 +1286,7 @@ export function selectEndPost(overrideId, C, wallThickness, grade, floorH, ancho
 }
 
 export function findPost(id, wallThickness, grade, floorH) {
-  const allPosts = [...(POST_SIZES[wallThickness] || []), ...(POST_SIZES['4'] || []), ...(POST_SIZES['6'] || [])];
-  const post = allPosts.find(p => p.id === id);
+  const post = postSizeById(id);
   if (!post) return null;
   return computePostCapacity(post, grade, floorH);
 }

@@ -14,11 +14,11 @@ const hd = pickHD(T);
 const minPost = POSTS4.filter(p => p.d2 >= 3.0);  // HDUE3 minimum post (2)2x4 (d2 ≥ 3.0")
 const post = minPost.find(p => postCap(p, h).cap >= C);
 const pc = postCap(post, h);
-// Deflection at 1.0E (SDPWS Eq. 4.3-1): v1 = V/L, T1 = C1 = V·h/L (lateral only)
-const v1 = V * 1000 / L, T1 = N * 1000, A = post.A, E = 1700000, Ga = NAIL.find(x => x.id === n.id).gaPLY;
+// Deflection at 1.0E (SDPWS Eq. 4.3-1), lateral end forces only (user 2026-10-14): v1 = V/L; T1 = C1 = V·h/L
+const v1 = V * 1000 / L, T1 = N * 1000, C1 = N * 1000, A = post.A, E = 1700000, Ga = NAIL.find(x => x.id === n.id).gaPLY;
 const t1 = 8 * v1 * h ** 3 / (E * A * L), t2 = v1 * h / (1000 * Ga);
-const dHD = hd.delta * T1 / hd.cap;
-const r = T1 / (A * 625), dC = 0.02 * (r < 0.73 ? r / 0.73 : r <= 1 ? 1 + (r - 0.73) / 0.27 : 2 * r ** 3);
+const dHD = hd.delta * T1 / hd.lrfdCap; // linear from the LRFD pair (2026-10-14)
+const r = C1 / (A * 625), dC = 0.02 * (r < 0.73 ? r / 0.73 : r <= 1 ? 1 + (r - 0.73) / 0.27 : 2 * r ** 3);
 const t3 = h * (dHD + dC) / L, delta = t1 + t2 + t3;
 // Story drift (Cd 4, Ie 1.0, RC II): the one wall governs; the same Eq. 4.3-1 through the shared helper
 const d1 = storyDrift('Level 1', h, [eq431({ mark: 'SW-1', L, h, nail: '4', hdL: 'HDUE3', hdR: 'HDUE3', postL: '(2)2x4', postR: '(2)2x4', Vk: V, TL: N, CR: N })]);
@@ -35,8 +35,8 @@ export default {
     'Uplift, (0.6 − 0.14S_DS)D + 0.7E: N = ' + f2(a.up) + ' × ' + f2(R) + ' − 0.7 × ' + f2(N) + ' = ' + f2(-T) + ' → T = ' + f2(T) + ' k → lightest HDUE with cap ≥ ' + Math.round(T * 1000) + ' lb: ' + hd.id + ' (' + hd.cap + ' lb), D/C = ' + f3(T * 1000 / hd.cap) + '.',
     'Compression, (1.0 + 0.14S_DS)D + 0.7E: C = ' + f2(a.dn) + ' × ' + f2(R) + ' + 0.7 × ' + f2(N) + ' = ' + f2(C) + ' k (combo (6): ' + f3(a.d6) + ' × ' + f2(R) + ' + 0.525 × ' + f2(N) + ' = ' + f3(C6) + ' k, smaller).',
     'End post: HDUE3 minimum post is (2)2x4. NDS column at h = ' + h + ' ft, DF-L No.1: F_c* = 1500 × 1.6 × 1.15 = ' + Math.round(pc.Fstar) + ' psi, F_cE = ' + Math.round(pc.FcE) + ' psi, C_P = ' + f4(pc.Cp) + ', F_c′ = ' + Math.round(pc.Fc1) + ' psi; bearing F_c⊥′ = 625 × (3.0 + 0.375)/3.0 = ' + Math.round(pc.Fperp) + ' psi → cap = ' + f2(pc.cap) + ' k ≥ ' + f2(C) + ' k → ' + post.id + '.',
-    'Deflection at 1.0E: v = ' + v1 + ' plf, A = ' + A + ' in², G_a = ' + Ga + ' k/in. 8vh³/(EAb) = 8 × ' + v1 + ' × ' + h + '³ / (1,700,000 × ' + A + ' × ' + L + ') = ' + f4(t1) + '; vh/(1000G_a) = ' + v1 + ' × ' + h + ' / (1000 × ' + Ga + ') = ' + f4(t2)
-      + '; holdown slip = 0.127 × ' + T1 + ' / 3790 = ' + f4(dHD) + '; crushing r = ' + T1 + ' / (' + A + ' × 625) = ' + f4(r) + ' → Δ_c = ' + f4(dC) + '; h·Δa/b = ' + f4(t3) + ' → δ = ' + f4(delta) + ' in.',
+    'Deflection at 1.0E (lateral end forces only): v = ' + v1 + ' plf, end forces T = C = V·h/L = ' + f2(N) + ' k, A = ' + A + ' in², G_a = ' + Ga + ' k/in. 8vh³/(EAb) = 8 × ' + v1 + ' × ' + h + '³ / (1,700,000 × ' + A + ' × ' + L + ') = ' + f4(t1) + '; vh/(1000G_a) = ' + v1 + ' × ' + h + ' / (1000 × ' + Ga + ') = ' + f4(t2)
+      + '; holdown Δ = δ_LRFD × T / T_LRFD of ' + hd.id + ' = ' + hd.delta + ' × ' + Math.round(T1) + ' / ' + hd.lrfdCap + ' = ' + f4(dHD) + '; crushing r = ' + Math.round(C1) + ' / (' + A + ' × 625) = ' + f4(r) + ' → Δ_c = ' + f4(dC) + '; h·Δa/b = ' + f4(t3) + ' → δ = ' + f4(delta) + ' in.',
     d1.text,
     'Line checks: base shear = 5 k at the foundation, base moment = 50 k·ft, gravity 1.0D = ' + f2(D) + ' k all at the foundation → G1–G12 pass.',
   ],

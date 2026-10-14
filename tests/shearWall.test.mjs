@@ -77,6 +77,7 @@ test('Regression: aligned stacked walls match Phase 3 results (nailing, T/C, acc
     const now = rows.find(x => x.mark === r.mark);
     return now && now.accumT === null && r.accumT === Math.max(...r.govT) ? { ...r, accumT: null, accumC: null } : r;
   });
+  // HDUE17 4" wall cap 17,685 → 16,040 lb (C-C2026, data 2026-10-13): SW-5 / SW-6 anchorage D/C 0.85 / 0.84 → 0.94 / 0.93 in the baseline
   // ids exact; forces within 0.02 k and D/C within 0.01 (unrounded end forces, calc v12: sums of stacked ends move ≤ 0.01 k)
   const ids = (r) => ({ mark: r.mark, nailing: r.nailing, anchorage: r.anchorage, post: r.post });
   assert.deepEqual(rows.map(ids), base.map(ids));

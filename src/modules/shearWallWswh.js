@@ -23,12 +23,13 @@ export const conditionLabel = (id) => (WSWH_CONDITIONS.find(c => c.id === id) ||
 export const WSWH_NOTES = [
   'Strong-Wall WSWH values: Simpson C-L-SW26 (2026) / ICC-ES ESR-2652, 2024 IBC basis — confirm ESR-2652 lists 2021 IBC for CBC 2022.',
   'Seismic values are based on R = 6.5. LRFD-equivalent values are derived (seismic ASD/0.7, wind ASD/0.6), not Simpson-published.',
-  'Drift at demand is linear in V (Δ = Δ_cap·V/V_cap); above V_cap it is a linear extrapolation. Table 03 (stacked 2nd story) could not be self-checked.',
+  'Drift at the 1.0 level is linear in V from the LRFD cap with its drift: Δ = Δ_LRFD·V/V_LRFD (stacked base: Δ_0,LRFD·M_d/M_allow,LRFD); a warning sign when V > V_LRFD. Table 03 (stacked 2nd story) could not be self-checked.',
   'Anchors: Table 06, cracked concrete. Bolt length l_e / HSR extension (Table 07) and edge shear anchorage (Table 08) are not checked.',
 ];
 
 const lerp = (a, b, t) => a + (b - a) * t;
-const COLS = ['He_in', 'V_ASDcap_S', 'Delta_ASDcap_S', 'T_ASDcap_S', 'V_ASDcap_W', 'Delta_ASDcap_W', 'T_ASDcap_W'];
+const COLS = ['He_in', 'V_ASDcap_S', 'Delta_ASDcap_S', 'T_ASDcap_S', 'V_ASDcap_W', 'Delta_ASDcap_W', 'T_ASDcap_W',
+  'V_LRFDcap_S', 'Delta_LRFDcap_S', 'V_LRFDcap_W', 'Delta_LRFDcap_W'];
 const mix = (r1, r2, t) => Object.fromEntries(COLS.map(k => [k, r2 == null || r1[k] == null ? r1[k] : lerp(r1[k], r2[k], t)]));
 const ofWidth = (rows, width) => rows.filter(r => r.model.startsWith('WSWH' + width + 'x'));
 
@@ -92,6 +93,9 @@ export function lookupWswh({ width, condition, ftfFt, P_lb = 0, fc = 2500, joist
   out.orderModel = order ? order.order_model : modelAt(n2);
   out.V = { E: v.V_ASDcap_S * factor, W: v.V_ASDcap_W * factor };          // ASD allowable shear (lb)
   out.D = { E: v.Delta_ASDcap_S * factor, W: v.Delta_ASDcap_W * factor };  // drift at V (in); scales with V
+  // LRFD cap with its drift (user 2026-10-13, option B): drift at the 1.0 level = Δ_LRFD × V / V_LRFD (linear)
+  out.VL = { E: v.V_LRFDcap_S * factor, W: v.V_LRFDcap_W * factor };
+  out.DL = { E: v.Delta_LRFDcap_S * factor, W: v.Delta_LRFDcap_W * factor };
   out.T0 = { E: v.T_ASDcap_S == null ? null : v.T_ASDcap_S * factor, W: v.T_ASDcap_W == null ? null : v.T_ASDcap_W * factor };
   const arm = WSWH_ARM.find(r => r.width_in === width);
   out.B = condition === 'raised' ? arm.B_raised_in : arm.B_concrete_in;

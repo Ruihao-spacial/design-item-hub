@@ -2,7 +2,7 @@
 // Engine units: lbf, ft, in, psi. Line shares are in kips at the 1.0 level (1.0E / 1.0W).
 import { createFTAO } from './shearWallFtao.js';
 import { nominalFor, gaFor } from './shearWallNailing.js';
-import { autoSelectFtaoStrap, getFtaoStrap, strapNailing, jambPostOptions, deltaBasisLoad, computePostCapacity } from './shearWallHardware.js';
+import { autoSelectFtaoStrap, getFtaoStrap, strapNailing, jambPostOptions, anchorageSlip, computePostCapacity, memberProps, sillProps, postSizeById } from './shearWallHardware.js';
 import { sortedOpenings, wallPiers } from './shearWallOpenings.js';
 
 function num(v) { return parseFloat(v) || 0; }
@@ -41,6 +41,12 @@ function engineInput(wall, ctx, lt, parts) {
     return jamb.area;
   };
   const anc = parts.anchorage;
+  // chord E of an edge member: end posts per their grade (4A / 4B / 4D), jambs dimension lumber
+  const edgeE = (i) => {
+    const p = (i === 0 && parts.endPosts && parts.endPosts[0]) || (i === nEdges - 1 && parts.endPosts && parts.endPosts[1]) || null;
+    const m = memberProps(ctx.grade, (p && p.id && postSizeById(p.id)) || jamb);
+    return m ? m.E : ctx.grade.E;
+  };
   return {
     wallId: wall.mark || wall.id,
     ...geo,
@@ -52,11 +58,11 @@ function engineInput(wall, ctx, lt, parts) {
     vs_nominal: nominalFor(parts.nailing, lt),
     Ga: gaFor(parts.nailing, ctx.sheathing),
     faces: 1, // both-sides nailing rows already carry two faces
-    E_post: Array(nEdges).fill(ctx.grade.E),
+    E_post: Array.from({ length: nEdges }, (_, i) => edgeE(i)),
     A_post: Array.from({ length: nEdges }, (_, i) => area(i)),
-    Fcperp_plate: ctx.grade.Fcperp,
-    HD_allow: deltaBasisLoad(anc) || 1, // engine scales d_a by T / HD_allow
-    d_a: anc && anc.delta != null ? anc.delta : 0,
+    Fcperp_plate: sillProps(ctx.grade, ctx.lineThickness).Fcperp, // sill plate: NDS Table 4A / 4B
+    HD_allow: (anc && anc.cap) || 1, // ASD cap (engine reference check of the gross H)
+    d_a: anchorageSlip(anc), HD_lrfd: (anc && anc.lrfdCap) || 0, // Δa = δ @ LRFD cap × T_pier / LRFD cap (LRFD pair, user 2026-10-14)
     strap_allow: parts.strap ? parts.strap.cap : 1,
   };
 }
@@ -108,7 +114,7 @@ function sizeJambs(wall, ctx, perType, hw) {
       let post = override ? capOf(override) : null;
       let size = override;
       if (!override) {
-        for (const p of opts) { const r = capOf(p); if (r.capacityKips >= C) { post = r; size = p; break; } }
+        for (const p of opts) { const r = capOf(p); if (r && r.capacityKips >= C) { post = r; size = p; break; } }
       }
       jambs.push({
         opening: j + 1, side, edge: 2 * j + (side === 'left' ? 1 : 2), loadType: lt,
@@ -156,8 +162,7 @@ export function ftaoDesign(wall, ctx, nailing, shares, hw) {
   for (const [lt, { V1 }] of Object.entries(perType)) {
     const el = createFTAO(engineInput(wall, ctx, lt, { nailing, endPosts: hw.endPosts, anchorage: hw.anchorage, strap, jambAreas }));
     const d = el.design(V1);
-    // Deflection is always run: its stiffness V_defl/Δ drives the deflection approach; wind Δ is only
-    // reported when the service factor α_s is set
+    // wind Δ is only reported when the service factor α_s is set
     const df = el.deflection(V1);
     const defl = lt === 'E' || num(ctx.alphaS) > 0
       ? { Delta_in: df.Delta_in, V_defl: df.loads.V_defl, cases: df.cases, warnings: df.warnings } : null;
@@ -169,7 +174,6 @@ export function ftaoDesign(wall, ctx, nailing, shares, hw) {
       sheathing: d.checks.sheathing, governing: d.checks.governing,
       plateBearing: d.checks.plateBearing, overall: d.checks.overall,
       deflection: defl,
-      stiffness: df.Delta_in > 0 ? df.loads.V_defl / df.Delta_in : null,
     };
     for (const w of d.warnings) if (!result.warnings.includes(w)) result.warnings.push(w);
   }
@@ -180,6 +184,16 @@ export function ftaoDesign(wall, ctx, nailing, shares, hw) {
     if (!gov || r.governing.dcr > gov.dcr) gov = { ...r.governing, loadType: lt };
   }
   result.governing = gov;
+  // δ(V) at the 1.0 level (in) for the deflection distribution (user 2026-10-14: no stored stiffness; the same level as
+  // the segmented walls' Eq. 4.3-1 and the WSWH table): the final element with α_s = 1 for W, at a trial share Vk (k).
+  // Built for every load type, also one this wall carries no share of. Not part of the stored results.
+  const els = {};
+  const deflAt = (lt, Vk) => {
+    if (!(Vk > 0)) return 0;
+    if (!els[lt]) els[lt] = createFTAO(engineInput(wall, { ...ctx, alphaS: 1 }, lt, { nailing, endPosts: hw.endPosts, anchorage: hw.anchorage, strap, jambAreas }));
+    return els[lt].deflection(Vk * 1000).Delta_in;
+  };
+  Object.defineProperty(result, '_deflAt', { enumerable: false, configurable: true, value: deflAt });
   if (!strap) result.warnings.push('No FTAO strap in the catalog carries ' + Math.round(Fmax) + ' lb');
   jambs.filter(jb => !jb.post).forEach(jb => result.warnings.push('Opening ' + jb.opening + ' ' + jb.side + ' jamb: no ' + ctx.lineThickness + '" post carries ' + jb.C.toFixed(2) + ' k'));
   return result;

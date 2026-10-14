@@ -11,35 +11,35 @@
   "handCalc": [
     {
       "step": 1,
-      "text": "Every wall uses SDPWS Eq. 4.3-1 at 1.0E: δ = 8vh³/(EAb) + vh/(1000G_a) + (h/b)·(δ_cap·T/P_δ + Δ_c(r)), v = 1000V/b, T = C = 1000·V·h/b + the end force from above (lb). P_δ = HDUE cap, MSTC cap/0.7; r = C/(A·625). Pinned: SW-3 6\" o.c. (G_a 16), SW-4 / SW-5 / SW-6 2\" o.c. both sides (G_a 56); SW-3 / SW-4 MSTC66 + (3)2x4; SW-5 HDUE13 + 8x4; SW-6 HDUE5 + (2)2x4."
+      "text": "Every wall uses SDPWS Eq. 4.3-1 at 1.0E, lateral end forces only: δ = 8vh³/(EAb) + vh/(1000G_a) + (h/b)·(Δ_HD + Δ_c(r)), v = 1000V/b, T = C = 1000·V·h/b + the end force from above (lb). Δ_HD = δ_LRFD × T / T_LRFD of the holdown / strap (LRFD pairs MSTC66 0.129 in / 8357 lb, HDUE5 0.205 / 7525, HDUE13 0.203 / 18130); r = C/(A·625). Pinned: SW-3 6\" o.c. (G_a 16), SW-4 / SW-5 / SW-6 2\" o.c. both sides (G_a 56); SW-3 / SW-4 MSTC66 + (3)2x4; SW-5 HDUE13 + 8x4; SW-6 HDUE5 + (2)2x4."
     },
     {
       "step": 2,
-      "text": "Level 2 (nothing above), equal δ: V_3 = 3.073 k, V_4 = 1.927 k, δ = 0.3423 in. SW-4 takes 38.54 % of Level 2 on 33.33 % of the length. End forces sent down (1.0E): SW-3 → SW-5 T = 3841 lb, SW-4 → SW-6 T = 4817 lb."
+      "text": "Level 2 (nothing above), equal δ: V_3 = 3.071 k, V_4 = 1.929 k, δ = 0.3417 in. SW-4 takes 38.57 % of Level 2 on 33.33 % of the length. End forces sent down (1.0E): SW-3 → SW-5 T = 3839 lb, SW-4 → SW-6 T = 4822 lb."
     },
     {
       "step": 3,
-      "text": "SW-6 at zero own share (only the force from SW-4): slip = 0.146 × 4817 / 5375 = 0.1308 in, crushing Δ_c = 0.0203 in → δ_6(0) = (10/4) × (0.1308 + 0.0203) = 0.3779 in."
+      "text": "SW-6 at zero own share (only the force from SW-4: T = C = 4822 lb): Δ_HD = 0.205 × 4822 / 7525 = 0.1314 in, crushing Δ_c = 0.0203 in → δ_6(0) = (10/4) × (0.1314 + 0.0203) = 0.3792 in."
     },
     {
       "step": 4,
-      "text": "SW-5 carrying the whole story (V = 5 k, plus 3841 lb from SW-3): 8vh³/(EAb) = 0.0140, vh/(1000G_a) = 0.1116, h·Δa/b = 0.1623 → δ_5(5 k) = 0.2879 in."
+      "text": "SW-5 carrying the whole story (V = 5 k, plus 3839 lb from SW-3): 8vh³/(EAb) = 0.0140, vh/(1000G_a) = 0.1116, h·Δa/b = 0.1623 → δ_5(5 k) = 0.2879 in."
     },
     {
       "step": 5,
-      "text": "δ_6(0) = 0.3779 in > δ_5(5 k) = 0.2879 in: even with no shear of its own SW-6 is displaced more than SW-5 carrying all of Level 1. No split with equal δ and V ≥ 0 exists → SW-6 takes 0, SW-5 takes 5 k, story δ = 0.2879 in; SW-6 is flagged (zero share). Its drift δ is its zero-share value 0.3779 in (the larger)."
+      "text": "δ_6(0) = 0.3792 in > δ_5(5 k) = 0.2879 in: even with no shear of its own SW-6 is displaced more than SW-5 carrying all of Level 1. No split with equal δ and V ≥ 0 exists → SW-6 takes 0, SW-5 takes 5 k, story δ = 0.2879 in; SW-6 is flagged (zero share). Its drift δ is its zero-share value 0.3792 in (the larger)."
     },
     {
       "step": 6,
-      "text": "Holdown check (both ends, post raised to the HDUE minimum post, SW-5 held): HDUE7 + (2)2x4: δ_6(0) = 0.3151 in → share 0.000 k; HDUE9 + 4x4: δ_6(0) = 0.2704 in → share 0.069 k; HDUE13 + 8x4: δ_6(0) = 0.1550 in → share 0.733 k; HDUE17 + 6x4: δ_6(0) = 0.1030 in → share 1.166 k. HDUE7 is not enough (δ_6(0) > 0.2879 in); the lightest giving a share is HDUE9 (0.069 k, barely), HDUE13 gives 0.733 k. Other fixes (listed, not calculated by the tool): a longer SW-6, less force from the stack above, or a less stiff SW-5 (its strength needs only 4\" o.c.: 0.7 × 5000 / 8 = 438 plf ≤ 470)."
+      "text": "Holdown check (both ends, post raised to the HDUE minimum post, SW-5 held): HDUE7 + (2)2x4: δ_6(0) = 0.3160 in → share 0.000 k; HDUE9 + 6x4: δ_6(0) = 0.1998 in → share 0.422 k; HDUE13 + 8x4: δ_6(0) = 0.1551 in → share 0.732 k; HDUE17 + 6x4: δ_6(0) = 0.0983 in → share 1.214 k. A larger holdown helps only through a lower δ_LRFD / T_LRFD and a larger minimum post; the lightest giving a share is HDUE9 (0.422 k). Other fixes (listed, not calculated by the tool): a longer SW-6, less force from the stack above, or a less stiff SW-5 (its strength needs only 4\" o.c.: 0.7 × 5000 / 8 = 438 plf ≤ 470)."
     },
     {
       "step": 7,
-      "text": "Free split (equal δ without the V ≥ 0 limit, information only; T and C clipped at 0): δ_5(V_5) = δ_6(V − V_5) → V_5 = 5.285 k, V_6 = -0.285 k (SW-6 pushes back), δ = 0.3008 in. SW-5 is designed for 5.000 k but would carry 5.285 k (+5.70 %) → big warning: check SW-5, more wall may be needed. The design keeps the zero share (user rule 2026-10-01)."
+      "text": "Free split (equal δ without the V ≥ 0 limit, information only; T and C clipped at 0): δ_5(V_5) = δ_6(V − V_5) → V_5 = 5.289 k, V_6 = -0.289 k (SW-6 pushes back), δ = 0.3010 in. SW-5 is designed for 5.000 k but would carry 5.289 k (+5.78 %) → big warning: check SW-5, more wall may be needed. The design keeps the zero share (user rule 2026-10-01)."
     },
     {
       "step": 8,
-      "text": "Story drift (Cd = 4, Ie = 1.0, RC II → Δa = 0.020 × h_sx = 0.020 × 10 × 12 = 2.400 in): Level 2 δxe = 0.3423 in (equal δ) → δx = 4 × 0.3423 / 1.0 = 1.3691 in ≤ 2.400 OK; Level 1 δxe = the larger wall δ = SW-6 at zero share 0.3779 in → δx = 1.5114 in ≤ 2.400 OK. No drift sizing (design pinned). Ω₀ = 2.5 only adds the Ω₀ force tables (not used for design)."
+      "text": "Story drift (Cd = 4, Ie = 1.0, RC II → Δa = 0.020 × h_sx = 0.020 × 10 × 12 = 2.400 in): Level 2 δxe = 0.3417 in (equal δ) → δx = 4 × 0.3417 / 1.0 = 1.3669 in ≤ 2.400 OK; Level 1 δxe = the larger wall δ = SW-6 at zero share 0.3792 in → δx = 1.5170 in ≤ 2.400 OK. No drift sizing (design pinned). Ω₀ = 2.5 only adds the Ω₀ force tables (not used for design)."
     },
     {
       "step": 9,
@@ -51,7 +51,7 @@
       "label": "SW-3 share, Level 2 (k)",
       "at": "wall:SW-3",
       "field": "shareExact_1E",
-      "value": 3.0731850720094864,
+      "value": 3.0713894796458474,
       "tol": 0.005,
       "step": 2
     },
@@ -59,7 +59,7 @@
       "label": "SW-4 share, Level 2 (k)",
       "at": "wall:SW-4",
       "field": "shareExact_1E",
-      "value": 1.9268149279905136,
+      "value": 1.9286105203541526,
       "tol": 0.005,
       "step": 2
     },
@@ -67,7 +67,7 @@
       "label": "SW-4 δ, Level 2 (in)",
       "at": "wall:SW-4",
       "field": "deflection.E.delta",
-      "value": 0.3422700708473025,
+      "value": 0.3417268096130648,
       "tol": 0.0005,
       "step": 2
     },
@@ -75,7 +75,7 @@
       "label": "SW-6 δ at zero own share (in)",
       "at": "line",
       "field": "distribution.levels[1].walls[1].delta0",
-      "value": 0.37785576246213104,
+      "value": 0.3792483703551666,
       "tol": 0.0005,
       "step": 3
     },
@@ -106,7 +106,7 @@
       "label": "Story δ, Level 1 (in)",
       "at": "line",
       "field": "distribution.levels[1].delta",
-      "value": 0.2879195827676733,
+      "value": 0.28788348339478814,
       "tol": 0.0005,
       "step": 4
     },
@@ -114,7 +114,7 @@
       "label": "SW-5 δ (in)",
       "at": "wall:SW-5",
       "field": "deflection.E.delta",
-      "value": 0.2879195827676733,
+      "value": 0.28788348339478814,
       "tol": 0.0005,
       "step": 4
     },
@@ -122,7 +122,7 @@
       "label": "SW-6 δ, zero share (in)",
       "at": "wall:SW-6",
       "field": "deflection.E.delta",
-      "value": 0.37785576246213104,
+      "value": 0.3792483703551666,
       "tol": 0.0005,
       "step": 5
     },
@@ -142,10 +142,10 @@
       "step": 6
     },
     {
-      "label": "Holdown check: HDUE9 + 4x4 share (k)",
+      "label": "Holdown check: HDUE9 + 6x4 share (k)",
       "at": "line",
       "field": "distribution.levels[1].walls[1].remedy[1].share",
-      "value": 0.06905458355856009,
+      "value": 0.4217920846219574,
       "tol": 0.002,
       "step": 6
     },
@@ -153,7 +153,7 @@
       "label": "Holdown check: HDUE13 + 8x4 share (k)",
       "at": "line",
       "field": "distribution.levels[1].walls[1].remedy[2].share",
-      "value": 0.7326461564186282,
+      "value": 0.7316516398905231,
       "tol": 0.002,
       "step": 6
     },
@@ -161,7 +161,7 @@
       "label": "Holdown check: HDUE17 + 6x4 share (k)",
       "at": "line",
       "field": "distribution.levels[1].walls[1].remedy[3].share",
-      "value": 1.1658283829980118,
+      "value": 1.2143295061390895,
       "tol": 0.002,
       "step": 6
     },
@@ -169,7 +169,7 @@
       "label": "Free split: SW-5 (k)",
       "at": "line",
       "field": "distribution.levels[1].walls[0].freeShare",
-      "value": 5.2851603443650985,
+      "value": 5.289000661989842,
       "tol": 0.002,
       "step": 7
     },
@@ -177,7 +177,7 @@
       "label": "Free split: SW-6 (k)",
       "at": "line",
       "field": "distribution.levels[1].walls[1].freeShare",
-      "value": -0.2851603443650985,
+      "value": -0.2890006619898422,
       "tol": 0.002,
       "step": 7
     },
@@ -185,7 +185,7 @@
       "label": "Free split δ (in)",
       "at": "line",
       "field": "distribution.levels[1].free.delta",
-      "value": 0.3008165255696572,
+      "value": 0.3009541121868701,
       "tol": 0.0005,
       "step": 7
     },
@@ -193,7 +193,7 @@
       "label": "Story drift δx, Level 2 (in)",
       "at": "line",
       "field": "drift.rows[0].seismic.deltaX",
-      "value": 1.36908028338921,
+      "value": 1.3669072384522591,
       "tol": 0.002,
       "step": 8
     },
@@ -201,7 +201,7 @@
       "label": "Story drift δx, Level 1 (in)",
       "at": "line",
       "field": "drift.rows[1].seismic.deltaX",
-      "value": 1.5114230498485242,
+      "value": 1.5169934814206665,
       "tol": 0.002,
       "step": 8
     },
@@ -251,12 +251,14 @@
       "postR": "(2)2x4"
     }
   },
-  "schemaVersion": 12,
+  "schemaVersion": 13,
   "inputs": {
     "sds": "1.0",
     "loadType": "seismic",
     "wallThickness": "4",
+    "species": "DF-L",
     "woodGrade": "dfir_no1",
+    "postGrade": "dfir_pt_no1",
     "sheathing": "ply",
     "distribution": "deflection",
     "cd": "4",
