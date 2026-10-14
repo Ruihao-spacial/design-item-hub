@@ -1,6 +1,6 @@
 # Diaphragm to LRS — calculator guide
 
-Module id `diaphragm_to_lrs` · schema 2 · calc v2 · branch `diaphragm-to-lrs` (built 2026-10-07, v2 2026-10-08, not yet committed).
+Module id `diaphragm_to_lrs` · schema 2 · calc v2 · branch `diaphragm-to-lrs` (built 2026-10-07, v2 2026-10-08; pushed as `4008c99`, PR #2 stacked on PR #1).
 Stored-data rules (how saved projects survive code changes): `docs/data-durability.md`.
 Decisions and open items: `docs/diaphragm-to-lrs-backlog.md`. Verification catalog: `docs/diaphragm-to-lrs-test-cases.md`.
 Hand back-check of the beam solver (cases B01–B19, every loading condition, formula + free body vs the tool): `docs/diaphragm-to-lrs-beam-check.md`.
