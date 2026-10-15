@@ -3,6 +3,19 @@
 Open items after the 2026-09-22 elevation review rounds and Phase 4 round 1 (R1–R3, 2026-09-24).
 Branches: `shearwall-load-path` (pushed, merge to `master` by someone else), `results-and-links` (G4, pushed 2026-09-24), `phase4-r1-r3` (Phase 4 round 1 + distribution + results by line; pushed 2026-09-24; CALC_VERSION v7, schema v6), `phase4-round2` (P9, R4, R6, WSWH, live loads, results / report rework; local 2026-09-28, not pushed; CALC_VERSION v9, schema v8), `sw-verification` (off phase4-round2; checks, drift sizing, solid segmented walls, calc sheet + S0–S7, verification cases, drift sizing with anchorage, verification split, F-DD1 equal-δ solver, zero-share warnings + engineer review, UI / report restructure, wind drift limit, PDF report + elevation rework, one shared elevation renderer, PDF calc sheet = tool calc sheet, drift in every method case; committed and pushed to GitHub 2026-10-01; CALC_VERSION v18, schema v12).
 
+## Next session — start here (set 2026-10-14, end of session)
+**State:**
+- Branch `sw-hardware-data`: committed (`cba1f9a` diaphragm docs, `5592c6b` Shear Wall) and pushed. **[PR #3](https://github.com/Ruihao-spacial/design-item-hub/pull/3)** `sw-hardware-data` → `master` open (PRs #1 / #2 already merged into `master`).
+- CALC_VERSION **v23**, schema **13**. `npm test` all green (method cases 97, wood 8, APA T555 regression unchanged); `npx vite build` OK; goldens accepted, catalog regenerated.
+- Rules now in force (Step 5 below): drift / deflection **lateral only**; Δa = δ_LRFD × T / T_LRFD (segmented), d_a × T_pier / HD_lrfd (FTAO), Δ_LRFD × V / V_LRFD (WSWH) — all at the 1.0 level; no drift LC; no stored stiffness k (one δ(V) per wall type, `deltaShare`).
+
+**First thing next session (user):**
+1. Review in the app (http://localhost:5173): a wall's calc sheet **C7** (Walls tab → Detailed → level / type / mark; scaled Δ_HD row, no gravity rows), the Distribution tab "δ at share", the Hardware tab, Summary wood settings.
+2. **Re-seed SW-VERIFY** at calc v23 (stored items still show v21 drift until recalculated); optional bulk upgrade of other items.
+3. Merge PR #3 (done by the user / someone else).
+
+**Then (open items, unchanged):** PDF "Design data" appendix; verify the D2 strap source (C-C2026 pp. 295–296); F-DD1 still present in milder form (V17 Line B SW-6 takes 0.37 k of 7 k vs ~33 % by capacity); nailing row 2 wind 1120 vs 1128 in D1.
+
 ## Hardware data — Hardware tab revision + SPF/HF (started 2026-10-13, branch `sw-hardware-data`)
 **Goal (user):** the Hardware tab shows where every value comes from; add SPF/HF values (all data are DF/SP today). The user enters all catalog data; Claude never transcribes Simpson / NDS values.
 
@@ -53,8 +66,8 @@ Branches: `shearwall-load-path` (pushed, merge to `master` by someone else), `re
 **Next:**
 0. **REVERTED 2026-10-14 (Step 5) — drift LCs (CALC_VERSION v22) removed.** Kept for the record: New combo group `drift` in `comboDefs` (shearWallCombos.js), numbered last (after Ω₀ LRFD, so every existing LC# stays): `1.0D+0.5L+1.0E` (§12.8.6.1, ρ = 1) for seismic, `1.0D+0.5L+αsW` (w = α_s) for wind **only when α_s is entered** (blank α_s = no wind drift, as before). α_s is passed to `computeWallTC` (regular walls and WSWH). Shown in: the Forces tab dropdown (group "Drift"; Cap = LRFD cap and the ratio as "⚠ > LRFD cap" text, never a D/C colour — user 2026-10-13 rule), the LC definitions table (Group "Drift", role text), the load case "Used for" text (names the drift LC#), the per-wall end-force table and the elevation combo select. G12 superposition covers the new LCs automatically. The deflection itself is still computed by `deflectionOf` (it needs trial shares for the equal-δ solver); new test `shearWallWood.test.mjs` asserts deflection T / C (→ and ←, E and W) = the drift LC end forces. Goldens unchanged; `npm test` green, build OK. Tests updated: Round2 R4 group list, Report LC numbering (seismic 18, wind 13 / 14 with α_s, both 25).
    - Note: FTAO and WSWH drift stay lateral only, so for those walls the drift LC is display of forces only (role text says so).
-1. User review in the app (Hardware tab, Summary wood settings, Drift tab warnings) and of the regenerated catalog.
-2. SW-VERIFY re-seeded by the user after v21 (verified read-only 2026-10-14: 19 items, schema 13, calc v21, DF-L / dfir_pt_no1). Optional bulk upgrade of other items to schema 13.
+1. User review in the app (Hardware tab, Summary wood settings, Drift tab warnings) and of the regenerated catalog — see "Next session — start here" at the top.
+2. SW-VERIFY re-seeded by the user after v21 (verified read-only 2026-10-14: 19 items, schema 13, calc v21, DF-L / dfir_pt_no1) — **re-seed again at v23**. Optional bulk upgrade of other items to schema 13.
 3. PDF Design data appendix.
 4. Verify the D2 strap source page (C-C2026 pp. 295–296) and its values.
 
