@@ -7,7 +7,7 @@ import fs from 'fs';
 import assert from 'assert/strict';
 import '../scripts/lib/shearWallLoadCheck.mjs'; // sets up the stand-in DOM
 import { calcAll, lineDriftMode, anchorageWithFloor } from '../src/modules/shearWallCalc.js';
-import { HDUE_TABLE } from '../src/modules/shearWallHardware.js';
+import { HDUE_TABLE, MSTC_TABLE, anchorageFlex } from '../src/modules/shearWallHardware.js';
 import { shearWallDesign, renderLineResults, migrateV8toV9, sheathingGovernsText } from '../src/modules/shearWallDesign.js';
 
 let passed = 0;
@@ -53,16 +53,22 @@ test('Drift check on: nailing or holdowns / straps are raised until both stories
 });
 
 test('Anchorage raised for drift: strength pick kept for reference; floor never lowers a strength pick; OVER stays OVER', () => {
-  const ln = lineOf(calcAll(ew()));
+  // manual nailing: only the holdown / strap can move (Δa = δ_LRFD × T / T_LRFD — only a stiffer size, lower δ_LRFD / T_LRFD, helps)
+  const ln = lineOf(calcAll(ew({ nail: '4' })));
   const sw6 = wallsOf(ln).find(w => w.mark === 'SW-6');
   assert.equal(sw6.anchorageBasis.left.basis, 'drift');
   const idx = (id) => HDUE_TABLE.findIndex(h => h.id === id);
   assert.ok(idx(sw6.anchorageLeft.id) > idx(sw6.anchorageBasis.left.strength), 'raised above the strength pick');
+  const hw = (id) => [...HDUE_TABLE, ...MSTC_TABLE['16']].find(h => h.id === id);
+  for (const l of ln.driftSizing.log) {
+    const ids = l.detail.match(/(HDUE|MSTC)\d+/g), to = ids.at(-1);
+    assert.ok(anchorageFlex(hw(to)) < Math.max(...ids.slice(0, -1).map(id => anchorageFlex(hw(id)))), 'each step is stiffer (δ_LRFD / T_LRFD): ' + l.detail);
+  }
   assert.equal(anchorageWithFloor(HDUE_TABLE[4], HDUE_TABLE, 1).id, HDUE_TABLE[4].id);
   assert.equal(anchorageWithFloor(HDUE_TABLE[0], HDUE_TABLE, 2).id, HDUE_TABLE[2].id);
   assert.equal(anchorageWithFloor(null, HDUE_TABLE, 2), null);
   const c = document.createElement('div');
-  renderLineResults(c, ln, calcAll(ew()).perDirection[0], { tab: 'drift', onTab() {}, report: 'summary', onReport() {} });
+  renderLineResults(c, ln, calcAll(ew({ nail: '4' })).perDirection[0], { tab: 'drift', onTab() {}, report: 'summary', onReport() {} });
   assert.ok(c.textContent.includes('Drift sizing steps') && c.textContent.includes('Δδ HD / strap'));
 });
 
@@ -155,7 +161,9 @@ test('Manual nailing is never changed by drift sizing; the auto holdowns / strap
   const ln = lineOf(calcAll(ew({ nail: '4' })));
   assert.deepEqual(wallsOf(ln).map(w => [w.nailing.id, w.nailingBasis]), [['4', 'manual'], ['4', 'manual']]);
   assert.ok(ln.driftSizing.log.every(l => l.action === 'anchorage' && l.saveNailing == null));
-  assert.deepEqual(driftStatus(ln), [false, true], 'Level 1 fixed by the holdown; the Roof strap is at the largest MSTC and stays NG');
+  // Δa = δ_LRFD × T / T_LRFD (2026-10-14): HDUE17 brings Level 1 within the limit; the Roof (MSTC66, the stiffest strap) stays NG
+  assert.deepEqual(driftStatus(ln), [false, true], 'with manual nailing the Roof stays NG');
+  assert.equal(wallsOf(ln).find(w => w.mark === 'SW-6').anchorageLeft.id, 'HDUE17');
   assert.ok(/Drift still NG at Roof/.test(ln.driftSizing.note));
 });
 

@@ -1,5 +1,5 @@
 {
-  "calcVersion": "v18",
+  "calcVersion": "v23",
   "lines": [
     {
       "line": "N-S / Line A",
@@ -29,7 +29,7 @@
             "(3)2x4",
             "(3)2x4"
           ],
-          "deltaE": 0.577
+          "deltaE": 0.578
         },
         {
           "mark": "SW-12",
@@ -64,7 +64,7 @@
       "drift": [
         {
           "level": "Level 1",
-          "dx": 2.416,
+          "dx": 2.417,
           "pass": false
         }
       ],

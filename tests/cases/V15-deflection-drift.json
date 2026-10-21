@@ -6,7 +6,7 @@
     "SDPWS 2021 Eq. 4.3-1",
     "ASCE 7-22 §12.8.6",
     "ASCE 7-22 Table 12.12-1",
-    "HDUE slip δ·T/cap",
+    "HDUE Δ = δ_LRFD × T / T_LRFD (LRFD pair)",
     "Plate crushing (r < 0.73)"
   ],
   "handCalc": [
@@ -24,19 +24,19 @@
     },
     {
       "step": 4,
-      "text": "SW-1: v = 333.33 plf, T = C = 3333.33 lb, A = 10.5 in², G_a = 16 k/in → 8vh³/(EAb) = 8 × 333.33 × 10³ / (1,700,000 × 10.5 × 10) = 0.0149; vh/(1000G_a) = 333.33 × 10 / (1000 × 16) = 0.2083; Δ_HD = 0.127 × 3333.33 / 3790 = 0.1117; r = 3333.33 / (10.5 × 625) = 0.5079 < 0.73 → Δ_c = 0.02 × r / 0.73 = 0.0139; h·Δa/b = 10 × (0.1117 + 0.0139) / 10 = 0.1256 → δ = 0.3489 in."
+      "text": "SW-1: v = 333.33 plf, T = C = V·h/L = 3333.33 lb (1.0E, lateral only), A = 10.5 in², G_a = 16 k/in → 8vh³/(EAb) = 8 × 333.33 × 10³ / (1,700,000 × 10.5 × 10) = 0.0149; vh/(1000G_a) = 333.33 × 10 / (1000 × 16) = 0.2083; Δ_HD = δ_LRFD × T / T_LRFD of HDUE3 = 0.178 × 3333.33 / 5306 = 0.1118; r = 3333.33 / (10.5 × 625) = 0.5079 → Δ_c = 0.0139; h·Δa/b = 10 × (0.1118 + 0.0139) / 10 = 0.1257 → δ = 0.3490 in."
     },
     {
       "step": 5,
-      "text": "SW-2: v = 333.33 plf, T = C = 3333.33 lb, A = 10.5 in², G_a = 16 k/in → 8vh³/(EAb) = 8 × 333.33 × 10³ / (1,700,000 × 10.5 × 8) = 0.0187; vh/(1000G_a) = 333.33 × 10 / (1000 × 16) = 0.2083; Δ_HD = 0.127 × 3333.33 / 3790 = 0.1117; r = 3333.33 / (10.5 × 625) = 0.5079 < 0.73 → Δ_c = 0.02 × r / 0.73 = 0.0139; h·Δa/b = 10 × (0.1117 + 0.0139) / 8 = 0.1570 → δ = 0.3840 in."
+      "text": "SW-2: v = 333.33 plf, T = C = V·h/L = 3333.33 lb (1.0E, lateral only), A = 10.5 in², G_a = 16 k/in → 8vh³/(EAb) = 8 × 333.33 × 10³ / (1,700,000 × 10.5 × 8) = 0.0187; vh/(1000G_a) = 333.33 × 10 / (1000 × 16) = 0.2083; Δ_HD = δ_LRFD × T / T_LRFD of HDUE3 = 0.178 × 3333.33 / 5306 = 0.1118; r = 3333.33 / (10.5 × 625) = 0.5079 → Δ_c = 0.0139; h·Δa/b = 10 × (0.1118 + 0.0139) / 8 = 0.1572 → δ = 0.3842 in."
     },
     {
       "step": 6,
-      "text": "Story drift: δxe = the largest wall δ = SW-2 0.3840 in (the shorter wall deflects more at the same unit shear: 8vh³/EAb and h·Δa/b grow with 1/b)."
+      "text": "Story drift: δxe = the largest wall δ = SW-2 0.3842 in (the shorter wall deflects more at the same unit shear: 8vh³/EAb and h·Δa/b grow with 1/b)."
     },
     {
       "step": 7,
-      "text": "δx = Cd·δxe/Ie = 4 × 0.3840 / 1 = 1.5361 in. Δa = 0.020 × h_sx = 0.020 × 10 × 12 = 2.400 in (Table 12.12-1, RC II). δx/h_sx = 0.0128 → 1.5361 ≤ 2.400 OK, no drift upsizing."
+      "text": "δx = Cd·δxe/Ie = 4 × 0.3842 / 1 = 1.5367 in. Δa = 0.020 × h_sx = 0.020 × 10 × 12 = 2.400 in (Table 12.12-1, RC II). δx/h_sx = 0.0128 → 1.5367 ≤ 2.400 OK, no drift upsizing."
     },
     {
       "step": 8,
@@ -72,7 +72,7 @@
       "label": "SW-1 holdown slip Δ_HD (in)",
       "at": "wall:SW-1",
       "field": "deflection.E.dirs[0].dHD",
-      "value": 0.11169744942832015,
+      "value": 0.11182309335343636,
       "tol": 0.0002,
       "step": 4
     },
@@ -88,7 +88,7 @@
       "label": "SW-1 δ (in)",
       "at": "wall:SW-1",
       "field": "deflection.E.delta",
-      "value": 0.3488861605291989,
+      "value": 0.3490118044543151,
       "tol": 0.0003,
       "step": 4
     },
@@ -96,7 +96,7 @@
       "label": "SW-2 h·Δa/b (in)",
       "at": "wall:SW-2",
       "field": "deflection.E.dirs[0].t3",
-      "value": 0.15701689767363675,
+      "value": 0.157173952580032,
       "tol": 0.0002,
       "step": 5
     },
@@ -104,7 +104,7 @@
       "label": "SW-2 δ (in)",
       "at": "wall:SW-2",
       "field": "deflection.E.delta",
-      "value": 0.3840243673281652,
+      "value": 0.3841814222345604,
       "tol": 0.0003,
       "step": 5
     },
@@ -112,7 +112,7 @@
       "label": "Story δxe (in)",
       "at": "drift:Level 1",
       "field": "seismic.deltaXE",
-      "value": 0.3840243673281652,
+      "value": 0.3841814222345604,
       "tol": 0.0003,
       "step": 6
     },
@@ -127,7 +127,7 @@
       "label": "δx = Cd·δxe/Ie (in)",
       "at": "drift:Level 1",
       "field": "seismic.deltaX",
-      "value": 1.5360974693126608,
+      "value": 1.5367256889382417,
       "tol": 0.001,
       "step": 7
     },
@@ -167,12 +167,14 @@
       "postR": "(2)2x4"
     }
   },
-  "schemaVersion": 12,
+  "schemaVersion": 13,
   "inputs": {
     "sds": "1",
     "loadType": "seismic",
     "wallThickness": "4",
+    "species": "DF-L",
     "woodGrade": "dfir_no1",
+    "postGrade": "dfir_pt_no1",
     "sheathing": "ply",
     "distribution": "capacity",
     "cd": "4",

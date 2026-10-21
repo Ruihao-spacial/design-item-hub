@@ -26,8 +26,8 @@ const comb = {
 const T8L = Math.max(0, ...Object.values(comb).map(v => -v)), C8L = Math.max(0, ...Object.values(comb));
 const T8own = 0.7 * N8 - a.up * R8, C8own = a.dn * R8 + 0.7 * N8;   // right end: own only
 // Story drift (Cd 4, Ie 1.0, RC II). SW-7 on the beam (beam deflection not included, tool rule P5). SW-8: 1.0E → left end
-// tension = own N8 − R_b,E (the beam reaction is compression there), right end compression = own N8; 1.0E is lateral
-// only, so ← is the exact mirror (left compression N8 − R_b,E, right tension N8)
+// tension = own N8 − R_b,E (the beam reaction is compression there), right end compression = own N8; ← is the mirror
+// (left compression N8 − R_b,E, right tension N8). Gravity 1.0D + 0.5L (no live): left R8 + R_b,D (the beam), right R8
 const dR = storyDrift('Roof', hT, [eq431({ mark: 'SW-7', L: LW, h: hT, nail: '6', hdL: 'MSTC40', hdR: 'MSTC40', postL: '(2)2x4', postR: '(2)2x4', Vk: F_roof, TL: NW, CR: NW })]);
 const d1 = storyDrift('Level 1', hB, [eq431({ mark: 'SW-8', L: L8, h: hB, nail: '4', hdL: 'HDUE3', hdR: 'HDUE3', postL: '(2)2x4', postR: '(2)2x4', Vk: V8, TL: N8 - RbE, CR: N8 })]);
 

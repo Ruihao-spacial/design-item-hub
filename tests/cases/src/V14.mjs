@@ -1,5 +1,5 @@
 // V14 — FTAO benchmark: APA T555 two-opening example (Figure 4 statics) run through the full calculator
-import { project, level, direction, line, wall, ex, f2, f3, f4, SEISMIC, storyDrift, driftExpect } from './lib.mjs';
+import { project, level, direction, line, wall, ex, HDUE, f2, f3, f4, SEISMIC, storyDrift, driftExpect } from './lib.mjs';
 
 // APA T555 "Design for Force Transfer Around Openings", two-opening example: piers 4 / 4 / 3.5 ft, openings
 // 6 ft and 2 ft, h = 8 ft, h_a = 1.33 ft (above), h_o = 2.67 ft (opening), h_b = 4 ft (below); V_ASD = 3,750 lb.
@@ -17,11 +17,11 @@ const off1 = Lp[0], off2 = Lp[0] + Lo[0] + Lp[1];
 // with this case's pinned design — not the published 0.335 in, which uses the example's own posts, holdowns and G_a.
 // At 1.0E (ρ = 1): V = V1. Pier unit shear v_i = (V/L)·(L_i + T_i)/L_i, T_i = the opening lengths tributary to the pier
 // (T555 statics, the same as the published pier values × V1/V_ASD). Pinned: 4" o.c. plywood G_a = 20 k/in, HDUE3
-// (δ 0.127 in at 3,790 lb), every pier edge (2)2x4 A = 10.5 in² (end posts and default jamb posts). A pier that
+// (LRFD pair δ 0.178 in at 5,306 lb: Δ_a = δ_LRFD × T_pier / T_LRFD, T_pier = v_i·h — 2026-10-14), every pier edge (2)2x4 A = 10.5 in² (end posts and default jamb posts). A pier that
 // deflects away from the sheathing below the opening (pier 1 ←L, pier n →R) uses the full height h and the crushing
 // term at the wall-end post with C = H (gross chord force); the others use h − h_b and no crushing.
 const FD = (() => {
-  const E = 1700000, Ga = 20, da = 0.127, HDa = 3790, A = 10.5, Fcp = 625, V = V1;
+  const hd3 = HDUE.find(x => x.id === 'HDUE3'), E = 1700000, Ga = 20, da = hd3.delta, Tcap = hd3.lrfdCap, A = 10.5, Fcp = 625, V = V1;
   const crush = (r) => 0.02 * (r < 0.73 ? r / 0.73 : r <= 1 ? 1 + (r - 0.73) / 0.27 : 2 * r ** 3);
   const Tl = [], Tr = [];
   for (let j = 0; j < Lo.length; j++) { const sum = Lp[j] + Lp[j + 1]; Tl[j] = Lp[j] * Lo[j] / sum; Tr[j] = Lp[j + 1] * Lo[j] / sum; }
@@ -30,12 +30,12 @@ const FD = (() => {
     const T = (i > 0 ? Tr[i - 1] : 0) + (i < Lo.length ? Tl[i] : 0), v = V / Ltot * (Li + T) / Li;
     for (const d of ['L', 'R']) {
       const full = (i === 0 && d === 'L') || (i === Lp.length - 1 && d === 'R'), hh = full ? h : h - hb;
-      const t1 = 8 * v * hh ** 3 / (E * A * Li), t2 = v * hh / (1000 * Ga), dHD = da * v * hh / HDa;
+      const t1 = 8 * v * hh ** 3 / (E * A * Li), t2 = v * hh / (1000 * Ga), Tp = v * hh, dHD = da * Tp / Tcap;
       const r = full ? Hd / (A * Fcp) : null, dC = full ? crush(r) : 0, t3 = hh * (dHD + dC) / Li;
-      cases.push({ pier: i + 1, d, T, v, hh, t1, t2, dHD, r, dC, t3, sum: t1 + t2 + t3 });
+      cases.push({ pier: i + 1, d, T, v, hh, Tp, t1, t2, dHD, r, dC, t3, sum: t1 + t2 + t3 });
     }
   });
-  return { Hd, cases, delta: cases.reduce((a, c) => a + c.sum, 0) / cases.length };
+  return { Hd, da, Tcap, cases, delta: cases.reduce((a, c) => a + c.sum, 0) / cases.length };
 })();
 const dL1 = storyDrift('Level 1', h, [{ mark: 'SW-14', delta: FD.delta }]);
 
@@ -52,8 +52,8 @@ export default {
     'Strap force F_max (published) = ' + PUB.Fmax + ' lb; corner forces: opening 1 left / right = ' + PUB.corner1.join(' / ') + ' lb, opening 2 left / right = ' + PUB.corner2.join(' / ') + ' lb.',
     'Anchorage along the wall = V / L = ' + V_ASD + ' / ' + Ltot + ' = ' + f2(anch) + ' plf.',
     'Line checks: base shear and moment of the one wall = the level load → G1–G12 pass.',
-    'FTAO deflection at 1.0E (APA T555 method: Eq. 4.3-1 for each pier in each direction, averaged; pinned design 4" o.c. plywood G_a = 20, HDUE3 δ 0.127 in at 3,790 lb, all pier edges (2)2x4 A = 10.5 in²; the published 0.335 in uses the example’s own components, so it is not this case’s value). V = ' + f2(V1) + ' lb, H = V·h/L = ' + f2(FD.Hd) + ' lb. '
-      + FD.cases.map(c => 'Pier ' + c.pier + ' ' + c.d + ': v = ' + f2(V1) + '/' + Ltot + ' × (L_' + c.pier + ' + T_' + c.pier + ') / L_' + c.pier + ' = ' + f2(V1) + '/' + Ltot + ' × (' + Lp[c.pier - 1] + ' + ' + f3(c.T) + ')/' + Lp[c.pier - 1] + ' = ' + f2(c.v) + ' plf, h = ' + c.hh + ' → ' + f4(c.t1) + ' + ' + f4(c.t2) + ' + ' + c.hh + ' × (' + f4(c.dHD) + (c.r != null ? ' + Δ_c ' + f4(c.dC) + ' [r = ' + f3(c.r) + ']' : '') + ')/' + Lp[c.pier - 1] + ' = ' + f4(c.sum)).join('; ')
+    'FTAO deflection at 1.0E (APA T555 method: Eq. 4.3-1 for each pier in each direction, averaged; pinned design 4" o.c. plywood G_a = 20, HDUE3 Δ_a = δ_LRFD × T_pier / T_LRFD = ' + FD.da + ' × v_i·h / ' + FD.Tcap + ' (LRFD pair), all pier edges (2)2x4 A = 10.5 in²; the published 0.335 in uses the example’s own components, so it is not this case’s value). V = ' + f2(V1) + ' lb, H = V·h/L = ' + f2(FD.Hd) + ' lb. '
+      + FD.cases.map(c => 'Pier ' + c.pier + ' ' + c.d + ': v = ' + f2(V1) + '/' + Ltot + ' × (L_' + c.pier + ' + T_' + c.pier + ') / L_' + c.pier + ' = ' + f2(V1) + '/' + Ltot + ' × (' + Lp[c.pier - 1] + ' + ' + f3(c.T) + ')/' + Lp[c.pier - 1] + ' = ' + f2(c.v) + ' plf, h = ' + c.hh + ', T_pier = ' + f2(c.Tp) + ' lb → Δ_a = ' + f4(c.dHD) + '; ' + f4(c.t1) + ' + ' + f4(c.t2) + ' + ' + c.hh + ' × (' + f4(c.dHD) + (c.r != null ? ' + Δ_c ' + f4(c.dC) + ' [r = ' + f3(c.r) + ']' : '') + ')/' + Lp[c.pier - 1] + ' = ' + f4(c.sum)).join('; ')
       + ' → Δ = average of the ' + FD.cases.length + ' cases = ' + f4(FD.delta) + ' in.',
     dL1.text,
   ],

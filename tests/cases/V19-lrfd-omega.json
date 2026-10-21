@@ -47,11 +47,11 @@
     },
     {
       "step": 10,
-      "text": "SW-1 (Eq. 4.3-1, → governs): v = 1000 × 3.000 / 8 = 375.00 plf, A = 10.5 in², G_a = 16 k/in → 8vh³/(EAb) = 0.0210; vh/(1000G_a) = 0.2344; Δ_HD = 0.097 × 3750.00 / 3070/0.7 = 0.0829 (MSTC40, T = 3750.00 lb); r = 3750.00 / (10.5 × 625) = 0.5714 → Δ_c = 0.0157; h·Δa/b = 10 × (0.0829 + 0.0157) / 8 = 0.1232 → δ = 0.3786 in. Story drift Level 2: δxe = the largest wall δ = SW-1 0.3786 in → δx = Cd·δxe/Ie = 4 × 0.3786 / 1.0 = 1.515 in vs Δa = 0.020 × 10 × 12 = 2.400 in → OK."
+      "text": "SW-1 (Eq. 4.3-1, → governs): v = 1000 × 3.000 / 8 = 375.00 plf, A = 10.5 in², G_a = 16 k/in → 8vh³/(EAb) = 0.0210; vh/(1000G_a) = 0.2344; uplift end T = 3750.00 lb (lateral); Δ_HD = δ_LRFD × T / T_LRFD = 0.097 × 3750.00 / 4386 = 0.0829 (MSTC40); r = 3750.00 / (10.5 × 625) = 0.5714 → Δ_c = 0.0157; h·Δa/b = 10 × (0.0829 + 0.0157) / 8 = 0.1232 → δ = 0.3786 in. Story drift Level 2: δxe = the largest wall δ = SW-1 0.3786 in → δx = Cd·δxe/Ie = 4 × 0.3786 / 1.0 = 1.514 in vs Δa = 0.020 × 10 × 12 = 2.400 in → OK."
     },
     {
       "step": 11,
-      "text": "SW-2 (Eq. 4.3-1, → governs): v = 1000 × 5.000 / 10 = 500.00 plf, A = 10.5 in², G_a = 20 k/in → 8vh³/(EAb) = 0.0224; vh/(1000G_a) = 0.2500; Δ_HD = 0.127 × 5000.00 / 3790 (ASD cap) = 0.1675 (HDUE3, T = 5000.00 lb); r = 5000.00 / (10.5 × 625) = 0.7619 → Δ_c = 0.0224; h·Δa/b = 10 × (0.1675 + 0.0224) / 10 = 0.1899 → δ = 0.4623 in. MSTC40 δ basis = cap/0.7 (strap); HDUE3 basis = ASD cap. Story drift Level 1: δxe = the largest wall δ = SW-2 0.4623 in → δx = Cd·δxe/Ie = 4 × 0.4623 / 1.0 = 1.849 in vs Δa = 0.020 × 10 × 12 = 2.400 in → OK."
+      "text": "SW-2 (Eq. 4.3-1, → governs): v = 1000 × 5.000 / 10 = 500.00 plf, A = 10.5 in², G_a = 20 k/in → 8vh³/(EAb) = 0.0224; vh/(1000G_a) = 0.2500; uplift end T = 5000.00 lb (lateral); Δ_HD = δ_LRFD × T / T_LRFD = 0.178 × 5000.00 / 5306 = 0.1677 (HDUE3); r = 5000.00 / (10.5 × 625) = 0.7619 → Δ_c = 0.0224; h·Δa/b = 10 × (0.1677 + 0.0224) / 10 = 0.1901 → δ = 0.4625 in. MSTC40 δ basis = cap/0.7 (strap); HDUE3 basis = ASD cap. Story drift Level 1: δxe = the largest wall δ = SW-2 0.4625 in → δx = Cd·δxe/Ie = 4 × 0.4625 / 1.0 = 1.850 in vs Δa = 0.020 × 10 × 12 = 2.400 in → OK."
     }
   ],
   "expect": [
@@ -162,7 +162,7 @@
       "label": "Story δxe, Level 2 (in)",
       "at": "drift:Level 2",
       "field": "seismic.deltaXE",
-      "value": 0.37862754925271164,
+      "value": 0.3786207956422454,
       "tol": 0.0005,
       "step": 10
     },
@@ -177,7 +177,7 @@
       "label": "δx = Cd·δxe/Ie, Level 2 (in)",
       "at": "drift:Level 2",
       "field": "seismic.deltaX",
-      "value": 1.5145101970108465,
+      "value": 1.5144831825689815,
       "tol": 0.002,
       "step": 10
     },
@@ -192,7 +192,7 @@
       "label": "Story δxe, Level 1 (in)",
       "at": "drift:Level 1",
       "field": "seismic.deltaXE",
-      "value": 0.4623184534245634,
+      "value": 0.46250691931223775,
       "tol": 0.0005,
       "step": 11
     },
@@ -207,7 +207,7 @@
       "label": "δx = Cd·δxe/Ie, Level 1 (in)",
       "at": "drift:Level 1",
       "field": "seismic.deltaX",
-      "value": 1.8492738136982536,
+      "value": 1.850027677248951,
       "tol": 0.002,
       "step": 11
     },
@@ -247,12 +247,14 @@
       "hd": "HDUE3"
     }
   },
-  "schemaVersion": 12,
+  "schemaVersion": 13,
   "inputs": {
     "sds": "1",
     "loadType": "seismic",
     "wallThickness": "4",
+    "species": "DF-L",
     "woodGrade": "dfir_no1",
+    "postGrade": "dfir_pt_no1",
     "sheathing": "ply",
     "distribution": "capacity",
     "cd": "4",

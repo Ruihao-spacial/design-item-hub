@@ -9,7 +9,7 @@
 import { gravityRows } from './shearWallGravity.js';
 import { hasOpenings, wallMethod, sortedOpenings, openingProblems } from './shearWallOpenings.js';
 import { isWswh, wswhWidthFt } from './shearWallWswh.js';
-import { NAILING_TABLE } from './shearWallNailing.js';
+import { nailingTable } from './shearWallNailing.js';
 import { hdueMinPost, meetsMinPost } from './shearWallHardware.js';
 import { lcRef } from './shearWallCombos.js';
 
@@ -136,12 +136,12 @@ export function lineChecks(line, res, ctx) {
       compare(g3, l.levelName + ' Σ shares', l.V, sum, { case: CASE_KEY[l.loadType], detail: 'Σ V_w = V_x' });
       for (const lw of l.walls) {
         const w = pl.walls.find(x => x.wallId === lw.wallId);
-        const V = (l.loadType === 'E' ? w.shareExact_1E : w.shareExact_1W) || 0, k = w.stiffness && w.stiffness[l.loadType];
+        const V = (l.loadType === 'E' ? w.shareExact_1E : w.shareExact_1W) || 0, dS = w.deltaShare && w.deltaShare[l.loadType];
         if (lw.zeroShare) {
           assertRow(g3, w.mark + ' (' + l.levelName + ')', lw.delta0 >= l.delta - 1e-4, 'δ(0) ≥ ' + l.delta.toFixed(4) + ' in', lw.delta0.toFixed(4) + ' in',
             { case: CASE_KEY[l.loadType], detail: 'zero share: rotated by the forces from above more than the story deflects' });
-        } else if (V > 0 && k > 0) {
-          compare(g3, w.mark + ' (' + l.levelName + ')', l.delta, V * 1000 / k, { tol: Math.max(0.0005, 0.005 * l.delta), unit: 'in', case: CASE_KEY[l.loadType],
+        } else if (V > 0 && dS > 0) {
+          compare(g3, w.mark + ' (' + l.levelName + ')', l.delta, dS, { tol: Math.max(0.0005, 0.005 * l.delta), unit: 'in', case: CASE_KEY[l.loadType],
             detail: 'δ at its share = story δ (±0.5 %)' });
         }
       }
@@ -426,6 +426,7 @@ export function lineChecks(line, res, ctx) {
 
   // G11 — sheathing (sheathed walls and segmented piers; FTAO / WSWH use their own engines)
   const g11 = newCheck('G11');
+  const NAILING_TABLE = nailingTable((walls.find(x => x.w.woodGroup) || { w: {} }).w.woodGroup); // the project's framing group table
   const need = (loadType === 'both' ? ['E', 'W'] : loadType === 'wind' ? ['W'] : ['E']);
   for (const { w, pl } of walls) {
     if (w.method === 'wswh' || w.method === 'ftao' || w.hbNotPermitted || !(w.length > 0)) continue;

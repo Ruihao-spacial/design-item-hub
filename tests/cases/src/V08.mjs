@@ -25,8 +25,8 @@ const Cbase = { e5: a.dn * RB + 0.7 * NB + Cc.e5, e6: a.d6 * RB + 0.75 * RLB + 0
 const C_base = Math.max(...Object.values(Cbase));
 const hd = pickHD(T_base);
 const postB = POSTS4.filter(p => p.d2 >= 3.0).find(p => postCap(p, hB).cap >= C_base); // HDUE minimum post (2)2x4
-// Story drift (Cd 4, Ie 1.0, RC II), pinned design. Eq. 4.3-1 at 1.0E with lateral-only end forces: SW-1 own N_T;
-// SW-2 own N_B + N_T from SW-1 above (both ends aligned, so the stack is symmetric: T = C at each end)
+// Story drift (Cd 4, Ie 1.0, RC II), pinned design. Eq. 4.3-1 at 1.0D + 0.5L + 1.0E: SW-1 own N_T with R_T (Lr not in the
+// drift case); SW-2 own N_B + N_T from SW-1 above, gravity R_B + 0.5·R_L,B + R_T (both ends aligned, symmetric)
 const e1 = eq431({ mark: 'SW-1', L, h: hT, nail: '6', hdL: 'MSTC28', hdR: 'MSTC28', postL: '(2)2x4', postR: '(2)2x4', Vk: VT, TL: NT, CR: NT });
 const e2 = eq431({ mark: 'SW-2', L, h: hB, nail: '3', hdL: 'HDUE7', hdR: 'HDUE7', postL: '6x4', postR: '6x4', Vk: VB, TL: NB + NT, CR: NB + NT });
 const dR = storyDrift('Roof', hT, [e1]), dL = storyDrift('Level 1', hB, [e2]);

@@ -3,18 +3,23 @@
 Branch `diaphragm-to-lrs` (off `sw-verification`). Plan: `~/.claude/plans/fx-is-the-right-sharded-melody.md` (approved 2026-10-07).
 Reference: Shared Drive `Design Item Hub\Diaphragm to LRS reference\diaphragm to line laoding.pdf` (page C.6) = case D01.
 
-## Next session — start here (set 2026-10-08)
-**State:** schema 2 / calc v2, local, **not committed**. `npm test` all green (engine 21, beam check 39, migration 22,
-cases 87); `npx vite build` OK. DLRS-VERIFY seeded by the user on 2026-10-08 (29 items, all pass on read-back; still schema 1).
+## Next session — start here (set 2026-10-08, end of session)
+**State:**
+- **Code:** schema 2 / calc v2, committed `4008c99` and pushed (branch `diaphragm-to-lrs`, user request).
+- **Pull requests** (opened 2026-10-08; the user chose two PRs):
+  - [#1](https://github.com/Ruihao-spacial/design-item-hub/pull/1) `sw-verification` → `master` (all the Shear Wall work, 32 commits);
+  - [#2](https://github.com/Ruihao-spacial/design-item-hub/pull/2) `diaphragm-to-lrs` → `sw-verification` (stacked).
+  - Merge #1 first, then #2. If GitHub does not retarget #2 to `master` by itself, change its base before merging.
+- **Tests:** `npm test` all green (engine 21, beam check 39, migration 22, cases 87); `npx vite build` OK.
+- **Local DB (done by the user, checked by Claude read-only):**
+  - `upgrade:dlrs --apply`: all 30 items on schema 2 / calc v2;
+  - DLRS-VERIFY: 29 cases pass;
+  - Test-123 has 4+5 merged at all levels: R.4+R.5 F = V 6.3484 k; 2.4+2.5 F 3.9692, V 10.3176 k; line 2 unchanged; all checks pass.
 
-**The user next:**
-1. **Upgrade the saved items:** `SB_EMAIL=… SB_PASSWORD=… npm run upgrade:dlrs` (dry run).
-   - Claude's dry run on 2026-10-08 reported 30 items, every one "schema 1→2, no value lost, results unchanged".
-   - Then `-- --apply`, or re-seed DLRS-VERIFY with `dlrs:seed -- --apply`.
-   - The user runs both in their own PowerShell (DB writes by Claude are blocked).
-2. **Test-123 merge:** E-W tab → Merge lines → + Merge lines → tick 4 and 5 → all levels → Calculate & Save.
-   Expected: R.4+R.5 F = V = 6.35 k; 2.4+2.5 F 3.97 k, V 10.32 k; line 2 unchanged (R.2 6.01, 2.2 V 8.99).
-3. **Look at:** the reaction rows (lever rule with numbers, no Case column) and the Detailed PDF (lever-rule table).
+**Next:**
+- PRs #1 / #2 reviewed and merged.
+- The user looks at the reaction rows (lever rule with numbers) and the Detailed PDF in the browser.
+- Then one of O2 / O3 / O4 below.
 
 **Open items:**
 - **O2 — Shear Wall link** (decision 16): fill Shear Wall line E loads from this item's F by direction / line name / level.

@@ -45,6 +45,7 @@ function endEnvelope(accum, comboGroups, group) {
 
 export function resolveVerticalLoadPath(ctx) {
   const { levels, walls, beams, posts, wallResultsMap, lineThickness, grade } = ctx;
+  const group = (grade && grade.group) || 'dfsp'; // framing group of the hardware tables
   // absorbedInto: stacked WSWH 2nd-story panel id → the panel below, whose base moment check already includes it
   const absorbedInto = ctx.absorbedInto || {};
   const warnings = [];
@@ -168,8 +169,8 @@ export function resolveVerticalLoadPath(ctx) {
     const lvl = levels[li];
     const useHoldown = li === nLv - 1 || lvl.anchorageType === 'holdown';
     const floorSpan = lvl.floorClearSpan || '16';
-    const anchorage = overrideId ? findAnchorage(overrideId, floorSpan)
-      : useHoldown ? autoSelectHoldown(T) : autoSelectStrap(T, floorSpan);
+    const anchorage = overrideId ? findAnchorage(overrideId, floorSpan, group, lineThickness)
+      : useHoldown ? autoSelectHoldown(T, group, lineThickness) : autoSelectStrap(T, floorSpan, group);
     const anchorageDC = anchorage && anchorage.cap > 0 ? r2(T * 1000 / anchorage.cap) : null;
     return { anchorageType: useHoldown ? 'holdown' : 'strap', anchorage, anchorageDC };
   }
@@ -350,8 +351,8 @@ export function resolveVerticalLoadPath(ctx) {
     const lvl = levels[levelIdx[w.levelId]];
     const floorSpan = (lvl && lvl.floorClearSpan) || '16';
     const hook = ctx.wallHardware ? (T, ov) => ctx.wallHardware(w, T, ov) : () => undefined;
-    const pickAnc = (ov, T) => { const h = hook(T, ov); if (h !== undefined) return h; return ov ? findAnchorage(ov, floorSpan)
-      : wr.anchorageType === 'holdown' ? autoSelectHoldown(T) : autoSelectStrap(T, floorSpan); };
+    const pickAnc = (ov, T) => { const h = hook(T, ov); if (h !== undefined) return h; return ov ? findAnchorage(ov, floorSpan, group, lineThickness)
+      : wr.anchorageType === 'holdown' ? autoSelectHoldown(T, group, lineThickness) : autoSelectStrap(T, floorSpan, group); };
     wr.anchorageLeft = pickAnc(w.anchorageLeftOverride, demand.tL);
     wr.anchorageRight = pickAnc(w.anchorageRightOverride, demand.tR);
     const panel = wr.method === 'wswh'; // WSWH: no separate end posts

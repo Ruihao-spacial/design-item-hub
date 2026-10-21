@@ -141,16 +141,21 @@ test('FTAO engine hard stop (pier h_o/b > 3.5) → designed as solid, flagged', 
 });
 
 test('3-term deflection terms by hand (SDPWS Eq. 4.3-1 + Δc)', () => {
-  const d = deflectionTerms({ v: 500, h: 10, b: 8, E: 1.7e6, A: 10.5, Ga: 16, T: 6250, anchorage: { id: 'HDUE7', cap: 7015, delta: 0.154 }, C: 6250, Ac: 10.5, Fcperp: 625 });
-  near(d.t1, 0.0280, 0.0001); near(d.t2, 0.3125, 0.0001); near(d.dHD, 0.1372, 0.0001);
-  near(d.dC, 0.0365, 0.0001); near(d.t3, 0.2171, 0.0001); near(d.delta, 0.5577, 0.0002);
+  // Δa = δ_LRFD × T / T_LRFD (user 2026-10-14): HDUE7 DF/SP 4" 0.216 × 6250 / 9821 = 0.1375 in; t3 = 10 × (0.1375 + 0.0365) / 8
+  const d = deflectionTerms({ v: 500, h: 10, b: 8, E: 1.7e6, A: 10.5, Ga: 16, T: 6250, anchorage: { id: 'HDUE7', cap: 7015, lrfdCap: 9821, deltaLrfd: 0.216 }, C: 6250, Ac: 10.5, Fcperp: 625 });
+  near(d.t1, 0.0280, 0.0001); near(d.t2, 0.3125, 0.0001); near(d.dHD, 0.216 * 6250 / 9821, 0.0001);
+  near(d.dC, 0.0365, 0.0001); near(d.t3, 0.2174, 0.0001); near(d.delta, 0.5579, 0.0002);
+  assert.equal(d.overLrfd, false);
 });
 
-test('Strap slip uses the MSTC LRFD cap (ASD cap / 0.7); HDUE uses the ASD cap', () => {
-  const m = deflectionTerms({ v: 500, h: 10, b: 8, E: 1.7e6, A: 10.5, Ga: 16, T: 2000, anchorage: { id: 'MSTC40', cap: 3070, delta: 0.097 }, C: 0, Ac: 10.5, Fcperp: 625 });
-  near(m.dHD, 0.097 * 2000 / (3070 / 0.7), 0.0001);
-  const h = deflectionTerms({ v: 500, h: 10, b: 8, E: 1.7e6, A: 10.5, Ga: 16, T: 2000, anchorage: { id: 'HDUE5', cap: 5375, delta: 0.146 }, C: 0, Ac: 10.5, Fcperp: 625 });
-  near(h.dHD, 0.146 * 2000 / 5375, 0.0001);
+test('Δa = δ_LRFD × T / T_LRFD (linear from the LRFD pair); T > LRFD cap → extrapolated + overLrfd warning only; no tension → 0', () => {
+  const strap = { id: 'MSTC40', cap: 3070, lrfdCap: 4386, deltaLrfd: 0.097 };
+  const at = (T) => deflectionTerms({ v: 500, h: 10, b: 8, E: 1.7e6, A: 10.5, Ga: 16, T, anchorage: strap, C: 0, Ac: 10.5, Fcperp: 625 });
+  near(at(2000).dHD, 0.097 * 2000 / 4386, 1e-4); near(at(4386).dHD, 0.097, 1e-4); near(at(2193).dHD, at(4386).dHD / 2, 1e-4);
+  assert.equal(at(4386).overLrfd, false); assert.equal(at(5000).overLrfd, true); near(at(5000).dHD, 0.097 * 5000 / 4386, 1e-4);
+  assert.equal(at(0).dHD, 0);
+  const hd = deflectionTerms({ v: 500, h: 10, b: 8, E: 1.7e6, A: 10.5, Ga: 16, T: 2000, anchorage: { id: 'HDUE5', cap: 5375, lrfdCap: 7525, deltaLrfd: 0.205 }, C: 0, Ac: 10.5, Fcperp: 625 });
+  near(hd.dHD, 0.205 * 2000 / 7525, 1e-4);
 });
 
 test('FTAO jamb posts: C = fD·DL + v_i·h_o; self-weight excludes openings; loads over openings count for FTAO', () => {
@@ -357,7 +362,10 @@ test('Deflection approach with an FTAO wall and wind', () => {
     { seismic: 4, wind: 3, floorH: 8, loadType: 'both', extra: { distribution: 'deflection' } });
   const out = calcAll(inp);
   const [f, r] = wallsOf(out);
-  assert.ok(f.stiffness.E > 0 && f.stiffness.W > 0 && r.stiffness.W > 0);
+  assert.ok(f.deltaShare.E > 0 && f.deltaShare.W > 0 && r.deltaShare.W > 0);
+  // δ(V) at the 1.0 level for every type: FTAO W from the engine at α_s = 1 (here α_s blank), = its δ at share
+  near(f._deltaAt('W', f.shareExact_1W), f.deltaShare.W, 1e-4);
+  near(f._deltaAt('E', 2 * f.shareExact_1E) / f._deltaAt('E', f.shareExact_1E), 2, 0.25);
   near(f.share_1E + r.share_1E, 4, 0.011); near(f.share_1W + r.share_1W, 3, 0.011);
   assert.equal(lineOf(out).distribution.converged, true);
 });

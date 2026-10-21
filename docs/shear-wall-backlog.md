@@ -3,7 +3,81 @@
 Open items after the 2026-09-22 elevation review rounds and Phase 4 round 1 (R1–R3, 2026-09-24).
 Branches: `shearwall-load-path` (pushed, merge to `master` by someone else), `results-and-links` (G4, pushed 2026-09-24), `phase4-r1-r3` (Phase 4 round 1 + distribution + results by line; pushed 2026-09-24; CALC_VERSION v7, schema v6), `phase4-round2` (P9, R4, R6, WSWH, live loads, results / report rework; local 2026-09-28, not pushed; CALC_VERSION v9, schema v8), `sw-verification` (off phase4-round2; checks, drift sizing, solid segmented walls, calc sheet + S0–S7, verification cases, drift sizing with anchorage, verification split, F-DD1 equal-δ solver, zero-share warnings + engineer review, UI / report restructure, wind drift limit, PDF report + elevation rework, one shared elevation renderer, PDF calc sheet = tool calc sheet, drift in every method case; committed and pushed to GitHub 2026-10-01; CALC_VERSION v18, schema v12).
 
+## Next session — start here (set 2026-10-14, end of session)
+**State:**
+- Branch `sw-hardware-data`: committed (`cba1f9a` diaphragm docs, `5592c6b` Shear Wall) and pushed. **[PR #3](https://github.com/Ruihao-spacial/design-item-hub/pull/3)** `sw-hardware-data` → `master` open (PRs #1 / #2 already merged into `master`).
+- CALC_VERSION **v23**, schema **13**. `npm test` all green (method cases 97, wood 8, APA T555 regression unchanged); `npx vite build` OK; goldens accepted, catalog regenerated.
+- Rules now in force (Step 5 below): drift / deflection **lateral only**; Δa = δ_LRFD × T / T_LRFD (segmented), d_a × T_pier / HD_lrfd (FTAO), Δ_LRFD × V / V_LRFD (WSWH) — all at the 1.0 level; no drift LC; no stored stiffness k (one δ(V) per wall type, `deltaShare`).
+
+**First thing next session (user):**
+1. Review in the app (http://localhost:5173): a wall's calc sheet **C7** (Walls tab → Detailed → level / type / mark; scaled Δ_HD row, no gravity rows), the Distribution tab "δ at share", the Hardware tab, Summary wood settings.
+2. **Re-seed SW-VERIFY** at calc v23 (stored items still show v21 drift until recalculated); optional bulk upgrade of other items.
+3. Merge PR #3 (done by the user / someone else).
+
+**Then (open items, unchanged):** PDF "Design data" appendix; verify the D2 strap source (C-C2026 pp. 295–296); F-DD1 still present in milder form (V17 Line B SW-6 takes 0.37 k of 7 k vs ~33 % by capacity); nailing row 2 wind 1120 vs 1128 in D1.
+
+## Hardware data — Hardware tab revision + SPF/HF (started 2026-10-13, branch `sw-hardware-data`)
+**Goal (user):** the Hardware tab shows where every value comes from; add SPF/HF values (all data are DF/SP today). The user enters all catalog data; Claude never transcribes Simpson / NDS values.
+
+**Step 1 — DONE 2026-10-13 (display only, no result change, uncommitted):**
+- `shearWallHardwareTab.js` replaces the old Hardware tab. Each table has a source block (document, edition, page, Shared Drive file, basis); calculated columns are marked ƒ with the formula under the table; "—" = not entered; grey "(current)" columns = the basis the calc uses until the data input phase.
+- DF/SP | SPF/HF toggle (one species at a time; default = the project grade's group, `NDS_GRADES[].group`; not saved).
+- Tables: nailing (ƒ C_G, ASD / LRFD), HDUE, MSTC per span, FTAO straps (all nail rows, species fasteners, length), WSWH T01–T03 (Seismic / Wind toggle, collapsed), wood grades, post sizes, post compression capacity, assumptions.
+- Reference .md files on the Shared Drive restructured (originals in the session scratchpad): source table, DF/SP + SPF/HF sections, new blank columns LRFD cap / δ @ LRFD cap, old-basis δ column kept until filled; new `Wood grades NDS 2018.md`; WSWH README §7.
+
+**User decisions (2026-10-13):**
+- ~~Holdown / strap δ: Eq. 4.3-1 uses **δ @ LRFD cap directly** (no δ·T/cap scaling).~~ **Superseded 2026-10-14 (Step 5): Δa = δ_LRFD × T / T_LRFD.** Each δ sits with its LRFD cap (HDUE and MSTC). T(1.0) > LRFD cap → **warning sign only** (no upsizing, no NG; drift is governed by the 3-term equation).
+- LRFD caps are never a design check (design = ASD per the combination definitions).
+- WSWH: option B — Δ_LRFDcap used directly, warning when V(1.0) > V_LRFDcap; the LRFD columns become input values.
+- No fastener / anchor columns; no "used in this project" column; PDF "Design data" appendix after the data input.
+- Post & Timber (NDS 4D, 6x6 / 8x6) = separate post-design topic.
+
+**Step 2 — DONE 2026-10-13 (calc change, schema 13 / CALC_VERSION v19, uncommitted on `sw-hardware-data`):**
+- The user filled 5 reference files (renamed with underscores; old versions in "Archived - not use"): HDUE per framing group **and wall width** (4" / 6"), MSTC per group and span (δ calculated: steel + 0.070 in slip), nailing DF/SP + SPF/HF (SPF/HF entered as V_n × C_G, C_G = 0.92 for SPF and HF), wood grades DF-L / SP (4B by width) / SPF / HF in Tables 4A / 4B / 4D. Claude filled the D2 source (C-C2026 pp. 295–296, to verify). All derived numbers re-checked (HDUE 24 rows, MSTC 22 rows recomputed from the strap model, nailing 35 values).
+- `scripts/buildHardwareData.mjs` → `src/modules/shearWallHardwareData.js` (GENERATED; `npm run hardware:build`, `hardware:check`); sanity checks fail the build on a broken table. The Hardware tab reads it (sources incl. "Entered by").
+- **Wood (user):** three Summary settings — Species (DF-L / SP / SPF / HF → DF/SP or SPF/HF tables), Grade — dimension lumber (4A / 4B), Grade — posts & timbers (4D, 6x6 / 8x6). Schema 13 migration: old items DF-L, P&T grade follows the dimension grade (SS → SS, No.1 & Btr / No.1 → No.1, No.2 / No.3 → No.2). Frozen fixture `tests/fixtures/legacy/schema12-tc1.json`.
+- **Posts:** 4A with C_F by nominal width (2"–4" 1.15, 5"–6" 1.10, 8" 1.05 — fixes 8x4 1.10 → 1.05 and 4x6 1.00 → 1.10); SP 4B by width class with C_F 1.0 (SP 8x4 not available — no 8" table); 6x6 / 8x6 = 4D with C_F 1.0. Bearing and sill crushing use the **sill plate F_c⊥ (4A / 4B)**, also under a 4D post (user check). Chord E in Eq. 4.3-1 = the end post with the smaller E·A.
+- **Deflection:** Δa = δ @ LRFD cap used directly (holdowns, straps, FTAO engine `daConstant`); T₁.₀ > LRFD cap → ⚠ in the Drift tab, calc sheet C7 and PDF (`ln.deflWarnings`), never NG. LRFD caps reported only (Forces tab uses the table value for HDUE and MSTC).
+- **Drift sizing:** the anchorage step takes the lightest larger size whose δ @ LRFD cap is smaller (the δ column is not monotonic: HDUE7 0.216 → HDUE9 0.188). Effect: drift is now mostly fixed by nailing; with manual nailing the E-W test stays NG even at HDUE17.
+- **Results that changed:** drift / deflection everywhere (e.g. V04 δx 1.809 → 3.268 in), deflection-distribution shares (V17), HDUE17 4" 17,685 → 16,040 lb, HDUE9 8,425 → 9,390 lb with min post 4x4 → 6x4, 6x6 / 8x6 post capacities (4D). Tests updated to the new rules; new `tests/shearWallWood.test.mjs` (8); method cases V01 / V14 / V15 / V17 / V18 / V22 / V23 hand calcs rewritten (δ @ LRFD cap), goldens accepted (drift + V17 shares only), catalog regenerated. `npm test` green, build OK.
+
+**Step 3 — DONE 2026-10-13 (CALC_VERSION v20), REVERTED 2026-10-14 (Step 5): gravity in the drift case.** Kept for the record:
+- Seismic: 1.0D + 0.5L + 1.0E; wind: 1.0D + 0.5L + α_s·W (Lr not included). Built from the accumulated load cases (`deflectionGravity`, shearWallDeflection.js): uplift end T = lateral − (D + 0.5L), other end C = lateral + (D + 0.5L), own + from above. Net T ≤ 0 → Δ_HD = 0 (user). The same δ drives drift, drift sizing and the equal-δ distribution (user). No new combination / LC#; G12 superposition unchanged.
+- Drift sizing: the anchorage step is skipped when the governing end has no net uplift. "> LRFD cap" warning uses the net T. Calc sheet C7 shows the gravity per end and T / C per direction.
+- FTAO walls (engine) and WSWH (table Δ) are unchanged — lateral only.
+- Tests: wood test + gravity rule; 15 method-case hand calcs pass the gravity per end (`eq431` GL / GR); goldens accepted (drift + V17 shares). TC-1 no longer warns (dead load keeps T below the LRFD cap); TC-1 drift N-S 1.17 / 2.00 in, E-W 1.82 / 2.14 in.
+
+**Step 4 — DONE 2026-10-13 (CALC_VERSION v21): WSWH drift basis (user, option B as the user meant it).**
+- The table Δ is the deflection at its own cap, so it stays linear in V; the reference point is the LRFD pair: Δ = Δ_LRFD × V(1.0) / V_LRFD; stacked base Δ₁ = Δ₀,LRFD × M_d / M_allow,LRFD (M_allow,LRFD = V₀,LRFD·H₁/12); stiffness k = V_LRFD / Δ_LRFD. ⚠ when V(1.0) > V_LRFD (base: M > M_allow,LRFD) — `deflWarnings`, never NG.
+- The LRFD columns stay the derived values (no public LRFD data — user); results differ from the old ASD line only by the column rounding (V20 panel 0.3550 → 0.3532 in). WSWH README §7 rewritten. V20 / V21 hand calcs use the LRFD rows; goldens accepted (V20 / V21 drift only).
+- ~~Open (optional): the WSWH Table 01 lookup P in the drift case~~ — closed 2026-10-14: Table 01 Δ does not depend on P (V and Δ move together; k within ~2.6 %), drift is lateral only (Step 5).
+
+**Step 5 — DONE 2026-10-14 (CALC_VERSION v23, no schema change, uncommitted): drift lateral only; Δa from the LRFD pair; one δ(V) per wall type (user).**
+- **Why (user):** the drift LC only changed the h·Δa/b term; FTAO cannot take it without leaving APA T555, and WSWH Table 01 Δ does not depend on P (V and Δ move together with P, k within ~2.6 %). Decision: back to lateral-only drift and make the three wall types consistent at the LRFD level.
+- **Drift / deflection end forces lateral only:** T = C = the accumulated 1.0E (ρ = 1) / α_s·1.0W end force, own + from above. `deflectionGravity` / `DEFL_GRAVITY` removed; the drift LC group, its LC#, Forces / LC table / elevation entries removed (`shearWallCombos.js` back to the committed version). TC-1 is LC1–LC17 again.
+- **Δa linear from the LRFD pair (user: Δa is linear in T):** `anchorageDelta(hw, T) = δ_LRFD × T / T_LRFD`, `anchorageFlex(hw) = δ_LRFD / T_LRFD` (shearWallHardware.js). Above the LRFD cap: extrapolated, ⚠ warning only (unchanged rule).
+- **FTAO (user):** APA T555 pier force kept, LRFD pair: Δa = d_a × T_pier / HD_lrfd (engine local change; the old ASD `HD_allow` path stays for the APA regression, `test/ftao.test.js` unchanged). The softer end holdown is picked by δ_LRFD / T_LRFD.
+- **WSWH:** unchanged (Δ = Δ_LRFD × V / V_LRFD already the same rule).
+- **Stored stiffness k removed (user):** every wall type has one δ(V) at the 1.0 level (`_deltaAt`): sheathed Eq. 4.3-1, FTAO engine with α_s = 1 (`ftao._deflAt`, adapter), WSWH `wswhDeltaAt` (stacked base with the upper panel's moment held — the old k ignored it). New stored `deltaShare[lt]` = δ at the wall's own share; the spread, G3, the Distribution tab and the calc sheet share line use it (`V_x × k_w / Σk` replaced by "the share at which δ_w = story δ*"). Fixes the FTAO wind k being read at α_s instead of 1.0W.
+- **Drift sizing:** the anchorage step takes the lightest larger size that is stiffer (lower δ_LRFD / T_LRFD); saving = (h/b)·T·(f_cur − f_next). E-W test: manual nailing now reaches Level 1 OK with HDUE17; the Roof stays NG.
+- **Audit (read-only script over all V-cases):** 82 sheathed directions Δa = δ_LRFD·T/T_LRFD, 6 FTAO pier cases d_a·T_pier/HD_lrfd, 3 WSWH panels Δ_LRFD·V/V_LRFD, 45 δ-at-share = reported δ (W at 1.0) — 0 mismatches.
+- **Tests:** Phase4 / Wood / Drift / CalcSheet / Round2 updated to the new rules, drift-LC and gravity tests removed, LC counts back to 17 / 13 / 23. Method-case hand calcs rewritten (`eq431` without GL / GR, scaled Δ_HD; V01, V14, V15, V17, V18, V22, V23 own calcs) — every T2 passes. **Goldens accepted 2026-10-14 (user), catalog regenerated (19 cases, all pass), `npm test` green, build OK:** only δ / drift change (V04 δx 3.27 → 1.81 in, back to the v18 value 1.809 — v18 also scaled the slip with T), plus the deflection-distribution shares and their end forces in V17 / V23 (V17 Line B SW-6 0.053 → 0.367 k; V23 SW-6 still zero share).
+
+**Next:**
+0. **REVERTED 2026-10-14 (Step 5) — drift LCs (CALC_VERSION v22) removed.** Kept for the record: New combo group `drift` in `comboDefs` (shearWallCombos.js), numbered last (after Ω₀ LRFD, so every existing LC# stays): `1.0D+0.5L+1.0E` (§12.8.6.1, ρ = 1) for seismic, `1.0D+0.5L+αsW` (w = α_s) for wind **only when α_s is entered** (blank α_s = no wind drift, as before). α_s is passed to `computeWallTC` (regular walls and WSWH). Shown in: the Forces tab dropdown (group "Drift"; Cap = LRFD cap and the ratio as "⚠ > LRFD cap" text, never a D/C colour — user 2026-10-13 rule), the LC definitions table (Group "Drift", role text), the load case "Used for" text (names the drift LC#), the per-wall end-force table and the elevation combo select. G12 superposition covers the new LCs automatically. The deflection itself is still computed by `deflectionOf` (it needs trial shares for the equal-δ solver); new test `shearWallWood.test.mjs` asserts deflection T / C (→ and ←, E and W) = the drift LC end forces. Goldens unchanged; `npm test` green, build OK. Tests updated: Round2 R4 group list, Report LC numbering (seismic 18, wind 13 / 14 with α_s, both 25).
+   - Note: FTAO and WSWH drift stay lateral only, so for those walls the drift LC is display of forces only (role text says so).
+1. User review in the app (Hardware tab, Summary wood settings, Drift tab warnings) and of the regenerated catalog — see "Next session — start here" at the top.
+2. SW-VERIFY re-seeded by the user after v21 (verified read-only 2026-10-14: 19 items, schema 13, calc v21, DF-L / dfir_pt_no1) — **re-seed again at v23**. Optional bulk upgrade of other items to schema 13.
+3. PDF Design data appendix.
+4. Verify the D2 strap source page (C-C2026 pp. 295–296) and its values.
+
+**Review items, resolved 2026-10-13:** 6x6 / 8x6 posts now NDS 4D; C_F 8x4 1.05, 4x6 1.10; DF-L No.2 E_min 580000 (user); HDUE13 8x4 / HDUE17 6x4 minimum posts confirmed (user); the 0.92 footnote-10 factor is kept together with C_G = 0.92 for SPF/HF (user). Still as before: nailing row 2 wind 1120 vs 1128 in D1.
+
 ## Next session — start here (set 2026-10-01, end of session)
+**Update 2026-10-08:** [PR #1](https://github.com/Ruihao-spacial/design-item-hub/pull/1) opened, `sw-verification` → `master`.
+- It carries every Shear Wall branch (32 commits: load path, results-and-links, Phase 4 rounds 1 and 2, verification).
+- Diaphragm to LRS is PR #2, stacked on it (see `docs/diaphragm-to-lrs-backlog.md`). Shear Wall code is unchanged since 2026-10-01.
+
 **State (end of 2026-10-01):**
 - Branch `sw-verification` **committed and pushed** to GitHub (user request). Merging into `master` is still done by someone else.
 - CALC_VERSION **v18**, schema **v12**.

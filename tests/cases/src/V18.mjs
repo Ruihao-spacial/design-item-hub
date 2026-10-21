@@ -22,9 +22,9 @@ function design(VE, VW) {
 const A = design(5, 6), B = design(2, 12);
 // α_s·W deflection of SW-2 (Eq. 4.3-1, lateral only): v = α_s·V_W/L, T = C = α_s·N_W
 const E = 1700000;
-const vw = alphaS * B.VW * 1000 / L, Tw = alphaS * B.NW * 1000, Ap = B.post.A, Ga = NAIL.find(n => n.id === B.n.id).gaPLY;
-const t1 = 8 * vw * h ** 3 / (E * Ap * L), t2 = vw * h / (1000 * Ga), dHD = B.hd.delta * Tw / B.hd.cap;
-const r = Tw / (Ap * 625), dC = 0.02 * (r < 0.73 ? r / 0.73 : r <= 1 ? 1 + (r - 0.73) / 0.27 : 2 * r ** 3);
+const vw = alphaS * B.VW * 1000 / L, Tw = alphaS * B.NW * 1000, Cw = Tw, Ap = B.post.A, Ga = NAIL.find(n => n.id === B.n.id).gaPLY;
+const t1 = 8 * vw * h ** 3 / (E * Ap * L), t2 = vw * h / (1000 * Ga), dHD = B.hd.delta * Tw / B.hd.lrfdCap; // linear from the LRFD pair (2026-10-14)
+const r = Cw / (Ap * 625), dC = 0.02 * (r < 0.73 ? r / 0.73 : r <= 1 ? 1 + (r - 0.73) / 0.27 : 2 * r ** 3);
 const t3 = h * (dHD + dC) / L, dW = t1 + t2 + t3;
 const pc = postCap(B.post, h);
 // Seismic story drift (Cd 4, Ie 1.0, RC II) at 1.0E, one wall per line, the pinned design
@@ -45,7 +45,7 @@ export default {
     ...rows(A, 'Line A SW-1 (1.0E = 5 k, 1.0W = 6 k)'),
     ...rows(B, 'Line B SW-2 (1.0E = 2 k, 1.0W = 12 k)'),
     'SW-2 end post: ' + B.post.id + ' at 10 ft: F_c* = ' + Math.round(pc.Fstar) + ' psi, F_cE = ' + Math.round(pc.FcE) + ' psi, C_P = ' + f4(pc.Cp) + ' → cap = ' + f2(pc.cap) + ' k ≥ ' + f3(B.Cg) + ' k (lighter posts in the list order are below ' + f3(B.Cg) + ' k or below the HDUE7 minimum post).',
-    'SW-2 service wind deflection with α_s = ' + alphaS + ': v = ' + f2(vw) + ' plf, T = C = ' + f2(Tw) + ' lb, A = ' + Ap + ' in², G_a = ' + Ga + ' → 8vh³/(EAb) = ' + f4(t1) + ', vh/(1000G_a) = ' + f4(t2) + ', Δ_HD = ' + B.hd.delta + ' × ' + f2(Tw) + ' / ' + B.hd.cap + ' = ' + f4(dHD) + ', r = ' + f4(r) + ' → Δ_c = ' + f4(dC) + ', h·Δa/b = ' + f4(t3) + ' → δ = ' + f4(dW) + ' in; δ/h_sx = ' + f4(dW) + ' / 120 = ' + f4(dW / 120) + ' (report only, no limit).',
+    'SW-2 service wind deflection with α_s = ' + alphaS + ': v = ' + f2(vw) + ' plf, T = C = α_s·N_W = ' + f2(Tw) + ' lb (lateral only), A = ' + Ap + ' in², G_a = ' + Ga + ' → 8vh³/(EAb) = ' + f4(t1) + ', vh/(1000G_a) = ' + f4(t2) + ', Δ_HD = δ_LRFD × T / T_LRFD of ' + B.hd.id + ' = ' + B.hd.delta + ' × ' + f2(Tw) + ' / ' + B.hd.lrfdCap + ' = ' + f4(dHD) + ', r = ' + f4(r) + ' → Δ_c = ' + f4(dC) + ', h·Δa/b = ' + f4(t3) + ' → δ = ' + f4(dW) + ' in; δ/h_sx = ' + f4(dW) + ' / 120 = ' + f4(dW / 120) + ' (report only, no limit).',
     'Line checks G1–G12 pass on both lines (1.0W and 1.0E balance; gravity all to the foundation).',
     'Seismic drift, Line A (1.0E = ' + A.VE + ' k): ' + dEA.gov.text + ' ' + dEA.text,
     'Seismic drift, Line B (1.0E = ' + B.VE + ' k): ' + dEB.gov.text + ' ' + dEB.text,

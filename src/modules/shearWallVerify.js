@@ -115,7 +115,7 @@ export function modelSummary(inputs) {
   const lv = inputs.levels || [];
   const name = (id) => (lv.find(l => l.id === id) || {}).name || id;
   const out = [];
-  out.push('Project: ' + (inputs.loadType || 'seismic') + ', S_DS ' + (inputs.sds || '—') + ', ' + (inputs.woodGrade || '') + ', ' + (inputs.wallThickness || '4') + '" walls, '
+  out.push('Project: ' + (inputs.loadType || 'seismic') + ', S_DS ' + (inputs.sds || '—') + ', ' + (inputs.species || 'DF-L') + ' ' + (inputs.woodGrade || '') + ' / ' + (inputs.postGrade || '') + ', ' + (inputs.wallThickness || '4') + '" walls, '
     + (inputs.sheathing === 'osb' ? 'OSB' : 'plywood') + ', distribution ' + (inputs.distribution || 'capacity')
     + (inputs.cd ? ', Cd ' + inputs.cd + ' / Ie ' + inputs.ie + ' / RC ' + (inputs.riskCategory || '—') : '')
     + (inputs.omega0 ? ', Ω₀ ' + inputs.omega0 : '')

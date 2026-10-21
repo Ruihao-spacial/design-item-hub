@@ -4,7 +4,7 @@
 // Build: npm run cases:build
 import fs from 'fs';
 
-export const SCHEMA = 12;
+export const SCHEMA = 13;
 
 // === Code tables used by the hand calcs (copied from the reference files, not imported from the engine) ===
 export const NAIL = [ // id, ASD seismic / wind unit shear (plf), Ga plywood / OSB (k/in)
@@ -16,9 +16,11 @@ export const NAIL = [ // id, ASD seismic / wind unit shear (plf), Ga plywood / O
   { id: '3B', label: '3" o.c. (both)', E: 1222, W: 1711, gaPLY: 44, gaOSB: 72 },
   { id: '2B', label: '2" o.c. (both)', E: 1600, W: 2240, gaPLY: 56, gaOSB: 102 },
 ];
-export const HDUE = [['HDUE3', 3790, 0.127], ['HDUE5', 5375, 0.146], ['HDUE7', 7015, 0.154], ['HDUE9', 8425, 0.159], ['HDUE13', 12950, 0.145], ['HDUE17', 17685, 0.111]]
-  .map(([id, cap, delta]) => ({ id, cap, delta }));
-export const MSTC16 = [['MSTC28', 1535, 0.0808], ['MSTC40', 3070, 0.0970], ['MSTC52', 4610, 0.1188], ['MSTC66', 5850, 0.1296]].map(([id, cap, delta]) => ({ id, cap, delta }));
+// HDUE DF/SP 4" wall and MSTC DF/SP 16" span (Floor_Anchorage_Holdown_Catalog.md / Floor_to_Floor_Strap_Catalog.md, C-C2026,
+// entered 2026-10-13): [id, ASD cap, LRFD cap, δ @ LRFD cap (in)]
+export const HDUE = [['HDUE3', 3790, 5306, 0.178], ['HDUE5', 5375, 7525, 0.205], ['HDUE7', 7015, 9821, 0.216], ['HDUE9', 9390, 13146, 0.188], ['HDUE13', 12950, 18130, 0.203], ['HDUE17', 16040, 22456, 0.132]]
+  .map(([id, cap, lrfdCap, delta]) => ({ id, cap, lrfdCap, delta }));
+export const MSTC16 = [['MSTC28', 1535, 2193, 0.081], ['MSTC40', 3070, 4386, 0.097], ['MSTC52', 4610, 6586, 0.118], ['MSTC66', 5850, 8357, 0.129]].map(([id, cap, lrfdCap, delta]) => ({ id, cap, lrfdCap, delta }));
 
 // SDPWS 2021 §4.3.4 aspect ratio factor
 export const Chb = (h, b) => (h / b <= 2 ? 1 : h / b <= 3.5 ? 1.25 - 0.125 * h / b : 0);
@@ -27,12 +29,13 @@ export const pickNail = (v, lt = 'E', C = 1) => NAIL.find(n => v <= n[lt] * C + 
 export const pickHD = (Tk) => HDUE.find(h => h.cap >= Tk * 1000) || null;
 export const pickStrap = (Tk) => MSTC16.find(h => h.cap >= Tk * 1000) || null;
 
-// NDS 2018 column capacity (DF-L No.1 unless given): C_D 1.6, K_e 1.0, l2 = 6" braced by sheathing, c = 0.8
+// NDS 2018 column capacity (DF-L No.1 unless given): C_D 1.6, K_e 1.0, l2 = 6" braced by sheathing, c = 0.8;
+// C_F (NDS Table 4A, F_c) by nominal width: 2"–4" 1.15, 5"–6" 1.10, 8" 1.05
 export const GRADE_NO1 = { Fc: 1500, Fcperp: 625, E: 1700000, Emin: 620000 };
 export const POSTS4 = [ // wall 4": order the engine tries them in (lightest first as listed)
   { id: '2x4', d1: 3.5, d2: 1.5, A: 5.25, CF: 1.15 }, { id: '(2)2x4', d1: 3.5, d2: 3.0, A: 10.5, CF: 1.15 },
   { id: '(3)2x4', d1: 3.5, d2: 4.5, A: 15.75, CF: 1.15 }, { id: '4x4', d1: 3.5, d2: 3.5, A: 12.25, CF: 1.15 },
-  { id: '6x4', d1: 3.5, d2: 5.5, A: 19.25, CF: 1.10 }, { id: '8x4', d1: 3.5, d2: 7.5, A: 26.25, CF: 1.10 },
+  { id: '6x4', d1: 3.5, d2: 5.5, A: 19.25, CF: 1.10 }, { id: '8x4', d1: 3.5, d2: 7.5, A: 26.25, CF: 1.05 },
 ];
 export function postCap(p, hFt, g = GRADE_NO1) {
   const Fstar = g.Fc * 1.6 * p.CF;
@@ -55,7 +58,7 @@ export const f4 = (v) => (+v).toFixed(4);
 // === Definition builders (schema v10) ===
 export function project(o = {}) {
   return {
-    sds: '1.0', loadType: 'seismic', wallThickness: '4', woodGrade: 'dfir_no1', sheathing: 'ply', distribution: 'capacity',
+    sds: '1.0', loadType: 'seismic', wallThickness: '4', species: 'DF-L', woodGrade: 'dfir_no1', postGrade: 'dfir_pt_no1', sheathing: 'ply', distribution: 'capacity',
     cd: '', ie: '', riskCategory: '', driftRow: 'other', driftBypass: false, alphaS: '', windDriftLimit: '400', omega0: '', lrfdHalfL: false,
     wswhFc: '2500', seismicDesignCategory: '', detachedOneTwoFamily: false, pdfReport: 'detailed', refs: {}, notes: '',
     wallDLTypes: [{ id: 'wdt-1', name: 'Stud wall', psf: '10' }],
@@ -90,10 +93,10 @@ export const ex = (label, at, field, value, step, tol) => ({ label, at, field, v
 // → drift check on (Table 12.12-1, "all other structures": Δa = 0.020·h_sx); Ω₀ only adds the Ω₀ force tables.
 export const SEISMIC = { cd: '4', ie: '1.0', riskCategory: 'II', omega0: '2.5' };
 const crushOf = (r) => 0.02 * (r < 0.73 ? r / 0.73 : r <= 1 ? 1 + (r - 0.73) / 0.27 : 2 * r ** 3); // SDPWS C4.3.4-2 curve
-// Holdown / strap at a wall end: δ at its basis load (HDUE: ASD cap; MSTC: cap / 0.7, the strap LRFD cap)
+// Holdown / strap at a wall end: Δ_HD = δ_LRFD × T / T_LRFD, linear from the LRFD pair (user 2026-10-14)
 export function anchorOf(id) {
-  const h = HDUE.find(x => x.id === id); if (h) return { id, delta: h.delta, basis: h.cap, basisText: h.cap + ' (ASD cap)' };
-  const s = MSTC16.find(x => x.id === id); if (s) return { id, delta: s.delta, basis: s.cap / 0.7, basisText: s.cap + '/0.7' };
+  const h = HDUE.find(x => x.id === id); if (h) return { id, delta: h.delta, lrfdCap: h.lrfdCap };
+  const s = MSTC16.find(x => x.id === id); if (s) return { id, delta: s.delta, lrfdCap: s.lrfdCap };
   throw new Error('anchor ' + id);
 }
 const postOf = (id) => { const p = POSTS4.find(x => x.id === id); if (!p) throw new Error('post ' + id); return p; };
@@ -101,17 +104,18 @@ const postOf = (id) => { const p = POSTS4.find(x => x.id === id); if (!p) throw 
 // ← mirrored), the larger governs. The design is the case's pinned one. Vk = the wall's 1.0E share (k);
 // TL / CR = the 1.0E tension at the left end / compression at the right end for → (k), own V·h/L + from above;
 // TR / CL the same for ← (default = TL / CR, a symmetric stack). A = the smaller end post (bending term).
+// End forces are lateral only (user 2026-10-14): no gravity in the drift.
 export function eq431({ mark, L, h, nail, hdL, hdR, postL, postR, Vk, TL, CR, TR, CL, E = 1700000, Fcp = 625 }) {
   const Ga = NAIL.find(n => n.id === nail).gaPLY, pL = postOf(postL), pR = postOf(postR), A = Math.min(pL.A, pR.A);
   const v = 1000 * Vk / L, t1 = 8 * v * h ** 3 / (E * A * L), t2 = v * h / (1000 * Ga);
   const one = (dir, Tk, Ck, hd, pc) => {
-    const a = anchorOf(hd), T = 1000 * Tk, C = 1000 * Ck, dHD = a.delta * T / a.basis, r = C / (pc.A * Fcp), dC = crushOf(r), t3 = h * (dHD + dC) / L;
+    const a = anchorOf(hd), T = Math.max(0, 1000 * Tk), C = 1000 * Ck, dHD = a.delta * T / a.lrfdCap, r = C / (pc.A * Fcp), dC = crushOf(r), t3 = h * (dHD + dC) / L;
     return { dir, T, C, a, pc, dHD, r, dC, t3, delta: t1 + t2 + t3 };
   };
   const dirs = [one('→', TL, CR, hdL, pR), one('←', TR != null ? TR : CR, CL != null ? CL : TL, hdR, pL)];
   const g = dirs[0].delta >= dirs[1].delta ? dirs[0] : dirs[1];
   const text = mark + ' (Eq. 4.3-1, ' + g.dir + ' governs): v = 1000 × ' + f3(Vk) + ' / ' + L + ' = ' + f2(v) + ' plf, A = ' + A + ' in², G_a = ' + Ga + ' k/in → 8vh³/(EAb) = ' + f4(t1)
-    + '; vh/(1000G_a) = ' + f4(t2) + '; Δ_HD = ' + g.a.delta + ' × ' + f2(g.T) + ' / ' + g.a.basisText + ' = ' + f4(g.dHD) + ' (' + g.a.id + ', T = ' + f2(g.T) + ' lb)'
+    + '; vh/(1000G_a) = ' + f4(t2) + '; uplift end T = ' + f2(g.T) + ' lb (lateral); Δ_HD = δ_LRFD × T / T_LRFD = ' + g.a.delta + ' × ' + f2(g.T) + ' / ' + g.a.lrfdCap + ' = ' + f4(g.dHD) + ' (' + g.a.id + (g.T > g.a.lrfdCap ? ', T > LRFD cap: extrapolated, warning' : '') + ')'
     + '; r = ' + f2(g.C) + ' / (' + g.pc.A + ' × ' + Fcp + ') = ' + f4(g.r) + ' → Δ_c = ' + f4(g.dC) + '; h·Δa/b = ' + h + ' × (' + f4(g.dHD) + ' + ' + f4(g.dC) + ') / ' + L + ' = ' + f4(g.t3)
     + ' → δ = ' + f4(g.delta) + ' in.';
   return { mark, t1, t2, dirs, gov: g, delta: g.delta, text };

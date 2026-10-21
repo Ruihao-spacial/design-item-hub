@@ -20,7 +20,8 @@ const hdP = pickHD(TU);
 const Cpost = Math.max(CU, CU_O);
 const pst = POSTS4.filter(p => p.d2 >= 3.0).find(p => postCap(p, hB).cap >= Cpost);
 // Story drift (Cd 4, Ie 1.0, RC II), pinned design, both lines alike: nothing transfers into the lower wall (Line A: no
-// post; Line B: the posts take the upper ends), so each wall's Eq. 4.3-1 uses only its own N = V·h/L
+// post; Line B: the posts take the upper ends), so each wall's Eq. 4.3-1 uses only its own N = V·h/L and its own self-weight
+// R (1.0D + 0.5L + 1.0E, no live load)
 const eU = (m) => eq431({ mark: m, L: LU, h: hT, nail: '6', hdL: 'MSTC28', hdR: 'MSTC28', postL: '(2)2x4', postR: '(2)2x4', Vk: VT, TL: NU, CR: NU });
 const eL = (m) => eq431({ mark: m, L: LL, h: hB, nail: '6', hdL: 'HDUE3', hdR: 'HDUE3', postL: '(2)2x4', postR: '(2)2x4', Vk: VB, TL: NL, CR: NL });
 const dr = (s) => ({ roof: storyDrift('Roof', hT, [eU('SW-' + s + '1')]), l1: storyDrift('Level 1', hB, [eL('SW-' + s + '2')]) });

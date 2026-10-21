@@ -1,15 +1,15 @@
 // V22 — robustness: awkward but valid inputs must calculate, render and report what is wrong
-import { project, level, direction, line, wall, ex, f2, f3, f4, eq431, storyDrift, driftExpect } from './lib.mjs';
+import { project, level, direction, line, wall, ex, HDUE, f2, f3, f4, eq431, storyDrift, driftExpect } from './lib.mjs';
 
 const h = 10, F2 = 2, F1 = 4, L1 = 8, L2 = 2.5, lineLen = 20;
 const V = F2 + F1;                               // Level 1 story shear (k): the Level 2 load still accumulates below
 const v = 0.7 * V * 1000 / L1, cap6 = 312;
 const N = V * h / L1;                            // no gravity → T = C = 0.7·N
 const T = 0.7 * N;
-// HDUE3 3790 < 5250 → HDUE5 5375 lb (δ 0.146); posts: (2)2x4 5.00 k < 5.25 → (3)2x4 7.50 k (A = 15.75)
-const hd = { id: 'HDUE5', cap: 5375, delta: 0.146 }, A = 15.75, Ga = 16, E = 1700000;
+// HDUE3 3790 < 5250 → HDUE5 5375 lb (δ @ LRFD cap 0.205 at 7,525 lb); posts: (2)2x4 5.00 k < 5.25 → (3)2x4 7.50 k (A = 15.75)
+const hd = HDUE.find(x => x.id === 'HDUE5'), A = 15.75, Ga = 16, E = 1700000;
 const v1 = V * 1000 / L1, T1 = N * 1000;
-const t1 = 8 * v1 * h ** 3 / (E * A * L1), t2 = v1 * h / (1000 * Ga), dHD = hd.delta * T1 / hd.cap;
+const t1 = 8 * v1 * h ** 3 / (E * A * L1), t2 = v1 * h / (1000 * Ga), dHD = hd.delta * T1 / hd.lrfdCap; // linear from the LRFD pair (2026-10-14)
 const r = T1 / (A * 625), dC = 0.02 * (1 + (r - 0.73) / 0.27), t3 = h * (dHD + dC) / L1, delta = t1 + t2 + t3;
 // Story drift (Cd 4, Ie 1.0, RC II — C_d and I_e typed with spaces, " 4 " / "1.0 ", to test the parsing): SW-1 alone governs
 // Level 1 (SW-2, h/b > 3.5, has no share and no δ); Level 2 has no wall → no drift row. Pinned design → drift NG kept.
@@ -25,7 +25,7 @@ export default {
     'SW-2 (x = 17.5–20.0 ft, touching the line end): h/b = 10/2.5 = 4.0 > 3.5 → not a shear wall (SDPWS 2021 §4.3.4), carries no shear, audit warning. SW-1 (x = 0–8, touching the line start) takes all ' + V + ' k.',
     'SW-1 manual 6" o.c.: v = 0.7 × ' + V * 1000 + '/' + L1 + ' = ' + f2(v) + ' plf vs 312 plf → D/C = ' + f3(v / cap6) + ' > 1 → wall NG (a design result, not an equilibrium check).',
     'SW-1 end forces (no gravity): N = ' + V + ' × ' + h + '/' + L1 + ' = ' + f2(N) + ' k → T = C = 0.7 × ' + f2(N) + ' = ' + f2(T) + ' k → HDUE5 (5,375 lb; HDUE3 3,790 lb too small), posts (3)2x4 (the (2)2x4 minimum post has 5.00 k < 5.25 k).',
-    'SW-1 δ at 1.0E: v = ' + v1 + ' plf, A = 15.75 in², G_a = 16 → 8vh³/(EAb) = ' + f4(t1) + ', vh/(1000G_a) = ' + f4(t2) + ', Δ_HD = 0.146 × ' + T1 + '/5375 = ' + f4(dHD) + ', r = ' + f4(r) + ' (0.73–1.0) → Δ_c = 0.02 × (1 + (r − 0.73)/0.27) = ' + f4(dC) + ', h·Δa/b = ' + f4(t3) + ' → δ = ' + f4(delta) + ' in.',
+    'SW-1 δ at 1.0E: v = ' + v1 + ' plf, A = 15.75 in², G_a = 16 → 8vh³/(EAb) = ' + f4(t1) + ', vh/(1000G_a) = ' + f4(t2) + ', Δ_HD = δ_LRFD × T / T_LRFD of HDUE5 = ' + hd.delta + ' × ' + T1 + ' / ' + hd.lrfdCap + ' = ' + f4(dHD) + ', r = ' + f4(r) + ' (0.73–1.0) → Δ_c = 0.02 × (1 + (r − 0.73)/0.27) = ' + f4(dC) + ', h·Δa/b = ' + f4(t3) + ' → δ = ' + f4(delta) + ' in.',
     'Seismic inputs typed with spaces: C_d " 4 " → 4, I_e "1.0 " → 1.0, risk category II (Ω₀ blank → default 2.5). SW-2 (h/b > 3.5) has no share and no δ; Level 2 has no wall, so no drift row. ' + d1.text,
     'Every other line check passes; every tab, calc sheet, elevation and PDF section renders (runner T4).',
   ],

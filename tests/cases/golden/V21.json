@@ -1,5 +1,5 @@
 {
-  "calcVersion": "v18",
+  "calcVersion": "v23",
   "lines": [
     {
       "line": "N-S / Line A",
@@ -56,7 +56,7 @@
             "WSWH panel",
             "WSWH panel"
           ],
-          "deltaE": 0.61
+          "deltaE": 0.607
         }
       ],
       "posts": [],
@@ -64,12 +64,12 @@
       "drift": [
         {
           "level": "Level 2",
-          "dx": 1.286,
+          "dx": 1.288,
           "pass": true
         },
         {
           "level": "Level 1",
-          "dx": 2.44,
+          "dx": 2.429,
           "pass": false
         }
       ],
@@ -104,7 +104,7 @@
             "WSWH panel",
             "WSWH panel"
           ],
-          "deltaE": 0.292
+          "deltaE": 0.29
         }
       ],
       "posts": [],
@@ -112,7 +112,7 @@
       "drift": [
         {
           "level": "Level 1",
-          "dx": 1.166,
+          "dx": 1.159,
           "pass": true
         }
       ],
