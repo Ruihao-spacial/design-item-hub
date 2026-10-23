@@ -21,6 +21,10 @@ UI or logic, with no bug and no lost input.
 | **P7** | **Bulk upgrade by script:** dry run first. It reports schema from → to, "no value lost" and "results unchanged" per item. Items that would lose a value are never written. The previous version goes into `revisions`. | Saved projects are moved to the new shape in a controlled, reversible way. |
 
 ## When you change a module
+0. **Copies (Clone Project / Duplicate, `src/clone.js`):** an item is copied exactly as stored — no migration, the
+   schema stamp travels with it; only the links (`inputs.refs`, item ids) are pointed at the copies. A new link
+   field must live in `inputs.refs`, or a cloned project would keep pointing at the old project's items.
+   `tests/clone.test.mjs` copies every frozen fixture and checks no value is lost.
 1. **UI only:** nothing to do, as long as it reads and writes the same fields. The fixtures' "opens and saves
    without loss" test catches a form that drops fields.
 2. **Calc logic:**

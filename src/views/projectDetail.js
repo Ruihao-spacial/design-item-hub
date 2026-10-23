@@ -1,10 +1,11 @@
 import { el, clearEl, formatDate, showToast } from '../utils.js';
-import { updateProjectStatus, deleteProject, archiveItem, restoreItem, listItems } from '../db.js';
+import { updateProjectStatus, deleteProject, archiveItem, restoreItem, listItems, cloneProject, duplicateItem } from '../db.js';
 import { DESIGN_ITEM_MODULES, getModule } from '../modules/registry.js';
 import { exportItemPdf } from '../pdf.js';
 import { linkChanges } from '../results.js';
 
-export async function renderProjectDetail(container, state, { onBack, onOpenItem, onAddItem, onDeleted }) {
+export async function renderProjectDetail(container, state, handlers) {
+  const { onBack, onOpenItem, onAddItem, onDeleted, onCloned } = handlers;
   clearEl(container);
   const p = state.currentProject;
   if (!p) { onBack(); return; }
@@ -90,12 +91,26 @@ export async function renderProjectDetail(container, state, { onBack, onOpenItem
           el('button', { className: 'btn btn-ghost btn-sm', title: 'Export PDF', 'aria-label': 'Export calculation as PDF', async onClick() {
             try { await exportItemPdf(p, item, mod, { items }); } catch (error) { console.error('Failed to export PDF:', error); showToast('PDF export failed.', 'error'); }
           } }, 'PDF'),
+          el('button', { className: 'btn btn-ghost btn-sm', title: 'Duplicate (copy in this project, same links)', 'aria-label': 'Duplicate calculation',
+            async onClick(e) {
+              const button = e.currentTarget;
+              button.disabled = true;
+              try {
+                await duplicateItem(item, mod ? mod.label : item.type);
+                showToast('Calculation duplicated.', 'success');
+                await renderProjectDetail(container, state, handlers);
+              } catch (error) {
+                console.error('Failed to duplicate calculation:', error);
+                showToast('Calculation could not be duplicated.', 'error');
+                button.disabled = false;
+              }
+            } }, 'Duplicate'),
           el('button', { className: 'btn btn-ghost btn-sm btn-danger', title: 'Archive',
             async onClick() {
               try {
                 await archiveItem(item.id);
                 showToast('Item archived.', 'success');
-                await renderProjectDetail(container, state, { onBack, onOpenItem, onAddItem, onDeleted });
+                await renderProjectDetail(container, state, handlers);
               } catch (error) {
                 console.error('Failed to archive calculation:', error);
                 showToast('Calculation could not be archived.', 'error');
@@ -124,7 +139,7 @@ export async function renderProjectDetail(container, state, { onBack, onOpenItem
               try {
                 await restoreItem(item.id);
                 showToast('Item restored.', 'success');
-                await renderProjectDetail(container, state, { onBack, onOpenItem, onAddItem, onDeleted });
+                await renderProjectDetail(container, state, handlers);
               } catch (error) {
                 console.error('Failed to restore calculation:', error);
                 showToast('Calculation could not be restored.', 'error');
@@ -137,7 +152,8 @@ export async function renderProjectDetail(container, state, { onBack, onOpenItem
     container.appendChild(details);
   }
 
-  container.appendChild(el('div', { style: { marginTop: '2rem' } },
+  container.appendChild(el('div', { style: { marginTop: '2rem', display: 'flex', gap: '0.5rem', flexWrap: 'wrap' } },
+    el('button', { className: 'btn btn-sm', onClick() { showCloneProjectModal(p, items.length, onCloned); } }, 'Clone Project'),
     el('button', { className: 'btn btn-danger btn-sm',
       async onClick() {
         if (!confirm('Delete project ' + (p.displayNumber || p.projectNumber) + ' and all its calculations? This cannot be undone.')) return;
@@ -152,6 +168,64 @@ export async function renderProjectDetail(container, state, { onBack, onOpenItem
       },
     }, 'Delete Project'),
   ));
+}
+
+function showCloneProjectModal(p, itemCount, onCloned) {
+  let number = '';
+  let name = (p.name || 'Untitled') + ' (copy)';
+  let submitting = false;
+  const previouslyFocused = document.activeElement;
+  const close = () => {
+    document.removeEventListener('keydown', onEscape);
+    backdrop.remove();
+    previouslyFocused?.focus?.();
+  };
+  const onEscape = (e) => { if (e.key === 'Escape') close(); };
+  const backdrop = el('div', { className: 'modal-backdrop', onClick(e) { if (e.target === backdrop) close(); } });
+  const numInput = el('input', { id: 'clone-project-number', className: 'form-input mono', type: 'text', placeholder: 'e.g. 24-105', required: 'true', onInput(e) { number = e.target.value; } });
+  const nameInput = el('input', { id: 'clone-project-name', className: 'form-input', type: 'text', value: name, onInput(e) { name = e.target.value; } });
+
+  async function submit() {
+    if (submitting) return;
+    if (!number.trim()) { showToast('Project number is required.', 'warning'); return; }
+    submitting = true;
+    cloneButton.disabled = true;
+    let result;
+    try {
+      result = await cloneProject(p, number.trim(), name.trim());
+    } catch (error) {
+      console.error('Failed to clone project:', error);
+      result = { success: false, error: 'Project could not be cloned. Please try again.' };
+    }
+    submitting = false;
+    cloneButton.disabled = false;
+    if (result.success) {
+      close();
+      showToast('Project ' + number.trim() + ' created with ' + result.count + ' calculation' + (result.count === 1 ? '' : 's') + '.', 'success');
+      onCloned(result.projectNumber);
+    } else {
+      showToast(result.error || 'Project could not be cloned. Please try again.', 'error');
+    }
+  }
+
+  const cloneButton = el('button', { className: 'btn btn-primary', type: 'submit' }, 'Clone');
+  const dialog = el('form', { className: 'modal', role: 'dialog', 'aria-modal': 'true', 'aria-labelledby': 'clone-project-title', onSubmit(e) { e.preventDefault(); submit(); } },
+    el('div', { className: 'modal-header' }, el('h3', { id: 'clone-project-title' }, 'Clone Project ' + (p.displayNumber || p.projectNumber)), el('button', { className: 'btn btn-ghost btn-sm', type: 'button', 'aria-label': 'Close clone project dialog', onClick: close }, '×')),
+    el('div', { className: 'modal-body' },
+      el('p', { style: { marginTop: '0', fontSize: '0.85rem', color: 'var(--ink-secondary)' } },
+        'Copies all ' + itemCount + ' calculation' + (itemCount === 1 ? '' : 's') + ' (archived ones stay archived). Links between them point to the copies.'),
+      el('div', { className: 'form-group' }, el('label', { className: 'form-label', htmlFor: 'clone-project-number' }, 'New Project Number'), numInput),
+      el('div', { className: 'form-group' }, el('label', { className: 'form-label', htmlFor: 'clone-project-name' }, 'Project Name'), nameInput),
+    ),
+    el('div', { className: 'modal-footer' },
+      el('button', { className: 'btn', type: 'button', onClick: close }, 'Cancel'),
+      cloneButton,
+    ),
+  );
+  backdrop.appendChild(dialog);
+  document.body.appendChild(backdrop);
+  document.addEventListener('keydown', onEscape);
+  numInput.focus();
 }
 
 function showAddCalcModal(onAddItem) {
