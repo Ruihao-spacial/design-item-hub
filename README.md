@@ -38,6 +38,7 @@ src/
   auth.js                  — Supabase auth wrappers
   admin.js                 — admin-only Edge Function client
   db.js                    — all Supabase database queries
+  clone.js                 — Clone Project / Duplicate: item rows to insert, links remapped to the copies (pure, tested)
   pdf.js                   — PDF calc-sheet generation
   supabaseClient.js        — Supabase client init
   styles.css               — design tokens + all component styles
@@ -95,6 +96,7 @@ scripts/
   dlrsCasesDoc.mjs          — generate docs/diaphragm-to-lrs-test-cases.md (Diaphragm to LRS case catalog)
   dlrsSeedCases.mjs         — put the Diaphragm to LRS cases into the local project DLRS-VERIFY (dry run by default)
 tests/
+  clone.test.mjs           — Clone Project / Duplicate: links remapped, definitions copied without loss, same results and link checks
   shearWall.test.mjs       — shear wall calc + regression + legacy-definition checks (npm test)
   shearWallPhase4.test.mjs — openings (segmented / FTAO), deflection & drift, LRFD, schema v6
   shearWallRound2.test.mjs — HDUE minimum post, Ω₀ combos, dead load by statics, WSWH, schema v7
@@ -211,6 +213,12 @@ That's it — no changes needed to the app shell, project views, or PDF infrastr
 ## Cross-item references
 
 A module can declare `refs` — what it can pull from other items in the same project (e.g. Seismic Mass Takeoff pulls per-assembly dead loads from a Flat Load Calculator item, and ELF pulls seismic weight from Mass Takeoff). The `extract(outputs)` function on each ref maps the source item's `outputs` into whatever shape the consuming module's `calc()` expects as `resolvedRefs`.
+
+## Cloning
+
+- **Clone Project** (project page, any active member): new project number + name; every calculation is copied, archived ones stay archived. Links between calculations (`inputs.refs`, copied in the `refs` column) point to the copies; a link to a deleted item is cleared. The definition, saved results and version stamps are copied as stored; `revisions` starts empty and the person cloning becomes `entered_by`. The new project's notes say where it came from. If the calculations cannot be inserted, the new project is deleted again.
+- **Duplicate** (each calculation row): a copy in the same project named "<name> (copy)", with the same links. It copies the last saved version.
+- Tests: `tests/clone.test.mjs`. Duplicating a calculation into another project (links re-picked there) is not built yet.
 
 ## Data model
 

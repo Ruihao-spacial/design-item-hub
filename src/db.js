@@ -1,6 +1,7 @@
 import { supabase } from './supabaseClient.js';
 import { sanitizeProjectNumber } from './utils.js';
 import { buildSaveItemArgs, mapRevisionHistory } from './itemPersistence.js';
+import { cloneProjectRows, cloneItemRow } from './clone.js';
 
 // ===== projects =====
 
@@ -23,13 +24,14 @@ export async function getProject(projectNumber) {
   return data ? mapProjectRow(data) : null;
 }
 
-export async function createProject(rawNumber, name) {
+export async function createProject(rawNumber, name, notes = '') {
   const projectNumber = sanitizeProjectNumber(rawNumber);
   const { data: { user } } = await supabase.auth.getUser();
   const { error } = await supabase.from('projects').insert({
     project_number: projectNumber,
     display_number: rawNumber,
     name,
+    notes,
     status: 'active',
     created_by: user?.id,
   });
@@ -40,6 +42,27 @@ export async function createProject(rawNumber, name) {
     return { success: false, error: error.message };
   }
   return { success: true, projectNumber };
+}
+
+// New project with a copy of every calculation of `source` (archived ones stay archived), links remapped
+// to the copies (src/clone.js). If the calculations cannot be inserted, the new project is deleted again.
+export async function cloneProject(source, rawNumber, name) {
+  const items = await listItems(source.projectNumber);
+  const from = source.displayNumber || source.projectNumber;
+  const note = 'Cloned from ' + from + ' on ' + new Date().toISOString().slice(0, 10) + '.';
+  const created = await createProject(rawNumber, name, source.notes ? note + '\n\n' + source.notes : note);
+  if (!created.success) return created;
+
+  const { data: { user } } = await supabase.auth.getUser();
+  const rows = cloneProjectRows(items, created.projectNumber, user?.id);
+  if (rows.length) {
+    const { error } = await supabase.from('items').insert(rows);
+    if (error) {
+      await supabase.from('projects').delete().eq('project_number', created.projectNumber);
+      return { success: false, error: 'The calculations could not be copied: ' + error.message };
+    }
+  }
+  return { success: true, projectNumber: created.projectNumber, count: rows.length };
 }
 
 export async function updateProjectStatus(projectNumber, status) {
@@ -168,6 +191,15 @@ export async function saveItem({ itemId, projectNumber, module: mod, inputs, res
   }));
   if (error) throw error;
   return data || itemId;
+}
+
+// Copy of one calculation in its own project, named "<name> (copy)"; its links stay as they are
+export async function duplicateItem(item, fallbackName) {
+  const { data: { user } } = await supabase.auth.getUser();
+  const row = cloneItemRow(item, user?.id, fallbackName);
+  const { error } = await supabase.from('items').insert(row);
+  if (error) throw error;
+  return row.id;
 }
 
 export async function archiveItem(itemId) {

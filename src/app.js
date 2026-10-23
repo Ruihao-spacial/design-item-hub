@@ -193,6 +193,16 @@ async function renderCurrentView() {
       onOpenItem: (item) => navigate('item-form', { _itemId: item.id, _moduleId: null }),
       onAddItem: (moduleId) => navigate('item-form', { _itemId: null, _moduleId: moduleId }),
       onDeleted: () => { state.currentProject = null; navigate('projects'); },
+      onCloned: async (projectNumber) => {
+        await refreshProjects();
+        try {
+          state.currentProject = await getProject(projectNumber);
+          navigate('project-detail');
+        } catch (error) {
+          console.error('Failed to open cloned project:', error);
+          showToast('The project was cloned but could not be opened. Find it in the project list.', 'warning');
+        }
+      },
     });
   } else if (state.view === 'item-form') {
     await renderItemForm(main, state, {
