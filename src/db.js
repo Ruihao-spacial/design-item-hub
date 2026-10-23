@@ -1,7 +1,6 @@
 import { supabase } from './supabaseClient.js';
 import { sanitizeProjectNumber } from './utils.js';
-
-const MAX_REVISIONS = 10;
+import { buildSaveItemArgs, mapRevisionHistory } from './itemPersistence.js';
 
 // ===== projects =====
 
@@ -78,10 +77,29 @@ function mapProjectRow(row) {
 
 // ===== items =====
 
+const ITEM_SELECT = `
+  id,
+  project_number,
+  type,
+  label,
+  custom_name,
+  inputs,
+  outputs,
+  refs,
+  schema_version,
+  calc_version,
+  archived,
+  entered_by,
+  created_at,
+  updated_at,
+  entered_by_profile:profiles!items_entered_by_fkey(full_name),
+  revision_history:item_revisions(updated_at, updated_by)
+`;
+
 export async function listItems(projectNumber) {
   const { data, error } = await supabase
     .from('items')
-    .select('*, entered_by_profile:profiles!items_entered_by_fkey(full_name)')
+    .select(ITEM_SELECT)
     .eq('project_number', projectNumber)
     .order('created_at', { ascending: false });
   if (error) throw error;
@@ -91,7 +109,7 @@ export async function listItems(projectNumber) {
 export async function getItem(itemId) {
   const { data, error } = await supabase
     .from('items')
-    .select('*, entered_by_profile:profiles!items_entered_by_fkey(full_name)')
+    .select(ITEM_SELECT)
     .eq('id', itemId)
     .maybeSingle();
   if (error) throw error;
@@ -101,7 +119,7 @@ export async function getItem(itemId) {
 export async function getItemsByType(projectNumber, type) {
   const { data, error } = await supabase
     .from('items')
-    .select('*, entered_by_profile:profiles!items_entered_by_fkey(full_name)')
+    .select(ITEM_SELECT)
     .eq('project_number', projectNumber)
     .eq('type', type)
     .eq('archived', false);
@@ -138,33 +156,18 @@ export async function saveItem({ itemId, projectNumber, module: mod, inputs, res
     return data.id;
   }
 
-  const existing = await getItem(itemId);
-  const revisions = Array.isArray(existing?.revisions) ? [...existing.revisions] : [];
-  if (existing?.inputs) {
-    revisions.push({
-      inputs: existing.inputs,
-      outputs: existing.outputs,
-      updatedAt: existing.updatedAt,
-      updatedBy: existing.enteredBy,
-    });
-    while (revisions.length > MAX_REVISIONS) revisions.shift();
-  }
-
-  const { error } = await supabase
-    .from('items')
-    .update({
-      label,
-      custom_name: customName || null,
-      inputs,
-      outputs,
-      refs: inputs.refs || {},
-      schema_version: mod.schemaVersion,
-      calc_version: mod.calcVersion,
-      revisions,
-    })
-    .eq('id', itemId);
+  const { data, error } = await supabase.rpc('save_item', buildSaveItemArgs({
+    itemId,
+    label,
+    customName,
+    inputs,
+    outputs,
+    refs: inputs.refs || {},
+    schemaVersion: mod.schemaVersion,
+    calcVersion: mod.calcVersion,
+  }));
   if (error) throw error;
-  return itemId;
+  return data || itemId;
 }
 
 export async function archiveItem(itemId) {
@@ -198,7 +201,7 @@ function mapItemRow(row) {
     schemaVersion: row.schema_version,
     calcVersion: row.calc_version,
     archived: row.archived,
-    revisions: row.revisions || [],
+    revisions: mapRevisionHistory(row.revision_history),
     enteredBy: row.entered_by_profile?.full_name || '—',
     createdAt: row.created_at,
     updatedAt: row.updated_at,
