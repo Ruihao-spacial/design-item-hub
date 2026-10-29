@@ -1,21 +1,37 @@
-# Transfer Diaphragm: decisions and backlog
+# Diaphragm Analysis: decisions and backlog
 
-Branch `diaphragm-analysis` (off `master` 71cdfb5). Plan: `~/.claude/plans/read-the-md-files-composed-kite.md` (approved 2026-10-29).
+Branch `diaphragm-analysis` (off `master` 71cdfb5; module renamed from Transfer Diaphragm 2026-10-29). Plan: `~/.claude/plans/read-the-md-files-composed-kite.md` (approved 2026-10-29).
 Guide: `docs/diaphragm-analysis.md`. Book cases: `docs/diaphragm-analysis-book-cases.md`.
 
-## Next session — start here (set 2026-10-29, after Phase 2)
-**State:** Phases 0–2 committed. Local `master` = `a60be7a` (SWD v24 `5539efd` + Diaphragm Analysis `b62a98b`,
-merged locally, **not pushed**). Branch `diaphragm-analysis` = master. `npm test` green, SWD goldens identical.
-**PRs (2026-10-29):** [#5](https://github.com/Ruihao-spacial/design-item-hub/pull/5) `sw-design-data-appendix` → master
-(SWD v24) and [#6](https://github.com/Ruihao-spacial/design-item-hub/pull/6) `diaphragm-analysis` → master — merge #5 first.
-Local `master` (a60be7a) is not pushed; after the PRs merge, reset it to origin/master.
-Local DB (user, 2026-10-29): `upgrade:shearwall -- --apply` (34 SWD items now schema 13 / v24),
-`seed:cases -- --apply` (SW-VERIFY 19 items at v24), `da:seed -- --apply` (DA-BOOK, 7 items). Checked read-only.
-**Next:** Phase 3 (TD engine) — ON HOLD (user, 2026-10-29).
-- Line-length check added: SWD line `totalLength` must equal the plan length of its grid (enter → leave the
-  sheathed plan, ±0.01 ft); a mismatch is a plan error and red ✗ in the Setup line table.
+## Next session — start here (set 2026-10-29, end of session)
+**State**
+- Phases 0–2 done and committed on branch `diaphragm-analysis` (pushed). `npm test` green, build OK, no Shear Wall
+  golden changed.
+- PRs: [#5](https://github.com/Ruihao-spacial/design-item-hub/pull/5) `sw-design-data-appendix` → master (SWD v24) and
+  [#6](https://github.com/Ruihao-spacial/design-item-hub/pull/6) `diaphragm-analysis` → master. **Merge #5 first**; #6
+  contains the v24 commit.
+- Local `master` = `a60be7a` (the two merged locally, **not pushed**). After the PRs merge on GitHub:
+  `git switch master && git reset --hard origin/master` (local only), then branch Phase 3 off it.
+- Local DB (done by the user): 34 SWD items at schema 13 / v24; SW-VERIFY re-seeded (19); DA-BOOK seeded (7 items).
 
-## Earlier start-here (Phase 1)
+**Next**
+1. User: review / merge #5 then #6; look at DA-BOOK items (Plan + Verification tabs) next to the book figures.
+2. **Phase 3 — TD engine — ON HOLD** until the user says go. Scope (plan file, "Phase 3"): `src/modules/tdCalc.js`,
+   a JS port of wood-diaph-transfer; tests T01–T21 (`tests/td-cases/skill-tests.json`) + invariants; engineer inputs
+   never auto-filled; DRAFT mark; selecting a drawn TD shows its typed inputs and results.
+3. Then Phase 4 (loads, span beams, View 1) + B4 (DA runs SWD `calcAll` with its line forces → wall shares).
+
+**Open questions / notes for later phases**
+- Phase 5: one TD per side of a notch or the user's choice; load lines when an opening has 2 chords; Ex 5.1
+  Vierendeel rule (chord force 0 at mid-opening) for chords around an opening.
+- Phase 4/5: Ex 3.4 sub-diaphragm on strut line 1 → reaction into the cantilever TD (support line without walls).
+- Phase 7: Ex 3.3 offset-line distribution (stiffness-weighted position; iterate to closure; tolerance).
+- Skill author: Ex 4.3 p3 erratum (v3 = 157.14, book 167.9) — the skill's tests.yaml T05 uses the printed value.
+- Local `supabase/config.toml` `site_url` is the production URL, so local password-reset emails link to the online
+  site. Change it to `http://localhost:5173` if local resets are needed (user's call).
+- PowerShell: set `$env:SB_EMAIL` / `$env:SB_PASSWORD` before `npm run …`, and pass flags as `-- --apply`.
+
+## Earlier start-here (Phase 1, history)
 
 **State:** Phases 0 and 1 built, nothing committed on this branch. `npm test` green (incl. 16 new plan tests), `npx vite build` OK.
 - Done: skill data vendored (`npm run da:skill:build`, 21 skill tests, T4.2.2), book-case format + Ex 4.1 source,

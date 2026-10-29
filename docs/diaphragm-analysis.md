@@ -1,6 +1,6 @@
 # Diaphragm Analysis: calculator guide
 
-Module **Diaphragm Analysis**, id `diaphragm_analysis` (Phase 1 built 2026-10-29: setup, plan editor, plan checks). Companion module `shear_wall_lines` (Phase 2).
+Module **Diaphragm Analysis**, id `diaphragm_analysis` (former id `transfer_diaphragm`). Built 2026-10-29: Phases 0–2 (book cases, plan editor and checks, Shear Wall Design link). Next: Phase 3 TD engine (on hold).
 Branch `diaphragm-analysis` (off `master` 71cdfb5, 2026-10-29). Plan: `~/.claude/plans/read-the-md-files-composed-kite.md`.
 Decisions and open items: `docs/diaphragm-analysis-backlog.md`. Book cases: `docs/diaphragm-analysis-book-cases.md`.
 
