@@ -3,18 +3,124 @@
 Open items after the 2026-09-22 elevation review rounds and Phase 4 round 1 (R1–R3, 2026-09-24).
 Branches: `shearwall-load-path` (pushed, merge to `master` by someone else), `results-and-links` (G4, pushed 2026-09-24), `phase4-r1-r3` (Phase 4 round 1 + distribution + results by line; pushed 2026-09-24; CALC_VERSION v7, schema v6), `phase4-round2` (P9, R4, R6, WSWH, live loads, results / report rework; local 2026-09-28, not pushed; CALC_VERSION v9, schema v8), `sw-verification` (off phase4-round2; checks, drift sizing, solid segmented walls, calc sheet + S0–S7, verification cases, drift sizing with anchorage, verification split, F-DD1 equal-δ solver, zero-share warnings + engineer review, UI / report restructure, wind drift limit, PDF report + elevation rework, one shared elevation renderer, PDF calc sheet = tool calc sheet, drift in every method case; committed and pushed to GitHub 2026-10-01; CALC_VERSION v18, schema v12).
 
-## Next session — start here (set 2026-10-14, end of session)
+## Next session — start here (set 2026-10-27, end of session)
+**State:**
+- Branch `sw-design-data-appendix` (from `master` 71cdfb5, after PRs #3 / #4 merged): **uncommitted**, ~36 files
+  (most are golden calcVersion stamps). CALC_VERSION **v24**, schema **13**. `npm test` green, `npx vite build` OK,
+  goldens accepted (V21: SW-1 T/C 4.715 → 4.21 k, hold-down name), catalog regenerated.
+- Local DB: migrations 20261023000000 / 000001 applied (user, after a backup). SW-VERIFY was re-seeded at v23 —
+  **re-seed at v24** after the commit.
+- `backup_public_2026-10-27.sql` is untracked in the repo root — move it to `supabase/backups/` before committing.
+
+**Done 2026-10-27** (details in the entries below):
+1. PDF "Design data" appendix (Detailed only; hardware used only; `hardwareBlocks` = one source for tab + PDF).
+2. F-DD1 milder form → warning `dist_low_share` (share < capacity share, shear D/C < 0.10; V17 Line B SW-6).
+3. Nailing row 2 wind: D1 typo 1128 → 1120 (tool always 1120).
+4. WSWH: Tables 07 / 08 "by others" note; ESR-2652 covers 2021 IBC; Table 06 concrete rows α = 1.4 (assumed,
+   unused); 2nd-story hold-down = WSWH-TSS12/18/24KT (no tension check); `B_stacked_in` 8⅛ / 14 / 20 in;
+   Tables 03 (22 rows, p. 50) and 06 (33 rows, pp. 86–87) match C-L-SW26.
+5. Closed: H8, P6 (accepted). P5 kept as a known limitation. G3 reworded (floor load on beams is carried when
+   entered as a gravity row; no self-weight).
+
+**First thing next session (user):**
+1. Look at a Detailed PDF (TC-1, V21): appendix layout, column widths, ƒ / δ / ⊥ / ½ glyphs.
+2. Commit + push `sw-design-data-appendix` (on request), open a PR; then re-seed SW-VERIFY at v24.
+
+**Open:** WSWH moment arm B — on hold (user verifying; catalog findings in the ON HOLD entry).
+**Known gaps / limitations:** G3, G5, P5. **Roadmap:** U1, U2 (last), U3 Beam Calculator.
+
+**How catalog PDFs are read:** the user stores C-L-SW26 page extracts in `Shearwall design reference/PDF stored/`.
+The PDFs have no text layer; Claude extracts the page images (Flate bitmaps → PNG, small node script) and reads them.
+
+## Next session — start here (set 2026-10-14, end of session) (history)
 **State:**
 - Branch `sw-hardware-data`: committed (`cba1f9a` diaphragm docs, `5592c6b` Shear Wall) and pushed. **[PR #3](https://github.com/Ruihao-spacial/design-item-hub/pull/3)** `sw-hardware-data` → `master` open (PRs #1 / #2 already merged into `master`).
 - CALC_VERSION **v23**, schema **13**. `npm test` all green (method cases 97, wood 8, APA T555 regression unchanged); `npx vite build` OK; goldens accepted, catalog regenerated.
 - Rules now in force (Step 5 below): drift / deflection **lateral only**; Δa = δ_LRFD × T / T_LRFD (segmented), d_a × T_pier / HD_lrfd (FTAO), Δ_LRFD × V / V_LRFD (WSWH) — all at the 1.0 level; no drift LC; no stored stiffness k (one δ(V) per wall type, `deltaShare`).
 
-**First thing next session (user):**
-1. Review in the app (http://localhost:5173): a wall's calc sheet **C7** (Walls tab → Detailed → level / type / mark; scaled Δ_HD row, no gravity rows), the Distribution tab "δ at share", the Hardware tab, Summary wood settings.
-2. **Re-seed SW-VERIFY** at calc v23 (stored items still show v21 drift until recalculated); optional bulk upgrade of other items.
-3. Merge PR #3 (done by the user / someone else).
+**Update 2026-10-27:**
+- PR #3 and PR #4 (clone project / item) are merged into `master`.
+- User review **confirmed**: calc sheet C7 (scaled Δ_HD, no gravity rows), Distribution "δ at share", Hardware tab, Summary wood settings.
+- **D2 strap source (C-C2026 pp. 295–296) checked and confirmed by the user.**
+- **SW-VERIFY re-seeded at v23 (user, 2026-10-27):** checked read-only, 19 items at schema 13 / calc v23. In Windows PowerShell, run `node scripts/seedCases.mjs --apply` directly; npm can drop the `--` and `--apply` with it.
 
-**Then (open items, unchanged):** PDF "Design data" appendix; verify the D2 strap source (C-C2026 pp. 295–296); F-DD1 still present in milder form (V17 Line B SW-6 takes 0.37 k of 7 k vs ~33 % by capacity); nailing row 2 wind 1120 vs 1128 in D1.
+**PDF "Design data" appendix — DONE 2026-10-27 (branch `sw-design-data-appendix`, uncommitted; no calc / schema change). Awaiting the user's look at a Detailed PDF.**
+- **User rules:**
+  - Detailed report only, at the end, on a new page.
+  - Only the hardware the design uses, on the project's framing group.
+- **One source:** `hardwareBlocks` (shearWallHardwareTab.js) is the content list. The Hardware tab draws every table from it (screen unchanged). `hardwareAppendixSections` prints the used rows.
+- **Contents:**
+  - Each table: its source rows (document, edition, page, entered by, file, basis), then the table and its notes.
+  - Nailing, HDUE per wall width, MSTC per span, FTAO strap + nail row.
+  - WSWH rows: the tabulated heights around each panel's floor-to-floor height (`wswhRowsUsed`, which shares the bracket logic with `lookupWswh`), for the project's load type(s).
+  - The project grades only (P&T grade only when a 6x6 / 8x6 is used).
+  - Post sizes and post capacity: the posts used, at the heights where they are used.
+  - Assumptions.
+- **Not included:** WSWH anchors (Table 06). They are not on the Hardware tab either.
+- **Tests (shearWallReport.test.mjs):**
+  - Summary has no appendix.
+  - Every method case lists exactly the nailing / HDUE / MSTC / posts it uses.
+  - TC-1 HDUE5 row = the table; the FTAO strap row is listed.
+  - V21: WSWH T01–T03, seismic only, WSWH18x9 at 9 ft.
+- `npm test` green, build OK.
+
+**F-DD1 milder form — DONE 2026-10-27 (CALC_VERSION v24, same branch, uncommitted). User rule: warning only, no design change.**
+- New distribution warning `dist_low_share` (amber, with the "Engineer reviewed — OK" button). It fires when all three hold:
+  - the line uses the deflection method;
+  - the wall has a share, but less than its capacity share (V·capWeight / ΣcapWeight);
+  - its shear D/C < 0.10 (`LOW_SHARE_DC`).
+- The capacity-share condition keeps a lightly loaded story from warning (Claude's addition to the user's D/C < 0.1).
+- **Effect:** only V17 Line B SW-6 among all cases and fixtures (0.37 k of 7.00 k vs 2.23 k by capacity, D/C 0.04); the line status is WARN.
+- **Tests:** rule test R10. Goldens unchanged; catalog regenerated (version line only).
+
+**Nailing row 2 wind — CLOSED 2026-10-27:** 1120 is correct (V_n × 0.92 / 2.0 = 2435 × 0.92 / 2.0 = 1120). D1 (`FTAO/D1 shearwall_ga_table.md`) had a 1128 typo, corrected to 1120 by Claude at the user's request. No code reads D1; the tool always used 1120.
+
+**WSWH Tables 07 / 08 — CLOSED 2026-10-27 (user): not needed by the tool.**
+- The WSWH note (screen + PDF) now reads: "Anchor bolt length / HSR extension and edge shear anchorage: per Simpson details, by others (not checked by this tool)."
+- The Table 07 text is gone from the elevation anchor hover tip and from the V20 / V21 "not hand-checked" lines; catalog regenerated.
+- No calc change.
+
+**ESR-2652 / CBC 2022 — CLOSED 2026-10-27 (user checked the ESR):** it covers the 2021 IBC / IRC. The WSWH note and WSWH README §1 were updated.
+
+**ON HOLD — WSWH moment arm B (user 2026-10-27: "verify which B applies to which case; come back later"):**
+- Two B values are in use (Table 05-C):
+  - concrete: 7.625 / 12.5 / 17.5 in (WSWH12 / 18 / 24), from p. 41 n.11;
+  - raised floor: 8.125 / 14.0 / 20.0 in, from p. 47 n.8.
+- **Current tool:**
+  - concrete panel and stack base (1st story) → concrete B;
+  - raised floor → raised B;
+  - stacked 2nd-story panel (TSS rod) → `B_stacked_in` = 8.125 / 14.0 / 20.0 (cited by the user as C-L-SW26 p. 47 n.8; v24, V21 golden accepted).
+- **To verify:**
+  - which B applies to each case, especially the stacked 2nd story (p. 47 is the raised-floor page; the stacked table and its notes are on p. 50) and the stack base;
+  - whether any case's T published in Tables 01 / 02 implies a different B (the README §6 check V·H_e/B matched T within 1 % for T01 / T02).
+- **Affects:** WSWH end forces T / C, and anchor / rod selection. V21 SW-1 4.21 k; Test-123 / 29999 "4 walls, 1 line" SW-2.
+- **Catalog findings 2026-10-27** (page images in `Shearwall design reference/PDF stored/`), for the user's review:
+  - p. 90 Anchor Bolt Layout: SWH-AB centre-to-centre spacing "B" = 8⅛ / 14 / 20 in. This is the physical bolt spacing; it equals the raised-floor arm (p. 47 n.8) and the value now used for the stacked 2nd story.
+  - The concrete arm 7.625 / 12.5 / 17.5 in (p. 41 n.11) is shorter than the bolt spacing. Simpson's published concrete T values back-calculate to it: Table 01 (README §6, within 1 %) and the p. 50 first-story stacked table (M × 12 / T = 7.63 / 12.5 / 17.5 in). So the stack base on the concrete B is confirmed by p. 50.
+  - Pages 48–50 give **no B and no tension** for the 2nd-story connection. The 2nd-story panel sits on the TSS threaded rods with its own pre-attached holdowns and compression nuts, on a wood floor (like the raised floor, which uses 8⅛ / 14 / 20).
+
+**WSWH anchor α — CLOSED 2026-10-27 (user: α = 1.4):**
+- Table 06 concrete-governed rows (21 of 33): T_LRFDcap_W = T_LRFDcap_E = min(T_ASDallow × 1.4, φN_sa), nearest 5 lb. Steel rows are unchanged.
+- The reference file `06_wswh_anchor_tension_cracked.md` notes:
+  - α is not published; 1.4 is an assumed value based on interpolation;
+  - every factor used (÷ 0.7, ÷ 0.6, × 1.4, φ 0.75, A_se,N 0.606, f_uta 58 / 125);
+  - the columns are currently never used.
+- Backup of the previous file: session scratchpad. Data regenerated; no golden moved (the columns are unused); WSWH note updated.
+
+**WSWH 2nd-story hold-down = TSS kit — CLOSED 2026-10-27 (user):**
+- WSWH-TSS12/18/24KT has no published tension capacity. It works when the 2nd-story panel passes Table 03 (P₂ ≤ 2,000 lb, shear, drift).
+- `tssKitAnchor(width)` replaces the TSS rod check (`WSWH_ROD` removed): the anchorage id is the kit, there is no anchor D/C, and T is reported.
+- The WSWH notes, the elevation kit tip, the V21 hand calc and the Round2 test were updated. V21 golden accepted (anchorage name only); catalog regenerated.
+
+**WSWH Tables 03 / 06 catalog check — CLOSED 2026-10-27 (Claude, from the C-L-SW26 page images the user stored in `Shearwall design reference/PDF stored/`):**
+- Table 03: all 22 rows match p. 50. WSWH24x7 Δ_S 0.31 is as printed.
+- Table 06: all 33 cracked rows match pp. 86–87, so the edition flag is resolved.
+- WSWH README §6 and the 06 file record the check; the WSWH note was updated.
+- The page images were extracted with a small script (no text layer in the PDFs).
+
+**H8 / P5 / P6 (user 2026-10-27):** H8 closed (covered by later reviews and tests); P5 kept as a known limitation (support deflection, tied to the Beam Calculator); P6 closed as accepted (APA largest-opening rule).
+
+**Open items:** WSWH moment arm B (on hold, above — catalog findings added). W2 is otherwise closed (Table 04 skipped by the user). Known limitations: P5, G3 (beam dead load, see below). Roadmap: U1, U3.
 
 ## Hardware data — Hardware tab revision + SPF/HF (started 2026-10-13, branch `sw-hardware-data`)
 **Goal (user):** the Hardware tab shows where every value comes from; add SPF/HF values (all data are DF/SP today). The user enters all catalog data; Claude never transcribes Simpson / NDS values.
@@ -69,7 +175,7 @@ Branches: `shearwall-load-path` (pushed, merge to `master` by someone else), `re
 1. User review in the app (Hardware tab, Summary wood settings, Drift tab warnings) and of the regenerated catalog — see "Next session — start here" at the top.
 2. SW-VERIFY re-seeded by the user after v21 (verified read-only 2026-10-14: 19 items, schema 13, calc v21, DF-L / dfir_pt_no1) — **re-seed again at v23**. Optional bulk upgrade of other items to schema 13.
 3. PDF Design data appendix.
-4. Verify the D2 strap source page (C-C2026 pp. 295–296) and its values.
+4. ~~Verify the D2 strap source page (C-C2026 pp. 295–296) and its values.~~ — confirmed by the user 2026-10-27.
 
 **Review items, resolved 2026-10-13:** 6x6 / 8x6 posts now NDS 4D; C_F 8x4 1.05, 4x6 1.10; DF-L No.2 E_min 580000 (user); HDUE13 8x4 / HDUE17 6x4 minimum posts confirmed (user); the 0.92 footnote-10 factor is kept together with C_G = 0.92 for SPF/HF (user). Still as before: nailing row 2 wind 1120 vs 1128 in D1.
 
@@ -242,8 +348,8 @@ User decisions (review comments 1–3):
 | P2 | Dead load over openings — **resolved 2026-09-24** | User rule: only loads directly above the shear wall length count. Segmented piers take loads over the pier length only (loads over openings are not carried). FTAO walls take loads over the full wall length including above openings; FTAO wall self-weight excludes the opening areas. |
 | P3 | FTAO jamb posts — **resolved 2026-09-24** | Sized for compression per the Diekmann pier chord (user): C = f_D·DL + v_i·h_o (ASD; f_D = 1 + 0.14SDS seismic, 1.0 wind). DL = half the adjacent pier's DL + half the header DL above the opening. Lightest (2)2x-or-heavier post of the line thickness; override applies to all jambs. Jamb areas feed the FTAO deflection. |
 | P4 | Drift = largest wall δ per line and level | **Distribution choice added 2026-09-24:** project default + per-line dropdown, Wall capacity (SDPWS 4.3.3.4.1) or Deflection (equal δ at each level, shares ∝ k = V/δ from SDPWS Eq. 4.3-1 at 1.0E / 1.0W, iterated from capacity shares until the walls’ δ at every level are within 5% ((δmax − δmin)/δmax), max 20 passes, else the closest pass is used and flagged; FTAO walls use the engine δ). `solveDistribution` in `shearWallCalc.js`, CALC_VERSION v7. Drift still reports the largest wall δ (equal under the deflection approach). **Superseded 2026-09-30 (calc v14, F-DD1):** the k = V/δ iteration and the 5 % spread test are replaced by a direct equal-δ solve on the unchanged Eq. 4.3-1 (shares where every wall gives the same δ*, Σ V = V; zero share + note when a wall is displaced more than δ* by the forces from above). |
-| P5 | Walls on beams / posts | Support deflection is not included in the wall deflection (noted in the table). |
-| P6 | FTAO with unequal opening heights | Engine analyzes the whole wall at the governing opening (APA largest-opening rule); straps drawn at the highest head and lowest sill. |
+| P5 | Walls on beams / posts — **KNOWN LIMITATION (user 2026-10-27)** | Support deflection is not included in the wall deflection (noted in the table). Tied to the Beam Calculator (U3): it needs the beam E·I. |
+| P6 | FTAO with unequal opening heights — **CLOSED, accepted (user 2026-10-27)** | Engine analyzes the whole wall at the governing opening (APA largest-opening rule, conservative); straps drawn at the highest head and lowest sill. |
 | P7 | Wind deflection | Only when the service factor α_s is entered; report only (no limit). |
 | P8 | FTAO hold-down | Wall-end T/C and hardware use the usual net formula with dead load over L_wall; the engine's gross H (no dead load) is shown as a reference. |
 | P9 | HDUE minimum post — **done 2026-09-28 (`phase4-round2`)**: posts at holdown ends never below the catalog minPost; override lists hide smaller posts; a stored smaller override is replaced and flagged | HDUE catalog lists (2)2x4 / (2)2x6 minimum post for every HDUE, but post auto-select can pick a single 2x4 at a holdown end. Found 2026-09-24 while tracing the deflection distribution (single 2x4 roughly doubles the bending term and triples plate crushing, so δ jumps). Proposed: holdown ends never below the HDUE minPost. |
@@ -251,7 +357,7 @@ User decisions (review comments 1–3):
 ## Known gaps (found in review, not fixed)
 | # | Item | Where | Notes |
 |---|---|---|---|
-| G3 | Beam reactions exclude floor gravity load | `shearWallLoadPath.js` | By design for now. **Note for the future Beam Calculator module:** consume Shear Wall `beamTransfers[].supports[]` (per-combo reactions, loads on the beam) through the existing `refs` / `extract` mechanism, add floor gravity (DL / LL tributary) and do the sizing there. Then decide whether the beam's reactions should flow back into the shear wall load path (support posts). Ties to R7. |
+| G3 | Transfer beams: no self-weight; floor load only when entered as a gravity row (reworded 2026-10-27) | `shearWallGravity.js` `gravityToElements`, `shearWallLoadPath.js` | **Carried (since G6, 2026-09-28; checked 2026-10-27):**<br>- Gravity rows (point / full / partial, D / L / Lr, incl. Flat Load psf × trib) entered in the rows of the story **below** the beam's floor line. A beam at Level n sits on the top floor line of story n−1, so enter that floor in story n−1's rows.<br>- The part of a row over the beam span goes to the beam (a uniform piece at its centroid, exact for two supports), is split to the two end reactions by statics in every combination, and goes down the support posts.<br>- Check: beam 0–10 ft, 200 plf D over 6–14 ft → 0.8 k at 8 ft → R 0.16 / 0.64 k, posts 0.16 / 0.64 k; 10–14 ft flagged "not carried". Test: `tests/shearWallLiveLoad.test.mjs` "Transfer beam carries the gravity…".<br>**Not carried (known gap):**<br>- the beam's self-weight (no beam size in this tool);<br>- floor load not entered as a gravity row;<br>- top-story (roof) rows never reach a beam (no beams at the roof line);<br>- beam design (bending, shear, deflection; support deflection = P5).<br>**Effect:** dead load left out is conservative for uplift (holdowns / straps), unconservative for compression (support posts, bearing). **Note for the future Beam Calculator module:** consume Shear Wall `beamTransfers[].supports[]` (per-combo reactions, loads on the beam) through the existing `refs` / `extract` mechanism, add floor gravity (DL / LL tributary) and do the sizing there. Then decide whether the beam's reactions should flow back into the shear wall load path (support posts). Ties to R7. |
 | G5 | Page-level recalculate-on-open path not exercised in automated tests | `itemForm.js` imports `db.js` (Vite env) | Accepted as-is (2026-09-22). Covered by build + code review + `scripts/lib/shearWallLoadCheck.mjs`. |
 
 ## Done / fixed
@@ -295,9 +401,9 @@ User decisions (review comments 1–3):
 | W1 | Simpson Strong-Wall WSWH wall type — **done 2026-09-28** | Tables from Shared Drive `Shearwall design reference/WSWH` (01–06; `nominal_ft` column added) via `scripts/buildWswhData.mjs`. Conditions concrete / raised floor / two-story stacked; width picked by user; nominal height = floor-to-floor (interpolated); P = combo-factored D; mixes with sheathed walls under either distribution; Table 06 anchors (smallest W, then d_e; SDC + detached dwelling); stacked 2nd story checked against the TSS rod. |
 | G6 | Live load / roof live load — **done 2026-09-28 (aa7d508)** | Gravity rows point / full line / partial with D, L, Lr (schema v8); Flat Load assembly × trib link; all ASCE 7-22 ASD + LRFD combos (shearWallCombos.js) with optional LRFD 0.5L; gravity on transfer beams and post tops carried down; support post members max(ASD, Ω₀ ASD); FTAO jambs and WSWH P include L; calc detail documents every load and the end forces of every combination. CALC_VERSION v9. Open: beam member design (R7); S / R not tracked. |
 | G7 | Line results / report rework — **done 2026-09-28 (4ab70d1)** | Tabs Distribution · Walls · Load path · Drift · LRFD · Ω₀. Distribution: capacity-method table, or the deflection-method final pass with the stiffness basis (Eq. 4.3-1 terms / WSWH table / FTAO engine). Walls: Summary (schedule + overturning table) or Detailed (each wall's calc by type, with an Overturning section). PDF report setting Summary / Detailed (calc sheet per wall). |
-| H8 | App test of `phase4-round2` — **pending** | P9, Ω₀ + design basis, dead load by statics, WSWH (demo item in Test 123), live loads / psf × trib / Flat Load link, Distribution tab, Summary / Detailed report, PDF. |
+| H8 | App test of `phase4-round2` — **CLOSED 2026-10-27 (user): covered by the later reviews, method cases and rule tests** | P9, Ω₀ + design basis, dead load by statics, WSWH (demo item in Test 123), live loads / psf × trib / Flat Load link, Distribution tab, Summary / Detailed report, PDF. |
 | T1 | Test module for the design calculator — **built 2026-09-29; F-DD1 resolved 2026-09-30** | Branch `sw-verification` (local, not committed): G1–G12 checks, drift sizing, solid segmented walls, calc sheet + S0–S7, verification cases V01–V22 (all pass) — see "Verification test cases V01–V22" below. Split 2026-09-30 into method cases / rule tests / goldens; F-DD1 fixed (calc v14). Remaining: the user's review of the catalog. |
-| W2 | WSWH open items | Table 07 (bolt length l_e, HSR extension) and Table 08 (edge shear anchorage) not in the folder. Table 04 (out-of-plane / axial) skipped by user. Stacked 2nd-story rod arm uses the concrete B — confirm for the TSS kit. Stacked base capacity weight in the capacity distribution = V₀ (the moment check governs D/C). Confirm ESR-2652 lists the 2021 IBC (CBC 2022) and Simpson's α for concrete-governed LRFD anchor rows. Spot-check Tables 03 / 06 against the catalog. |
+| W2 | WSWH open items | ~~Tables 07 / 08~~ closed 2026-10-27 (user): not needed by the tool; one note "per Simpson details, by others (not checked by this tool)". Table 04 (out-of-plane / axial) skipped by user. ~~Stacked 2nd-story rod arm~~ closed 2026-10-27: B_stacked_in = 8.125 / 14.0 / 20.0 in (WSWH12 / 18 / 24), C-L-SW26 p. 47 n.8 (user), Table 05-C; calc v24. Open: WSWH-MSKHD holdown capacity at the 2nd story (only the TSS rod steel limit is checked). Stacked base capacity weight in the capacity distribution = V₀ (the moment check governs D/C). Confirm ESR-2652 lists the 2021 IBC (CBC 2022) and Simpson's α for concrete-governed LRFD anchor rows. Spot-check Tables 03 / 06 against the catalog. |
 | R7 | Optional beam sizing | Planned as a separate Beam Calculator module linked to the shear wall beam reactions (see G3). |
 
 ## Done 2026-09-29 (branch `sw-verification`, local, not committed) — schema v10, calc v11

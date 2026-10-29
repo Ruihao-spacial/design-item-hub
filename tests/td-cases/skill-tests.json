@@ -1,0 +1,1465 @@
+{
+  "generatedFrom": "design-skills/skills/wood-diaph-transfer/tests.yaml",
+  "skill": "wood-diaph-transfer",
+  "skillVersion": "0.2.0",
+  "skillStatus": "TESTED",
+  "schemaVersion": "1.1.0",
+  "tests": [
+    {
+      "id": "T01",
+      "kind": "reference",
+      "source": {
+        "id": "EX-IRREG-2E",
+        "ref": "Example 4.1, TD1 (Figs 4.2-4.4)"
+      },
+      "edition": "CBC-2025",
+      "inputs": {
+        "code_edition": "CBC-2025",
+        "design_basis": "ASD",
+        "load_type": "wind",
+        "diaph_sheathing_type": "wsp",
+        "td_blocked": true,
+        "td_support": "simple",
+        "td_span": 50,
+        "td_length": 15,
+        "td_P1": 5062.5,
+        "td_side1": 1,
+        "td_y1": 10,
+        "td_has_load2": false,
+        "td_P2": 0,
+        "td_side2": 1,
+        "td_y2": 0,
+        "td_vb_x1_top": 300,
+        "td_vb_x1_y1": 300,
+        "td_vb_x1_y2": 300,
+        "td_vb_x1_bot": 300,
+        "td_vb_x2_top": 240,
+        "td_vb_x2_y1": 240,
+        "td_vb_x2_y2": 240,
+        "td_vb_x2_bot": 240,
+        "td_vo_x1_s1_hi": 300,
+        "td_vo_x1_s1_lo": 300,
+        "td_vo_x1_s2_hi": 0,
+        "td_vo_x1_s2_lo": 0,
+        "td_vo_x1_s3_hi": 300,
+        "td_vo_x1_s3_lo": 300,
+        "td_vo_x2_s1_hi": 300,
+        "td_vo_x2_s1_lo": 300,
+        "td_vo_x2_s2_hi": 0,
+        "td_vo_x2_s2_lo": 0,
+        "td_vo_x2_s3_hi": 0,
+        "td_vo_x2_s3_lo": 0
+      },
+      "engineer_inputs": {
+        "td_region_clear": true,
+        "td_closure_tol": 0.01
+      },
+      "expected": {
+        "outputs": {
+          "td_F_sup_top": 1012.5,
+          "td_F_sup_bot": 4050,
+          "td_v_s1": 67.5,
+          "td_v_s3": -270,
+          "td_vnet_x1_s1_hi": 367.5,
+          "td_vnet_x2_s1_hi": 307.5,
+          "td_vnet_x1_s3_lo": 30,
+          "td_vnet_x2_s3_lo": -30,
+          "td_N_x2_b1": 300,
+          "td_Nlong_1": 5062.5,
+          "td_aspect": 3.333,
+          "td_blocking_required": true
+        },
+        "flags": [
+          "W_TD_BLOCKING_REQUIRED"
+        ],
+        "terminal": "OUTPUT"
+      },
+      "tolerance": {
+        "default_rel": 0.01,
+        "default_abs": 1
+      },
+      "verify": "UNVERIFIED",
+      "note": "Grid-1 member forces are not quantified in the book and are not asserted."
+    },
+    {
+      "id": "T02",
+      "kind": "reference",
+      "source": {
+        "id": "EX-IRREG-2E",
+        "ref": "Example 4.1, TD2 (Figs 4.2-4.4)"
+      },
+      "edition": "CBC-2025",
+      "inputs": {
+        "code_edition": "CBC-2025",
+        "design_basis": "ASD",
+        "load_type": "wind",
+        "diaph_sheathing_type": "wsp",
+        "td_blocked": true,
+        "td_support": "simple",
+        "td_span": 50,
+        "td_length": 15,
+        "td_P1": -10062.5,
+        "td_side1": -1,
+        "td_y1": 10,
+        "td_has_load2": false,
+        "td_P2": 0,
+        "td_side2": 1,
+        "td_y2": 0,
+        "td_vb_x1_top": 160,
+        "td_vb_x1_y1": 160,
+        "td_vb_x1_y2": 160,
+        "td_vb_x1_bot": 160,
+        "td_vb_x2_top": 100,
+        "td_vb_x2_y1": 100,
+        "td_vb_x2_y2": 100,
+        "td_vb_x2_bot": 100,
+        "td_vo_x1_s1_hi": 200,
+        "td_vo_x1_s1_lo": 200,
+        "td_vo_x1_s2_hi": 0,
+        "td_vo_x1_s2_lo": 0,
+        "td_vo_x1_s3_hi": 0,
+        "td_vo_x1_s3_lo": 0,
+        "td_vo_x2_s1_hi": 100,
+        "td_vo_x2_s1_lo": 100,
+        "td_vo_x2_s2_hi": 0,
+        "td_vo_x2_s2_lo": 0,
+        "td_vo_x2_s3_hi": 100,
+        "td_vo_x2_s3_lo": 100
+      },
+      "engineer_inputs": {
+        "td_region_clear": true,
+        "td_closure_tol": 0.01
+      },
+      "expected": {
+        "outputs": {
+          "td_F_sup_top": -2012.5,
+          "td_F_sup_bot": -8050,
+          "td_v_s1": -134.2,
+          "td_v_s3": 536.7,
+          "td_vnet_x1_s1_hi": 25.8,
+          "td_vnet_x1_s3_lo": 696.7,
+          "td_vnet_x2_s1_hi": -34.2,
+          "td_vnet_x2_s3_lo": 636.7,
+          "td_N_x1_b1": 6968,
+          "td_N_x2_b1": -5368,
+          "td_Nlong_1": 10062.5
+        },
+        "flags": [
+          "W_TD_BLOCKING_REQUIRED"
+        ],
+        "terminal": "OUTPUT"
+      },
+      "tolerance": {
+        "default_rel": 0.01,
+        "default_abs": 1
+      },
+      "verify": "UNVERIFIED",
+      "note": "Book p6 right-TD table duplicates the left-TD table (erratum); p7 values used."
+    },
+    {
+      "id": "T03",
+      "kind": "reference",
+      "source": {
+        "id": "EX-IRREG-2E",
+        "ref": "Example 3.5, TD1 (Figs 3.28, 3.29, 3.31)"
+      },
+      "edition": "CBC-2025",
+      "inputs": {
+        "code_edition": "CBC-2025",
+        "design_basis": "ASD",
+        "load_type": "wind",
+        "diaph_sheathing_type": "wsp",
+        "td_blocked": true,
+        "td_support": "simple",
+        "td_span": 50,
+        "td_length": 15,
+        "td_P1": -8889,
+        "td_side1": -1,
+        "td_y1": 14,
+        "td_has_load2": false,
+        "td_P2": 0,
+        "td_side2": 1,
+        "td_y2": 0,
+        "td_vb_x1_top": 80,
+        "td_vb_x1_y1": 80,
+        "td_vb_x1_y2": 80,
+        "td_vb_x1_bot": 80,
+        "td_vb_x2_top": 20,
+        "td_vb_x2_y1": 20,
+        "td_vb_x2_y2": 20,
+        "td_vb_x2_bot": 20,
+        "td_vo_x1_s1_hi": 111.1,
+        "td_vo_x1_s1_lo": 111.1,
+        "td_vo_x1_s2_hi": 0,
+        "td_vo_x1_s2_lo": 0,
+        "td_vo_x1_s3_hi": 0,
+        "td_vo_x1_s3_lo": 0,
+        "td_vo_x2_s1_hi": 20,
+        "td_vo_x2_s1_lo": 20,
+        "td_vo_x2_s2_hi": 0,
+        "td_vo_x2_s2_lo": 0,
+        "td_vo_x2_s3_hi": 20,
+        "td_vo_x2_s3_lo": 20
+      },
+      "engineer_inputs": {
+        "td_region_clear": true,
+        "td_closure_tol": 0.01
+      },
+      "expected": {
+        "outputs": {
+          "td_F_sup_top": -2489,
+          "td_F_sup_bot": -6400,
+          "td_v_s1": -165.9,
+          "td_v_s3": 426.7,
+          "td_vnet_x1_s1_hi": -85.9,
+          "td_vnet_x1_s3_lo": 506.7,
+          "td_vnet_x2_s1_hi": -145.9,
+          "td_vnet_x2_s3_lo": 446.7,
+          "td_N_x1_b1": 7092,
+          "td_N_x2_b1": -5972.4,
+          "td_Nlong_1": 8889
+        },
+        "flags": [
+          "W_TD_BLOCKING_REQUIRED"
+        ],
+        "terminal": "OUTPUT"
+      },
+      "tolerance": {
+        "default_rel": 0.01,
+        "default_abs": 1
+      },
+      "verify": "UNVERIFIED"
+    },
+    {
+      "id": "T04",
+      "kind": "reference",
+      "source": {
+        "id": "EX-IRREG-2E",
+        "ref": "Example 3.5, TD2 (Figs 3.28, 3.29, 3.31)"
+      },
+      "edition": "CBC-2025",
+      "inputs": {
+        "code_edition": "CBC-2025",
+        "design_basis": "ASD",
+        "load_type": "seismic",
+        "diaph_sheathing_type": "wsp",
+        "td_blocked": true,
+        "td_support": "simple",
+        "td_span": 50,
+        "td_length": 15,
+        "td_P1": -13500,
+        "td_side1": 1,
+        "td_y1": 20,
+        "td_has_load2": false,
+        "td_P2": 0,
+        "td_side2": 1,
+        "td_y2": 0,
+        "td_vb_x1_top": -60,
+        "td_vb_x1_y1": -60,
+        "td_vb_x1_y2": -60,
+        "td_vb_x1_bot": -60,
+        "td_vb_x2_top": -120,
+        "td_vb_x2_y1": -120,
+        "td_vb_x2_y2": -120,
+        "td_vb_x2_bot": -120,
+        "td_vo_x1_s1_hi": -60,
+        "td_vo_x1_s1_lo": -60,
+        "td_vo_x1_s2_hi": 0,
+        "td_vo_x1_s2_lo": 0,
+        "td_vo_x1_s3_hi": -60,
+        "td_vo_x1_s3_lo": -60,
+        "td_vo_x2_s1_hi": 0,
+        "td_vo_x2_s1_lo": 0,
+        "td_vo_x2_s2_hi": 0,
+        "td_vo_x2_s2_lo": 0,
+        "td_vo_x2_s3_hi": -300,
+        "td_vo_x2_s3_lo": -300
+      },
+      "engineer_inputs": {
+        "td_region_clear": true,
+        "td_closure_tol": 0.01
+      },
+      "expected": {
+        "outputs": {
+          "td_F_sup_top": -5400,
+          "td_F_sup_bot": -8100,
+          "td_v_s1": -360,
+          "td_v_s3": 540,
+          "td_vnet_x1_s1_hi": -420,
+          "td_vnet_x1_s3_lo": 480,
+          "td_vnet_x2_s1_hi": -480,
+          "td_vnet_x2_s3_lo": 420,
+          "td_N_x1_b1": 10800,
+          "td_N_x2_b1": -14400,
+          "td_Nlong_1": -13500,
+          "td_vnet_absmax": 480
+        },
+        "flags": [
+          "W_TD_BLOCKING_REQUIRED",
+          "W_SEISMIC_COLLECTOR_AMPLIFICATION"
+        ],
+        "terminal": "OUTPUT"
+      },
+      "tolerance": {
+        "default_rel": 0.01,
+        "default_abs": 1
+      },
+      "verify": "UNVERIFIED"
+    },
+    {
+      "id": "T05",
+      "kind": "reference",
+      "source": {
+        "id": "EX-IRREG-2E",
+        "ref": "Example 4.3, TD1 (Figs 4.14-4.16)"
+      },
+      "edition": "CBC-2025",
+      "inputs": {
+        "code_edition": "CBC-2025",
+        "design_basis": "ASD",
+        "load_type": "wind",
+        "diaph_sheathing_type": "wsp",
+        "td_blocked": true,
+        "td_support": "simple",
+        "td_span": 56,
+        "td_length": 15,
+        "td_P1": -5600,
+        "td_side1": -1,
+        "td_y1": 34,
+        "td_has_load2": true,
+        "td_P2": 5700,
+        "td_side2": -1,
+        "td_y2": 16,
+        "td_vb_x1_top": 210.7,
+        "td_vb_x1_y1": 210.7,
+        "td_vb_x1_y2": 210.7,
+        "td_vb_x1_bot": 210.7,
+        "td_vb_x2_top": 167.9,
+        "td_vb_x2_y1": 167.9,
+        "td_vb_x2_y2": 167.9,
+        "td_vb_x2_bot": 167.9,
+        "td_vo_x1_s1_hi": 305.3,
+        "td_vo_x1_s1_lo": 305.3,
+        "td_vo_x1_s2_hi": 0,
+        "td_vo_x1_s2_lo": 0,
+        "td_vo_x1_s3_hi": 317.8,
+        "td_vo_x1_s3_lo": 317.8,
+        "td_vo_x2_s1_hi": 167.9,
+        "td_vo_x2_s1_lo": 167.9,
+        "td_vo_x2_s2_hi": 167.9,
+        "td_vo_x2_s2_lo": 167.9,
+        "td_vo_x2_s3_hi": 167.9,
+        "td_vo_x2_s3_lo": 167.9
+      },
+      "engineer_inputs": {
+        "td_region_clear": true,
+        "td_closure_tol": 0.01
+      },
+      "expected": {
+        "outputs": {
+          "td_F_sup_top": -1771.4,
+          "td_F_sup_bot": 1871.4,
+          "td_v_s1": -118.1,
+          "td_v_s2": 255.24,
+          "td_v_s3": -124.8,
+          "td_vnet_x1_s1_hi": 92.6,
+          "td_vnet_x1_s2_hi": 465.9,
+          "td_vnet_x1_s3_lo": 86.5,
+          "td_vnet_x2_s1_hi": 49.8,
+          "td_vnet_x2_s2_hi": 423.1,
+          "td_vnet_x2_s3_lo": 43.7,
+          "td_N_x1_b1": 4679.4,
+          "td_N_x1_b2": -3706.8,
+          "td_N_x2_b1": -2598.2,
+          "td_N_x2_b2": 1995.4,
+          "td_Nlong_1": 5600,
+          "td_Nlong_2": -5700
+        },
+        "flags": [
+          "W_TD_BLOCKING_REQUIRED"
+        ],
+        "terminal": "OUTPUT"
+      },
+      "tolerance": {
+        "default_rel": 0.01,
+        "default_abs": 1,
+        "overrides": {
+          "td_vnet_x1_s3_lo": 0.015,
+          "td_vnet_x2_s3_lo": 0.015
+        }
+      },
+      "verify": "UNVERIFIED",
+      "note": "Book p5 computes v_D = -124.8 plf, then uses 124.2 in the net-shear table (erratum). Overrides cover the 0.6 plf difference. Book closure residuals (6, 8.2 lb) carry the erratum and are not asserted."
+    },
+    {
+      "id": "T06",
+      "kind": "reference",
+      "source": {
+        "id": "EX-IRREG-2E",
+        "ref": "Example 5.1, TD1 (Figs 5.8, 5.9)"
+      },
+      "edition": "CBC-2025",
+      "inputs": {
+        "code_edition": "CBC-2025",
+        "design_basis": "ASD",
+        "load_type": "wind",
+        "diaph_sheathing_type": "wsp",
+        "td_blocked": true,
+        "td_support": "simple",
+        "td_span": 50,
+        "td_length": 15,
+        "td_P1": -6441.4,
+        "td_side1": 1,
+        "td_y1": 40,
+        "td_has_load2": true,
+        "td_P2": 4824.2,
+        "td_side2": 1,
+        "td_y2": 16,
+        "td_vb_x1_top": 320,
+        "td_vb_x1_y1": 320,
+        "td_vb_x1_y2": 320,
+        "td_vb_x1_bot": 320,
+        "td_vb_x2_top": 260,
+        "td_vb_x2_y1": 260,
+        "td_vb_x2_y2": 260,
+        "td_vb_x2_bot": 260,
+        "td_vo_x1_s1_hi": 320,
+        "td_vo_x1_s1_lo": 320,
+        "td_vo_x1_s2_hi": 320,
+        "td_vo_x1_s2_lo": 320,
+        "td_vo_x1_s3_hi": 320,
+        "td_vo_x1_s3_lo": 320,
+        "td_vo_x2_s1_hi": 610.6,
+        "td_vo_x2_s1_lo": 610.6,
+        "td_vo_x2_s2_hi": 0,
+        "td_vo_x2_s2_lo": 0,
+        "td_vo_x2_s3_hi": 430.9,
+        "td_vo_x2_s3_lo": 430.9
+      },
+      "engineer_inputs": {
+        "td_region_clear": true,
+        "td_closure_tol": 0.01
+      },
+      "expected": {
+        "outputs": {
+          "td_F_sup_top": -3609.4,
+          "td_F_sup_bot": 1992.2,
+          "td_v_s1": -240.6,
+          "td_v_s2": 188.8,
+          "td_v_s3": -132.8,
+          "td_vnet_x1_s1_hi": 79.4,
+          "td_vnet_x1_s2_hi": 508.8,
+          "td_vnet_x1_s3_lo": 187.2,
+          "td_vnet_x2_s1_hi": 19.4,
+          "td_vnet_x2_s2_hi": 448.8,
+          "td_vnet_x2_s3_lo": 127.2,
+          "td_N_x2_b1": -5912,
+          "td_N_x2_b2": 4859.2,
+          "td_Nlong_1": -6441.4,
+          "td_Nlong_2": 4824.2
+        },
+        "flags": [
+          "W_TD_BLOCKING_REQUIRED"
+        ],
+        "terminal": "OUTPUT"
+      },
+      "tolerance": {
+        "default_rel": 0.01,
+        "default_abs": 1
+      },
+      "verify": "UNVERIFIED",
+      "note": "Book p19 prints the V_D multiplier as 1/16; the result 1992.2 matches 1/50 (erratum)."
+    },
+    {
+      "id": "T07",
+      "kind": "reference",
+      "source": {
+        "id": "EX-IRREG-2E",
+        "ref": "Example 5.1, TD2 (Figs 5.8, 5.10)"
+      },
+      "edition": "CBC-2025",
+      "inputs": {
+        "code_edition": "CBC-2025",
+        "design_basis": "ASD",
+        "load_type": "wind",
+        "diaph_sheathing_type": "wsp",
+        "td_blocked": true,
+        "td_support": "simple",
+        "td_span": 50,
+        "td_length": 15,
+        "td_P1": -4670.1,
+        "td_side1": -1,
+        "td_y1": 40,
+        "td_has_load2": true,
+        "td_P2": 4131.2,
+        "td_side2": -1,
+        "td_y2": 16,
+        "td_vb_x1_top": 164,
+        "td_vb_x1_y1": 164,
+        "td_vb_x1_y2": 164,
+        "td_vb_x1_bot": 164,
+        "td_vb_x2_top": 104,
+        "td_vb_x2_y1": 104,
+        "td_vb_x2_y2": 104,
+        "td_vb_x2_bot": 104,
+        "td_vo_x1_s1_hi": 315.4,
+        "td_vo_x1_s1_lo": 315.4,
+        "td_vo_x1_s2_hi": 0,
+        "td_vo_x1_s2_lo": 0,
+        "td_vo_x1_s3_hi": 315.4,
+        "td_vo_x1_s3_lo": 315.4,
+        "td_vo_x2_s1_hi": 104,
+        "td_vo_x2_s1_lo": 104,
+        "td_vo_x2_s2_hi": 104,
+        "td_vo_x2_s2_lo": 104,
+        "td_vo_x2_s3_hi": 104,
+        "td_vo_x2_s3_lo": 104
+      },
+      "engineer_inputs": {
+        "td_region_clear": true,
+        "td_closure_tol": 0.01
+      },
+      "expected": {
+        "outputs": {
+          "td_F_sup_top": -2414.1,
+          "td_F_sup_bot": 1875.2,
+          "td_v_s1": -160.9,
+          "td_v_s2": 150.4,
+          "td_v_s3": -125,
+          "td_vnet_x1_s1_hi": 3.1,
+          "td_vnet_x1_s2_hi": 314.4,
+          "td_vnet_x1_s3_lo": 39,
+          "td_vnet_x2_s1_hi": -56.9,
+          "td_vnet_x2_s2_hi": 254.4,
+          "td_vnet_x2_s3_lo": -21,
+          "td_N_x1_b1": 3123.2,
+          "td_N_x1_b2": -4422.4,
+          "td_N_x2_b1": -1609.6,
+          "td_N_x2_b2": 2000
+        },
+        "flags": [
+          "W_TD_BLOCKING_REQUIRED"
+        ],
+        "terminal": "OUTPUT"
+      },
+      "tolerance": {
+        "default_rel": 0.01,
+        "default_abs": 1
+      },
+      "verify": "UNVERIFIED",
+      "note": "Book tabulates grid 4-5 member forces as running sums from grid D with no T/C label. Magnitudes are book values; senses follow the skill convention, which test_invariants.py checks independently (beam-chord and mirror tests). EOR to confirm."
+    },
+    {
+      "id": "T08",
+      "kind": "reference",
+      "source": {
+        "id": "EX-IRREG-2E",
+        "ref": "Example 3.4, propped-cantilever TD (Figs 3.23-3.26)"
+      },
+      "edition": "CBC-2025",
+      "inputs": {
+        "code_edition": "CBC-2025",
+        "design_basis": "ASD",
+        "load_type": "wind",
+        "diaph_sheathing_type": "wsp",
+        "td_blocked": true,
+        "td_support": "cantilever",
+        "td_span": 60,
+        "td_length": 20,
+        "td_P1": -4620,
+        "td_side1": 1,
+        "td_y1": -15,
+        "td_has_load2": false,
+        "td_P2": 0,
+        "td_side2": 1,
+        "td_y2": 0,
+        "td_vb_x1_top": -79.5,
+        "td_vb_x1_bot": 40.5,
+        "td_vb_x1_y1": 115.5,
+        "td_vb_x1_y2": 0,
+        "td_vb_x2_top": -79.5,
+        "td_vb_x2_bot": 40.5,
+        "td_vb_x2_y1": 115.5,
+        "td_vb_x2_y2": 0,
+        "td_vo_x1_s1_hi": -60,
+        "td_vo_x1_s1_lo": 60,
+        "td_vo_x1_s2_hi": 0,
+        "td_vo_x1_s2_lo": 0,
+        "td_vo_x1_s3_hi": 0,
+        "td_vo_x1_s3_lo": 0,
+        "td_vo_x2_s1_hi": -79.5,
+        "td_vo_x2_s1_lo": 40.5,
+        "td_vo_x2_s2_hi": 0,
+        "td_vo_x2_s2_lo": 0,
+        "td_vo_x2_s3_hi": 40.5,
+        "td_vo_x2_s3_lo": 115.5
+      },
+      "engineer_inputs": {
+        "td_region_clear": true,
+        "td_cantilever_ok": true,
+        "td_closure_tol": 0.01
+      },
+      "expected": {
+        "outputs": {
+          "td_F_sup_top": 1155,
+          "td_F_sup_bot": -5775,
+          "td_v_s1": 57.75,
+          "td_v_s3": -231,
+          "td_vnet_x1_s1_hi": -21.75,
+          "td_vnet_x1_s1_lo": 98.25,
+          "td_vnet_x1_s3_hi": -190.5,
+          "td_vnet_x1_s3_lo": -115.5,
+          "td_vnet_x2_s1_hi": -21.75,
+          "td_vnet_x2_s1_lo": 98.25,
+          "td_vnet_x2_s3_hi": -190.5,
+          "td_vnet_x2_s3_lo": -115.5,
+          "td_N_x1_b1": -2295,
+          "td_N_x2_b1": 3465,
+          "td_Nlong_1": -2310,
+          "td_aspect": 3,
+          "td_blocking_required": false
+        },
+        "flags": [],
+        "terminal": "OUTPUT"
+      },
+      "tolerance": {
+        "default_rel": 0.01,
+        "default_abs": 1
+      },
+      "verify": "UNVERIFIED",
+      "note": "Book chord senses: B tension 3465, C compression 2295, strut 1B compression 2310, collector 2 = 5775 compression. Book does not address blocking for this TD."
+    },
+    {
+      "id": "T09",
+      "kind": "boundary",
+      "source": {
+        "id": "EOR-hand-calc",
+        "ref": "T01 with TD length 10 ft (aspect 5.0)"
+      },
+      "edition": "CBC-2025",
+      "inputs": {
+        "code_edition": "CBC-2025",
+        "design_basis": "ASD",
+        "load_type": "wind",
+        "diaph_sheathing_type": "wsp",
+        "td_blocked": true,
+        "td_support": "simple",
+        "td_span": 50,
+        "td_length": 10,
+        "td_P1": 5062.5,
+        "td_side1": 1,
+        "td_y1": 10,
+        "td_has_load2": false,
+        "td_P2": 0,
+        "td_side2": 1,
+        "td_y2": 0,
+        "td_vb_x1_top": 300,
+        "td_vb_x1_y1": 300,
+        "td_vb_x1_y2": 300,
+        "td_vb_x1_bot": 300,
+        "td_vb_x2_top": 240,
+        "td_vb_x2_y1": 240,
+        "td_vb_x2_y2": 240,
+        "td_vb_x2_bot": 240,
+        "td_vo_x1_s1_hi": 300,
+        "td_vo_x1_s1_lo": 300,
+        "td_vo_x1_s2_hi": 0,
+        "td_vo_x1_s2_lo": 0,
+        "td_vo_x1_s3_hi": 300,
+        "td_vo_x1_s3_lo": 300,
+        "td_vo_x2_s1_hi": 300,
+        "td_vo_x2_s1_lo": 300,
+        "td_vo_x2_s2_hi": 0,
+        "td_vo_x2_s2_lo": 0,
+        "td_vo_x2_s3_hi": 0,
+        "td_vo_x2_s3_lo": 0
+      },
+      "engineer_inputs": {
+        "td_region_clear": true,
+        "td_closure_tol": 0.01
+      },
+      "expected": {
+        "outputs": {},
+        "flags": [
+          "E_TD_ASPECT"
+        ],
+        "terminal": "HARD_STOP:E_TD_ASPECT"
+      },
+      "tolerance": {
+        "default_rel": 0.01,
+        "default_abs": 1
+      },
+      "verify": "UNVERIFIED"
+    },
+    {
+      "id": "T10",
+      "kind": "boundary",
+      "source": {
+        "id": "EOR-hand-calc",
+        "ref": "T01 with region not clear"
+      },
+      "edition": "CBC-2025",
+      "inputs": {
+        "code_edition": "CBC-2025",
+        "design_basis": "ASD",
+        "load_type": "wind",
+        "diaph_sheathing_type": "wsp",
+        "td_blocked": true,
+        "td_support": "simple",
+        "td_span": 50,
+        "td_length": 15,
+        "td_P1": 5062.5,
+        "td_side1": 1,
+        "td_y1": 10,
+        "td_has_load2": false,
+        "td_P2": 0,
+        "td_side2": 1,
+        "td_y2": 0,
+        "td_vb_x1_top": 300,
+        "td_vb_x1_y1": 300,
+        "td_vb_x1_y2": 300,
+        "td_vb_x1_bot": 300,
+        "td_vb_x2_top": 240,
+        "td_vb_x2_y1": 240,
+        "td_vb_x2_y2": 240,
+        "td_vb_x2_bot": 240,
+        "td_vo_x1_s1_hi": 300,
+        "td_vo_x1_s1_lo": 300,
+        "td_vo_x1_s2_hi": 0,
+        "td_vo_x1_s2_lo": 0,
+        "td_vo_x1_s3_hi": 300,
+        "td_vo_x1_s3_lo": 300,
+        "td_vo_x2_s1_hi": 300,
+        "td_vo_x2_s1_lo": 300,
+        "td_vo_x2_s2_hi": 0,
+        "td_vo_x2_s2_lo": 0,
+        "td_vo_x2_s3_hi": 0,
+        "td_vo_x2_s3_lo": 0
+      },
+      "engineer_inputs": {
+        "td_region_clear": false,
+        "td_closure_tol": 0.01
+      },
+      "expected": {
+        "outputs": {},
+        "flags": [
+          "E_TD_REGION_NOT_CLEAR"
+        ],
+        "terminal": "HARD_STOP:E_TD_REGION_NOT_CLEAR"
+      },
+      "tolerance": {
+        "default_rel": 0.01,
+        "default_abs": 1
+      },
+      "verify": "UNVERIFIED"
+    },
+    {
+      "id": "T11",
+      "kind": "boundary",
+      "source": {
+        "id": "EOR-hand-calc",
+        "ref": "T01 with inconsistent outside shear at x2 (280 plf vs 300)"
+      },
+      "edition": "CBC-2025",
+      "inputs": {
+        "code_edition": "CBC-2025",
+        "design_basis": "ASD",
+        "load_type": "wind",
+        "diaph_sheathing_type": "wsp",
+        "td_blocked": true,
+        "td_support": "simple",
+        "td_span": 50,
+        "td_length": 15,
+        "td_P1": 5062.5,
+        "td_side1": 1,
+        "td_y1": 10,
+        "td_has_load2": false,
+        "td_P2": 0,
+        "td_side2": 1,
+        "td_y2": 0,
+        "td_vb_x1_top": 300,
+        "td_vb_x1_y1": 300,
+        "td_vb_x1_y2": 300,
+        "td_vb_x1_bot": 300,
+        "td_vb_x2_top": 240,
+        "td_vb_x2_y1": 240,
+        "td_vb_x2_y2": 240,
+        "td_vb_x2_bot": 240,
+        "td_vo_x1_s1_hi": 300,
+        "td_vo_x1_s1_lo": 300,
+        "td_vo_x1_s2_hi": 0,
+        "td_vo_x1_s2_lo": 0,
+        "td_vo_x1_s3_hi": 300,
+        "td_vo_x1_s3_lo": 300,
+        "td_vo_x2_s1_hi": 280,
+        "td_vo_x2_s1_lo": 280,
+        "td_vo_x2_s2_hi": 0,
+        "td_vo_x2_s2_lo": 0,
+        "td_vo_x2_s3_hi": 0,
+        "td_vo_x2_s3_lo": 0
+      },
+      "engineer_inputs": {
+        "td_region_clear": true,
+        "td_closure_tol": 0.01
+      },
+      "expected": {
+        "outputs": {},
+        "flags": [
+          "E_TD_CLOSURE"
+        ],
+        "terminal": "HARD_STOP:E_TD_CLOSURE"
+      },
+      "tolerance": {
+        "default_rel": 0.01,
+        "default_abs": 1
+      },
+      "verify": "UNVERIFIED",
+      "note": "Residual = (307.5-280)(40) + (-30-0)(10) = 800 lb = 15.8% of P1 > 1%."
+    },
+    {
+      "id": "T12",
+      "kind": "boundary",
+      "source": {
+        "id": "EOR-hand-calc",
+        "ref": "T01 with blocking required but TD specified unblocked"
+      },
+      "edition": "CBC-2025",
+      "inputs": {
+        "code_edition": "CBC-2025",
+        "design_basis": "ASD",
+        "load_type": "wind",
+        "diaph_sheathing_type": "wsp",
+        "td_blocked": false,
+        "td_support": "simple",
+        "td_span": 50,
+        "td_length": 15,
+        "td_P1": 5062.5,
+        "td_side1": 1,
+        "td_y1": 10,
+        "td_has_load2": false,
+        "td_P2": 0,
+        "td_side2": 1,
+        "td_y2": 0,
+        "td_vb_x1_top": 300,
+        "td_vb_x1_y1": 300,
+        "td_vb_x1_y2": 300,
+        "td_vb_x1_bot": 300,
+        "td_vb_x2_top": 240,
+        "td_vb_x2_y1": 240,
+        "td_vb_x2_y2": 240,
+        "td_vb_x2_bot": 240,
+        "td_vo_x1_s1_hi": 300,
+        "td_vo_x1_s1_lo": 300,
+        "td_vo_x1_s2_hi": 0,
+        "td_vo_x1_s2_lo": 0,
+        "td_vo_x1_s3_hi": 300,
+        "td_vo_x1_s3_lo": 300,
+        "td_vo_x2_s1_hi": 300,
+        "td_vo_x2_s1_lo": 300,
+        "td_vo_x2_s2_hi": 0,
+        "td_vo_x2_s2_lo": 0,
+        "td_vo_x2_s3_hi": 0,
+        "td_vo_x2_s3_lo": 0
+      },
+      "engineer_inputs": {
+        "td_region_clear": true,
+        "td_closure_tol": 0.01
+      },
+      "expected": {
+        "outputs": {
+          "td_blocking_required": true,
+          "td_dc_blocking": 1.111,
+          "td_vnet_x1_s1_hi": 367.5
+        },
+        "flags": [
+          "F_TD_BLOCKING_NOT_SPECIFIED"
+        ],
+        "terminal": "OUTPUT"
+      },
+      "tolerance": {
+        "default_rel": 0.01,
+        "default_abs": 1
+      },
+      "verify": "UNVERIFIED",
+      "note": "Aspect 3.33 > 3.0 unblocked limit; analysis results still issued with the fail flag."
+    },
+    {
+      "id": "T13",
+      "kind": "boundary",
+      "source": {
+        "id": "EOR-hand-calc",
+        "ref": "unsupported edition"
+      },
+      "edition": "CBC-2019",
+      "inputs": {
+        "code_edition": "CBC-2019",
+        "design_basis": "ASD",
+        "load_type": "wind",
+        "diaph_sheathing_type": "wsp",
+        "td_blocked": true,
+        "td_support": "simple",
+        "td_span": 50,
+        "td_length": 15,
+        "td_P1": 5062.5,
+        "td_side1": 1,
+        "td_y1": 10,
+        "td_has_load2": false,
+        "td_P2": 0,
+        "td_side2": 1,
+        "td_y2": 0,
+        "td_vb_x1_top": 300,
+        "td_vb_x1_y1": 300,
+        "td_vb_x1_y2": 300,
+        "td_vb_x1_bot": 300,
+        "td_vb_x2_top": 240,
+        "td_vb_x2_y1": 240,
+        "td_vb_x2_y2": 240,
+        "td_vb_x2_bot": 240,
+        "td_vo_x1_s1_hi": 300,
+        "td_vo_x1_s1_lo": 300,
+        "td_vo_x1_s2_hi": 0,
+        "td_vo_x1_s2_lo": 0,
+        "td_vo_x1_s3_hi": 300,
+        "td_vo_x1_s3_lo": 300,
+        "td_vo_x2_s1_hi": 300,
+        "td_vo_x2_s1_lo": 300,
+        "td_vo_x2_s2_hi": 0,
+        "td_vo_x2_s2_lo": 0,
+        "td_vo_x2_s3_hi": 0,
+        "td_vo_x2_s3_lo": 0
+      },
+      "engineer_inputs": {
+        "td_region_clear": true,
+        "td_closure_tol": 0.01
+      },
+      "expected": {
+        "outputs": {},
+        "flags": [
+          "E_EDITION_UNSUPPORTED"
+        ],
+        "terminal": "HARD_STOP:E_EDITION_UNSUPPORTED"
+      },
+      "tolerance": {
+        "default_rel": 0.01,
+        "default_abs": 1
+      },
+      "verify": "UNVERIFIED"
+    },
+    {
+      "id": "T14",
+      "kind": "boundary",
+      "source": {
+        "id": "EOR-hand-calc",
+        "ref": "simple span with load at the top support (y1 = W)"
+      },
+      "edition": "CBC-2025",
+      "inputs": {
+        "code_edition": "CBC-2025",
+        "design_basis": "ASD",
+        "load_type": "wind",
+        "diaph_sheathing_type": "wsp",
+        "td_blocked": true,
+        "td_support": "simple",
+        "td_span": 50,
+        "td_length": 15,
+        "td_P1": 5062.5,
+        "td_side1": 1,
+        "td_y1": 50,
+        "td_has_load2": false,
+        "td_P2": 0,
+        "td_side2": 1,
+        "td_y2": 0,
+        "td_vb_x1_top": 300,
+        "td_vb_x1_y1": 300,
+        "td_vb_x1_y2": 300,
+        "td_vb_x1_bot": 300,
+        "td_vb_x2_top": 240,
+        "td_vb_x2_y1": 240,
+        "td_vb_x2_y2": 240,
+        "td_vb_x2_bot": 240,
+        "td_vo_x1_s1_hi": 300,
+        "td_vo_x1_s1_lo": 300,
+        "td_vo_x1_s2_hi": 0,
+        "td_vo_x1_s2_lo": 0,
+        "td_vo_x1_s3_hi": 300,
+        "td_vo_x1_s3_lo": 300,
+        "td_vo_x2_s1_hi": 300,
+        "td_vo_x2_s1_lo": 300,
+        "td_vo_x2_s2_hi": 0,
+        "td_vo_x2_s2_lo": 0,
+        "td_vo_x2_s3_hi": 0,
+        "td_vo_x2_s3_lo": 0
+      },
+      "engineer_inputs": {
+        "td_region_clear": true,
+        "td_closure_tol": 0.01
+      },
+      "expected": {
+        "outputs": {},
+        "flags": [
+          "E_TD_GEOMETRY"
+        ],
+        "terminal": "HARD_STOP:E_TD_GEOMETRY"
+      },
+      "tolerance": {
+        "default_rel": 0.01,
+        "default_abs": 1
+      },
+      "verify": "UNVERIFIED"
+    },
+    {
+      "id": "T15",
+      "kind": "boundary",
+      "source": {
+        "id": "EOR-hand-calc",
+        "ref": "T01 with TD length 20 ft (aspect 2.5, unblocked OK)"
+      },
+      "edition": "CBC-2025",
+      "inputs": {
+        "code_edition": "CBC-2025",
+        "design_basis": "ASD",
+        "load_type": "wind",
+        "diaph_sheathing_type": "wsp",
+        "td_blocked": false,
+        "td_support": "simple",
+        "td_span": 50,
+        "td_length": 20,
+        "td_P1": 5062.5,
+        "td_side1": 1,
+        "td_y1": 10,
+        "td_has_load2": false,
+        "td_P2": 0,
+        "td_side2": 1,
+        "td_y2": 0,
+        "td_vb_x1_top": 300,
+        "td_vb_x1_y1": 300,
+        "td_vb_x1_y2": 300,
+        "td_vb_x1_bot": 300,
+        "td_vb_x2_top": 240,
+        "td_vb_x2_y1": 240,
+        "td_vb_x2_y2": 240,
+        "td_vb_x2_bot": 240,
+        "td_vo_x1_s1_hi": 300,
+        "td_vo_x1_s1_lo": 300,
+        "td_vo_x1_s2_hi": 0,
+        "td_vo_x1_s2_lo": 0,
+        "td_vo_x1_s3_hi": 300,
+        "td_vo_x1_s3_lo": 300,
+        "td_vo_x2_s1_hi": 300,
+        "td_vo_x2_s1_lo": 300,
+        "td_vo_x2_s2_hi": 0,
+        "td_vo_x2_s2_lo": 0,
+        "td_vo_x2_s3_hi": 0,
+        "td_vo_x2_s3_lo": 0
+      },
+      "engineer_inputs": {
+        "td_region_clear": true,
+        "td_closure_tol": 0.01
+      },
+      "expected": {
+        "outputs": {
+          "td_aspect": 2.5,
+          "td_blocking_required": false,
+          "td_v_s1": 50.625,
+          "td_v_s3": -202.5,
+          "td_N_x2_b1": -375
+        },
+        "flags": [],
+        "terminal": "OUTPUT"
+      },
+      "tolerance": {
+        "default_rel": 0.001,
+        "default_abs": 0.01
+      },
+      "verify": "UNVERIFIED",
+      "note": "Synthetic: basic shears held at T01 values to isolate the TD length effect. N_x2_b1 = (240+50.625-300)(40)."
+    },
+    {
+      "id": "T16",
+      "kind": "boundary",
+      "source": {
+        "id": "EOR-hand-calc",
+        "ref": "missing engineer input pauses the run"
+      },
+      "edition": "CBC-2025",
+      "inputs": {
+        "code_edition": "CBC-2025",
+        "design_basis": "ASD",
+        "load_type": "wind",
+        "diaph_sheathing_type": "wsp",
+        "td_blocked": true,
+        "td_support": "simple",
+        "td_span": 50,
+        "td_length": 15,
+        "td_P1": 5062.5,
+        "td_side1": 1,
+        "td_y1": 10,
+        "td_has_load2": false,
+        "td_P2": 0,
+        "td_side2": 1,
+        "td_y2": 0,
+        "td_vb_x1_top": 300,
+        "td_vb_x1_y1": 300,
+        "td_vb_x1_y2": 300,
+        "td_vb_x1_bot": 300,
+        "td_vb_x2_top": 240,
+        "td_vb_x2_y1": 240,
+        "td_vb_x2_y2": 240,
+        "td_vb_x2_bot": 240,
+        "td_vo_x1_s1_hi": 300,
+        "td_vo_x1_s1_lo": 300,
+        "td_vo_x1_s2_hi": 0,
+        "td_vo_x1_s2_lo": 0,
+        "td_vo_x1_s3_hi": 300,
+        "td_vo_x1_s3_lo": 300,
+        "td_vo_x2_s1_hi": 300,
+        "td_vo_x2_s1_lo": 300,
+        "td_vo_x2_s2_hi": 0,
+        "td_vo_x2_s2_lo": 0,
+        "td_vo_x2_s3_hi": 0,
+        "td_vo_x2_s3_lo": 0
+      },
+      "engineer_inputs": {},
+      "expected": {
+        "outputs": {},
+        "flags": [],
+        "terminal": "ENGINEER_INPUT:S020"
+      },
+      "tolerance": {
+        "default_rel": 0.01,
+        "default_abs": 1
+      },
+      "verify": "UNVERIFIED"
+    },
+    {
+      "id": "T17",
+      "kind": "edition",
+      "source": {
+        "id": "EX-IRREG-2E",
+        "ref": "Example 4.1, TD1 under CBC-2022"
+      },
+      "edition": "CBC-2022",
+      "inputs": {
+        "code_edition": "CBC-2022",
+        "design_basis": "ASD",
+        "load_type": "wind",
+        "diaph_sheathing_type": "wsp",
+        "td_blocked": true,
+        "td_support": "simple",
+        "td_span": 50,
+        "td_length": 15,
+        "td_P1": 5062.5,
+        "td_side1": 1,
+        "td_y1": 10,
+        "td_has_load2": false,
+        "td_P2": 0,
+        "td_side2": 1,
+        "td_y2": 0,
+        "td_vb_x1_top": 300,
+        "td_vb_x1_y1": 300,
+        "td_vb_x1_y2": 300,
+        "td_vb_x1_bot": 300,
+        "td_vb_x2_top": 240,
+        "td_vb_x2_y1": 240,
+        "td_vb_x2_y2": 240,
+        "td_vb_x2_bot": 240,
+        "td_vo_x1_s1_hi": 300,
+        "td_vo_x1_s1_lo": 300,
+        "td_vo_x1_s2_hi": 0,
+        "td_vo_x1_s2_lo": 0,
+        "td_vo_x1_s3_hi": 300,
+        "td_vo_x1_s3_lo": 300,
+        "td_vo_x2_s1_hi": 300,
+        "td_vo_x2_s1_lo": 300,
+        "td_vo_x2_s2_hi": 0,
+        "td_vo_x2_s2_lo": 0,
+        "td_vo_x2_s3_hi": 0,
+        "td_vo_x2_s3_lo": 0
+      },
+      "engineer_inputs": {
+        "td_region_clear": true,
+        "td_closure_tol": 0.01
+      },
+      "expected": {
+        "outputs": {
+          "td_vnet_x1_s1_hi": 367.5,
+          "td_N_x2_b1": 300,
+          "td_blocking_required": true
+        },
+        "flags": [
+          "W_TD_BLOCKING_REQUIRED"
+        ],
+        "terminal": "OUTPUT"
+      },
+      "tolerance": {
+        "default_rel": 0.01,
+        "default_abs": 1
+      },
+      "verify": "UNVERIFIED",
+      "note": "Method is edition-independent; only the ASCE 7 edition cited on the seismic flag changes (deltas.md)."
+    },
+    {
+      "id": "T18",
+      "kind": "boundary",
+      "source": {
+        "id": "EOR-hand-calc",
+        "ref": "T05 with load 2 above load 1"
+      },
+      "edition": "CBC-2025",
+      "inputs": {
+        "code_edition": "CBC-2025",
+        "design_basis": "ASD",
+        "load_type": "wind",
+        "diaph_sheathing_type": "wsp",
+        "td_blocked": true,
+        "td_support": "simple",
+        "td_span": 56,
+        "td_length": 15,
+        "td_P1": -5600,
+        "td_side1": -1,
+        "td_y1": 16,
+        "td_has_load2": true,
+        "td_P2": 5700,
+        "td_side2": -1,
+        "td_y2": 34,
+        "td_vb_x1_top": 210.7,
+        "td_vb_x1_y1": 210.7,
+        "td_vb_x1_y2": 210.7,
+        "td_vb_x1_bot": 210.7,
+        "td_vb_x2_top": 167.9,
+        "td_vb_x2_y1": 167.9,
+        "td_vb_x2_y2": 167.9,
+        "td_vb_x2_bot": 167.9,
+        "td_vo_x1_s1_hi": 305.3,
+        "td_vo_x1_s1_lo": 305.3,
+        "td_vo_x1_s2_hi": 0,
+        "td_vo_x1_s2_lo": 0,
+        "td_vo_x1_s3_hi": 317.8,
+        "td_vo_x1_s3_lo": 317.8,
+        "td_vo_x2_s1_hi": 167.9,
+        "td_vo_x2_s1_lo": 167.9,
+        "td_vo_x2_s2_hi": 167.9,
+        "td_vo_x2_s2_lo": 167.9,
+        "td_vo_x2_s3_hi": 167.9,
+        "td_vo_x2_s3_lo": 167.9
+      },
+      "engineer_inputs": {
+        "td_region_clear": true,
+        "td_closure_tol": 0.01
+      },
+      "expected": {
+        "outputs": {},
+        "flags": [
+          "E_TD_GEOMETRY"
+        ],
+        "terminal": "HARD_STOP:E_TD_GEOMETRY"
+      },
+      "tolerance": {
+        "default_rel": 0.01,
+        "default_abs": 1
+      },
+      "verify": "UNVERIFIED"
+    },
+    {
+      "id": "T19",
+      "kind": "boundary",
+      "source": {
+        "id": "EOR-hand-calc",
+        "ref": "T08 with cantilever limits not confirmed"
+      },
+      "edition": "CBC-2025",
+      "inputs": {
+        "code_edition": "CBC-2025",
+        "design_basis": "ASD",
+        "load_type": "wind",
+        "diaph_sheathing_type": "wsp",
+        "td_blocked": true,
+        "td_support": "cantilever",
+        "td_span": 60,
+        "td_length": 20,
+        "td_P1": -4620,
+        "td_side1": 1,
+        "td_y1": -15,
+        "td_has_load2": false,
+        "td_P2": 0,
+        "td_side2": 1,
+        "td_y2": 0,
+        "td_vb_x1_top": -79.5,
+        "td_vb_x1_bot": 40.5,
+        "td_vb_x1_y1": 115.5,
+        "td_vb_x1_y2": 0,
+        "td_vb_x2_top": -79.5,
+        "td_vb_x2_bot": 40.5,
+        "td_vb_x2_y1": 115.5,
+        "td_vb_x2_y2": 0,
+        "td_vo_x1_s1_hi": -60,
+        "td_vo_x1_s1_lo": 60,
+        "td_vo_x1_s2_hi": 0,
+        "td_vo_x1_s2_lo": 0,
+        "td_vo_x1_s3_hi": 0,
+        "td_vo_x1_s3_lo": 0,
+        "td_vo_x2_s1_hi": -79.5,
+        "td_vo_x2_s1_lo": 40.5,
+        "td_vo_x2_s2_hi": 0,
+        "td_vo_x2_s2_lo": 0,
+        "td_vo_x2_s3_hi": 40.5,
+        "td_vo_x2_s3_lo": 115.5
+      },
+      "engineer_inputs": {
+        "td_region_clear": true,
+        "td_cantilever_ok": false,
+        "td_closure_tol": 0.01
+      },
+      "expected": {
+        "outputs": {},
+        "flags": [
+          "E_TD_CANTILEVER_LIMITS"
+        ],
+        "terminal": "HARD_STOP:E_TD_CANTILEVER_LIMITS"
+      },
+      "tolerance": {
+        "default_rel": 0.01,
+        "default_abs": 1
+      },
+      "verify": "UNVERIFIED"
+    },
+    {
+      "id": "T20",
+      "kind": "boundary",
+      "source": {
+        "id": "EOR-hand-calc",
+        "ref": "cantilever with two loads (out of scope)"
+      },
+      "edition": "CBC-2025",
+      "inputs": {
+        "code_edition": "CBC-2025",
+        "design_basis": "ASD",
+        "load_type": "wind",
+        "diaph_sheathing_type": "wsp",
+        "td_blocked": true,
+        "td_support": "cantilever",
+        "td_span": 60,
+        "td_length": 20,
+        "td_P1": -4620,
+        "td_side1": 1,
+        "td_y1": -15,
+        "td_has_load2": true,
+        "td_P2": 1000,
+        "td_side2": 1,
+        "td_y2": -5,
+        "td_vb_x1_top": -79.5,
+        "td_vb_x1_bot": 40.5,
+        "td_vb_x1_y1": 115.5,
+        "td_vb_x1_y2": 0,
+        "td_vb_x2_top": -79.5,
+        "td_vb_x2_bot": 40.5,
+        "td_vb_x2_y1": 115.5,
+        "td_vb_x2_y2": 0,
+        "td_vo_x1_s1_hi": -60,
+        "td_vo_x1_s1_lo": 60,
+        "td_vo_x1_s2_hi": 0,
+        "td_vo_x1_s2_lo": 0,
+        "td_vo_x1_s3_hi": 0,
+        "td_vo_x1_s3_lo": 0,
+        "td_vo_x2_s1_hi": -79.5,
+        "td_vo_x2_s1_lo": 40.5,
+        "td_vo_x2_s2_hi": 0,
+        "td_vo_x2_s2_lo": 0,
+        "td_vo_x2_s3_hi": 40.5,
+        "td_vo_x2_s3_lo": 115.5
+      },
+      "engineer_inputs": {
+        "td_region_clear": true,
+        "td_cantilever_ok": true,
+        "td_closure_tol": 0.01
+      },
+      "expected": {
+        "outputs": {},
+        "flags": [
+          "E_TD_GEOMETRY"
+        ],
+        "terminal": "HARD_STOP:E_TD_GEOMETRY"
+      },
+      "tolerance": {
+        "default_rel": 0.01,
+        "default_abs": 1
+      },
+      "verify": "UNVERIFIED"
+    },
+    {
+      "id": "T21",
+      "kind": "boundary",
+      "source": {
+        "id": "EOR-hand-calc",
+        "ref": "independent two-load case for EOR hand check (review plan 2.8)"
+      },
+      "edition": "CBC-2025",
+      "inputs": {
+        "code_edition": "CBC-2025",
+        "design_basis": "ASD",
+        "load_type": "seismic",
+        "diaph_sheathing_type": "wsp",
+        "td_blocked": true,
+        "td_support": "simple",
+        "td_span": 32,
+        "td_length": 10,
+        "td_P1": -2400,
+        "td_side1": 1,
+        "td_y1": 24,
+        "td_has_load2": true,
+        "td_P2": 1800,
+        "td_side2": 1,
+        "td_y2": 10,
+        "td_vb_x1_top": 180,
+        "td_vb_x1_y1": 180,
+        "td_vb_x1_y2": 180,
+        "td_vb_x1_bot": 180,
+        "td_vb_x2_top": 150,
+        "td_vb_x2_y1": 150,
+        "td_vb_x2_y2": 150,
+        "td_vb_x2_bot": 150,
+        "td_vo_x1_s1_hi": 180,
+        "td_vo_x1_s1_lo": 180,
+        "td_vo_x1_s2_hi": 180,
+        "td_vo_x1_s2_lo": 180,
+        "td_vo_x1_s3_hi": 180,
+        "td_vo_x1_s3_lo": 180,
+        "td_vo_x2_s1_hi": 330,
+        "td_vo_x2_s1_lo": 330,
+        "td_vo_x2_s2_hi": 0,
+        "td_vo_x2_s2_lo": 0,
+        "td_vo_x2_s3_hi": 216,
+        "td_vo_x2_s3_lo": 216
+      },
+      "engineer_inputs": {
+        "td_region_clear": true,
+        "td_closure_tol": 0.01
+      },
+      "expected": {
+        "outputs": {
+          "td_F_sup_top": -1237.5,
+          "td_F_sup_bot": 637.5,
+          "td_v_s1": -123.75,
+          "td_v_s2": 116.25,
+          "td_v_s3": -63.75,
+          "td_vnet_x1_s2_hi": 296.25,
+          "td_N_x1_b1": 990,
+          "td_N_x1_b2": -637.5,
+          "td_N_x2_b1": -2430,
+          "td_N_x2_b2": 1297.5
+        },
+        "flags": [
+          "W_TD_BLOCKING_REQUIRED",
+          "W_SEISMIC_COLLECTOR_AMPLIFICATION"
+        ],
+        "terminal": "OUTPUT"
+      },
+      "tolerance": {
+        "default_rel": 0.001,
+        "default_abs": 0.01
+      },
+      "verify": "UNVERIFIED",
+      "note": "Oracle values; set verify to PE_APPROVED only after an independent EOR hand calculation agrees."
+    }
+  ]
+}
