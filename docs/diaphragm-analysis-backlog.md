@@ -3,7 +3,15 @@
 Branch `diaphragm-analysis` (off `master` 71cdfb5). Plan: `~/.claude/plans/read-the-md-files-composed-kite.md` (approved 2026-10-29).
 Guide: `docs/diaphragm-analysis.md`. Book cases: `docs/diaphragm-analysis-book-cases.md`.
 
-## Next session — start here (set 2026-10-29)
+## Next session — start here (set 2026-10-29, after Phase 2)
+**State:** Phases 0–2 committed. Local `master` = `a60be7a` (SWD v24 `5539efd` + Diaphragm Analysis `b62a98b`,
+merged locally, **not pushed**). Branch `diaphragm-analysis` = master. `npm test` green, SWD goldens identical.
+**Next:** user: push / PR when wanted; `upgrade:shearwall` dry run; seed DA-BOOK. Then Phase 3 (TD engine).
+- Line-length check added: SWD line `totalLength` must equal the plan length of its grid (enter → leave the
+  sheathed plan, ±0.01 ft); a mismatch is a plan error and red ✗ in the Setup line table.
+
+## Earlier start-here (Phase 1)
+
 **State:** Phases 0 and 1 built, nothing committed on this branch. `npm test` green (incl. 16 new plan tests), `npx vite build` OK.
 - Done: skill data vendored (`npm run da:skill:build`, 21 skill tests, T4.2.2), book-case format + Ex 4.1 source,
   build / doc scripts, these docs. `yaml` added as a dev dependency (build script only).
