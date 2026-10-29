@@ -3,7 +3,22 @@
 Open items after the 2026-09-22 elevation review rounds and Phase 4 round 1 (R1–R3, 2026-09-24).
 Branches: `shearwall-load-path` (pushed, merge to `master` by someone else), `results-and-links` (G4, pushed 2026-09-24), `phase4-r1-r3` (Phase 4 round 1 + distribution + results by line; pushed 2026-09-24; CALC_VERSION v7, schema v6), `phase4-round2` (P9, R4, R6, WSWH, live loads, results / report rework; local 2026-09-28, not pushed; CALC_VERSION v9, schema v8), `sw-verification` (off phase4-round2; checks, drift sizing, solid segmented walls, calc sheet + S0–S7, verification cases, drift sizing with anchorage, verification split, F-DD1 equal-δ solver, zero-share warnings + engineer review, UI / report restructure, wind drift limit, PDF report + elevation rework, one shared elevation renderer, PDF calc sheet = tool calc sheet, drift in every method case; committed and pushed to GitHub 2026-10-01; CALC_VERSION v18, schema v12).
 
-## Next session — start here (set 2026-10-27, end of session)
+## Next session — start here (set 2026-10-29)
+**State:**
+- `sw-design-data-appendix` committed (`5539efd`, CALC_VERSION **v24**, schema **13**) and pushed;
+  **[PR #5](https://github.com/Ruihao-spacial/design-item-hub/pull/5)** → master open — merge it before PR #6
+  (Diaphragm Analysis, which contains this commit).
+- Local DB (user, 2026-10-29): `upgrade:shearwall -- --apply` → all 34 SWD items at schema 13 / v24 (dry run first:
+  0 failed); SW-VERIFY re-seeded at v24 (19 items). `backup_public_2026-10-27.sql` moved to `supabase/backups/`
+  (git-ignored).
+- PR #6 adds an **optional** "line loads from Diaphragm Analysis" link to SWD (`shearWallDesign.js` only, additive):
+  calc untouched, all goldens identical, unlinked items unchanged. Rule for future SWD edits from that work: additive
+  link only, guarded by identical goldens / fixtures / upgrade dry run (`docs/diaphragm-analysis-backlog.md`).
+
+**Still open:** user review of a Detailed PDF (TC-1, V21: appendix layout, column widths, ƒ / δ / ⊥ / ½ glyphs);
+WSWH moment arm B — on hold. Known gaps / limitations: G3, G5, P5. Roadmap: U1, U2 (last), U3 Beam Calculator.
+
+## Previous start-here (set 2026-10-27, history)
 **State:**
 - Branch `sw-design-data-appendix` (from `master` 71cdfb5, after PRs #3 / #4 merged): **uncommitted**, ~36 files
   (most are golden calcVersion stamps). CALC_VERSION **v24**, schema **13**. `npm test` green, `npx vite build` OK,
