@@ -7,7 +7,7 @@ import {
 import { calcAll, CALC_VERSION, DISTRIBUTION_METHODS, lineDistribution, lineDriftMode, DEFAULT_OMEGA0, omega0Of, windLimitDen } from './shearWallCalc.js';
 import { renderElevation, renderElevationForPdf, pdfElevationAspect, planPdfElevation, pdfElevationPartSize } from './shearWallElevation.js';
 import { NAILING_TABLE, SHEATHING_TYPES, FOOTNOTE_10_NOTE, sheathingLabel } from './shearWallNailing.js';
-import { renderHardwareTab as renderHardwareTabView } from './shearWallHardwareTab.js';
+import { renderHardwareTab as renderHardwareTabView, hardwareAppendixSections } from './shearWallHardwareTab.js';
 import { lrfdCap, getGradeById, woodBasis, sillProps, SPECIES, speciesOf, dimGrades, ptGrades, groupLabel } from './shearWallHardware.js';
 import { DRIFT_ROWS, driftLimit } from './shearWallDeflection.js';
 import { WSWH_NOTES, WSWH_FC, conditionLabel } from './shearWallWswh.js';
@@ -867,6 +867,8 @@ export const shearWallDesign = {
       if (checks.length) sections.push({ title: T('Equilibrium checks G1–G12'), table: { headers: ['ID', 'Check', 'Result', 'Status'], colWidths: [0.07, 0.43, 0.35, 0.15],
         rows: checks.map(c => [c.id, c.title, checkSummaryText(c), c.status === 'fail' ? { t: 'NG', color: DC_RGB.fail } : c.status === 'pass' ? { t: 'OK', color: DC_RGB.pass } : String(c.status || '').toUpperCase()]) } });
     }
+    // Appendix (Detailed): the hardware and material data this design uses, with sources (user 2026-10-27)
+    if (detailed) sections.push(...hardwareAppendixSections(inputs, outputs));
     return sections;
   },
 };
@@ -1835,7 +1837,7 @@ function wswhSheetRows(w) {
   if (!x.ok) return [['Problem', x.errors.join('; ') + ' — panel carries no shear']];
   const lt = w.dcGoverning === 'wind' ? 'W' : 'E';
   const sc = x.stacked && x.stacked[lt];
-  const an = (a, dc) => (!a ? 'OVER' : a.byRDP ? a.id : a.id + (a.cap ? ' ' + a.cap + ' lb' : '') + (a.W ? ', W ' + a.W + '" d_e ' + a.de + '" L_ftg ' + a.Lftg + '"' : '') + (dc != null ? ' (D/C ' + f2(dc) + ')' : ''));
+  const an = (a, dc) => (!a ? 'OVER' : a.byRDP || a.byKit ? a.id : a.id + (a.cap ? ' ' + a.cap + ' lb' : '') + (a.W ? ', W ' + a.W + '" d_e ' + a.de + '" L_ftg ' + a.Lftg + '"' : '') + (dc != null ? ' (D/C ' + f2(dc) + ')' : ''));
   return [
     ['Panel', x.evalModel + (x.orderModel !== x.evalModel ? ' (order ' + x.orderModel + ', trimmed)' : '') + ' — ' + conditionLabel(x.role === 'stackedLower' ? 'concrete' : x.condition) + (x.role === 'stackedLower' ? ', stack base' : '') + (x.kit ? ', ' + x.kit : '')],
     ['Table values', 'H_e ' + f2(x.He) + ' in, B ' + x.B + ' in; V_allow E ' + f0(x.Vcap.E) + ' / W ' + f0(x.Vcap.W) + ' lb; Δ_cap E ' + f2(x.Dcap.E) + ' / W ' + f2(x.Dcap.W) + ' in; V_LRFD E ' + f0(x.VcapL.E) + ' / W ' + f0(x.VcapL.W) + ' lb with Δ_LRFD E ' + f2(x.DcapL.E) + ' / W ' + f2(x.DcapL.W) + ' in — drift Δ = Δ_LRFD × V / V_LRFD (' + x.table + ')'],
@@ -2065,7 +2067,7 @@ function wswhRows(ln) {
       if (w.method !== 'wswh') continue;
       const x = w.wswh;
       const lt = w.dcGoverning === 'wind' ? 'W' : 'E';
-      const anc = (a, dc) => !a ? 'OVER' : a.byRDP ? a.id : a.id + (a.W ? ', W ' + a.W + '" d_e ' + a.de + '" L ' + a.Lftg + '"' : '') + (dc != null ? ' (' + dc.toFixed(2) + ')' : '') + (a.override ? ' *' : '');
+      const anc = (a, dc) => !a ? 'OVER' : a.byRDP || a.byKit ? a.id : a.id + (a.W ? ', W ' + a.W + '" d_e ' + a.de + '" L ' + a.Lftg + '"' : '') + (dc != null ? ' (' + dc.toFixed(2) + ')' : '') + (a.override ? ' *' : '');
       rows.push([
         w.mark, pl.levelName,
         x.ok ? x.evalModel + (x.orderModel && x.orderModel !== x.evalModel ? ' (' + x.orderModel + ')' : '') : 'not tabulated',

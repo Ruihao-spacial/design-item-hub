@@ -397,4 +397,63 @@ test('PDF elevations: FTAO strap on the hardware elevation only (with its D/C co
   assert.equal(level.getAttribute('font-size'), '11', 'level name at the screen size');
 });
 
+// PDF "Design data" appendix (user 2026-10-27): Detailed only; only the hardware the design uses, project framing group
+const appendixOf = (inputs) => {
+  const secs = shearWallDesign.pdfSections(inputs);
+  const i = secs.findIndex(s => s.heading === 'Appendix — Design data');
+  return i < 0 ? null : secs.slice(i);
+};
+const appendixIds = (secs, head) => new Set(secs.filter(s => s.table && s.title.startsWith(head)).flatMap(s => s.table.rows.map(r => r[0])));
+const allCaseFiles = () => fs.readdirSync(new URL('./cases/', import.meta.url)).filter(f => /^V\d\d-.*\.json$/.test(f));
+
+test('Design data appendix: Detailed report only, last, on a new page', () => {
+  const inp = caseInputs('V08-two-story-aligned-stack.json');
+  assert.equal(appendixOf({ ...inp, pdfReport: 'summary' }), null, 'Summary has no appendix');
+  const secs = appendixOf({ ...inp, pdfReport: 'detailed' });
+  assert.ok(secs && secs[0].pageBreakBefore);
+  assert.ok(secs.some(s => s.title === 'Assumptions — notes'));
+  assert.ok(secs.some(s => s.title.endsWith('— source') && s.rows.some(r => r[0] === 'File' && r[1].startsWith('Shearwall design reference/'))));
+});
+
+test('Design data appendix: exactly the nailing, HDUE, MSTC and posts the design uses — every method case', () => {
+  for (const f of allCaseFiles()) {
+    const inp = { ...caseInputs(f), pdfReport: 'detailed' };
+    const out = calcAll(inp);
+    const want = { nail: new Set(), hdue: new Set(), mstc: new Set(), post: new Set() };
+    const anc = (a) => { if (a && a.family === 'HDUE') want.hdue.add(a.id); if (a && a.family === 'MSTC') want.mstc.add(a.id); };
+    for (const d of out.perDirection) for (const ln of d.perLine) {
+      for (const pl of ln.perLevel) for (const w of pl.walls) {
+        if (w.method === 'wswh') continue;
+        want.nail.add(w.nailing.id);
+        anc(w.anchorageLeft); anc(w.anchorageRight);
+        for (const p of [w.postLeft, w.postRight]) if (p) want.post.add(p.postLabel);
+        for (const j of (w.ftao && w.ftao.jambs) || []) if (j.post) want.post.add(j.post.label);
+      }
+      for (const pp of ln.postPaths || []) { anc(pp.anchorage); if (pp.post) want.post.add(pp.post.postLabel); }
+      for (const bt of ln.beamTransfers || []) for (const s of bt.supports) anc(s.anchorage);
+    }
+    const secs = appendixOf(inp);
+    assert.deepEqual(appendixIds(secs, 'Shear Wall Nailing'), want.nail, f + ' nailing');
+    assert.deepEqual(appendixIds(secs, 'HDUE'), want.hdue, f + ' HDUE');
+    assert.deepEqual(appendixIds(secs, 'MSTC'), want.mstc, f + ' MSTC');
+    assert.deepEqual(appendixIds(secs, 'Post Sizes'), want.post, f + ' post sizes');
+    assert.deepEqual(appendixIds(secs, 'Post Compression'), want.post, f + ' post capacity');
+  }
+});
+
+test('Design data appendix: rows equal the Hardware tab tables; FTAO strap row; WSWH rows around each panel height', () => {
+  const tc1 = JSON.parse(fs.readFileSync(new URL('./fixtures/tc1-two-story.json', import.meta.url), 'utf8'));
+  const secs = appendixOf({ ...shearWallDesign.migrate({ schemaVersion: tc1.schemaVersion, inputs: tc1.inputs }).inputs, pdfReport: 'detailed' });
+  const hd = secs.find(s => s.table && s.title.startsWith('HDUE')).table.rows.find(r => r[0] === 'HDUE5');
+  assert.deepEqual(hd, ['HDUE5', '5375', '7525', '0.205', '(2)2x4', '0.146']);
+  const ftao = secs.find(s => s.table && s.title.startsWith('FTAO')).table.rows;
+  assert.deepEqual(ftao.map(r => r[0] + ' ' + r[3]), ['CS22 0.148 x 2½']);
+  const v21 = appendixOf({ ...caseInputs('V21-wswh-stack-raised.json'), pdfReport: 'detailed' });
+  const ws = v21.filter(s => s.table && s.title.startsWith('Simpson'));
+  assert.deepEqual(ws.map(s => s.title.slice(s.title.lastIndexOf(' — ') + 3)), ['Seismic', 'Seismic', 'Seismic'], 'seismic-only project: seismic columns only');
+  assert.deepEqual(ws.map(s => s.title.match(/Table 0\d/)[0]), ['Table 01', 'Table 02', 'Table 03']);
+  for (const s of ws) assert.ok(s.table.rows.every(r => r[0] === 'WSWH18x9' && r[1] === '9'), s.title);
+  assert.ok(!v21.some(s => s.table && /Nailing|HDUE|Post Sizes/.test(s.title)), 'WSWH-only design: no sheathed hardware');
+});
+
 console.log(passed + ' passed' + (process.exitCode ? ', some FAILED' : ''));

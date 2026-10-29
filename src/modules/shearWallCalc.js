@@ -8,10 +8,10 @@ import { expandWalls, hasOpenings, wallMethod, wallPiers, sortedOpenings } from 
 import { ftaoCapacityLbf, ftaoDesign, ftaoLoadTypes } from './shearWallFtaoAdapter.js';
 import { wallDeflection, wallDeflectionAtShare, postArea, driftLimit } from './shearWallDeflection.js';
 import { lineChecks } from './shearWallChecks.js';
-import { isWswh, wswhWidthIn, wswhWidthFt, lookupWswh, stackedBaseCheck, selectWswhAnchor, RAISED_ANCHOR, WSWH_ROD, WSWH_PANEL_POST, conditionLabel } from './shearWallWswh.js';
+import { isWswh, wswhWidthIn, wswhWidthFt, lookupWswh, stackedBaseCheck, selectWswhAnchor, RAISED_ANCHOR, tssKitAnchor, WSWH_PANEL_POST, conditionLabel } from './shearWallWswh.js';
 
 // Records which calc produced a stored results snapshot (results are always regenerated for display)
-export const CALC_VERSION = 'v23'; // v23 (2026-10-14): drift lateral only; Δa = δ_LRFD × T / T_LRFD (segmented + FTAO); δ(V) per wall type, no stored k
+export const CALC_VERSION = 'v24'; // v24 (2026-10-27): distribution warning dist_low_share (share < capacity share, shear D/C < 0.10); WSWH stacked 2nd-story rod arm B = Table 05-C B_stacked_in. v23 (2026-10-14): drift lateral only; Δa = δ_LRFD × T / T_LRFD (segmented + FTAO); δ(V) per wall type, no stored k
 
 export function accumulateStoryShear(levelLoads, levels) {
   const result = {};
@@ -754,11 +754,11 @@ export function calcAll(inputs) {
 }
 
 // Anchorage at a WSWH end for ASD tension T (kips): Table 06 row (concrete / stacked base),
-// TSS rod (stacked 2nd story), or "by RDP" (raised floor)
+// TSS kit (stacked 2nd story), or "by RDP" (raised floor)
 function wswhAnchorFor(w, info, T, inputs) {
   if (!info) return null;
   if (info.role === 'raised') return RAISED_ANCHOR;
-  if (info.role === 'stackedUpper') return T * 1000 <= WSWH_ROD.cap + 1e-6 ? WSWH_ROD : null;
+  if (info.role === 'stackedUpper') return tssKitAnchor(info.width);
   return selectWswhAnchor(T * 1000, { fc: inputs.wswhFc || '2500', sdc: inputs.seismicDesignCategory, detached: !!inputs.detachedOneTwoFamily,
     width: info.width, override: w.wswhAnchorOverride || '' });
 }
@@ -865,6 +865,7 @@ export function lineDistribution(inputs, line) {
 
 const DIST_SHARE_TOL = 0.001; // k — the split is final when no share changes by more than this between passes
 const DIST_MAX_PASSES = 20;
+const LOW_SHARE_DC = 0.1;     // warn when a wall below its capacity share has shear D/C < 0.10 (F-DD1, user 2026-10-27)
 const FROM_ABOVE_NOTE = 0.5;  // note a wall when δ(0)/δ* > 0.5: more than half its δ comes from the forces above
 
 // Deflection spread of a line result: per level and load type, (δmax − δmin) / δmax over the walls
@@ -970,10 +971,26 @@ function zeroShareFollowUp(res, levels) {
 
 // Distribution warnings (user rule 2026-10-01): a zero-share wall (with its holdown check and the other fixes),
 // and the walls at that story carrying more than designed because the zero share leaves out the push-back.
-function distributionWarnings(levels) {
+// F-DD1 milder form (user 2026-10-27): a wall with a share but less than its capacity share and shear D/C < 0.10 is a
+// warning too (V17 Line B SW-6) — little own stiffness because the walls above rotate it; no design change.
+function distributionWarnings(levels, res) {
   const out = [];
   const k = (v) => v.toFixed(2) + ' k';
   for (const l of levels) {
+    const pl = res && res.perLevel.find(p => p.levelId === l.levelId);
+    const rw = (id) => pl && pl.walls.find(w => w.wallId === id);
+    const totW = l.walls.reduce((a, lw) => a + (((rw(lw.wallId) || {}).capWeight || {})[l.loadType] || 0), 0);
+    for (const lw of l.walls) {
+      const w = rw(lw.wallId);
+      if (lw.zeroShare || !w || !(totW > 0)) continue;
+      const capShare = l.V * ((w.capWeight || {})[l.loadType] || 0) / totW;
+      const dc = l.loadType === 'E' ? w.seismicDC : w.windDC;
+      if (!(dc < LOW_SHARE_DC) || !(lw.share < capShare - 0.0005)) continue;
+      out.push({ type: 'dist_low_share', level: 'warn', elementId: lw.wallId, elementMark: lw.mark, levelId: l.levelId, levelName: l.levelName, loadType: l.loadType,
+        message: lw.mark + ' (' + l.levelName + ', 1.0' + l.loadType + ') takes ' + k(lw.share) + ' of ' + k(l.V) + ' at equal deflection vs ' + k(capShare) + ' by capacity; shear D/C '
+          + dc.toFixed(2) + ' < ' + LOW_SHARE_DC.toFixed(2) + '. Its own stiffness is low (δ ' + lw.delta0.toFixed(3) + ' in at zero own share from the forces of the walls above, story δ '
+          + l.delta.toFixed(3) + ' in). If it is stiffer than SDPWS Eq. 4.3-1 gives, it takes more shear than designed — check ' + lw.mark + ' for its capacity share, or reduce the rotation (larger holdown / strap).' });
+    }
     const zeros = l.walls.filter(w => w.zeroShare);
     if (!zeros.length) continue;
     const tag = ' (' + l.levelName + ', 1.0' + l.loadType + ')';
@@ -1070,7 +1087,7 @@ function solveDistribution(line, inputs, levels, runLine) {
   out.res.distribution = {
     method: 'deflection', passes, converged, shareChange: r4(out.moved), shareTolerance: DIST_SHARE_TOL,
     spread: sp.spread, spreadRows: sp.rows, levels: out.split.levels, fromAboveLimit: FROM_ABOVE_NOTE, noted,
-    warnings: applyDistReviews(distributionWarnings(out.split.levels), line.distReviewed),
+    warnings: applyDistReviews(distributionWarnings(out.split.levels, out.res), line.distReviewed),
     note: out.split.kept.size ? 'Capacity shares kept at ' + [...out.split.kept].join(', ') + ': a wall has no deflection (no post / hardware selected or no load)' : null,
   };
   // zero-share walls are distribution warnings (above); a wall mostly displaced from above stays an ⓘ note

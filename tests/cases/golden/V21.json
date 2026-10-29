@@ -1,5 +1,5 @@
 {
-  "calcVersion": "v23",
+  "calcVersion": "v24",
   "lines": [
     {
       "line": "N-S / Line A",
@@ -14,16 +14,16 @@
           "V_W": 0,
           "dc": 0.51,
           "T": [
-            4.715,
-            4.715
+            4.21,
+            4.21
           ],
           "C": [
-            4.715,
-            4.715
+            4.21,
+            4.21
           ],
           "anchorage": [
-            "TSS rod 1\" A193 B7",
-            "TSS rod 1\" A193 B7"
+            "WSWH-TSS18KT",
+            "WSWH-TSS18KT"
           ],
           "posts": [
             "WSWH panel",
