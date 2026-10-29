@@ -1,13 +1,13 @@
 {
   "id": "V21",
   "title": "Strong-Wall WSWH stack and raised floor",
-  "intent": "Line A: two WSWH18 panels stacked over two 9 ft stories. The 2nd-story panel uses Table 03 and is held down by the TSS rod; the 1st-story panel is checked as an allowable base moment (M_allow = V₀·H₁/12 with V₀ at P = 4,000 lb, f'c 2,500) against M_d = [V₁·H₁ + V₂·(H₁ + d_fl + H₂)]/12, and its anchors carry the stack moment. Line B: one panel on a raised wood floor (Table 02): shear check and anchor tension T only — the anchorage is by the RDP.",
+  "intent": "Line A: two WSWH18 panels stacked over two 9 ft stories. The 2nd-story panel uses Table 03 and is held down by the WSWH-TSS18KT kit (no tension capacity published); the 1st-story panel is checked as an allowable base moment (M_allow = V₀·H₁/12 with V₀ at P = 4,000 lb, f'c 2,500) against M_d = [V₁·H₁ + V₂·(H₁ + d_fl + H₂)]/12, and its anchors carry the stack moment. Line B: one panel on a raised wood floor (Table 02): shear check and anchor tension T only — the anchorage is by the RDP.",
   "covers": [
     "C-L-SW26 Table 03 (stacked 2nd story)",
     "Table 01 stack base (README §5)",
     "Table 02 raised floor",
     "Table 06-A anchors",
-    "TSS rod"
+    "TSS kit"
   ],
   "handCalc": [
     {
@@ -28,7 +28,7 @@
     },
     {
       "step": 5,
-      "text": "2nd-story hold-down: T = 0.7·V₂·H₂/B = 0.7 × 0.80 × 105.25/12.5 = 4.715 k (B = concrete B, Table 05-C, tool note) ≤ TSS rod 36,800 lb → rod."
+      "text": "2nd-story hold-down: T = 0.7·V₂·H₂/B = 0.7 × 0.80 × 105.25/14.0 = 4.210 k (B = TSS rod arm 14.0 in, Table 05-C, C-L-SW26 p. 47 n.8), reported. Hold-down = WSWH-TSS18KT: no tension capacity published; OK because the panel passes Table 03 (P₂ = 0 ≤ 2,000 lb, shear D/C 0.511, drift)."
     },
     {
       "step": 6,
@@ -121,7 +121,7 @@
       "label": "SW-1 hold-down (stacked 2nd story)",
       "at": "wall:SW-1",
       "field": "anchorageLeft.id",
-      "value": "TSS rod 1\" A193 B7",
+      "value": "WSWH-TSS18KT",
       "step": 5,
       "line": "Line A",
       "role": true
@@ -130,7 +130,7 @@
       "label": "SW-1 rod tension (k)",
       "at": "wall:SW-1",
       "field": "governingTensionLeft",
-      "value": 4.715199999999999,
+      "value": 4.209999999999999,
       "tol": 0.005,
       "step": 5,
       "line": "Line A"
@@ -304,7 +304,7 @@
   "expectChecks": {
     "fail": []
   },
-  "notChecked": "TSS rod arm (the tool uses the concrete B — confirm for the kit, backlog W2); Table 07 / 08.",
+  "notChecked": "",
   "pinned": {
     "Line A/SW-1": {},
     "Line A/SW-2": {

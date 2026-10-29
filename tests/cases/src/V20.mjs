@@ -59,7 +59,6 @@ export default {
     ...driftExpect(d1, 11),
   ],
   expectChecks: { fail: [] },
-  notChecked: 'Bolt length / HSR extension (Table 07) and edge shear anchorage (Table 08) — not in the tool.',
   // Design pinned as manual overrides (method case): the engine picks at calc v13, frozen 2026-09-30
   pins: {"SW-1":{"wswhAnchor":"E STD 16000"},"SW-2":{"nail":"6","hdL":"HDUE3","hdR":"HDUE3","postL":"(2)2x4","postR":"(2)2x4"}},
   inputs: project({
