@@ -5,15 +5,31 @@ import { exportItemPdf } from '../pdf.js';
 import { validateEngineeringInputs } from '../validation.js';
 import { currentOutputs, linkChanges, applyLinkUpdates } from '../results.js';
 
-// Refs for saving, read fresh from the database
+// Refs for saving, read fresh from the database (same rules as refsFromItems: many / from 'inputs')
 async function resolveRefs(mod, inputs) {
   const resolvedRefs = {};
   if (mod.refs && mod.refs.length && inputs && inputs.refs) {
+    const one = async (ref, id) => {
+      const refItem = id ? await getItem(id) : null;
+      if (!refItem) return undefined;
+      try {
+        if (ref.from === 'inputs') {
+          const upMod = getModule(refItem.type);
+          const m = upMod && upMod.migrate ? upMod.migrate({ ...refItem }) : refItem;
+          return ref.extract(m.inputs || {}, m);
+        }
+        return ref.extract(refItem.outputs || {}, refItem);
+      } catch (e) { return undefined; }
+    };
     for (const ref of mod.refs) {
-      const refId = inputs.refs[ref.key];
-      if (refId) {
-        const refItem = await getItem(refId);
-        if (refItem) resolvedRefs[ref.key] = ref.extract(refItem.outputs || {});
+      const v = inputs.refs[ref.key];
+      if (ref.many) {
+        const list = [];
+        for (const id of (Array.isArray(v) ? v : v ? [v] : [])) { const x = await one(ref, id); if (x !== undefined) list.push({ id, ...x }); }
+        if (list.length) resolvedRefs[ref.key] = list;
+      } else {
+        const x = await one(ref, Array.isArray(v) ? v[0] : v);
+        if (x !== undefined) resolvedRefs[ref.key] = x;
       }
     }
   }

@@ -6,11 +6,15 @@
 const newUuid = () => crypto.randomUUID();
 const copy = (v) => JSON.parse(JSON.stringify(v ?? {}));
 
-// Links pointed at their new ids. A link to an item not in idMap (deleted) is cleared.
+// Links pointed at their new ids. A link to an item not in idMap (deleted) is cleared; a list of links keeps
+// the ones that still exist (and is dropped when none do).
 export function remapRefs(refs, idMap) {
   const out = {};
   for (const [key, id] of Object.entries(refs || {})) {
-    if (idMap.has(id)) out[key] = idMap.get(id);
+    if (Array.isArray(id)) {
+      const ids = id.filter(x => idMap.has(x)).map(x => idMap.get(x));
+      if (ids.length) out[key] = ids;
+    } else if (idMap.has(id)) out[key] = idMap.get(id);
   }
   return out;
 }
