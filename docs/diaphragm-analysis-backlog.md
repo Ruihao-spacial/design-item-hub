@@ -6,7 +6,12 @@ Guide: `docs/diaphragm-analysis.md`. Book cases: `docs/diaphragm-analysis-book-c
 ## Next session — start here (set 2026-10-29, after Phase 2)
 **State:** Phases 0–2 committed. Local `master` = `a60be7a` (SWD v24 `5539efd` + Diaphragm Analysis `b62a98b`,
 merged locally, **not pushed**). Branch `diaphragm-analysis` = master. `npm test` green, SWD goldens identical.
-**Next:** user: push / PR when wanted; `upgrade:shearwall` dry run; seed DA-BOOK. Then Phase 3 (TD engine).
+**PRs (2026-10-29):** [#5](https://github.com/Ruihao-spacial/design-item-hub/pull/5) `sw-design-data-appendix` → master
+(SWD v24) and [#6](https://github.com/Ruihao-spacial/design-item-hub/pull/6) `diaphragm-analysis` → master — merge #5 first.
+Local `master` (a60be7a) is not pushed; after the PRs merge, reset it to origin/master.
+`upgrade:shearwall` dry run done by the user: 34 items, 0 failed (34 would move to v24). Optional DB writes, not run:
+`upgrade:shearwall -- --apply`, `seed:cases -- --apply`, `da:seed -- --apply`.
+**Next:** Phase 3 (TD engine) — ON HOLD (user, 2026-10-29).
 - Line-length check added: SWD line `totalLength` must equal the plan length of its grid (enter → leave the
   sheathed plan, ±0.01 ft); a mismatch is a plan error and red ✗ in the Setup line table.
 
