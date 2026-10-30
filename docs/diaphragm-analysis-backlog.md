@@ -3,22 +3,71 @@
 Branch `diaphragm-analysis` (off `master` 71cdfb5; module renamed from Transfer Diaphragm 2026-10-29). Plan: `~/.claude/plans/read-the-md-files-composed-kite.md` (approved 2026-10-29).
 Guide: `docs/diaphragm-analysis.md`. Book cases: `docs/diaphragm-analysis-book-cases.md`.
 
-## Next session — start here (set 2026-10-29, Phase 6)
+## Next session — start here (set 2026-10-30, Phase 7)
 **State**
-- Branch `da-phase3-td-engine` (off `diaphragm-analysis` 3d568d0) holds Phases 3–6, committed (4d9782f) and pushed
-  2026-10-29; no PR yet (open one on request, after #5 / #6). PRs #5 / #6 still open. `npm test` green (DA: Plan 22, Link 9, Engine 10, Basic 10, Td 8, Net 8),
+- Branch `da-phase3-td-engine`: Phases 3–6 (4d9782f) and, on 2026-10-30, Phase 7 + the review rounds below (result
+  views, loads on Setup, wind mode, force levels, TD gate) committed and pushed. PRs #5 / #6 still open; no PR for
+  this branch yet. `npm test` green (DA: Plan 22, Link 9, Engine 10, Basic 10, Td 8, Net 11, Offset 5, Loads 7),
   build OK, no Shear Wall Design / DLRS file changed.
-- Book: 344 / 344 values of phases 4–6 match (`docs/diaphragm-analysis-book-cases.md`); only Ex 3.3 (22 values,
-  phase 7) is pending. Every member run of the 6 examples closes; the skill's TD edge forces = the integrator's.
+- Book: **366 / 366** values of phases 4–7 match, nothing pending (`docs/diaphragm-analysis-book-cases.md`); the book's
+  non-closing first run of Ex 3.3 (37 values) is reproduced in the Offset test.
 
 **Next**
 1. User: re-seed DA-BOOK (`npm run da:seed -- --apply`; PowerShell `$env:SB_EMAIL` / `$env:SB_PASSWORD` first);
-   review Analysis Views 1–4, TDs, Checks, Verification next to the book figures (Ex 3.4: review the cantilever
-   limits first — TD / net values wait for it).
-2. Phase 7: offset wall lines (Ex 3.3 weighted-average / closure iteration — open question: method and tolerance;
-   Ex 4.2 already runs with the equal split).
-3. Phase 8: PDF reports (Views 1–4, TD tables, step trace), upgrade script, README.
+   review Analysis Views 1–4 (Ex 3.3: pass table under the line forces), TDs, Checks, Verification next to the book
+   figures (Ex 3.4: review the cantilever limits first — TD / net values wait for it).
+2. Open (user): closure tolerance values — rule max(fixed lb, % of run max) is in; values kept at 1 lb / 1 %
+   (`CLOSURE_LB` / `CLOSURE_REL`, tdNet.js). Should the iteration stop at the tolerance (now) or run on until the
+   residual is ~0 (start-independent result)?
+3. Phase 8: PDF reports (Views 1–4, TD tables, step trace, pass table), upgrade script, README.
 4. For the skill author: T05 misprint; stray shell text at the end of `references/citations.md`.
+
+## TD gate (2026-10-30, user)
+- Ex 3.4 without "Reviewed — limits met": only TD1 paused; the net field / members still ran without it and showed
+  invalid values. Decision: pause the dependent results of that load case (basic shear and line forces stay),
+  PAUSED in Checks; offset-line line forces held from SWD (null) + warning. `blocksCase`, `pausedChecks`,
+  `pausedPanel`. "No disrupted force" (td-no-load) does not pause.
+
+## Setup pages (2026-10-30, user)
+- All loads on the Setup tab: pages Seismic loading · Wind loading · Shear wall link · General (code / sheathing /
+  method, which had no page of their own in the request). `renderLoadList(inputs, kind, refresh)` (tdPlanEditor.js)
+  replaces the Plan-panel load cards; the Plan panel only points to Setup. No stored-data change.
+
+## Review round 2 (2026-10-30): text, maxima, read-out, loads, force levels
+- Text size A− / A+ (default 120 %); max tension and max compression labelled per run and listed in the member
+  table; mouse read-out (unit shear at the point / N on the nearest member line).
+- Decisions (user): seismic stays at F_x for everything; display factors k_D (→ F_px) and k_C (→ collector level)
+  on the Analysis tab, with "Forces shown" always stated; SWD gets 1.0E. Load strip w(s) on the Plan tab only.
+  Wind: simpler plf input with windward / leeward kept apart (matters at openings, Ex 5.1) → load mode `wind`
+  (segments w = windward, wl = leeward). A single 123 / 77 wind load reproduces all 73 Ex 5.1 values. W area load →
+  warning. No CALC_VERSION change (new mode only; existing items give the same results).
+
+## Result views: zoom, organisation, legend (2026-10-30, user review of DA-BOOK)
+- User: Ex 3.4 View 4 line 2 compression did not return to 0 at A. Cause: in the seeded item TD1 waits for the
+  cantilever review (ENGINEER_INPUT), so View 4 drew members without TD1 (line 2 kept −5775 = TD1's reaction at 2;
+  lines 1 / 3 left +4620 / +1155). After the review every run closes and matches Figs 3.25 / 3.26. Now shown on
+  screen: notice on Views 2–4 + "open ±N" at the end of each run that does not close.
+- Views regrouped (Unit shear: Basic / TD / Net; Forces: Members), shared zoom / pan (`zoomAt`, `zoomButtons` in
+  tdPlanEditor.js, used by the editor too), hover read-outs, N at grids / wall ends at zoom ≥ 200 %, overlays
+  (line forces on every view, outlines), result-mode plan (diaphragm / TD outlines only), HTML legend (scale + plan
+  symbols, also on the Plan tab). No calc change. Not checked in a real browser by Claude (Node stand-in DOM).
+
+## Phase 7 log (2026-10-30)
+- Decisions (user): **iterate to closure** (not the book's p14 weighted-average rule, not flexible + flag);
+  closure tolerance = the larger of a fixed force and a % of the run's largest |N|.
+- **Offset line** = walls with one wall line name on ≥ 2 grids across the span (`lineGroups`); force shared by wall
+  length across the group (`shareGroup`, basis `group`). No new input: the wall line name already exists. Linked
+  Shear Wall Design walls keep one grid per line, so groups come from typed walls.
+- `src/modules/tdOffset.js` `offsetIterate`: pass 0 flexible; per pass TDs → net field → members; each wall line
+  F ← F − Σ residuals of its cross runs (parts by run), groups pool; stop when every wall-line run closes, max 25.
+  Only cases with a group iterate — the other examples run exactly as before (test).
+- `tdDerive`: a strut TD on a group grid takes P = strut force at the TD edge (Ex 3.3: 694 lb, book 693.6); an
+  ungrouped wall line on a TD load line now says how to group it.
+- Ex 3.3 result: R_A 4597, R_B/C 5403 (book 4600 / 5400), every Fig 3.21 value within its tolerance; 1 pass.
+- `tdNet.closes` / `closureTol` / `CLOSURE_LB` / `CLOSURE_REL` replace the `closureTol` parameter (Checks, View 4).
+  Book key `R:<group>`. Verification tab and book-cases doc compare phase 7. CALC_VERSION td-v6.
+- Line forces sent to a linked SWD item are recomputed after the iteration; a non-group line moved by it is
+  re-shared on its own basis (SWD weights kept from the first pass).
 
 ## Phase 6 log (2026-10-29)
 - `src/modules/tdNet.js`: TD field (segment shears of each TD that ran, × ySign), net field v_net = v_b + Σ v_TD,

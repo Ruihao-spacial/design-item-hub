@@ -8,16 +8,17 @@ import { parsePlan, planErrors, sheathedArea, tdFrame } from './tdGeometry.js';
 import { TD_FLOW } from './tdFlow.js';
 import { TD_SCHEMA, migrateItem, normalizeInputs } from './tdMigrate.js';
 import { defaultInputs } from './tdModel.js';
-import { renderPlanEditor, newEditorState, drawPlan } from './tdPlanEditor.js';
+import { renderPlanEditor, newEditorState, drawPlan, renderLoadList } from './tdPlanEditor.js';
 import { swdExtract, linkedWalls, guessDir, swdWallShares } from './tdWallLink.js';
 import { renderAnalysis } from './tdViews.js';
 import { toolValue } from './tdBookKeys.js';
 import { loadCases, analyseCase, lineForces as caseLineForces, wallShares } from './tdBasicShear.js';
 import { runTds, CLOSURE_TOL } from './tdDerive.js';
-import { tdFields, members, netChecks } from './tdNet.js';
+import { tdFields, members, netChecks, CLOSURE_REL, CLOSURE_LB } from './tdNet.js';
+import { offsetIterate } from './tdOffset.js';
 import { cantileverLimits, CANTILEVER_LIMITS_VERIFY } from './tdLimits.js';
 
-export const CALC_VERSION = 'td-v5'; // v5: TD and net fields, net-field members (Phase 6). // v2: TD geometry in the skill frame (results.tds); v3: basic shear, line forces, wall shares (Phase 4); v4: derived TD inputs + TD engine runs (Phase 5)
+export const CALC_VERSION = 'td-v6'; // v6: offset wall lines, line forces iterated to closure (Phase 7). // v5: TD and net fields, net-field members (Phase 6). // v2: TD geometry in the skill frame (results.tds); v3: basic shear, line forces, wall shares (Phase 4); v4: derived TD inputs + TD engine runs (Phase 5)
 const f2 = v => (Number.isFinite(v) ? v.toFixed(2) : '—');
 const sameName = (a, b) => String(a || '').trim().toLowerCase() === String(b || '').trim().toLowerCase();
 const SHEATHING = [['wsp', 'Wood structural panels'], ['lumber_straight_single', 'Lumber, straight (single)'],
@@ -43,17 +44,31 @@ export function calcAll(inputs, refs = {}) {
   const an = errors.length ? { cases: [], lineForces: [], issues: [] } : analyse(plan, q, link, refs.wallSource);
   warnings.push(...an.issues.map(i => ({ ...i, warn: true })));
   const frames = new Map(plan.tds.map(t => [t.id, tdFrame(t)]));
-  const tdRuns = an.cases.flatMap(cs => runTds(plan, cs, frames, inputs.tds, {
-    codeEdition: inputs.codeEdition, designBasis: inputs.designBasis,
-    sheathing: (inputs.diaphragm && inputs.diaphragm.sheathing) || 'wsp', blocked: !inputs.diaphragm || inputs.diaphragm.blocked !== false }));
+  const tdOpts = { codeEdition: inputs.codeEdition, designBasis: inputs.designBasis,
+    sheathing: (inputs.diaphragm && inputs.diaphragm.sheathing) || 'wsp', blocked: !inputs.diaphragm || inputs.diaphragm.blocked !== false };
+  const runCase = cs => runTds(plan, cs, frames, inputs.tds, tdOpts);
+  const tdRuns = [];
+  for (const cs of an.cases) {
+    const it = offsetIterate(plan, cs, runCase, { frames }); // Phase 7: offset wall lines → iterate to closure
+    if (it) { cs.offset = it.offset; tdRuns.push(...it.tdRuns); continue; }
+    const runs = runCase(cs);
+    tdRuns.push(...runs);
+    cs.fields = tdFields(plan, cs, runs, frames); cs.members = members(plan, cs, cs.fields);
+  }
+  // Gate (user 2026-10-30): a TD that did not run makes the net field / members of its case incomplete — they are
+  // paused, not reported. Basic shear and line forces stay (an offset-line case's line forces are held from SWD).
+  for (const cs of an.cases) cs.paused = tdRuns.filter(r => r.caseId === cs.id && blocksCase(r)).map(r => ({ mark: r.mark, terminal: r.terminal, reason: pauseReason(r) }));
+  if (an.cases.some(cs => cs.offset)) an.lineForces = linkLineForces(an.cases, link);
+  for (const cs of an.cases) if (cs.offset && cs.paused.length && link)
+    warnings.push({ code: 'swd-held', warn: true, msg: `Line forces of the ${cs.kind === 'E' ? 'seismic' : 'wind'} case along ${cs.dir} are held from Shear Wall Design until ${cs.paused.map(p => 'TD ' + p.mark).join(', ')} run(s) (offset wall line).` });
   for (const r of tdRuns) warnings.push(...(r.issues || []).map(i => ({ ...i, warn: true })));
-  for (const cs of an.cases) { cs.fields = tdFields(plan, cs, tdRuns, frames); cs.members = members(plan, cs, cs.fields); }
-  const checks = an.cases.flatMap(cs => netChecks(plan, cs, tdRuns, frames, CLOSURE_TOL));
+  const checks = an.cases.flatMap(cs => (cs.paused.length ? pausedChecks(plan, cs, tdRuns, frames) : [...netChecks(plan, cs, tdRuns, frames), ...offsetChecks(cs)]));
   return {
     calcVersion: CALC_VERSION,
     level: (inputs.level && inputs.level.name) || '',
     sumA,
     q,
+    forceLevels: forceLevels(inputs),
     errors, warnings,
     counts: { grids: plan.grids.length, openings: plan.openings.length, walls: plan.walls.length, tds: plan.tds.length, diaphragms: plan.diaphragms.length },
     wallLink: link ? { levelId: link.levelId, lines: link.lines.map(l => ({ dirId: l.dirId, dir: l.dir, lineId: l.lineId, name: l.name, grid: l.grid ? l.grid.name : null, origin: l.origin,
@@ -84,12 +99,7 @@ export function analyse(plan, q, link, swd) {
     if (lc.loads.some(l => l.mode === 'seismic') && q === null) issues.push({ code: 'no-fx', msg: 'Seismic load: F_x is missing (Setup) — seismic loads are 0.' });
     return { ...c, lines: lf.lines, issues: undefined };
   });
-  const lineForces = [];
-  for (const l of (link && link.lines) || []) {
-    if (!l.grid) continue;
-    const at = kind => { const c = cases.find(x => x.dir === l.dir && x.kind === kind); const ln = c && c.lines.find(x => x.gridId === l.grid.id); return ln ? ln.P / 1000 : 0; };
-    lineForces.push({ swdDirId: l.dirId, swdLineId: l.lineId, line: l.name, E: at('E'), W: at('W') });
-  }
+  const lineForces = linkLineForces(cases, link);
   const sw = link && swd ? swdWallShares(swd, link.levelId, lineForces) : null;
   if (sw && sw.error) issues.push({ code: 'swd-calc', msg: sw.error });
   for (const c of cases) for (const ln of c.lines) {
@@ -102,9 +112,69 @@ export function analyse(plan, q, link, swd) {
         issues.push({ code: 'swd-no-share', msg: `Line ${ln.name} (${c.kind === 'E' ? 'seismic' : 'wind'}): Shear Wall Design gives its walls no share for this load — split by wall length.` });
       }
     }
+    ln.weights = weights; // kept for Phase 7 (a line force moved by the iteration is re-shared on the same basis)
     ln.walls = wallShares(plan, ln, weights);
   }
   return { cases, lineForces, issues };
+}
+
+// A TD run that leaves its case incomplete: engineer input pending, a stop, an error, or not run for a reason other
+// than "no disrupted force" (a TD with nothing to carry adds no shear, so the case is complete without it)
+export function blocksCase(r) {
+  const t = String(r.terminal);
+  if (t === 'OUTPUT') return false;
+  if (t === 'NOT_RUN') return !(r.issues || []).some(i => i.code === 'td-no-load');
+  return true;
+}
+function pauseReason(r) {
+  const t = String(r.terminal);
+  if (t.startsWith('ENGINEER_INPUT')) return 'awaits the cantilever review (TDs tab → "Reviewed — limits met")';
+  if (t.startsWith('HARD_STOP')) return 'stopped: ' + t.slice(10).replace(/_/g, ' ').toLowerCase() + ' (TDs tab)';
+  const i = (r.issues || []).find(x => !x.warn) || (r.issues || [])[0];
+  return (t === 'ERROR' ? 'error' : 'not run') + (i ? ' — ' + i.msg : '');
+}
+// Checks of a paused case: what is still valid (equilibrium, TD status) + PAUSED instead of closure / members
+function pausedChecks(plan, cs, tdRuns, frames) {
+  const tag = (cs.dir === 'y' ? '↕' : '↔') + ' ' + (cs.kind === 'E' ? 'E' : 'W');
+  return [...netChecks(plan, cs, tdRuns, frames).filter(c => c.code === 'equilibrium' || c.code === 'td'),
+    { caseId: cs.id, code: 'paused', ok: false, warn: true,
+      msg: `${tag}: PAUSED — ${cs.paused.map(p => 'TD ' + p.mark + ' ' + p.reason).join('; ')}. TD / net shear, member forces and closure are not reported until it runs` + (cs.offset ? '; the offset-line forces are not final.' : '.') }];
+}
+
+// Seismic display factors (Setup): F_x → diaphragm level (k_D = F_px / F_x) and collector level (k_C); blank / bad = 1
+export function forceLevels(inputs) {
+  const k = v => { const n = Number(v); return v !== '' && v !== null && v !== undefined && Number.isFinite(n) && n > 0 ? n : 1; };
+  const lv = inputs.level || {};
+  return { fx: Number.isFinite(Number(lv.fx)) && lv.fx !== '' ? Number(lv.fx) : null, diaphragm: k(lv.diaphragmFactor), collector: k(lv.collectorFactor) };
+}
+
+// Per linked SWD line, the force this diaphragm delivers (kip, load-direction sign, E and W; null = held)
+export function linkLineForces(cases, link) {
+  const out = [];
+  for (const l of (link && link.lines) || []) {
+    if (!l.grid) continue;
+    const at = kind => {
+      const c = cases.find(x => x.dir === l.dir && x.kind === kind);
+      if (c && c.offset && (c.paused || []).length) return null; // held: offset-line forces wait for the TD runs (SWD skips null)
+      const ln = c && c.lines.find(x => x.gridId === l.grid.id);
+      return ln ? ln.P / 1000 : 0;
+    };
+    out.push({ swdDirId: l.dirId, swdLineId: l.lineId, line: l.name, E: at('E'), W: at('W') });
+  }
+  return out;
+}
+
+// Phase 7 check: the offset-line iteration reached closure
+function offsetChecks(cs) {
+  const o = cs.offset;
+  if (!o) return [];
+  const tag = (cs.dir === 'y' ? '↕' : '↔') + ' ' + (cs.kind === 'E' ? 'E' : 'W');
+  const last = o.passes[o.passes.length - 1];
+  const forces = last.lines.map(l => `${l.name} ${Math.round(l.P)} lb`).join(', ');
+  return [{ caseId: cs.id, code: 'offset', ok: o.converged,
+    msg: `${tag}: offset wall line ${o.groups.map(g => g.name).join(', ')} — ` + (o.converged
+      ? `line forces iterated to closure in ${last.pass} pass${last.pass === 1 ? '' : 'es'} (${forces}; tolerance max(${CLOSURE_LB} lb, ${CLOSURE_REL * 100} % of the run max))`
+      : `no closure after ${last.pass} passes (${last.open} runs open, largest residual ${Math.round(last.maxRes)} lb; ${forces})`) }];
 }
 
 const elfRows = linked => (linked && linked.elfSource && linked.elfSource.elfTable) || null;
@@ -173,6 +243,10 @@ export const diaphragmAnalysis = {
     if (inputs.loads[0] && String(inputs.loads[0].acts).endsWith('x')) ed.dir = 'x';
     let active = inputs.verification ? 'verification' : 'plan';
     let caseId = null, view = 1, show = { chord: true, cross: true }; // Analysis tab: load case, view, member filter
+    let overlays = { lines: true, outlines: true };
+    let setupPage = 'seismic'; // Setup tab page: seismic | wind | walls | general
+    let forceLevel = 'E'; // Analysis tab, seismic cases: 'E' (1.0E, F_x) | 'D' (diaphragm level) | 'C' (collector level)
+    const viewZoom = { zoom: 1, panX: 0, panY: 0 }; // Analysis tab zoom / pan, shared by every view and case
     let results = calcAll(inputs, refs);
 
     function refresh(inputsChanged) {
@@ -202,7 +276,8 @@ export const diaphragmAnalysis = {
       if (active === 'setup') body.appendChild(renderSetup());
       else if (active === 'plan') body.appendChild(renderPlanTab());
       else if (active === 'analysis') body.appendChild(renderAnalysis(planWithLinks(inputs, refs).plan, results, { id: caseId, set(id) { caseId = id; renderAll(); },
-        view, setView(n) { view = n; renderAll(); }, show, setShow(x) { show = x; renderAll(); }, closureTol: CLOSURE_TOL }));
+        view, setView(n) { view = n; renderAll(); }, show, setShow(x) { show = x; renderAll(); },
+        zoom: viewZoom, overlays, setOverlays(x) { overlays = x; renderAll(); }, level: forceLevel, setLevel(x) { forceLevel = x; renderAll(); } }));
       else if (active === 'tds') body.appendChild(renderTds(results, inputs, refresh));
       else if (active === 'checks') body.appendChild(renderChecks(results));
       else if (active === 'verification') body.appendChild(renderVerification(inputs, results, planWithLinks(inputs, refs).plan));
@@ -218,8 +293,15 @@ export const diaphragmAnalysis = {
       if (typeof window !== 'undefined' && window.scrollTo) try { window.scrollTo(0, scrollY); } catch { /* stand-in DOM */ }
     }
 
+    // Setup: one page each for seismic loading, wind loading, the Shear Wall Design link, and general settings
     function renderSetup() {
       const sec = el('div');
+      sec.appendChild(el('div', { style: { display: 'flex', gap: '4px', flexWrap: 'wrap', marginBottom: '0.8rem' } },
+        ...[['seismic', 'Seismic loading'], ['wind', 'Wind loading'], ['walls', 'Shear wall link'], ['general', 'General']].map(([k, t]) =>
+          el('button', { type: 'button', className: 'btn btn-sm' + (setupPage === k ? ' btn-primary' : ' btn-ghost'), onClick() { setupPage = k; renderAll(); } }, t))));
+      if (setupPage === 'wind') return setupWind(sec);
+      if (setupPage === 'walls') { sec.appendChild(renderWallLink()); return sec; }
+      if (setupPage === 'general') return setupGeneral(sec);
       sec.appendChild(el('div', { className: 'section-header' }, 'Level and story force F', el('sub', null, 'x')));
       const linked = !!inputs.refs.elfSource;
       const linkedItem = elfItems.find(x => x.id === inputs.refs.elfSource);
@@ -251,8 +333,42 @@ export const diaphragmAnalysis = {
         el('div', { className: 'form-group' }, el('label', { className: 'form-label' }, 'ΣA (sf) / q'),
           el('div', { className: 'mono', style: { padding: '6px 0' } }, f2(results.sumA) + ' sf' + (results.q != null ? ' · q = ' + f2(results.q) + ' psf' : '')))));
 
-      sec.appendChild(renderWallLink());
-      sec.appendChild(el('div', { className: 'section-header', style: { marginTop: '1rem' } }, 'Code and diaphragm'));
+      // Seismic force levels (display factors on the Analysis tab; the analysis and the SWD line forces stay at 1.0E)
+      const lvName = inputs.level.name;
+      const elfRow = (table, key) => { const t = linkedItem && linkedItem.outputs && linkedItem.outputs[table]; const r = t && t.find(x => sameName(x.level, lvName)); return r ? Number(r[key]) : NaN; };
+      const fxNum = Number(inputs.level.fx);
+      const hint = (val, what) => (Number.isFinite(val) && fxNum > 0 ? el('span', { style: { fontSize: '0.75rem', color: 'var(--ink-tertiary)' } },
+        ' ELF: ' + what + ' = ' + val + ' k → ' + (val / fxNum).toFixed(3) + ' ', el('button', { type: 'button', className: 'btn btn-ghost btn-sm', onClick() { setFactor(what === 'F_px' ? 'diaphragmFactor' : 'collectorFactor', (val / fxNum).toFixed(3)); } }, 'use')) : null);
+      const setFactor = (k, v) => { inputs.level[k] = v; refresh(true); };
+      const factorInput = k => el('input', { type: 'number', step: 'any', min: 0, value: numOrBlank(inputs.level[k]), placeholder: '1.0', style: { width: '80px' }, onChange(e) { setFactor(k, e.target.value); } });
+      sec.appendChild(el('div', { className: 'section-header', style: { marginTop: '1rem' } }, 'Seismic force levels (Analysis tab display)'));
+      sec.appendChild(el('p', { style: { fontSize: '0.8rem', color: 'var(--ink-secondary)', margin: '0 0 0.4rem' } },
+        'The analysis runs at 1.0E from F', el('sub', null, 'x'), ' (the line forces sent to Shear Wall Design stay there). The Analysis tab can show the same results scaled to the diaphragm design level (F', el('sub', null, 'px'), ', ASCE 7 §12.10.1.1) or to the collector level (Ω₀ / §12.10.2.1) — linear, so every force and unit shear scales by the factor. Blank = 1.0.'));
+      sec.appendChild(el('div', { style: { display: 'flex', gap: '1.5rem', flexWrap: 'wrap', alignItems: 'flex-end' } },
+        el('div', { className: 'form-group' }, el('label', { className: 'form-label' }, 'Diaphragm level k', el('sub', null, 'D'), ' = F', el('sub', null, 'px'), ' / F', el('sub', null, 'x')),
+          el('div', null, factorInput('diaphragmFactor'), hint(elfRow('diaphragmTable', 'fpxDesign'), 'F_px'))),
+        el('div', { className: 'form-group' }, el('label', { className: 'form-label' }, 'Collector level k', el('sub', null, 'C'), ' = F', el('sub', null, 'collector'), ' / F', el('sub', null, 'x')),
+          el('div', null, factorInput('collectorFactor'), hint(elfRow('collectorTable', 'designForce'), 'F_collector')))));
+
+      sec.appendChild(el('div', { className: 'section-header', style: { marginTop: '1rem' } }, 'Seismic loads (E)'));
+      sec.appendChild(el('p', { style: { fontSize: '0.8rem', color: 'var(--ink-secondary)', margin: '0 0 0.2rem' } },
+        'Seismic F_x / ΣA puts q = F_x / ΣA on the sheathed area (the load follows the sheathed depth; openings carry nothing). All E loads of one direction form one load case, 1.0E.'));
+      sec.appendChild(renderLoadList(inputs, 'E', refresh));
+      return sec;
+    }
+
+    function setupWind(sec) {
+      sec.appendChild(el('div', { className: 'section-header' }, 'Wind loads (W)'));
+      sec.appendChild(el('p', { style: { fontSize: '0.8rem', color: 'var(--ink-secondary)', margin: '0 0 0.2rem' } },
+        'Wind: per segment along the span a windward plf (on the face the wind comes from) and a leeward plf (on the opposite face) — pressure × tributary height. '
+        + 'Without an opening only the net load counts; at an opening each band takes its own strip (book Ex 5.1). A line load (plf) on a chosen edge is also possible. '
+        + 'All W loads of one direction form one load case, 1.0W as entered.'));
+      sec.appendChild(renderLoadList(inputs, 'W', refresh));
+      return sec;
+    }
+
+    function setupGeneral(sec) {
+      sec.appendChild(el('div', { className: 'section-header' }, 'Code and diaphragm'));
       const pick = (label, value, opts, set) => el('div', { className: 'form-group' }, el('label', { className: 'form-label' }, label),
         el('select', { className: 'form-select', style: { width: 'auto' }, onChange(e) { set(e.target.value); refresh(true); } },
           ...opts.map(([v, s]) => el('option', { value: v, selected: value === v }, s))));
@@ -332,7 +448,8 @@ export const diaphragmAnalysis = {
         box.appendChild(el('div', { style: { fontSize: '0.8rem', color: 'var(--stale)', margin: '0 0 0.5rem' } },
           el('strong', null, '⚠ '), results.warnings.map(e => e.msg).join(' · ')));
       }
-      box.appendChild(renderPlanEditor({ inputs, plan, errors: results.errors, state: ed, refresh, wallsLinked: !!refs.wallSource }));
+      box.appendChild(renderPlanEditor({ inputs, plan, errors: results.errors, state: ed, refresh, wallsLinked: !!refs.wallSource,
+        loadCases: results.analysis && results.analysis.cases, q: results.q }));
       box.appendChild(el('p', { style: { fontSize: '0.78rem', color: 'var(--ink-tertiary)', marginTop: '0.4rem' } },
         'ΣA = ' + f2(results.sumA) + ' sf · ' + results.counts.grids + ' grids · ' + results.counts.openings + ' openings · ' + results.counts.walls + ' walls · ' + results.counts.diaphragms + ' diaphragms · ' + results.counts.tds + ' TDs'));
       return box;
@@ -498,8 +615,8 @@ function renderVerification(inputs, results, toolPlan) {
   const byPhase = {};
   exp.forEach(e => { byPhase[e.phase] = (byPhase[e.phase] || 0) + 1; });
   // values the built phases reach are compared (book tolerance, else 0.5 % or 0.5); the rest stay pending
-  const BUILT = 6;
-  const awaiting = (results.tdRuns || []).some(r => String(r.terminal).startsWith('ENGINEER_INPUT'));
+  const BUILT = 7;
+  const awaiting = ((results.analysis && results.analysis.cases) || []).some(c => (c.paused || []).length); // a paused case (gate)
   const row = e => {
     if (e.phase > BUILT) return { tool: null, status: 'pending' };
     if (e.phase >= 6 && awaiting) return { tool: null, status: 'review' }; // TD / net values wait for the cantilever review
@@ -510,7 +627,7 @@ function renderVerification(inputs, results, toolPlan) {
   };
   const rows = exp.map(e => ({ e, ...row(e) }));
   const nOk = rows.filter(r => r.status === 'ok').length, nDiff = rows.filter(r => r.status === 'DIFF').length;
-  if (awaiting) box.appendChild(el('p', { style: { fontSize: '0.8rem', color: 'var(--stale)' } }, 'A cantilever TD awaits the engineer review of its limits (TDs tab); TD and net-field values are compared after it.'));
+  if (awaiting) box.appendChild(el('p', { style: { fontSize: '0.8rem', color: 'var(--stale)' } }, 'A TD has not run (cantilever review pending or a stop — TDs tab); its case is paused, so TD and net-field values are compared after it runs.'));
   box.appendChild(el('p', { style: { fontSize: '0.8rem', color: nDiff ? 'var(--fail)' : 'var(--ink-secondary)', marginTop: '0.5rem' } },
     exp.length + ' book values (' + Object.entries(byPhase).map(([p, n]) => n + ' from phase ' + p).join(', ') + '): ' + nOk + ' ok, ' + nDiff + ' differ, '
     + (exp.length - nOk - nDiff) + ' pending (phases not built yet).'));

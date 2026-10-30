@@ -171,6 +171,7 @@ test('DA form with the SWD item: link section, walls drawn read-only, Wall tool 
   diaphragmAnalysis.renderForm(box, daCase('swd-1'), () => {}, items, () => {}, {});
   const click = t => { const b = [...box.querySelectorAll('button')].find(x => x.textContent.startsWith(t)); b.dispatchEvent(new window.Event('click')); };
   click('Setup');
+  click('Shear wall link'); // Setup page of its own (2026-10-30)
   assert.ok(box.textContent.includes('Shear walls (from Shear Wall Design)'));
   assert.ok(box.textContent.includes('auto 0') || [...box.querySelectorAll('input')].some(i => i.getAttribute('placeholder') === 'auto 0'), 'origin auto shown');
   click('Plan');

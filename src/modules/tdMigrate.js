@@ -20,9 +20,12 @@
 //   tds: [{ id, mark, dir, x1, x2, y1, y2, supports: [gridId, gridId], loads: [{ gridId, side }], overhang: [a, b] | null,
 //           engineer: { regionClear, cantileverOk, closureTol } },
 //   wallLink: { dirMap: { [swdDirId]: 'x'|'y' }, origins: { [swdLineId]: ft | '' } },   // refs.wallSource = SWD item
-//   loads: [{ id, acts: '+x'|'-x'|'+y'|'-y', mode: 'seismic'|'area'|'line', kind: ''|'E'|'W' ('' = E for seismic, else W),
-//             psf, edgeId, segments: [{ from, to, w, w2 }] }] }
+//   loads: [{ id, acts: '+x'|'-x'|'+y'|'-y', mode: 'seismic'|'area'|'line'|'wind', kind: ''|'E'|'W' ('' = E for seismic, else W),
+//             psf, edgeId, segments: [{ from, to, w, w2, wl }] }] }
 //   diaphragms[].bandSplit: ''|'mid'|'low'|'high' (Phase 4; '' = mid)
+//   loads[].mode 'wind' + segments[].wl (2026-10-30): w = windward plf, wl = leeward plf (blank = 0)
+//   level.diaphragmFactor / level.collectorFactor (2026-10-30): display factors F_x → diaphragm / collector level
+//     ('' = 1); results stay at 1.0E
 // Numbers are stored as typed (strings); '' = blank.
 
 export const TD_SCHEMA = 1;
@@ -54,7 +57,7 @@ export function normalizeInputs(inputs) {
   const fill = (o, defaults) => { for (const [k, v] of Object.entries(defaults)) if (o[k] === undefined || (o[k] === null && typeof v === 'object' && v !== null)) o[k] = typeof v === 'object' && v !== null ? clone(v) : v; return o; };
   const arr = (o, k) => { if (!Array.isArray(o[k])) o[k] = []; return o[k]; };
   fill(inputs, { codeEdition: 'CBC-2025', designBasis: 'ASD', pdfReport: 'summary', refs: {}, notes: '', level: {}, diaphragm: {} });
-  fill(inputs.level, { name: '', fx: '' });
+  fill(inputs.level, { name: '', fx: '', diaphragmFactor: '', collectorFactor: '' });
   fill(inputs.diaphragm, { sheathing: 'wsp', blocked: true });
   fill(inputs, { wallLink: {} });
   fill(inputs.wallLink, { dirMap: {}, origins: {} });
@@ -79,7 +82,7 @@ export function normalizeInputs(inputs) {
   arr(inputs, 'loads').forEach((l, i) => {
     if (!isObj(l)) return;
     fill(l, { id: 'ld-auto-' + i, acts: '-y', mode: 'line', psf: '', edgeId: '', kind: '' });
-    arr(l, 'segments').forEach(s => isObj(s) && fill(s, { from: '', to: '', w: '', w2: '' }));
+    arr(l, 'segments').forEach(s => isObj(s) && fill(s, { from: '', to: '', w: '', w2: '', wl: '' }));
   });
   return inputs;
 }

@@ -14,6 +14,11 @@ import { vAt, wallR } from './tdMembers.js';
 import { lineParts } from './tdBasicShear.js';
 
 const EPS = 1e-6, NUDGE = 1e-5;
+// Member closure (user 2026-10-30): a run closes when |residual| ≤ the larger of a fixed force and a share of the run's
+// largest |N| — the fixed floor lets a run with small forces pass, the share scales with large ones.
+export const CLOSURE_REL = 0.01, CLOSURE_LB = 1;
+export const closureTol = max => Math.max(CLOSURE_LB, CLOSURE_REL * Math.abs(max));
+export const closes = r => Math.abs(r.residual) <= closureTol(r.max);
 const uniq = a => [...new Set(a.filter(Number.isFinite).map(v => Math.round(v * 1e6) / 1e6))].sort((p, q) => p - q);
 
 // TD shear fields of a case: [{ tdId, mark, rect, along, segs: [{ lo, hi, v }] }] (plan coordinates, plan sign)
@@ -156,8 +161,8 @@ export function memberN(m, p) {
 
 // Phase 6 checks of a case: equilibrium, closure of every member run, the TD runs, the skill's TD edge-member forces
 // against the integrator on the same lines (only where the line's run is exactly the TD span), the seismic flag.
-// closureTol: relative (to the run's max |N|), with a 1 lb floor. Returns [{ caseId, code, ok, msg, warn? }].
-export function netChecks(plan, cs, runs, frames, closureTol) {
+// Closure per run: closes() above. Returns [{ caseId, code, ok, msg, warn? }].
+export function netChecks(plan, cs, runs, frames) {
   const out = [];
   const tag = (cs.dir === 'y' ? '↕' : '↔') + ' ' + (cs.kind === 'E' ? 'E' : 'W');
   const total = cs.diaphragms.reduce((t, d) => t + d.load, 0) * cs.sigma, sum = cs.lines.reduce((t, l) => t + l.P, 0);
@@ -167,7 +172,7 @@ export function netChecks(plan, cs, runs, frames, closureTol) {
   const open = [];
   for (const m of cs.members || []) for (const r of m.runs) {
     n++;
-    if (Math.abs(r.residual) > Math.max(1, closureTol * Math.abs(r.max))) open.push(`${m.name} (${+r.from.toFixed(2)}–${+r.to.toFixed(2)}): ${Math.round(r.residual)} lb of max ${Math.round(Math.abs(r.max))}`);
+    if (!closes(r)) open.push(`${m.name} (${+r.from.toFixed(2)}–${+r.to.toFixed(2)}): ${Math.round(r.residual)} lb of max ${Math.round(Math.abs(r.max))}`);
   }
   out.push({ caseId: cs.id, code: 'closure', ok: !open.length, msg: `${tag}: ${n - open.length} of ${n} member runs close` + (open.length ? ' — open: ' + open.join('; ') : '') });
   for (const r of runs.filter(x => x.caseId === cs.id)) {

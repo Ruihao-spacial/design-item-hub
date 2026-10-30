@@ -18,7 +18,12 @@ export function toolValue(key, plan, analysis) {
   const [kind, ...rest] = key.split(':');
   const cases = analysis.cases;
   if (kind === 'R') {
-    for (const c of cases) { const l = c.lines.find(x => x.name === rest[0]); if (l) return l.P; }
+    for (const c of cases) {
+      const g = c.offset && c.offset.groups.find(x => x.name === rest[0]); // offset wall line (Phase 7)
+      if (g) return g.P;
+      const l = c.lines.find(x => x.name === rest[0]);
+      if (l) return l.P;
+    }
     return null;
   }
   if (kind === 'Rw' || kind === 'vw') {

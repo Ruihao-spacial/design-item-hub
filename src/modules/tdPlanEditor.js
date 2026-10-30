@@ -7,6 +7,7 @@
 // (Select) = pan. Edits go through applyClick / the panel and then refresh(true); view changes call refresh(false).
 import { el } from '../utils.js';
 import { planBounds, spanAxis, DIR_LABEL } from './tdGeometry.js';
+import { loadProfile, loadKind } from './tdBasicShear.js';
 import { newGrid, newOpening, newWall, newTd, newDiaphragm, newLoad, newSegment, nextMark } from './tdModel.js';
 
 const NS = 'http://www.w3.org/2000/svg';
@@ -59,6 +60,109 @@ export function viewOf(plan, state) {
     wx: px => (px - M - state.panX) / k + b.x1,
     wy: py => b.y2 - (py - M - state.panY) / k,
   };
+}
+
+// w(s) strip beside the plan (below it for a span along x, right of it for a span along y): the summed load of the
+// diaphragms in plf, positive in the load direction, with its value at each step / end
+function drawLoadProfile(g, v, cs, q, nCases, modes) {
+  const prof = loadProfile(cs);
+  if (!prof.length) return;
+  const wmax = Math.max(1e-9, ...prof.flatMap(p => [Math.abs(p.wa), Math.abs(p.wb)]));
+  const H = 18, alongX = cs.axis === 'x';
+  const base = alongX ? v.sy(v.b.y1) + 40 : v.sx(v.b.x2) + 40; // baseline, px
+  const pt = (s, w) => (alongX ? [v.sx(s), base - H * w / wmax] : [base - H * w / wmax, v.sy(s)]);
+  const grp = svg('g', { class: 'td-load-profile' });
+  const lineAt = s => (alongX ? [v.sx(s), base] : [base, v.sy(s)]);
+  let last = null;
+  for (const p of prof) {
+    const poly = [lineAt(p.a), pt(p.a, p.wa), pt(p.b, p.wb), lineAt(p.b)].map(c => c.join(',')).join(' ');
+    grp.appendChild(svg('polygon', { points: poly, fill: C.load, 'fill-opacity': 0.18, stroke: C.load, 'stroke-width': 1 },
+      svg('title', null, `w ${fmt(p.wa)}${Math.abs(p.wa - p.wb) > 0.01 ? ' → ' + fmt(p.wb) : ''} plf at ${cs.axis} ${fmt(p.a)}–${fmt(p.b)}`)));
+    // label where the value changes (and at the start)
+    if (last === null || Math.abs(last - p.wa) > 0.01) {
+      const [x, y] = alongX ? [v.sx(p.a) + 2, base + 11] : [base + 11, v.sy(p.a) - 2];
+      grp.appendChild(text(x, y, fmt(Math.round(p.wa * 10) / 10), { fill: C.load, 'font-size': 9, 'text-anchor': 'start', transform: alongX ? null : `rotate(90 ${x} ${y})` }));
+    }
+    last = p.wb;
+  }
+  const [x1, y1] = lineAt(prof[0].a), [x2, y2] = lineAt(prof[prof.length - 1].b);
+  grp.appendChild(svg('line', { x1, y1, x2, y2, stroke: C.load, 'stroke-width': 1 }));
+  const how = modes.map(m => (m === 'seismic' ? 'seismic q·d(s)' + (Number.isFinite(q) ? ', q = ' + fmt(q) + ' psf' : '') : m === 'area' ? 'area psf·d(s)' : m === 'wind' ? 'wind windward + leeward' : 'line plf')).join(' + ');
+  const cap = `w(s) on the span beams, plf (${cs.kind === 'E' ? 'E' : 'W'}: ${how})` + (nCases > 1 ? ' — 1 of ' + nCases + ' load cases' : '');
+  grp.appendChild(alongX ? text(v.sx(v.b.x2), base + 11, cap, { fill: C.load, 'font-size': 9, 'text-anchor': 'end' })
+    : text(base + 11, v.sy(v.b.y1), cap, { fill: C.load, 'font-size': 9, 'text-anchor': 'start', transform: `rotate(-90 ${base + 11} ${v.sy(v.b.y1)})` }));
+  g.appendChild(grp);
+}
+
+// Wind load: windward arrows outside the windward face pointing at it, leeward arrows outside the leeward face pointing
+// away (suction), both in the load direction; each labelled with its plf
+function drawWind(g, v, l) {
+  const sg = l.acts.startsWith('-') ? -1 : 1, alongX = spanAxis(l.acts) === 'x';
+  for (const s of l.segments) {
+    if (![s.from, s.to, s.w].every(fin)) continue;
+    for (const [face, w, lee] of [['wind', s.w, false], ['lee', s.wl, true]]) {
+      if (!fin(w) || !w) continue;
+      // face coordinate across the span: windward = the side the load comes from
+      const at = alongX ? ((sg < 0) !== lee ? v.b.y2 : v.b.y1) : ((sg < 0) !== lee ? v.b.x2 : v.b.x1);
+      const out = (sg < 0) !== lee ? 1 : -1; // outward from the plan, in plan units
+      if (alongX) {
+        const ys = v.sy(at), d = -out; // screen y grows downward
+        const xa = v.sx(s.from), xb = v.sx(s.to), n = Math.max(2, Math.round((xb - xa) / 28));
+        const [y0, y1] = lee ? [ys + d * 3, ys + d * 20] : [ys + d * 20, ys + d * 3]; // arrow from y0 to y1 (head at y1)
+        g.appendChild(svg('line', { x1: xa, y1: lee ? y1 : y0, x2: xb, y2: lee ? y1 : y0, stroke: C.load, 'stroke-width': 1 }));
+        for (let i = 0; i <= n; i++) {
+          const xx = xa + (xb - xa) * i / n, h = Math.sign(y1 - y0);
+          g.appendChild(svg('path', { d: `M${xx},${y0} L${xx},${y1} M${xx - 3},${y1 - h * 5} L${xx},${y1} L${xx + 3},${y1 - h * 5}`, stroke: C.load, 'stroke-width': 1, fill: 'none' }));
+        }
+        g.appendChild(text((xa + xb) / 2, ys + d * 26 + (d > 0 ? 8 : 0), fmt(w) + ' plf ' + (lee ? 'leeward' : 'windward'), { fill: C.load, 'font-size': 10 }));
+      } else {
+        const xs = v.sx(at), d = out;
+        const ya = v.sy(s.from), yb = v.sy(s.to), n = Math.max(2, Math.round(Math.abs(yb - ya) / 28));
+        const [x0, x1] = lee ? [xs + d * 3, xs + d * 20] : [xs + d * 20, xs + d * 3];
+        g.appendChild(svg('line', { x1: lee ? x1 : x0, y1: ya, x2: lee ? x1 : x0, y2: yb, stroke: C.load, 'stroke-width': 1 }));
+        for (let i = 0; i <= n; i++) {
+          const yy = ya + (yb - ya) * i / n, h = Math.sign(x1 - x0);
+          g.appendChild(svg('path', { d: `M${x0},${yy} L${x1},${yy} M${x1 - h * 5},${yy - 3} L${x1},${yy} L${x1 - h * 5},${yy + 3}`, stroke: C.load, 'stroke-width': 1, fill: 'none' }));
+        }
+        g.appendChild(text(xs + d * 26, (ya + yb) / 2, fmt(w) + ' plf ' + (lee ? 'leeward' : 'windward'), { fill: C.load, 'font-size': 10, 'text-anchor': d > 0 ? 'start' : 'end' }));
+      }
+    }
+  }
+}
+
+// Zoom by `factor` about the drawing point (px, py) (drawing units): the plan point under it stays put. Used by the
+// editor and the result views (tdViews.js); state holds zoom / panX / panY.
+export function zoomAt(plan, state, view, px, py, factor) {
+  const wx = view.wx(px), wy = view.wy(py);
+  state.zoom = Math.min(20, Math.max(0.2, state.zoom * factor));
+  const v2 = viewOf(plan, { ...state, panX: 0, panY: 0 });
+  state.panX = px - v2.sx(wx); state.panY = py - v2.sy(wy);
+}
+// − / + (about the middle of the drawing) / Fit buttons
+export function zoomButtons(plan, state, redraw) {
+  const btn = (txt, title, fn) => el('button', { type: 'button', className: 'btn btn-ghost btn-sm', title, onClick() { fn(); redraw(); } }, txt);
+  const mid = f => { const v = viewOf(plan, state); zoomAt(plan, state, v, v.W / 2, v.H / 2, f); };
+  return [btn('−', 'Zoom out', () => mid(1 / 1.25)), btn('+', 'Zoom in', () => mid(1.25)),
+    btn('Fit', 'Fit the plan', () => { state.zoom = 1; state.panX = 0; state.panY = 0; })];
+}
+
+// Legend of the plan symbols (HTML, under a drawing). result: the result views draw diaphragms / TDs as outlines.
+export function planLegend({ result = false } = {}) {
+  const sw = (...kids) => { const s = svg('svg', { width: 30, height: 14, viewBox: '0 0 30 14', style: 'vertical-align:middle;flex:none' }); kids.forEach(k => s.appendChild(k)); return s; };
+  const item = (swatch, txt) => el('span', { style: { display: 'inline-flex', alignItems: 'center', gap: '4px', whiteSpace: 'nowrap' } }, swatch, txt);
+  const items = [
+    item(sw(svg('rect', { x: 1, y: 1, width: 28, height: 12, fill: C.fill, stroke: C.edge, 'stroke-width': 1.5 })), 'sheathing (outline)'),
+    item(sw(svg('rect', { x: 1, y: 1, width: 28, height: 12, fill: C.open, stroke: C.edge, 'stroke-width': 1, 'stroke-dasharray': '4 2' }),
+      svg('line', { x1: 1, y1: 1, x2: 29, y2: 13, stroke: C.edge, 'stroke-width': 0.6 }), svg('line', { x1: 29, y1: 1, x2: 1, y2: 13, stroke: C.edge, 'stroke-width': 0.6 })), 'opening'),
+    item(sw(svg('rect', { x: 1, y: 1, width: 28, height: 12, fill: result ? 'none' : C.dgFill, stroke: C.dg, 'stroke-width': 1.5, 'stroke-dasharray': '6 2' })), 'diaphragm (span between its supports)'),
+    item(sw(svg('rect', { x: 1, y: 1, width: 28, height: 12, fill: result ? 'none' : C.td, stroke: C.tdEdge, 'stroke-width': 1.5 })), 'transfer diaphragm (TD), arrow = load line'),
+    item(sw(svg('line', { x1: 1, y1: 7, x2: 29, y2: 7, stroke: C.wall, 'stroke-width': 5 })), 'shear wall'),
+    item(sw(svg('line', { x1: 1, y1: 7, x2: 29, y2: 7, stroke: C.wallLinked, 'stroke-width': 5 })), 'wall from Shear Wall Design'),
+    item(sw(svg('path', { d: 'M15,1 L15,12 M11,8 L15,12 L19,8', stroke: C.load, 'stroke-width': 1.5, fill: 'none' })), 'load'),
+    item(sw(svg('line', { x1: 1, y1: 7, x2: 29, y2: 7, stroke: C.grid, 'stroke-width': 1, 'stroke-dasharray': '6 3 2 3' })), 'grid line'),
+  ];
+  if (!result) items.push(item(sw(svg('rect', { x: 1, y: 1, width: 28, height: 12, fill: 'none', stroke: C.sel, 'stroke-width': 2 })), 'selected'));
+  return el('div', { className: 'td-legend', style: { display: 'flex', flexWrap: 'wrap', gap: '4px 14px', fontSize: '0.75rem', color: 'var(--ink-secondary)', marginTop: '4px' } }, ...items);
 }
 
 // Coordinates worth snapping to, per axis: corners of everything drawn (grids are handled first)
@@ -339,25 +443,28 @@ export function drawPlan(plan, state, errors, opts = {}) {
       op.name ? text(x + w / 2, y + h / 2 - 4, op.name, { fill: col }) : null));
   }
 
-  // diaphragms of this direction (clipped outline drawn as a dashed rectangle + support marks)
-  for (const d of plan.diaphragms.filter(x => x.dir === dir)) {
+  // diaphragms of this direction (clipped outline drawn as a dashed rectangle + support marks). Result views
+  // (opts.result) draw diaphragms and TDs as outlines only, so the result colours are the only fills;
+  // opts.outlines === false leaves them out.
+  const showRects = opts.outlines !== false;
+  for (const d of showRects ? plan.diaphragms.filter(x => x.dir === dir) : []) {
     if (![d.x1, d.x2, d.y1, d.y2].every(fin)) continue;
     const [x, y, w, h] = [v.sx(d.x1), v.sy(d.y2), (d.x2 - d.x1) * v.k, (d.y2 - d.y1) * v.k];
     const col = isSel('diaphragm', d.id) ? C.sel : bad.has(d.id) ? C.err : C.dg;
     const grp = svg('g', { style: cursor, onClick: pick('diaphragm', d.id) },
-      svg('rect', { x: x + 3, y: y + 3, width: Math.max(w - 6, 1), height: Math.max(h - 6, 1), fill: C.dgFill, stroke: col, 'stroke-width': isSel('diaphragm', d.id) ? 2.5 : 1.5, 'stroke-dasharray': '10 4' }),
+      svg('rect', { x: x + 3, y: y + 3, width: Math.max(w - 6, 1), height: Math.max(h - 6, 1), fill: opts.result ? 'none' : C.dgFill, stroke: col, 'stroke-width': isSel('diaphragm', d.id) ? 2.5 : 1.5, 'stroke-dasharray': '10 4' }),
       text(x + 18, y + h - 10, d.mark || 'D', { fill: col, 'font-weight': 700, 'font-size': 13 }));
     for (const s of d.supports) if (s && fin(s.at)) grp.appendChild(supportMark(v, d, s, col));
     g.appendChild(grp);
   }
 
   // TDs of this direction
-  for (const t of plan.tds.filter(x => x.dir === dir)) {
+  for (const t of showRects ? plan.tds.filter(x => x.dir === dir) : []) {
     if (![t.x1, t.x2, t.y1, t.y2].every(fin)) continue;
     const [x, y, w, h] = [v.sx(t.x1), v.sy(t.y2), (t.x2 - t.x1) * v.k, (t.y2 - t.y1) * v.k];
     const col = isSel('td', t.id) ? C.sel : bad.has(t.id) ? C.err : C.tdEdge;
     const grp = svg('g', { style: cursor, onClick: pick('td', t.id) },
-      svg('rect', { x, y, width: w, height: h, fill: C.td, stroke: col, 'stroke-width': isSel('td', t.id) ? 2.5 : 1.5 }),
+      svg('rect', { x, y, width: w, height: h, fill: opts.result ? 'none' : C.td, stroke: col, 'stroke-width': isSel('td', t.id) ? 2.5 : 1.5 }),
       text(x + w / 2, y + 14, t.mark || 'TD', { fill: col, 'font-weight': 600 }));
     for (const s of t.supports) if (s && fin(s.at)) grp.appendChild(supportMark(v, t, s, col));
     for (const l of t.loads) {
@@ -412,6 +519,7 @@ export function drawPlan(plan, state, errors, opts = {}) {
   const notes = [];
   for (const l of plan.loads.filter(x => (x.acts.endsWith('x') ? 'x' : 'y') === dir)) {
     const span = spanAxis(l.acts);
+    if (l.mode === 'wind') { notes.push('wind acting ' + l.acts + ' (windward / leeward)'); drawWind(g, v, l); continue; }
     if (l.mode !== 'line') { notes.push((l.mode === 'seismic' ? 'seismic F_x / ΣA' : fmt(l.psf) + ' psf') + ' acting ' + l.acts); continue; }
     notes.push('line load acting ' + l.acts + (l.edge ? ' on ' + l.edge.name : ''));
     for (const s of l.segments) {
@@ -460,7 +568,14 @@ export function drawPlan(plan, state, errors, opts = {}) {
   lg.appendChild(text(92, 27, 'Load along ' + dir, { fill: C.load, 'font-weight': 700, 'font-size': 12 }));
   lg.appendChild(text(92, 44, plan.diaphragms.filter(x => x.dir === dir).length + ' diaphragm(s), ' + plan.tds.filter(x => x.dir === dir).length + ' TD(s)', { fill: C.load, 'font-size': 10 }));
   root.appendChild(lg);
-  if (notes.length) root.appendChild(text(10, v.H - 10, 'Load: ' + notes.join(' · '), { 'text-anchor': 'start', fill: C.load }));
+  // the load the span beams carry, w(s) in plf, for every load mode (Plan tab: opts.loadCases = the analysis cases)
+  const lcs = (opts.loadCases || []).filter(c => c.dir === dir);
+  if (lcs.length) {
+    const kindOf = l => l.kind || (l.mode === 'seismic' ? 'E' : 'W');
+    const modes = [...new Set(plan.loads.filter(l => (l.acts.endsWith('x') ? 'x' : 'y') === dir && kindOf(l) === lcs[0].kind).map(l => l.mode))];
+    drawLoadProfile(g, v, lcs[0], opts.q, lcs.length, modes);
+  }
+  if (notes.length) root.appendChild(text(10, lcs.length ? 16 : v.H - 10, 'Load: ' + notes.join(' · '), { 'text-anchor': 'start', fill: C.load }));
   root.appendChild(text(v.W - 40, v.H - 10, 'x →  y ↑', { fill: '#94a3b8', 'font-size': 10 }));
 
   // edge handles of the selected diaphragm / TD (drag an edge; it snaps to grid lines)
@@ -536,7 +651,8 @@ function drawEdgePreview(overlay, plan, v, d, s) {
 }
 
 // The editor: direction switch, toolbar, drawing, panel. refresh(inputsChanged) redraws (recalculates when true).
-export function renderPlanEditor({ inputs, plan, errors, state, refresh, wallsLinked = false }) {
+// loadCases / q (optional): the analysis cases, for the w(s) load strip.
+export function renderPlanEditor({ inputs, plan, errors, state, refresh, wallsLinked = false, loadCases = null, q = null }) {
   if (wallsLinked && state.tool === 'wall') state.tool = 'select';
   const box = el('div', { className: 'td-editor' });
   const dirBar = el('div', { style: { display: 'flex', gap: '6px', alignItems: 'center', marginBottom: '0.4rem' } },
@@ -555,9 +671,7 @@ export function renderPlanEditor({ inputs, plan, errors, state, refresh, wallsLi
   if (state.tool === 'outline' && state.pending.length) bar.appendChild(el('button', { type: 'button', className: 'btn btn-sm', onClick() { const ch = finishOutline(inputs, state); refresh(ch); } }, 'Finish outline'));
   if (state.pending.length) bar.appendChild(el('button', { type: 'button', className: 'btn btn-ghost btn-sm', onClick() { state.pending = []; state.message = ''; refresh(false); } }, 'Cancel'));
   bar.appendChild(el('span', { style: { flex: 1 } }));
-  bar.appendChild(el('button', { type: 'button', className: 'btn btn-ghost btn-sm', title: 'Zoom out', onClick() { state.zoom = Math.max(0.2, state.zoom / 1.25); refresh(false); } }, '−'));
-  bar.appendChild(el('button', { type: 'button', className: 'btn btn-ghost btn-sm', title: 'Zoom in', onClick() { state.zoom = Math.min(20, state.zoom * 1.25); refresh(false); } }, '+'));
-  bar.appendChild(el('button', { type: 'button', className: 'btn btn-ghost btn-sm', title: 'Fit the plan', onClick() { state.zoom = 1; state.panX = 0; state.panY = 0; refresh(false); } }, 'Fit'));
+  zoomButtons(plan, state, () => refresh(false)).forEach(b => bar.appendChild(b));
   if (state.sel) bar.appendChild(el('button', { type: 'button', className: 'btn btn-ghost btn-sm', style: { color: 'var(--fail)' }, onClick() { if (deleteSelected(inputs, state)) refresh(true); } }, 'Delete selected'));
   box.appendChild(bar);
   box.appendChild(el('div', { style: { fontSize: '0.78rem', color: state.message ? 'var(--ink-primary, #111)' : 'var(--ink-tertiary)', minHeight: '1.1em', marginBottom: '0.3rem' } },
@@ -567,6 +681,7 @@ export function renderPlanEditor({ inputs, plan, errors, state, refresh, wallsLi
   const { svg: drawing, group, overlay, view } = drawPlan(plan, state, errors, {
     onPick: state.tool === 'select' ? (kind, id) => { state.sel = { kind, id }; refresh(false); } : null,
     onEdgeDown: state.tool === 'select' ? (kind, id, edge) => { edgeDrag = { kind, id, edge, at: null }; } : null,
+    loadCases, q,
   });
   const coords = el('div', { className: 'mono', style: { fontSize: '0.75rem', color: 'var(--ink-tertiary)', textAlign: 'right' } }, ' ');
   const scale = () => { const r = drawing.getBoundingClientRect ? drawing.getBoundingClientRect() : null; return r && r.width ? { r, sc: view.W / r.width } : { r: { left: 0, top: 0 }, sc: 1 }; };
@@ -613,10 +728,7 @@ export function renderPlanEditor({ inputs, plan, errors, state, refresh, wallsLi
   drawing.addEventListener('wheel', e => {
     e.preventDefault();
     const [px, py] = toSvg(e);
-    const wx = view.wx(px), wy = view.wy(py);
-    state.zoom = Math.min(20, Math.max(0.2, state.zoom * (e.deltaY < 0 ? 1.15 : 1 / 1.15)));
-    const v2 = viewOf(plan, { ...state, panX: 0, panY: 0 });
-    state.panX = px - v2.sx(wx); state.panY = py - v2.sy(wy);
+    zoomAt(plan, state, view, px, py, e.deltaY < 0 ? 1.15 : 1 / 1.15);
     refresh(false);
   });
   // Keys anywhere on the page while this editor is shown: Esc cancels (drawing → selection → tool), Delete removes
@@ -635,8 +747,60 @@ export function renderPlanEditor({ inputs, plan, errors, state, refresh, wallsLi
   if (typeof document !== 'undefined') document.addEventListener('keydown', state._onKey);
 
   box.appendChild(el('div', { style: { display: 'flex', gap: '1rem', alignItems: 'flex-start', flexWrap: 'wrap' } },
-    el('div', { style: { flex: '1 1 600px', minWidth: 0 } }, drawing, coords),
+    el('div', { style: { flex: '1 1 600px', minWidth: 0 } }, drawing, coords, planLegend()),
     el('div', { style: { flex: '0 1 400px', minWidth: '300px' } }, renderPanel(inputs, plan, state, refresh, wallsLinked))));
+  return box;
+}
+
+// ── load lists (Setup tab: Seismic loading = kind E, Wind loading = kind W) ──
+// Each load: direction it acts, mode, values. Changing the mode keeps the load on its page (kind set explicitly).
+// Loads saved before have kind '' (seismic → E, any other mode → W) and show on that page.
+const LOAD_MODES = {
+  E: [['seismic', 'Seismic F_x/ΣA'], ['area', 'Area (psf)'], ['line', 'Line (plf)']],
+  W: [['wind', 'Wind (windward / leeward plf)'], ['line', 'Line (plf), optional edge'], ['area', 'Area (psf)']],
+};
+export function renderLoadList(inputs, kind, refresh) {
+  const box = el('div');
+  for (const dir of ['y', 'x']) {
+    const list = inputs.loads.filter(l => (String(l.acts).endsWith('x') ? 'x' : 'y') === dir && loadKind(l) === kind);
+    box.appendChild(el('div', { className: 'section-header', style: { marginTop: '0.6rem' } }, 'Load along ' + dir + ' (' + DIR_LABEL[dir] + ')'));
+    if (!list.length) box.appendChild(el('p', { style: small }, 'None.'));
+    for (const l of list) {
+      const c = el('div', { style: { border: '1px solid var(--border-light)', borderRadius: '6px', padding: '6px', marginBottom: '6px', maxWidth: '720px' } });
+      c.appendChild(el('div', { style: { display: 'flex', gap: '6px', alignItems: 'center', flexWrap: 'wrap' } },
+        el('span', { style: small }, 'Acts'),
+        choose((dir === 'y' ? ['-y', '+y'] : ['+x', '-x']).map(a => [a, a]), l.acts, v => { l.acts = v; refresh(true); }),
+        choose(LOAD_MODES[kind].some(([m]) => m === l.mode) ? LOAD_MODES[kind] : [...LOAD_MODES[kind], [l.mode, l.mode]], l.mode, v => {
+          l.mode = v; l.kind = kind;
+          if ((v === 'line' || v === 'wind') && !l.segments.length) l.segments.push(newSegment('', '', ''));
+          refresh(true);
+        }),
+        l.mode === 'area' ? el('span', null, numInput(l, 'psf', refresh, '56px'), ' psf') : null,
+        l.mode === 'seismic' ? el('span', { style: small }, 'q = F_x / ΣA from the level above') : null,
+        l.mode === 'line' ? el('span', null, el('span', { style: small }, 'edge '), gridSelect(inputs, spanAxis(l.acts) === 'x' ? 'y' : 'x', l.edgeId, id => { l.edgeId = id; refresh(true); }, 'shared')) : null,
+        delBtn(() => { inputs.loads.splice(inputs.loads.indexOf(l), 1); refresh(true); }, 'Delete load')));
+      if (l.mode === 'line' || l.mode === 'wind') {
+        const wind = l.mode === 'wind', ax = spanAxis(l.acts);
+        const t = el('table', { className: 'dynamic-table', style: { marginTop: '4px' } });
+        t.appendChild(el('tr', null, el('th', null, ax + ' from'), el('th', null, ax + ' to'),
+          wind ? el('th', { title: 'On the face the wind comes from (pressure × tributary height)' }, 'windward (plf)') : el('th', null, 'w (plf)'),
+          wind ? el('th', { title: 'On the opposite face (suction × tributary height); blank = 0' }, 'leeward (plf)') : el('th', { title: 'End value for a varying load (blank = uniform)' }, 'w end'),
+          el('th', null, '')));
+        l.segments.forEach((s, i) => t.appendChild(el('tr', null, ...['from', 'to', 'w', wind ? 'wl' : 'w2'].map(k => el('td', null, numInput(s, k, refresh, '64px'))),
+          el('td', null, delBtn(() => { l.segments.splice(i, 1); refresh(true); })))));
+        c.appendChild(t);
+        if (wind) c.appendChild(el('p', { style: small }, 'Each strip loads the sheathing band on its own face. Without an opening both reach the same band, so only the net (windward + leeward) counts; at an opening each band gets its own strip (book Ex 5.1).'));
+        c.appendChild(el('button', { type: 'button', className: 'btn btn-ghost btn-sm', onClick() { l.segments.push(newSegment('', '', '')); refresh(true); } }, '+ segment'));
+      }
+      box.appendChild(c);
+    }
+    box.appendChild(el('button', { type: 'button', className: 'btn btn-sm', onClick() {
+      const l = newLoad(dir === 'y' ? '-y' : '+x', kind === 'E' ? 'seismic' : 'wind');
+      l.kind = kind;
+      if (kind === 'W') l.segments.push(newSegment('', '', ''));
+      inputs.loads.push(l); refresh(true);
+    } }, (kind === 'E' ? '+ Seismic load along ' : '+ Wind load along ') + dir));
+  }
   return box;
 }
 
@@ -746,33 +910,12 @@ function renderPanel(inputs, plan, state, refresh, wallsLinked = false) {
     box.appendChild(section('Transfer diaphragms — load along ' + dir, body));
   }
 
-  // loads of this direction
+  // loads: entered on Setup (Seismic loading / Wind loading); drawn on the plan
   {
-    const body = el('div');
-    body.appendChild(el('p', { style: small }, 'Seismic uses F_x / ΣA. A line load runs along the span (plf), optionally on one edge (chord) — e.g. windward / leeward strips at an opening. Loads of one kind (E or W) form one load case; enter them as 1.0E / 1.0W when they go to Shear Wall Design.'));
-    for (const l of inputs.loads.filter(x => (String(x.acts).endsWith('x') ? 'x' : 'y') === dir)) {
-      const c = el('div', { style: { border: '1px solid var(--border-light)', borderRadius: '6px', padding: '6px', marginBottom: '6px' } });
-      c.appendChild(el('div', { style: { display: 'flex', gap: '6px', alignItems: 'center', flexWrap: 'wrap' } },
-        el('span', { style: small }, 'Acts'),
-        choose((dir === 'y' ? ['-y', '+y'] : ['+x', '-x']).map(a => [a, a]), l.acts, v => { l.acts = v; refresh(true); }),
-        choose([['seismic', 'Seismic F_x/ΣA'], ['area', 'Area (psf)'], ['line', 'Line (plf)']], l.mode, v => { l.mode = v; if (v === 'line' && !l.segments.length) l.segments.push(newSegment('', '', '')); refresh(true); }),
-        choose([['', l.mode === 'seismic' ? 'E (default)' : 'W (default)'], ['E', 'E (seismic)'], ['W', 'W (wind)']], l.kind || '', v => { l.kind = v; refresh(true); }),
-        l.mode === 'area' ? el('span', null, numInput(l, 'psf', refresh, '56px'), ' psf') : null,
-        l.mode === 'line' ? el('span', null, el('span', { style: small }, 'edge '), gridSelect(inputs, spanAxis(l.acts) === 'x' ? 'y' : 'x', l.edgeId, id => { l.edgeId = id; refresh(true); }, 'shared')) : null,
-        delBtn(() => { inputs.loads.splice(inputs.loads.indexOf(l), 1); refresh(true); }, 'Delete load')));
-      if (l.mode === 'line') {
-        const t = el('table', { className: 'dynamic-table', style: { marginTop: '4px' } });
-        const ax = spanAxis(l.acts);
-        t.appendChild(el('tr', null, el('th', null, ax + ' from'), el('th', null, ax + ' to'), el('th', null, 'w (plf)'), el('th', { title: 'End value for a varying load (blank = uniform)' }, 'w end'), el('th', null, '')));
-        l.segments.forEach((s, i) => t.appendChild(el('tr', null, ...['from', 'to', 'w', 'w2'].map(k => el('td', null, numInput(s, k, refresh, '56px'))),
-          el('td', null, delBtn(() => { l.segments.splice(i, 1); refresh(true); })))));
-        c.appendChild(t);
-        c.appendChild(el('button', { type: 'button', className: 'btn btn-ghost btn-sm', onClick() { l.segments.push(newSegment('', '', '')); refresh(true); } }, '+ segment'));
-      }
-      body.appendChild(c);
-    }
-    body.appendChild(el('button', { type: 'button', className: 'btn btn-sm', onClick() { const l = newLoad(dir === 'y' ? '-y' : '+x', 'line'); l.segments.push(newSegment('', '', '')); inputs.loads.push(l); refresh(true); } }, '+ Load along ' + dir));
-    box.appendChild(section('Loads — along ' + dir, body));
+    const n = inputs.loads.filter(x => (String(x.acts).endsWith('x') ? 'x' : 'y') === dir).length;
+    box.appendChild(section('Loads — along ' + dir, el('p', { style: small },
+      (n ? n + ' load(s) act along ' + dir + ' — drawn on the plan with the w(s) strip. ' : 'No load acts along ' + dir + '. ')
+      + 'Loads are entered on the Setup tab: Seismic loading / Wind loading.')));
   }
 
   // shared plan items

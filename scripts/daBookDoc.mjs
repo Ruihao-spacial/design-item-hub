@@ -9,7 +9,7 @@ const repo = path.resolve(path.dirname(new URL(import.meta.url).pathname.replace
 const sources = await loadSources();
 
 // Tool results for the phases built so far (BUILT): the item each example seeds, through the module's calcAll
-const BUILT = 6;
+const BUILT = 7;
 const { bookToInputs } = await import('../tests/td-book/src/toInputs.mjs');
 const { calcAll, planWithLinks } = await import('../src/modules/diaphragmAnalysis.js');
 const { toolValue: bookKeyValue } = await import('../src/modules/tdBookKeys.js');

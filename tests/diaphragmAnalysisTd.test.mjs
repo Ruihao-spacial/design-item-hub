@@ -110,11 +110,13 @@ test('TD engine on the drawn book TDs: results = the skill tests\' expected outp
     }
   }
   assert.deepEqual(fails, []);
-  // Ex 4.2 (strut shared by two TDs) runs too; Ex 3.3 (load line with walls) waits for Phase 7
+  // Ex 4.2 (strut shared by two TDs) runs too; Ex 3.3 (load line with walls of the offset line B/C) runs since Phase 7
   assert.ok(run('Ex4.2').r.tdRuns.every(x => x.terminal === 'OUTPUT'));
-  const e33 = run('Ex3.3').r.tdRuns[0];
+  assert.equal(run('Ex3.3').r.tdRuns[0].terminal, 'OUTPUT');
+  // without the grouping (SW1 its own line B) the walls on B take the strut force: nothing for TD1, and the reason is given
+  const e33 = run('Ex3.3', i => { i.walls.find(w => w.mark === 'SW1').line = 'B'; }).r.tdRuns[0];
   assert.equal(e33.terminal, 'NOT_RUN');
-  assert.ok(e33.issues.some(i => /Phase 7/.test(i.msg)));
+  assert.ok(e33.issues.some(i => /one wall line name/.test(i.msg)));
 });
 
 test('cantilever TD: paused until the engineer reviews the limits; "not met" stops; region clear and closure are never asked', () => {

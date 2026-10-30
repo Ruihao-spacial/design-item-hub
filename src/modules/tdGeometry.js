@@ -37,9 +37,10 @@ export function parsePlan(inputs) {
     sheathing: d.sheathing || '', blocked: d.blocked, bandSplit: d.bandSplit || '',
   }));
   const loads = (inputs.loads || []).map(l => ({
-    id: l.id, acts: ['+x', '-x', '+y', '-y'].includes(l.acts) ? l.acts : '-y', mode: ['seismic', 'area', 'line'].includes(l.mode) ? l.mode : 'line', kind: l.kind === 'E' || l.kind === 'W' ? l.kind : '',
+    id: l.id, acts: ['+x', '-x', '+y', '-y'].includes(l.acts) ? l.acts : '-y', mode: ['seismic', 'area', 'line', 'wind'].includes(l.mode) ? l.mode : 'line', kind: l.kind === 'E' || l.kind === 'W' ? l.kind : '',
     psf: num(l.psf), edge: l.edgeId ? gridById.get(l.edgeId) || null : null,
-    segments: (l.segments || []).map(s => ({ from: num(s.from), to: num(s.to), w: num(s.w), w2: s.w2 === '' || s.w2 === undefined ? null : num(s.w2) })),
+    segments: (l.segments || []).map(s => ({ from: num(s.from), to: num(s.to), w: num(s.w), w2: s.w2 === '' || s.w2 === undefined ? null : num(s.w2),
+      wl: s.wl === '' || s.wl === undefined || s.wl === null ? 0 : num(s.wl) })),
   }));
   return { grids, gridById, outline, openings, walls, tds, diaphragms, loads };
 }
@@ -186,10 +187,15 @@ export function planErrors(plan) {
   }
   for (const l of plan.loads) {
     if (l.mode === 'area' && !fin(l.psf)) err.push({ code: 'load-psf', msg: 'Area load: psf missing.', ref: l.id });
+    if (l.mode === 'area' && l.kind !== 'E') err.push({ code: 'load-wind-area', warn: true, msg: 'Wind (W) entered as an area load spreads it over the plan; wind reaches the diaphragm along the windward / leeward faces — use the Wind load (plf = pressure × tributary height).', ref: l.id });
     if (l.mode === 'line') {
       if (!l.segments.length) err.push({ code: 'load-seg', msg: 'Line load: add at least one segment.', ref: l.id });
       if (l.segments.some(s => !fin(s.from) || !fin(s.to) || !fin(s.w) || s.to - s.from < EPS)) err.push({ code: 'load-seg-bad', msg: 'Line load: a segment has a missing value or zero length.', ref: l.id });
       if (l.edge && l.edge.axis === (l.acts.endsWith('y') ? 'x' : 'y')) err.push({ code: 'load-edge', msg: `Line load edge ${l.edge.name} must run along the span.`, ref: l.id });
+    }
+    if (l.mode === 'wind') {
+      if (!l.segments.length) err.push({ code: 'load-seg', msg: 'Wind load: add at least one segment.', ref: l.id });
+      if (l.segments.some(s => !fin(s.from) || !fin(s.to) || !fin(s.w) || !fin(s.wl) || s.to - s.from < EPS)) err.push({ code: 'load-seg-bad', msg: 'Wind load: a segment has a missing value or zero length (windward plf needed; leeward blank = 0).', ref: l.id });
     }
   }
   return err;

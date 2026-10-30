@@ -1,6 +1,6 @@
 # Diaphragm Analysis: calculator guide
 
-Module **Diaphragm Analysis**, id `diaphragm_analysis` (former id `transfer_diaphragm`). Built 2026-10-29: Phases 0–6 (book cases, plan editor and checks, Shear Wall Design link, TD engine, basic shear / line forces, derived TD inputs and TD runs, net field / member diagrams / Views 1–4 / checks). Next: Phase 7 (offset wall lines).
+Module **Diaphragm Analysis**, id `diaphragm_analysis` (former id `transfer_diaphragm`). Built 2026-10-29: Phases 0–6 (book cases, plan editor and checks, Shear Wall Design link, TD engine, basic shear / line forces, derived TD inputs and TD runs, net field / member diagrams / Views 1–4 / checks); 2026-10-30: Phase 7 (offset wall lines, line forces iterated to closure). Next: Phase 8 (PDF, upgrade script).
 Branch `diaphragm-analysis` (off `master` 71cdfb5, 2026-10-29). Plan: `~/.claude/plans/read-the-md-files-composed-kite.md`.
 Decisions and open items: `docs/diaphragm-analysis-backlog.md`. Book cases: `docs/diaphragm-analysis-book-cases.md`.
 
@@ -47,6 +47,27 @@ collector and drag force, with a closure check on each member.
 - SWD → Loading → "Line loads from Diaphragm Analysis": tick the DA item of each level; its line forces are copied
   into the line loads (update notice when they change). Line forces are filled since Phase 4.
 
+## Loads: seismic vs wind (2026-10-30)
+| | Seismic (E) | Wind (W) |
+|---|---|---|
+| Input | "Seismic F_x/ΣA" (F_x from ELF or typed) | "Wind": per segment a windward and a leeward plf (pressure × tributary height); or a line load on an edge |
+| On the span beams | w(s) = q·d(s), q = F_x / ΣA (follows the sheathed depth, openings carry nothing) | windward strip → the band on the windward face, leeward strip → the band on the leeward face |
+| Matters when | always the same shape | at an opening: the bands get different strips (book Ex 5.1: 123 on A, 77 on D); without one only the net counts |
+| Force level shown | 1.0E; Analysis can show × k_D (F_px / F_x) or × k_C (collector level), Setup | 1.0W as entered |
+| To Shear Wall Design | 1.0E line forces (never the scaled ones) | 1.0W line forces |
+- **Where loads are entered (user 2026-10-30): the Setup tab**, one page each — *Seismic loading* (level, F_x / ELF
+  link, k_D / k_C, E loads per direction), *Wind loading* (W loads per direction: wind windward / leeward, line on an
+  edge, area), *Shear wall link*, *General* (code, sheathing, blocking, method). A load's page follows its kind
+  (blank kind: seismic → E, other modes → W); changing the mode on a page keeps it there. The Plan tab draws the
+  loads (arrows, w(s) strip) and points to Setup.
+- An Area (psf) load of kind W gets a warning (wind is not a plan-area load).
+- Plan tab: the w(s) strip (plf, positive in the load direction) the beams carry is drawn beside the plan for every
+  mode (below it for a span along x, right of it for a span along y), with its value at each step; the first load
+  case of the direction shown.
+- Seismic display factors k_D / k_C (`level.diaphragmFactor` / `collectorFactor`, blank = 1): the analysis stays at
+  1.0E (linear), the Analysis tab scales every force / unit shear for display (`scaleCase`) and states the level in
+  the "Forces shown" line. Setup suggests both from the linked ELF item (F_px design / F_x, collector design / F_x).
+
 ## Basic shear, line forces, walls (Phase 4)
 - Load case = direction × kind (E / W; load field `kind`). Each diaphragm is a beam between its two support lines
   (overhang allowed); line loads are shared by the diaphragms covering a section in proportion to depth (edge loads:
@@ -75,6 +96,24 @@ collector and drag force, with a closure check on each member.
   share the force of their own connected part of the line.
 - Checks tab: equilibrium, closure of every member run, TD status, skill TD edge forces = integrator, seismic flag.
 - Views: 1 basic shear, 2 TD shear, 3 net shear, 4 member force diagrams (+ table).
+- Member closure (user 2026-10-30): |residual| ≤ max(`CLOSURE_LB` = 1 lb, `CLOSURE_REL` = 1 % of the run's largest
+  |N|) — `tdNet.closes`, used by the Checks tab, View 4 table and the Phase 7 iteration.
+
+## Offset wall lines (Phase 7)
+- **Offset line of resistance:** walls with one wall line name on two or more grids across the span (book Ex 3.3:
+  SW1 on B, SW3 / SW4 on C = "B/C"). Its force is shared by wall length across all its grids. To keep the walls of
+  each grid as separate lines, give them different names.
+- The wall on one grid can then take more than the diaphragm delivers there; the excess runs along that grid as a
+  strut into the TD that has it as a load line (P = the strut force at the TD edge), and the TD hands it to its
+  supports. The split between the lines is therefore found by **iteration to closure** (user 2026-10-30):
+  pass 0 = flexible forces (group = Σ of its grids); each pass shares the walls, runs the TDs, builds the net field and
+  members, then moves every wall line by the closure residual of its runs (F ← F − residual; a group by the Σ of its
+  grids) until every run on a wall line closes. Maximum 25 passes, else the "offset" check fails.
+- Ex 3.3: pass 0 B/C 5210 / A 4790 (193 lb open) → pass 1 B/C 5403 / A 4597 (15 lb, closes). The book's equal split
+  (5000 / 5000) leaves 387 lb on A and C (test); its trial shift 4600 and its weighted-average rule 4612 both lie
+  inside the tolerance; exact closure is ~4580.5. The stop point depends on the start only within the tolerance.
+- Analysis tab (View 1): pass table (line / group forces, TD loads, largest residual, open runs); Checks tab:
+  "offset" check. A linked Shear Wall Design line takes the iterated force.
 
 ## TD engine (Phase 3)
 - One call per transfer diaphragm. It is not the analysis of a regular diaphragm: that is the basic shear (Phase 4);
@@ -87,6 +126,30 @@ collector and drag force, with a closure check on each member.
 
 ## Views
 1. Basic unit shear. 2. TD unit shear. 3. Net unit shear. 4. All drag / collector / chord force diagrams on the plan.
+- Analysis tab layout (2026-10-30): **Unit shear:** Basic v_b (View 1) · TD v_TD (View 2) · Net v_net (View 3);
+  **Forces:** Members N (View 4). Overlays for every view: line forces & wall shares, diaphragm / TD outlines;
+  members along / across the span (View 4).
+- **Zoom / pan** (− / + / Fit, wheel about the cursor, drag) shared by all views and load cases, so one spot can be
+  compared view by view. Labels keep their size, so values hidden on small cells appear as you zoom in; at ≥ 200 %
+  View 4 also labels N at the grids crossing a member and at wall ends. Hover any cell / diagram for its value.
+- **Text size** A− / A+ (default 120 %, kept across views); the room a label needs scales with it.
+- **Maxima:** every member run labels its largest tension and its largest compression ("max T …", "max C …");
+  the member table lists both with their positions.
+- **Mouse read-out:** a box follows the mouse — Views 1–3: the unit shear at the point; View 4: N on the nearest
+  member line (within 10 px) at that position, with a dot on the line.
+- **Colours:** results blue = + (unit shear: book "+" element; members: tension), red = − (compression); colour depth
+  ∝ |v| / the largest of that view (shown in the legend). Plan symbols: sheathing light indigo, opening white with an
+  X, diaphragm teal dashed, TD brown (amber fill on the Plan tab, outline only on the result views so the result
+  colours are the only fills), shear wall black (indigo when linked from Shear Wall Design), load blue, grid grey.
+  Legend (HTML) under each drawing: the view's scale + the plan symbols; the Plan tab shows the symbols.
+- **Gate (user 2026-10-30):** a TD that did not run — cantilever review pending, "limits not met" stop, error, or
+  incomplete geometry — pauses its load case (`cs.paused`). The TD / Net / Members views, the member table and the
+  closure / edge / offset checks are not reported (panel "PAUSED — TD1 awaits the cantilever review" or "STOPPED");
+  the Checks tab shows PAUSED (warning, not failure); the Verification tab compares those values after the TD runs.
+  Still shown: basic shear, line forces, wall shares, equilibrium, the TD status. A TD with no disrupted force adds
+  nothing and does not pause. An offset-line case's line forces depend on the TD runs: they are held from Shear Wall
+  Design (`lineForces` E / W = null, which SWD skips) with a warning. A run that does not close in a complete case is
+  still marked "open ±N" in View 4.
 
 ## Files
 | File | Role |
@@ -111,6 +174,8 @@ collector and drag force, with a closure check on each member.
 | `tests/diaphragmAnalysisTd.test.mjs` | Phase 5: opening rule, book Nb values, derived inputs = T01–T08, TD runs, cantilever review, mirrored overhang |
 | `src/modules/tdNet.js` | Phase 6: TD / net fields, members on every line, closure, checks |
 | `tests/diaphragmAnalysisNet.test.mjs` | Phase 6: book values, closure, skill = integrator, line parts, views, checks |
+| `src/modules/tdOffset.js` | Phase 7: offset wall lines — line forces iterated to closure, pass table |
+| `tests/diaphragmAnalysisOffset.test.mjs` | Phase 7: Ex 3.3 values, the book's non-closing equal split, convergence, grouping, pass table / check |
 | `src/modules/tdBookKeys.js` | tool value of a book key (Verification tab, book tests, book-cases doc) |
 | `tests/diaphragmAnalysisBasic.test.mjs` | Phase 4: book values, statics, closed forms, bands, TD hand-over, load cases, B4, View 1 |
 | `src/modules/tdWallLink.js` | Shear Wall Design link: `swdExtract`, direction guess, walls of the level placed on the plan, matching checks |

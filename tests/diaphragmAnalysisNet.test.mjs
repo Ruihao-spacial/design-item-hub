@@ -16,7 +16,8 @@ const { vNetAt, vtdAt, memberN } = await import('../src/modules/tdNet.js');
 const { vAt } = await import('../src/modules/tdMembers.js');
 const { lineParts } = await import('../src/modules/tdBasicShear.js');
 const { defaultInputs, newLoad, newSegment } = await import('../src/modules/tdModel.js');
-const { diaphragmAnalysis, calcAll, planWithLinks } = await import('../src/modules/diaphragmAnalysis.js');
+const { diaphragmAnalysis, calcAll, planWithLinks, blocksCase } = await import('../src/modules/diaphragmAnalysis.js');
+const V = await import('../src/modules/tdViews.js');
 const { bookToInputs } = await import('./td-book/src/toInputs.mjs');
 
 const book = id => JSON.parse(fs.readFileSync(new URL('./td-book/' + id + '.json', import.meta.url), 'utf8'));
@@ -120,18 +121,117 @@ test('Analysis tab: Views 2–4 (TD shear, net shear, member diagrams with filte
   diaphragmAnalysis.renderForm(box, inputs, () => {}, [], () => {}, {});
   const click = t => [...box.querySelectorAll('button')].find(b => b.textContent === t).dispatchEvent(new window.Event('click'));
   click('Analysis');
-  click('View 2 · TD shear');
+  click('TD v_TD');
   assert.ok(box.textContent.includes('View 2 — TD unit shear') && box.querySelectorAll('g.td-view rect').length >= 6);
-  click('View 3 · net shear');
+  click('Net v_net');
   assert.equal(box.querySelectorAll('g.td-view rect').length, 16, 'View 3: 6 × 3 cells less the 2 in the opening');
-  click('View 4 · member forces');
+  click('Members N');
   const polys = box.querySelectorAll('g.td-view polygon').length;
   assert.ok(polys > 20 && box.textContent.includes('Closure residual'));
-  const cb = [...box.querySelectorAll('input[type=checkbox]')][1];
+  const cb = [...box.querySelectorAll('input[type=checkbox]')].find(x => x.parentNode.textContent.includes('across the span'));
   cb.checked = false; cb.dispatchEvent(new window.Event('change'));
   assert.ok(box.querySelectorAll('g.td-view polygon').length < polys, 'filter hides the cross members');
   click('Checks');
   assert.ok(box.textContent.includes('Analysis checks') && box.textContent.includes('member runs close'));
+});
+
+test('Analysis tab: zoom shared by the views (more values when zoomed, Fit resets), hover values, legend, outlines without fill', () => {
+  const open = (id, edit) => {
+    const inputs = bookToInputs(book(id));
+    inputs.tds.forEach(t => { t.engineer.cantileverOk = true; });
+    if (edit) edit(inputs);
+    const b = document.createElement('div');
+    diaphragmAnalysis.renderForm(b, inputs, () => {}, [], () => {}, {});
+    return b;
+  };
+  let box = open('Ex4.2');
+  const click = t => [...box.querySelectorAll('button')].find(b => b.textContent === t).dispatchEvent(new window.Event('click'));
+  const texts = () => box.querySelectorAll('g.td-view text').length;
+  click('Analysis');
+  click('Net v_net');
+  const n1 = texts();
+  for (let i = 0; i < 4; i++) click('+');
+  assert.ok(box.textContent.includes('244 %'), 'zoom readout');
+  assert.ok(texts() > n1, `zoomed in shows more values (${n1} → ${texts()})`);
+  box = open('Ex3.4');
+  click('Analysis');
+  for (let i = 0; i < 4; i++) click('+');
+  click('Members N');
+  assert.ok(box.textContent.includes('244 %'), 'zoom kept when switching view');
+  assert.ok([...box.querySelectorAll('g.td-view text')].some(t => t.textContent === 'C 3,225'), 'N at the wall end SW1 (y = 40) labelled at zoom ≥ 200 %');
+  assert.ok([...box.querySelectorAll('g.td-view polygon title')].some(t => /^2: N C/.test(t.textContent)), 'hover read-out on the member diagram');
+  click('Fit');
+  assert.ok(box.textContent.includes('100 %'));
+  // legend: the view's scale and the plan symbols; TDs as outlines (no fill) in result views
+  assert.ok(box.querySelector('.td-scale').textContent.includes('largest |N| 5,775 lb'));
+  assert.ok(box.querySelector('.td-legend').textContent.includes('transfer diaphragm (TD)'));
+  click('Basic v_b');
+  assert.ok(box.querySelector('.td-scale').textContent.includes('+115.5 plf'));
+  assert.ok([...box.querySelectorAll('g.td-view1 rect title')].some(t => t.textContent.startsWith('v_b 115.5')), 'hover read-out on a shear cell');
+  assert.ok(![...box.querySelectorAll('svg rect')].some(r => /245, 158, 11/.test(r.getAttribute('fill') || '')), 'no amber TD fill over the results');
+  assert.ok(!box.querySelector('.td-notice'), 'every TD ran');
+  // the Plan tab carries the symbol legend too
+  click('Plan');
+  assert.ok(box.querySelector('.td-legend').textContent.includes('selected'));
+});
+
+test('Analysis tab: text size A− / A+, max tension and compression per run, mouse read-out on the plan and on a member line', () => {
+
+  const { r, plan } = run('Ex3.4');
+  const cs = r.analysis.cases[0];
+  // read-out: line 2 (x = 15) at y = 50, along SW1 → N = C 4,500 (−3225 − 127.5 × 10); the nearest line wins
+  const d4 = V.drawMembers(plan, cs, undefined, { zoom: 1, panX: 0, panY: 0 });
+  const ro = V.readoutAt(plan, cs, d4.view, 4, d4.view.sx(15) + 4, d4.view.sy(50));
+  assert.ok(ro && ro.text.startsWith('2 at y 50: N = C 4,500'), ro && ro.text);
+  assert.equal(V.readoutAt(plan, cs, d4.view, 4, d4.view.sx(45), d4.view.sy(50)), null, 'nothing away from a line');
+  const ro3 = V.readoutAt(plan, cs, d4.view, 3, d4.view.sx(40), d4.view.sy(70));
+  assert.ok(ro3.text.startsWith('v_net 48.3 plf · x 40, y 70'), ro3.text); // 98.25 at grid 2 → −21.75 at grid 3, linear
+  // line A has compression only; line B tension only; both maxima labelled where they exist
+  const labels = [...d4.svg.querySelectorAll('g.td-view text')].map(t => t.textContent);
+  assert.ok(labels.includes('max C 1,580') && labels.includes('max T 3,465') && labels.includes('max C 5,775'));
+  const box = document.createElement('div');
+  const inputs = bookToInputs(book('Ex3.4'));
+  inputs.tds.forEach(t => { t.engineer.cantileverOk = true; });
+  diaphragmAnalysis.renderForm(box, inputs, () => {}, [], () => {}, {});
+  const click = t => [...box.querySelectorAll('button')].find(b => b.textContent === t).dispatchEvent(new window.Event('click'));
+  click('Analysis'); click('Members N');
+  const size = () => Number(box.querySelector('g.td-view text').getAttribute('font-size'));
+  const s0 = size();
+  click('A+');
+  assert.ok(size() > s0 && box.textContent.includes('text 144 %'), 'larger text');
+  assert.ok(box.textContent.includes('Max tension (lb)') && box.textContent.includes('Max compression (lb)'));
+  assert.ok(box.querySelector('g.td-readout'), 'read-out layer');
+});
+
+test('gate: a TD that did not run pauses its case — no TD / net / member results, Checks PAUSED (not failed), basic shear and line forces kept (Ex 3.4)', () => {
+  const inputs = bookToInputs(book('Ex3.4')); // cantilever not reviewed: TD1 waits
+  const r = calcAll(inputs), cs = r.analysis.cases[0];
+  assert.deepEqual(cs.paused.map(p => [p.mark, p.terminal]), [['TD1', 'ENGINEER_INPUT:S062']]);
+  assert.ok(!r.checks.some(c => !c.ok && !c.warn), 'nothing reported as failed');
+  assert.ok(!r.checks.some(c => c.code === 'closure'), 'no closure verdict on an incomplete field');
+  assert.ok(r.checks.some(c => c.code === 'paused' && c.msg.includes('PAUSED — TD TD1 awaits the cantilever review')));
+  assert.ok(r.checks.some(c => c.code === 'equilibrium' && c.ok), 'equilibrium still checked');
+  const box = document.createElement('div');
+  diaphragmAnalysis.renderForm(box, inputs, () => {}, [], () => {}, {});
+  const click = t => [...box.querySelectorAll('button')].find(b => b.textContent === t).dispatchEvent(new window.Event('click'));
+  click('Analysis');
+  assert.ok(box.querySelector('.td-paused').textContent.includes('basic shear and line forces below are valid'));
+  assert.ok(box.querySelector('g.td-view1') && box.textContent.includes('Σ line forces 15,000 lb ✓'), 'View 1 still drawn');
+  for (const v of ['TD v_TD', 'Net v_net', 'Members N']) {
+    click(v);
+    assert.ok(box.querySelector('.td-paused').textContent.startsWith('PAUSED — TD TD1 awaits the cantilever review'), v);
+    assert.ok(!box.querySelector('g.td-view') && !box.textContent.includes('Closure residual'), v + ': nothing drawn');
+  }
+  // the review lifts the gate; "limits not met" stops it
+  inputs.tds[0].engineer.cantileverOk = true;
+  assert.equal(calcAll(inputs).analysis.cases[0].paused.length, 0);
+  inputs.tds[0].engineer.cantileverOk = false;
+  const st = calcAll(inputs).analysis.cases[0].paused;
+  assert.ok(st.length && st[0].reason.startsWith('stopped'), st[0] && st[0].reason);
+  // a TD with no disrupted force adds nothing: it does not pause its case (Ex 3.3 with SW1 on its own line B)
+  const u = bookToInputs(book('Ex3.3')); u.walls.find(w => w.mark === 'SW1').line = 'B';
+  assert.equal(calcAll(u).analysis.cases[0].paused.length, 0);
+  assert.ok(blocksCase({ terminal: 'NOT_RUN', issues: [{ code: 'td-geometry' }] }) && !blocksCase({ terminal: 'NOT_RUN', issues: [{ code: 'td-no-load' }] }));
 });
 
 console.log(passed + ' passed');

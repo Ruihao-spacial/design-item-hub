@@ -32,28 +32,28 @@ PDF `The Analysis of Irregular Shaped Example 3.3.pdf`, pages 1-14. **Mirrored "
 | 3 | basic unit shear at grid A (left/below), between 2 and 4 (4090 lb / 100 ft) | `vb:A-:2-4` | -40.9 | 40.9 | plf |  | 6 (3.17) | 4 | 40.9 | ok |
 | 4 | basic unit shear at grid B, between 2 and 4 (V_B = 4510 - 200(15) = 1510 lb / 100 ft) | `vb:B:2-4` | 15.1 | -15.1 | plf |  | 6 (3.17) | 4 | -15.1 | ok |
 | 5 | basic unit shear at grid C (right/above), between 2 and 4 (4510 lb / 100 ft) | `vb:C+:2-4` | 45.1 | -45.1 | plf |  | 6 (3.17) | 4 | -45.1 | ok |
-| 6 | force to wall line A (book trial shift of 400 lb. Weighted-average rule (p14) gives 4612; exact closure of Fig 3.21 needs about 4580 (derived, not in book). tol spans 4579-4621) | `R:A` | 4,600 | 4,600 | lb |  | 13 | 7 | — | pending (phase 7) |
-| 7 | force to wall line B/C (weighted-average rule (p14) gives 5388) | `R:B/C` | 5,400 | 5,400 | lb |  | 13 | 7 | — | pending (phase 7) |
-| 8 | net unit shear at grid A (left/below), between 1 and 2 | `vnet:A-:1-2` | -28 | 28 | plf |  | 7 (3.18) | 7 | — | pending (phase 7) |
-| 9 | net unit shear at grid B (right/above), between 1 and 2 | `vnet:B+:1-2` | 28 | -28 | plf |  | 7 (3.18) | 7 | — | pending (phase 7) |
-| 10 | net unit shear at grid A (left/below), between 3 and 4 | `vnet:A-:3-4` | -40.9 | 40.9 | plf |  | 7 (3.18) | 7 | — | pending (phase 7) |
-| 11 | net unit shear at grid C (right/above), between 3 and 4 | `vnet:C+:3-4` | 45.1 | -45.1 | plf |  | 7 (3.18) | 7 | — | pending (phase 7) |
-| 12 | basic-field force in line B at grid 2 (disrupted strut force into TD1) | `Nb:B:2` | 693.6 | 693.6 | lb | T | 13 (3.21) | 7 | — | pending (phase 7) |
-| 13 | force in line B at grid x=8 (right end of SW1) | `N:B:x=8` | 1,169.6 | 1,169.6 | lb | T | 13 (3.21) | 7 | — | pending (phase 7) |
-| 14 | force in line B at grid 2 | `N:B:2` | 693.6 | 693.6 | lb | T | 13 (3.21) | 7 | — | pending (phase 7) |
-| 15 | force in line B at grid 3 (line B diagram closes at grid 3) | `N:B:3` | 0 | 0 | lb | ? | 13 (3.21) | 7 | — | pending (phase 7) |
-| 16 | force in line A at grid 2 | `N:A:2` | -700 | -700 | lb | C | 13 (3.21) | 7 | — | pending (phase 7) |
-| 17 | force in line A at grid x=30 (left end of SW2; book prints 802.5 (erratum)) | `N:A:x=30` | -852.5 | -852.5 | lb | C | 13 (3.21) | 7 | — | pending (phase 7) |
-| 18 | force in line A at grid x=40 (right end of SW2; book prints 3388.5 (erratum)) | `N:A:x=40` | 3,442.5 | 3,442.5 | lb | T | 13 (3.21) | 7 | — | pending (phase 7) |
-| 19 | force in line A at grid 3 (book prints 3236 (erratum)) | `N:A:3` | 3,290 | 3,290 | lb | T | 13 (3.21) | 7 | — | pending (phase 7) |
-| 20 | force in line A at grid 4 (closure residual; book prints 36 and calls it negligible. R_A = 4612 gives ~29, exact closure 0) | `N:A:4` | 18 | 18 | lb | T | 13 (3.21) | 7 | — | pending (phase 7) |
-| 21 | force in line C at grid 3 | `N:C:3` | -416.6 | -416.6 | lb | C | 13 (3.21) | 7 | — | pending (phase 7) |
-| 22 | force in line C at grid x=57 (left end of SW3) | `N:C:x=57` | -957.8 | -957.8 | lb | C | 13 (3.21) | 7 | — | pending (phase 7) |
-| 23 | force in line C at grid x=65 (right end of SW3; diagram crosses to the tension side (book prints 75 unsigned)) | `N:C:x=65` | 75 | 75 | lb | T | 13 (3.21) | 7 | — | pending (phase 7) |
-| 24 | force in line C at grid x=110 (left end of SW4) | `N:C:x=110` | -1,954.5 | -1,954.5 | lb | C | 13 (3.21) | 7 | — | pending (phase 7) |
-| 25 | force in line C at grid 4 (closure residual; book prints 18 unsigned. R_A = 4612 gives ~29, exact closure 0) | `N:C:4` | -18 | -18 | lb | C | 13 (3.21) | 7 | — | pending (phase 7) |
-| 26 | force in line 2 at grid B (left/below) | `N:2:B-` | -87.5 | -87.5 | lb | ? | 13 (3.21) | 7 | — | pending (phase 7) |
-| 27 | force in line 3 at grid B (right/above) | `N:3:B+` | -364 | -364 | lb | ? | 13 (3.21) | 7 | — | pending (phase 7) |
+| 6 | force to wall line A (book trial shift of 400 lb. Weighted-average rule (p14) gives 4612; exact closure of Fig 3.21 needs about 4580 (derived, not in book). tol spans 4579-4621) | `R:A` | 4,600 | 4,600 | lb |  | 13 | 7 | 4,596.6 | ok |
+| 7 | force to wall line B/C (weighted-average rule (p14) gives 5388) | `R:B/C` | 5,400 | 5,400 | lb |  | 13 | 7 | 5,403.4 | ok |
+| 8 | net unit shear at grid A (left/below), between 1 and 2 | `vnet:A-:1-2` | -28 | 28 | plf |  | 7 (3.18) | 7 | 28 | ok |
+| 9 | net unit shear at grid B (right/above), between 1 and 2 | `vnet:B+:1-2` | 28 | -28 | plf |  | 7 (3.18) | 7 | -28 | ok |
+| 10 | net unit shear at grid A (left/below), between 3 and 4 | `vnet:A-:3-4` | -40.9 | 40.9 | plf |  | 7 (3.18) | 7 | 40.9 | ok |
+| 11 | net unit shear at grid C (right/above), between 3 and 4 | `vnet:C+:3-4` | 45.1 | -45.1 | plf |  | 7 (3.18) | 7 | -45.1 | ok |
+| 12 | basic-field force in line B at grid 2 (disrupted strut force into TD1) | `Nb:B:2` | 693.6 | 693.6 | lb | T | 13 (3.21) | 7 | 694.41 | ok |
+| 13 | force in line B at grid x=8 (right end of SW1) | `N:B:x=8` | 1,169.6 | 1,169.6 | lb | T | 13 (3.21) | 7 | 1,170.4 | ok |
+| 14 | force in line B at grid 2 | `N:B:2` | 693.6 | 693.6 | lb | T | 13 (3.21) | 7 | 694.41 | ok |
+| 15 | force in line B at grid 3 (line B diagram closes at grid 3) | `N:B:3` | 0 | 0 | lb | ? | 13 (3.21) | 7 | 0 | ok |
+| 16 | force in line A at grid 2 | `N:A:2` | -700 | -700 | lb | C | 13 (3.21) | 7 | -700 | ok |
+| 17 | force in line A at grid x=30 (left end of SW2; book prints 802.5 (erratum)) | `N:A:x=30` | -852.5 | -852.5 | lb | C | 13 (3.21) | 7 | -852.42 | ok |
+| 18 | force in line A at grid x=40 (right end of SW2; book prints 3388.5 (erratum)) | `N:A:x=40` | 3,442.5 | 3,442.5 | lb | T | 13 (3.21) | 7 | 3,439.4 | ok |
+| 19 | force in line A at grid 3 (book prints 3236 (erratum)) | `N:A:3` | 3,290 | 3,290 | lb | T | 13 (3.21) | 7 | 3,287 | ok |
+| 20 | force in line A at grid 4 (closure residual; book prints 36 and calls it negligible. R_A = 4612 gives ~29, exact closure 0) | `N:A:4` | 18 | 18 | lb | T | 13 (3.21) | 7 | 14.97 | ok |
+| 21 | force in line C at grid 3 | `N:C:3` | -416.6 | -416.6 | lb | C | 13 (3.21) | 7 | -415.91 | ok |
+| 22 | force in line C at grid x=57 (left end of SW3) | `N:C:x=57` | -957.8 | -957.8 | lb | C | 13 (3.21) | 7 | -957.11 | ok |
+| 23 | force in line C at grid x=65 (right end of SW3; diagram crosses to the tension side (book prints 75 unsigned)) | `N:C:x=65` | 75 | 75 | lb | T | 13 (3.21) | 7 | 76.5 | ok |
+| 24 | force in line C at grid x=110 (left end of SW4) | `N:C:x=110` | -1,954.5 | -1,954.5 | lb | C | 13 (3.21) | 7 | -1,953 | ok |
+| 25 | force in line C at grid 4 (closure residual; book prints 18 unsigned. R_A = 4612 gives ~29, exact closure 0) | `N:C:4` | -18 | -18 | lb | C | 13 (3.21) | 7 | -14.97 | ok |
+| 26 | force in line 2 at grid B (left/below) | `N:2:B-` | -87.5 | -87.5 | lb | ? | 13 (3.21) | 7 | -86.93 | ok |
+| 27 | force in line 3 at grid B (right/above) | `N:3:B+` | -364 | -364 | lb | ? | 13 (3.21) | 7 | -364.57 | ok |
 
 **Errata**
 - p3: Fig 3.17 labels the band 2-4 reaction at C "+4150 lb". Used: 4510 lb (p6).

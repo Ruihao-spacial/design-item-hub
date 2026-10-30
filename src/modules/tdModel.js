@@ -18,7 +18,7 @@ export const newDiaphragm = (mark, dir, x1, x2, y1, y2, supports) => ({
   supports: supports || [], sheathing: '', blocked: null, bandSplit: '',
 });
 export const newLoad = (acts, mode) => ({ id: uid('ld'), acts: acts || '-y', mode: mode || 'seismic', kind: '', psf: '', edgeId: '', segments: [] });
-export const newSegment = (from, to, w) => ({ from: s(from), to: s(to), w: s(w), w2: '' });
+export const newSegment = (from, to, w) => ({ from: s(from), to: s(to), w: s(w), w2: '', wl: '' }); // wind mode: w windward, wl leeward
 
 // A new item: a 100 × 50 ft rectangle on grids 1-2 / A-B, seismic load and one diaphragm in each direction
 export function defaultInputs() {

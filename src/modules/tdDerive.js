@@ -4,7 +4,8 @@
 //     chord TD (load line along the span, e.g. Ex 4.1 B): P = N · side, N = the basic-field chord force where the
 //       member enters the TD (tdMembers.chordForce: M/d of the cut band, or Vierendeel at an opening);
 //     strut TD (load line across the span, e.g. Ex 3.4 line 1, Ex 4.2 B): P = the force of that wall-less line handed
-//       into the TD in Phase 4 (equal split between TDs on one line). A load line with walls needs Phase 7 (offset).
+//       into the TD in Phase 4 (equal split between TDs on one line). A load line with walls of an offset wall
+//       line (Phase 7, Ex 3.3 B): P = its strut force at the TD edge (walls shared across the group, tdOffset.js).
 //   td_vb_* : basic unit shear just inside each TD edge at the breakpoints;
 //   td_vo_* : just outside each edge at both ends of each segment — void 0, sheathing its basic v, plus a shear wall
 //             on that edge line (its reaction per foot: x1 edge + r, x2 edge − r).
@@ -51,8 +52,8 @@ export function deriveTd(plan, cs, t, f, opts = {}) {
       }
       const ranges = plan.tds.filter(q => q.dir === cs.dir && q.loads.some(m => m.grid && m.grid.id === l.grid.id)).map(q => (l.grid.axis === 'x' ? [q.y1, q.y2] : [q.x1, q.x2]));
       const r = crossForce(cs, l.grid, l.side > 0 ? e2 : e1, ranges);
-      if (r) { N = r.N; txt = `strut ${l.grid.name}: N = ${Math.round(N)} lb at the TD edge (${r.how}) × side`; }
-      if (ln && !ln.noWall) issues.push({ code: 'td-load-wall-line', warn: true, msg: `TD ${t.mark}: load line ${l.grid.name} has shear walls — offset wall lines are Phase 7; P is the strut force at the TD edge.` });
+      if (r) { N = r.N; txt = `strut ${l.grid.name}${ln && ln.group ? ' (offset wall line ' + ln.group + ')' : ''}: N = ${Math.round(N)} lb at the TD edge (${r.how}) × side`; }
+      if (ln && !ln.noWall && !ln.group) issues.push({ code: 'td-load-wall-line', warn: true, msg: `TD ${t.mark}: load line ${l.grid.name} has shear walls of its own wall line — they take its force. For an offset line of resistance give its walls on every grid one wall line name (e.g. B/C).` });
     }
     if (N === null) { issues.push({ code: 'td-no-P', msg: `TD ${t.mark}: no member force found at load line ${l.grid.name}.` }); return 0; }
     how['td_P' + (i + 1)] = txt;
@@ -90,7 +91,7 @@ export function runTds(plan, cs, frames, inputsTds, opts) {
     const dv = deriveTd(plan, cs, t, f, opts);
     if (Math.abs(dv.skill.td_P1) < 0.5 && Math.abs(dv.skill.td_P2) < 0.5)
       return { ...base, type: dv.type, skill: dv.skill, how: dv.how, terminal: 'NOT_RUN', issues: [...dv.issues, { code: 'td-no-load', warn: true,
-        msg: `TD ${t.mark}: no disrupted force at its load line(s) on the basic field${dv.issues.some(i => i.code === 'td-load-wall-line') ? ' — the line\'s walls take it; offset wall lines are Phase 7' : ''}.` }] };
+        msg: `TD ${t.mark}: no disrupted force at its load line(s) on the basic field${dv.issues.some(i => i.code === 'td-load-wall-line') ? ' — the line\'s own walls take it' : ''}.` }] };
     const raw = (inputsTds || []).find(x => x.id === t.id) || {};
     const ok = raw.engineer ? raw.engineer.cantileverOk : null;
     const eng = { td_region_clear: true, td_closure_tol: CLOSURE_TOL, ...(ok === true || ok === false ? { td_cantilever_ok: ok } : {}) };

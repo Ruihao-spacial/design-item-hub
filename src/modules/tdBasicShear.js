@@ -4,6 +4,8 @@
 // the user defined for that direction is a flexible beam along the span axis (spanAxis: a load along y spans along
 // x) between its two support lines; it may overhang a support. Its load w(s) (plf, signed along the plan axis):
 //   seismic mode  q · d(s)   (q = F_x / ΣA, psf)        area mode  psf · d(s)
+//   wind mode     per segment a windward and a leeward plf: each goes to the band on that face of the section
+//                 (windward = the side the load comes from), so at an opening the two strips load different bands
 //   line mode     w(s) of the segments, shared by the diaphragms covering the section in proportion to their depth;
 //                 with an `edge` grid only by the diaphragms whose depth contains that line
 // where d(s) is the diaphragm's sheathed depth at s (its rectangle ∩ the sheathed plan). Within an interval between
@@ -95,6 +97,24 @@ export function analyseCase(plan, lc, ctx = {}) {
         const p = l.mode === 'seismic' ? ctx.q : l.psf;
         if (!fin(p)) continue;
         w += sg * p * (band ? band[1] - band[0] : dW);
+        continue;
+      }
+      if (l.mode === 'wind') {
+        // windward plf to the band on the windward face of the whole section, leeward plf to the band on the leeward
+        // face (book Ex 5.1: 123 plf on chord A, 77 plf on chord D at the opening). With one band across the section
+        // both reach it, so only the net load matters there.
+        const all = sectionBands(plan, ax, mid);
+        if (!all.length) continue;
+        const cMin = Math.min(...all.map(b => b[0])), cMax = Math.max(...all.map(b => b[1]));
+        const cWind = sg < 0 ? cMax : cMin, cLee = sg < 0 ? cMin : cMax; // the wind blows toward the load direction
+        for (const g of l.segments) {
+          if (segAt(g, s) === null || segAt(g, mid) === null) continue;
+          for (const [cf, val] of [[cWind, g.w], [cLee, g.wl]]) {
+            if (!fin(val) || !val) continue;
+            const holder = bands.find(b => cf >= b[0] - EPS && cf <= b[1] + EPS);
+            if (holder && (!band || band === holder)) w += sg * val; // no holder: the face belongs to another diaphragm
+          }
+        }
         continue;
       }
       for (const g of l.segments) {
@@ -222,6 +242,22 @@ export function analyseCase(plan, lc, ctx = {}) {
   return { id: lc.id, dir: lc.dir, kind: lc.kind, axis: ax, sigma: lc.loads.length ? sigma(lc.loads[0]) : 1, diaphragms: out, issues };
 }
 
+// The load the span beams carry, summed over the diaphragms of the case, along the span: [{ a, b, wa, wb }] (plf,
+// positive in the load direction). One picture for every load mode: seismic q·d(s), area psf·d(s), wind / line plf.
+export function loadProfile(cs) {
+  const pts = sortU(cs.diaphragms.flatMap(d => d.intervals.flatMap(i => [i.a, i.b])));
+  const at = (i, s) => i.wa + (i.wb - i.wa) * (s - i.a) / (i.b - i.a);
+  const out = [];
+  for (let j = 0; j < pts.length - 1; j++) {
+    const a = pts[j], b = pts[j + 1];
+    if (b - a < EPS) continue;
+    let wa = 0, wb = 0;
+    for (const d of cs.diaphragms) for (const i of d.intervals) if (i.a <= a + EPS && i.b >= b - EPS) { wa += at(i, a); wb += at(i, b); }
+    out.push({ a, b, wa: wa * cs.sigma, wb: wb * cs.sigma });
+  }
+  return out;
+}
+
 // Line forces of a case: each support line's Σ (−R) (plan-axis sign), then wall-less lines into their TDs.
 // Each contribution keeps where it enters along the line (`parts`: c ranges — a diaphragm's bands at the support, a
 // TD's extent), so the line can be split into connected parts (lineParts) and each part's walls take its force.
@@ -329,6 +365,40 @@ export function wallShares(plan, line, weights = null) {
     }
   }
   return out;
+}
+
+// Offset wall lines (Phase 7): walls with one wall line name on two or more grids across the span are one line of
+// resistance (book Ex 3.3: SW1 on B, SW3 / SW4 on C = line B/C). Returns [{ name, gridIds, walls }].
+export function lineGroups(plan, cs) {
+  const by = new Map();
+  for (const w of plan.walls) {
+    if (w.axis !== cs.axis || !w.line || !(fin(w.from) && fin(w.to) && w.to > w.from)) continue;
+    const k = w.line.toLowerCase();
+    let g = by.get(k);
+    if (!g) by.set(k, g = { name: w.line, gridIds: [], walls: [] });
+    g.walls.push(w);
+    if (!g.gridIds.includes(w.gridId)) g.gridIds.push(w.gridId);
+  }
+  return [...by.values()].filter(g => g.gridIds.length > 1);
+}
+
+// A group's force F (plan sign) to its walls by length across all its grids (a rigid line, SDPWS 4.3.5.5.1 exception;
+// book Ex 3.3 p4: SW1 on B shares with SW3 / SW4 on C); each grid line's force = Σ its walls' shares. A group grid
+// with no diaphragm reaction gets a line entry.
+export function shareGroup(plan, cs, grp, F) {
+  const len = grp.walls.reduce((t, w) => t + w.to - w.from, 0);
+  for (const id of grp.gridIds) {
+    let ln = cs.lines.find(l => l.gridId === id);
+    if (!ln) { const g = plan.gridById.get(id); cs.lines.push(ln = { gridId: id, name: g.name, at: g.at, F: 0, from: [], parts: [], noWall: false }); }
+    const ws = grp.walls.filter(w => w.gridId === id);
+    ln.F = ws.reduce((t, w) => t + F * (w.to - w.from) / len, 0);
+    ln.P = ln.F * cs.sigma;
+    ln.group = grp.name;
+    ln.walls = ws.map(w => {
+      const share = F * cs.sigma * (w.to - w.from) / len;
+      return { id: w.id, mark: w.mark, from: w.from, to: w.to, length: w.to - w.from, share, v: share / (w.to - w.from), basis: 'group' };
+    });
+  }
 }
 
 // Section at s (side '-' / '+' / ''): per diaphragm covering s, its bands with V and v, and the total V
