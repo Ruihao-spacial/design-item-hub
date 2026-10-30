@@ -5,8 +5,8 @@ Guide: `docs/diaphragm-analysis.md`. Book cases: `docs/diaphragm-analysis-book-c
 
 ## Next session — start here (set 2026-10-29, Phase 6)
 **State**
-- Branch `da-phase3-td-engine` (off `diaphragm-analysis` 3d568d0) holds Phases 3–6, **uncommitted** (user: no commit
-  / push yet). PRs #5 / #6 still open. `npm test` green (DA: Plan 22, Link 9, Engine 10, Basic 10, Td 8, Net 8),
+- Branch `da-phase3-td-engine` (off `diaphragm-analysis` 3d568d0) holds Phases 3–6, committed (4d9782f) and pushed
+  2026-10-29; no PR yet (open one on request, after #5 / #6). PRs #5 / #6 still open. `npm test` green (DA: Plan 22, Link 9, Engine 10, Basic 10, Td 8, Net 8),
   build OK, no Shear Wall Design / DLRS file changed.
 - Book: 344 / 344 values of phases 4–6 match (`docs/diaphragm-analysis-book-cases.md`); only Ex 3.3 (22 values,
   phase 7) is pending. Every member run of the 6 examples closes; the skill's TD edge forces = the integrator's.
