@@ -103,6 +103,38 @@
         "to": 125
       }
     ],
+    "diaphragms": [
+      {
+        "mark": "D1",
+        "x": [
+          0,
+          25
+        ],
+        "y": [
+          15,
+          50
+        ],
+        "supports": [
+          "B",
+          "A"
+        ]
+      },
+      {
+        "mark": "D2",
+        "x": [
+          25,
+          125
+        ],
+        "y": [
+          0,
+          50
+        ],
+        "supports": [
+          "C",
+          "A"
+        ]
+      }
+    ],
     "tds": [
       {
         "mark": "TD1",
@@ -492,7 +524,7 @@
       "page": 4,
       "phase": 7,
       "note": "Figs 3.17/3.18 print it negative (erratum)",
-      "vTool": -161.3
+      "vTool": 161.3
     },
     {
       "k": "vw:SW2",
@@ -500,7 +532,7 @@
       "unit": "plf",
       "page": 4,
       "phase": 7,
-      "vTool": -500
+      "vTool": 500
     },
     {
       "k": "vw:SW3",
@@ -508,7 +540,7 @@
       "unit": "plf",
       "page": 4,
       "phase": 7,
-      "vTool": -161.3
+      "vTool": 161.3
     },
     {
       "k": "vw:SW4",
@@ -516,7 +548,7 @@
       "unit": "plf",
       "page": 4,
       "phase": 7,
-      "vTool": -161.3
+      "vTool": 161.3
     },
     {
       "k": "N:B:x=8",

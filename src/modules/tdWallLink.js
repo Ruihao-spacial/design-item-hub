@@ -6,8 +6,10 @@
 //   - an SWD wall position is measured along its line from the line origin; wallLink.origins[lineId] is the plan
 //     coordinate of that origin ('' = where the line enters the sheathed plan).
 // DA's results label each line force with the SWD direction / line ids, so SWD needs no geometry or mapping.
-// SWD helpers are imported read-only.
+// SWD helpers and its engine are imported read-only. B4 (Phase 4): swdWallShares runs SWD's own calcAll on a copy of
+// the definition with DA's line forces at DA's level, so the walls share a line force exactly as in SWD.
 import { isWswh, wswhWidthFt } from './shearWallWswh.js';
+import { calcAll as swdCalcAll } from './shearWallCalc.js';
 import { sectionBands } from './tdGeometry.js';
 
 const LENGTH_TOL = 0.01; // ft — SWD line length vs the plan length of its grid
@@ -18,6 +20,7 @@ const same = (a, b) => String(a || '').trim().toLowerCase() === String(b || '').
 // What DA needs from an SWD definition (the ref's extract)
 export function swdExtract(def) {
   return {
+    definition: JSON.parse(JSON.stringify(def)), // full definition for B4 (SWD calcAll)
     levels: (def.levels || []).map(l => ({ id: l.id, name: l.name || '' })),
     directions: (def.directions || []).map(d => ({
       id: d.id, name: d.name || '',
@@ -83,6 +86,32 @@ export function linkedWalls(inputs, plan, swd) {
         out.walls.push({ id: 'swd:' + w.id, line: ln.name, mark: w.mark, gridId: grid.id, from: String(origin + w.position), to: String(origin + w.position + w.length),
           linked: true, swdLineId: ln.id, swdDirId: d.id, type: w.type });
       }
+    }
+  }
+  return out;
+}
+
+// B4: SWD calcAll on a copy of the definition, DA's line forces at DA's level (kip, 1.0E / 1.0W; other levels keep
+// their own loads). lineForces: [{ swdDirId, swdLineId, E, W }]. Returns { weights: { E: { 'swd:<wallId>': kip },
+// W: {…} }, error } — the shares SWD gives the walls of each line at this level (DA uses their ratio on a line).
+export function swdWallShares(swd, levelId, lineForces) {
+  const out = { weights: { E: {}, W: {} }, error: null };
+  if (!swd || !swd.definition || !levelId) return out;
+  const def = JSON.parse(JSON.stringify(swd.definition));
+  for (const lf of lineForces) {
+    const dir = (def.directions || []).find(d => d.id === lf.swdDirId);
+    const line = dir && (dir.lines || []).find(l => l.id === lf.swdLineId);
+    if (!line) continue;
+    if (!line.levelLoads) line.levelLoads = {};
+    line.levelLoads[levelId] = { ...(line.levelLoads[levelId] || {}), seismic: String(lf.E || 0), wind: String(lf.W || 0) };
+  }
+  let res;
+  try { res = swdCalcAll(def); } catch (e) { out.error = 'Shear Wall Design calculation failed: ' + e.message; return out; }
+  for (const d of res.perDirection || []) for (const l of d.perLine || []) {
+    const pl = (l.perLevel || []).find(p => p.levelId === levelId);
+    for (const w of (pl && pl.walls) || []) {
+      out.weights.E['swd:' + w.wallId] = w.shareExact_1E || 0;
+      out.weights.W['swd:' + w.wallId] = w.shareExact_1W || 0;
     }
   }
   return out;

@@ -20,7 +20,9 @@
 //   tds: [{ id, mark, dir, x1, x2, y1, y2, supports: [gridId, gridId], loads: [{ gridId, side }], overhang: [a, b] | null,
 //           engineer: { regionClear, cantileverOk, closureTol } },
 //   wallLink: { dirMap: { [swdDirId]: 'x'|'y' }, origins: { [swdLineId]: ft | '' } },   // refs.wallSource = SWD item
-//   loads: [{ id, acts: '+x'|'-x'|'+y'|'-y', mode: 'seismic'|'area'|'line', psf, edgeId, segments: [{ from, to, w, w2 }] }] }
+//   loads: [{ id, acts: '+x'|'-x'|'+y'|'-y', mode: 'seismic'|'area'|'line', kind: ''|'E'|'W' ('' = E for seismic, else W),
+//             psf, edgeId, segments: [{ from, to, w, w2 }] }] }
+//   diaphragms[].bandSplit: ''|'mid'|'low'|'high' (Phase 4; '' = mid)
 // Numbers are stored as typed (strings); '' = blank.
 
 export const TD_SCHEMA = 1;
@@ -64,7 +66,7 @@ export function normalizeInputs(inputs) {
   const dir0 = Array.isArray(inputs.loads) && inputs.loads[0] && String(inputs.loads[0].acts || '').endsWith('x') ? 'x' : 'y';
   arr(inputs, 'diaphragms').forEach((d, i) => {
     if (!isObj(d)) return;
-    fill(d, { id: 'dg-auto-' + i, mark: '', dir: dir0, x1: '', x2: '', y1: '', y2: '', sheathing: '', blocked: null });
+    fill(d, { id: 'dg-auto-' + i, mark: '', dir: dir0, x1: '', x2: '', y1: '', y2: '', sheathing: '', blocked: null, bandSplit: '' });
     arr(d, 'supports');
   });
   arr(inputs, 'tds').forEach((t, i) => {
@@ -76,7 +78,7 @@ export function normalizeInputs(inputs) {
   });
   arr(inputs, 'loads').forEach((l, i) => {
     if (!isObj(l)) return;
-    fill(l, { id: 'ld-auto-' + i, acts: '-y', mode: 'line', psf: '', edgeId: '' });
+    fill(l, { id: 'ld-auto-' + i, acts: '-y', mode: 'line', psf: '', edgeId: '', kind: '' });
     arr(l, 'segments').forEach(s => isObj(s) && fill(s, { from: '', to: '', w: '', w2: '' }));
   });
   return inputs;

@@ -18,8 +18,8 @@ export function bookToInputs(book) {
   const dirs = [...new Set((L.loads || []).map(l => (l.acts.endsWith('x') ? 'x' : 'y')))];
   const xs = L.outline.map(p => p[0]), ys = L.outline.map(p => p[1]);
   const box = { x1: Math.min(...xs), x2: Math.max(...xs), y1: Math.min(...ys), y2: Math.max(...ys) };
-  // Default diaphragm per load direction: the whole plan, spanning between the outermost wall lines across the span
-  // (book sub-diaphragms, e.g. Ex 3.4, are refined when the basic shear is checked in Phase 4)
+  // Diaphragms: the layout's own (book sub-diaphragms, Ex 3.3 / 3.4 / 4.2), else one per load direction: the whole
+  // plan, spanning between the outermost wall lines across the span
   const diaphragmFor = (dir, i) => {
     const sAxis = dir === 'y' ? 'x' : 'y';
     const wallAt = (L.walls || []).filter(w => w.axis === sAxis).map(w => w.at);
@@ -39,7 +39,10 @@ export function bookToInputs(book) {
       const g = gridOn(w.axis, w.at);
       return { id: `wl-${book.id}-${i}`, line: s(w.line), mark: s(w.mark), gridId: g ? gridId(g.name) : '', from: s(w.from), to: s(w.to) };
     }),
-    diaphragms: dirs.map(diaphragmFor),
+    diaphragms: L.diaphragms
+      ? L.diaphragms.map((d, i) => ({ id: `dg-${book.id}-${i}`, mark: d.mark, dir: d.dir || dirs[0] || 'y', x1: s(d.x[0]), x2: s(d.x[1]), y1: s(d.y[0]), y2: s(d.y[1]),
+        supports: d.supports.map(gridId), sheathing: '', blocked: null, bandSplit: d.bandSplit || '' }))
+      : dirs.map(diaphragmFor),
     tds: (L.tds || []).map((t, i) => ({
       id: `td-${book.id}-${i}`, mark: t.mark, dir: dirs[0] || 'y', x1: s(t.x[0]), x2: s(t.x[1]), y1: s(t.y[0]), y2: s(t.y[1]),
       supports: t.supports.map(gridId),

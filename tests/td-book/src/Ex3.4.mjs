@@ -22,6 +22,11 @@ export default {
       { line: '2', mark: 'SW2', axis: 'x', at: 15, from: 0, to: 30 },
       { line: '3', mark: 'SW3', axis: 'x', at: 75, from: 30, to: 100 },
     ],
+    // Book sub-diaphragms (p2-p4): upper A-C spans strut line 1 to wall line 3; lower C-D spans 2 to 3
+    diaphragms: [
+      { mark: 'D1', x: [0, 75], y: [60, 100], supports: ['1', '3'] },
+      { mark: 'D2', x: [15, 75], y: [0, 60], supports: ['2', '3'] },
+    ],
     tds: [
       { mark: 'TD1', x: [0, 75], y: [60, 80], supports: ['2', '3'], overhang: [0, 15],
         loads: [{ grid: '1', side: '+' }] },

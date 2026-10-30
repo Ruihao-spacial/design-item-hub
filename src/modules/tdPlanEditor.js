@@ -708,7 +708,9 @@ function renderPanel(inputs, plan, state, refresh, wallsLinked = false) {
       c.appendChild(el('div', { style: { marginTop: '4px' } }, el('span', { style: small }, 'Sheathing '),
         choose(SHEATHING, d.sheathing || '', v => { d.sheathing = v; refresh(true); }),
         el('span', { style: { ...small, marginLeft: '6px' } }, 'Blocking '),
-        choose([['', 'default'], ['yes', 'blocked'], ['no', 'unblocked']], d.blocked === true ? 'yes' : d.blocked === false ? 'no' : '', v => { d.blocked = v === '' ? null : v === 'yes'; refresh(true); })));
+        choose([['', 'default'], ['yes', 'blocked'], ['no', 'unblocked']], d.blocked === true ? 'yes' : d.blocked === false ? 'no' : '', v => { d.blocked = v === '' ? null : v === 'yes'; refresh(true); }),
+        el('span', { style: { ...small, marginLeft: '6px' }, title: 'Where an opening splits the depth, the bands share the section shear by width at one section of the opening; each band then carries its own load. Auto: at the end on a support line (free chord ends, Ex 4.3), else at the opening end with the smaller shear (Ex 5.1).' }, 'Opening bands share V at '),
+        choose([['', 'auto'], ['low', 'opening start (low ' + sAxis + ')'], ['high', 'opening end (high ' + sAxis + ')'], ['mid', 'mid-opening']], d.bandSplit || '', v => { d.bandSplit = v; refresh(true); })));
       body.appendChild(c);
     }
     if (!list.length) body.appendChild(el('p', { style: { ...small, color: 'var(--stale)' } }, 'None for this direction — use the Diaphragm tool.'));
@@ -747,13 +749,14 @@ function renderPanel(inputs, plan, state, refresh, wallsLinked = false) {
   // loads of this direction
   {
     const body = el('div');
-    body.appendChild(el('p', { style: small }, 'Seismic uses F_x / ΣA. A line load runs along the span (plf), optionally on one edge (chord) — e.g. windward / leeward strips at an opening.'));
+    body.appendChild(el('p', { style: small }, 'Seismic uses F_x / ΣA. A line load runs along the span (plf), optionally on one edge (chord) — e.g. windward / leeward strips at an opening. Loads of one kind (E or W) form one load case; enter them as 1.0E / 1.0W when they go to Shear Wall Design.'));
     for (const l of inputs.loads.filter(x => (String(x.acts).endsWith('x') ? 'x' : 'y') === dir)) {
       const c = el('div', { style: { border: '1px solid var(--border-light)', borderRadius: '6px', padding: '6px', marginBottom: '6px' } });
       c.appendChild(el('div', { style: { display: 'flex', gap: '6px', alignItems: 'center', flexWrap: 'wrap' } },
         el('span', { style: small }, 'Acts'),
         choose((dir === 'y' ? ['-y', '+y'] : ['+x', '-x']).map(a => [a, a]), l.acts, v => { l.acts = v; refresh(true); }),
         choose([['seismic', 'Seismic F_x/ΣA'], ['area', 'Area (psf)'], ['line', 'Line (plf)']], l.mode, v => { l.mode = v; if (v === 'line' && !l.segments.length) l.segments.push(newSegment('', '', '')); refresh(true); }),
+        choose([['', l.mode === 'seismic' ? 'E (default)' : 'W (default)'], ['E', 'E (seismic)'], ['W', 'W (wind)']], l.kind || '', v => { l.kind = v; refresh(true); }),
         l.mode === 'area' ? el('span', null, numInput(l, 'psf', refresh, '56px'), ' psf') : null,
         l.mode === 'line' ? el('span', null, el('span', { style: small }, 'edge '), gridSelect(inputs, spanAxis(l.acts) === 'x' ? 'y' : 'x', l.edgeId, id => { l.edgeId = id; refresh(true); }, 'shared')) : null,
         delBtn(() => { inputs.loads.splice(inputs.loads.indexOf(l), 1); refresh(true); }, 'Delete load')));

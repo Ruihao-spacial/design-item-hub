@@ -3,7 +3,120 @@
 Branch `diaphragm-analysis` (off `master` 71cdfb5; module renamed from Transfer Diaphragm 2026-10-29). Plan: `~/.claude/plans/read-the-md-files-composed-kite.md` (approved 2026-10-29).
 Guide: `docs/diaphragm-analysis.md`. Book cases: `docs/diaphragm-analysis-book-cases.md`.
 
-## Next session — start here (set 2026-10-29, end of session)
+## Next session — start here (set 2026-10-29, Phase 6)
+**State**
+- Branch `da-phase3-td-engine` (off `diaphragm-analysis` 3d568d0) holds Phases 3–6, **uncommitted** (user: no commit
+  / push yet). PRs #5 / #6 still open. `npm test` green (DA: Plan 22, Link 9, Engine 10, Basic 10, Td 8, Net 8),
+  build OK, no Shear Wall Design / DLRS file changed.
+- Book: 344 / 344 values of phases 4–6 match (`docs/diaphragm-analysis-book-cases.md`); only Ex 3.3 (22 values,
+  phase 7) is pending. Every member run of the 6 examples closes; the skill's TD edge forces = the integrator's.
+
+**Next**
+1. User: re-seed DA-BOOK (`npm run da:seed -- --apply`; PowerShell `$env:SB_EMAIL` / `$env:SB_PASSWORD` first);
+   review Analysis Views 1–4, TDs, Checks, Verification next to the book figures (Ex 3.4: review the cantilever
+   limits first — TD / net values wait for it).
+2. Phase 7: offset wall lines (Ex 3.3 weighted-average / closure iteration — open question: method and tolerance;
+   Ex 4.2 already runs with the equal split).
+3. Phase 8: PDF reports (Views 1–4, TD tables, step trace), upgrade script, README.
+4. For the skill author: T05 misprint; stray shell text at the end of `references/citations.md`.
+
+## Phase 6 log (2026-10-29)
+- `src/modules/tdNet.js`: TD field (segment shears of each TD that ran, × ySign), net field v_net = v_b + Σ v_TD,
+  members on every line of the case (grids, band / outline / opening edges, TD edges) in two families — chords along
+  the span dN/ds = v_net(above) − v_net(below); lines across the span dN/dc = v_net(s+) − v_net(s−) − r_wall —
+  from 0 at the low (free) end; Simpson per piece (exact for the linear / quadratic shears), interior extremes;
+  closure residual per run.
+- **Wall lines across a gap** (book): a line with walls is one member across a gap inside the outline (strut — Ex 4.3
+  line 1, "continuous via strut") and two members at a gap outside it (notch — Ex 4.2 line C). Wall shares are now
+  per connected part of the line (`lineParts`; each force contribution keeps where it enters the line): Ex 4.2
+  SW3 = 500 + 213.3, SW4 = 3833.3 + 213.3 (book). Phase 4 values unchanged.
+- **Checks** (`netChecks`, Checks tab): equilibrium per case; every member run closes (|res| ≤ max(1 lb, 1 % of the
+  run's max)); TD status; skill TD edge forces = integrator (cantilever: from the tip); seismic collector flag.
+  Without its TDs the basic field does not close (Ex 4.1 test) — the book's error check.
+- **Views** (Analysis tab): View 2 TD shear, View 3 net shear (cells, values at the ends), View 4 member diagrams
+  (tension blue / compression red, max per run, filter chords / cross members) + member table with closure.
+- Book keys `tdR`, `vtd`, `aspect`, `vnet`, `N`, `Nmax` (signed at the largest |N|); Verification tab and the
+  book-cases doc compare phases ≤ 6; with a cantilever not yet reviewed the TD / net rows read "awaiting review"
+  (the doc uses the book's own acceptance of Ex 3.4's cantilever).
+- Fixes: a side nudge smaller than sectionAt's snap returned the wrong side of a section; zero of q on a sample step
+  missed an extreme. CALC_VERSION td-v5. Saved results 23–37 KB per book item.
+
+## Phase 5 log (2026-10-29)
+- **Opening rule from the geometry** (user review: Ex 4.3 and Ex 5.1 are different cases). Book Ch 5.2 (Vierendeel):
+  the opening-edge chords have an inflection (force 0) and the bands share V by width at one section.
+  - Opening stretch ending at a support line / diaphragm end (Ex 4.3, wall line 1): the edge chords have a free end
+    there — inflection and width split at that end.
+  - Sheathing / TDs on both sides (Ex 5.1): inflection at mid-opening (book F3B = F3C = 0); width split at the end
+    with the smaller |V| (book "start at grid 4", 8200 < 13000).
+  - Diaphragm "Opening bands share V at": auto (default) | start | end | mid overrides the width split only.
+  - Book layouts no longer carry bandSplit; the auto rule reproduces both examples.
+- `src/modules/tdMembers.js`: basic-field member forces. Chords: single band ±M/d (M = ∫V, exact); opening stretch:
+  ±M/H at the inflection then ∫(v above − v below) per band edge. Cross lines (struts / collectors):
+  dN/dc = v(s+) − v(s−) − r_wall from a free end; between two TDs equal split (Ex 4.2). Finding: on the basic field a
+  notch chord with TDs at both ends has no zero point — the book's disrupted force there is M/d of the cut band; the
+  unit-shear integral from free ends closes only on the net field (Phase 6).
+- `src/modules/tdDerive.js`: each drawn TD's skill inputs per load case — P (chord TD: chord force at the TD edge ×
+  side; strut TD: the wall-less line's force handed into it), td_vb (just inside each edge), td_vo (just outside:
+  void 0, sheathing v, + wall reaction per foot on the edge line), ×ySign for a mirrored overhang. The 8 book TDs
+  give exactly the skill tests' hand inputs T01–T08, and the engine then gives their expected outputs.
+- Engineer inputs (user): region clear = true (drawn TD); cantilever = review of the listed limits (`tdLimits.js`,
+  UNVERIFIED, buttons on the TDs tab → `engineer.cantileverOk`); closure tolerance = `CLOSURE_TOL` 1 %.
+- TD runs in results (`tdRuns`, CALC_VERSION td-v4); TDs tab: loads with their derivation, shears per segment, TD
+  results, flags, stops; Ex 3.3 (load line with walls) is not run — Phase 7.
+- Fix: a one-sided section at a diaphragm's own end returned the other side (sectionAt), which zeroed strut forces.
+
+## Phase 4 log (2026-10-29)
+- `src/modules/tdBasicShear.js` (pure): load cases = direction × kind (E | W; new load field `kind`, '' = E for
+  seismic mode, else W). Each user-defined diaphragm of the direction is a flexible beam between its two supports
+  (overhang allowed). Load w(s): q·d(s) (seismic, q = F_x / ΣA), psf·d(s) (area), line segments shared by the
+  diaphragms covering the section in proportion to their depth (edge loads: only diaphragms whose depth holds that
+  edge line). Exact statics on the intervals between break coordinates; V(s) = forces on the low-s part; v = V/d
+  in the book's "+" element.
+- **Opening bands** (Ex 4.3, 5.1): each band carries its own load (edge loads → the band on that edge); the bands
+  share the section shear by width at one section of the stretch — diaphragm field `bandSplit`: `low` / `high` end
+  or `mid` (default, '' = mid). The book uses `low` in Ex 4.3 and `high` in Ex 5.1 (set in the book layouts).
+  Default mid-opening = equal average shear strain of the two bands (to confirm with the user).
+- **Line forces**: Σ reactions per support line. A line without a wall passes its force to the TD(s) that have it as
+  a load line (equal split between TDs, Ex 4.2) and each TD to its supports by statics (Ex 3.4: 4620 → 5775 / −1155);
+  no TD → warning. Reported positive in the load direction.
+- **Wall shares**: by wall length (typed walls); with a Shear Wall Design link (**B4**) in the ratio SWD's own
+  `calcAll` gives the walls of the line at this level, run on a copy of the definition with DA's line forces
+  (`swdWallShares`, `tdWallLink.js`; `swdExtract` now carries the full definition). Test: same ratio as SWD after
+  its DA-link update.
+- `lineForces` output filled (kip, per linked SWD line, E and W as entered — enter loads as 1.0E / 1.0W).
+- **Views**: Analysis tab = View 1 (`tdViews.js`): v_b painted per band and interval, values at the band ends, line
+  forces and wall shares on the plan, line / wall table with Σ check, section shears per diaphragm at the grids.
+  Verification tab compares the built phases (ok / differ / pending). Plan panel: load kind, opening band split.
+- Book layouts: optional `diaphragms` (FORMAT.md); sub-diaphragms for Ex 3.3, 3.4, 4.2; `bandSplit` for 4.3, 5.1.
+  Wall shares / wall unit shears are in the load-direction sense, so the mirrored examples no longer negate `vw`.
+  `npm run da:book:doc` now fills the Tool column for the built phases.
+- CALC_VERSION `td-v3`. Not checked in a real browser by Claude (Node stand-in DOM).
+
+## Phase 3 log (2026-10-29)
+- Decisions (user): go, branch off without waiting for merges; **no typed TD inputs** — geometry comes from the
+  drawn TD, loads / shears become automatic in Phase 5; T05 misprint fixed and noted; SDPWS T4.2.2 stays UNVERIFIED;
+  DA-BOOK review later.
+- **What the TD engine is:** the calculation for one transfer-diaphragm strip (a beam between two support lines
+  loaded by a cut chord / strut force). It does not analyse a regular diaphragm; the basic shear of every diaphragm
+  is Phase 4, and TD shears are added on top of it where a notch / offset / opening cuts a member.
+- `scripts/buildTdSkillData.mjs` now also writes `src/modules/tdFlow.js` (flow.yaml steps as data, expressions
+  compiled to JS); `--check` ignores line endings (it reported a false difference on Windows before).
+- `src/modules/tdCalc.js` `runTd(inputs, engineerInputs, edition)` → `{ outputs, flags, trace, terminal, draft }`,
+  the JS twin of the skill's Python reference. Engineer inputs never filled (missing → `ENGINEER_INPUT:<step>`).
+- Checked against the Python reference once (scratchpad script, not in `npm test`): 21 skill tests + 200 random
+  cases, 7632 output values identical (1e-9), same terminal, flags and step path.
+- **T05 correction** (in the build script, `CORRECTIONS`): book Ex 4.3 p3 prints v3 = 8800/56 = 167.9 plf; correct
+  157.14. Edge x2 basic / outside shears → 157.14; expected net shears x2 → 39.05 / 412.38 / 32.38 (book 49.8 /
+  423.1 / 43.7); the x2 s3 tolerance override is dropped. The vendored test keeps the replaced values under
+  `corrected.was`. Edge-member forces do not depend on it (test).
+- `tdFrame(td)` (`tdGeometry.js`): drawn TD → skill frame (support type, W, L, y1 / y2, sides, bottom / top support,
+  edges). Overhang on the high side mirrors y (ySign −1: plan unit shears and support forces change sign into and
+  out of the engine; P and member forces do not). All 8 book TDs give exactly the skill tests' geometry.
+- Results gain `tds[]` (frame per TD); CALC_VERSION `td-v2`. TDs tab replaces the placeholder (DRAFT mark).
+- Engineer inputs (`td_region_clear`, `td_cantilever_ok`, `td_closure_tol`): asked in the UI in Phase 5, when TD
+  results first appear (the stored `engineer` fields exist since schema 1).
+
+## Earlier start-here (end of Phase 2, history)
 **State**
 - Phases 0–2 done and committed on branch `diaphragm-analysis` (pushed). `npm test` green, build OK, no Shear Wall
   golden changed.

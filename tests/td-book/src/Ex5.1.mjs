@@ -25,6 +25,8 @@ export default {
       { line: '1', mark: 'SW1', axis: 'x', at: 0, from: 0, to: 50 },
       { line: '6', mark: 'SW2', axis: 'x', at: 160, from: 0, to: 50 },
     ],
+    // Whole plan. Opening between TD1 and TD2: inflection at grid 3, width split at grid 4 (auto rule, p8-p9)
+    diaphragms: [{ mark: 'D1', x: [0, 160], y: [0, 50], supports: ['1', '6'] }],
     tds: [
       { mark: 'TD1', x: [0, 15], y: [0, 50], supports: ['A', 'D'],
         loads: [{ grid: 'B', side: '+' }, { grid: 'C', side: '+' }] },

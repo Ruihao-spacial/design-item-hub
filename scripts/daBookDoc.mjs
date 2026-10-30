@@ -1,5 +1,5 @@
 // Generates docs/diaphragm-analysis-book-cases.md: every book example, its layout, and each book value against the
-// tool value. Until an engine phase exists the tool column reads "pending (phase N)".
+// tool value (phases built so far; later phases read "pending (phase N)").
 // Run: npm run da:book:doc
 import fs from 'node:fs';
 import path from 'node:path';
@@ -8,8 +8,24 @@ import { loadSources, validate, sheathedArea, parseKey, parseStation, toolValue 
 const repo = path.resolve(path.dirname(new URL(import.meta.url).pathname.replace(/^\/([A-Za-z]:)/, '$1')), '..');
 const sources = await loadSources();
 
-// Tool results by example id, filled in by later phases: { [id]: (key) => number | undefined }
-const toolValue = () => undefined;
+// Tool results for the phases built so far (BUILT): the item each example seeds, through the module's calcAll
+const BUILT = 6;
+const { bookToInputs } = await import('../tests/td-book/src/toInputs.mjs');
+const { calcAll, planWithLinks } = await import('../src/modules/diaphragmAnalysis.js');
+const { toolValue: bookKeyValue } = await import('../src/modules/tdBookKeys.js');
+const runs = new Map();
+function toolValue(id, k) {
+  const s = sources.find(x => x.id === id), e = s.expected.find(x => x.k === k);
+  if (!e || e.phase > BUILT) return undefined;
+  if (!runs.has(id)) {
+    const inputs = bookToInputs(s);
+    inputs.tds.forEach(t => { t.engineer.cantileverOk = true; }); // the book's own design accepts its cantilever TD (Ex 3.4)
+    runs.set(id, { plan: planWithLinks(inputs).plan, r: calcAll(inputs) });
+  }
+  const { plan, r } = runs.get(id);
+  const v = bookKeyValue(k, plan, r.analysis);
+  return v === null ? NaN : v;
+}
 
 const fmt = v => (Math.abs(v) >= 1000 ? v.toLocaleString('en-US', { maximumFractionDigits: 1 }) : String(+v.toFixed(2)));
 const side = s => (s === '-' ? ' (left/below)' : s === '+' ? ' (right/above)' : '');
@@ -72,7 +88,7 @@ for (const s of sources) {
   s.expected.forEach((e, i) => {
     const t = toolValue(s.id, e.k);
     const want = toToolSign(s, e);
-    const status = t === undefined ? `pending (phase ${e.phase})` : (Math.abs(t - want) <= (e.tol ?? Math.max(0.005 * Math.abs(want), 1)) ? 'ok' : 'DIFF');
+    const status = t === undefined ? `pending (phase ${e.phase})` : (Math.abs(t - want) <= (e.tol ?? Math.max(0.005 * Math.abs(want), 0.5)) ? 'ok' : 'DIFF');
     out.push(`| ${i + 1} | ${describe(e.k)}${e.note ? ` (${e.note})` : ''} | \`${e.k}\` | ${fmt(e.v)} | ${fmt(want)} | ${e.unit} | ${e.sense || ''} | ${e.page}${e.fig ? ` (${e.fig})` : ''} | ${e.phase} | ${t === undefined ? '—' : fmt(t)} | ${status} |`);
   });
   out.push('');

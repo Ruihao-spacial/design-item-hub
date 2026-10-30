@@ -120,7 +120,7 @@ test('link infra: DA reads the SWD definition (from inputs), SWD reads DA output
   assert.ok(daRefs.wallSource && daRefs.wallSource.directions.length >= 1, 'DA got the SWD definition');
   const daOut = currentOutputs(da, items[1], items);
   assert.equal(daOut.counts.walls, 2, 'DA results use the linked walls');
-  assert.deepEqual(daOut.lineForces, [], 'no line forces before Phase 4');
+  assert.ok(daOut.lineForces.length && daOut.lineForces.every(l => l.E === 0 && l.W === 0), 'line forces 0 while F_x is blank (Phase 4)');
   const swdRefs = refsFromItems(swdMod, swdDef, items, new Set(['swd-1']));
   assert.ok(Array.isArray(swdRefs.diaphragmSources) && swdRefs.diaphragmSources[0].id === 'da-1' && swdRefs.diaphragmSources[0].level === 'Roof');
   assert.ok(currentOutputs(swdMod, items[0], items), 'SWD still calculates');

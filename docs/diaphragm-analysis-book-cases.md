@@ -27,11 +27,11 @@ PDF `The Analysis of Irregular Shaped Example 3.3.pdf`, pages 1-14. **Mirrored "
 
 | # | Quantity | Key | Book | Tool sign | Unit | T/C | Page (fig) | Phase | Tool | Status |
 |---|---|---|---|---|---|---|---|---|---|---|
-| 1 | basic unit shear at grid A (left/below), between 1 and 2 (700 lb / 25 ft) | `vb:A-:1-2` | -28 | 28 | plf |  | 5 (3.17) | 4 | — | pending (phase 4) |
-| 2 | basic unit shear at grid B (right/above), between 1 and 2 | `vb:B+:1-2` | 28 | -28 | plf |  | 3 (3.17) | 4 | — | pending (phase 4) |
-| 3 | basic unit shear at grid A (left/below), between 2 and 4 (4090 lb / 100 ft) | `vb:A-:2-4` | -40.9 | 40.9 | plf |  | 6 (3.17) | 4 | — | pending (phase 4) |
-| 4 | basic unit shear at grid B, between 2 and 4 (V_B = 4510 - 200(15) = 1510 lb / 100 ft) | `vb:B:2-4` | 15.1 | -15.1 | plf |  | 6 (3.17) | 4 | — | pending (phase 4) |
-| 5 | basic unit shear at grid C (right/above), between 2 and 4 (4510 lb / 100 ft) | `vb:C+:2-4` | 45.1 | -45.1 | plf |  | 6 (3.17) | 4 | — | pending (phase 4) |
+| 1 | basic unit shear at grid A (left/below), between 1 and 2 (700 lb / 25 ft) | `vb:A-:1-2` | -28 | 28 | plf |  | 5 (3.17) | 4 | 28 | ok |
+| 2 | basic unit shear at grid B (right/above), between 1 and 2 | `vb:B+:1-2` | 28 | -28 | plf |  | 3 (3.17) | 4 | -28 | ok |
+| 3 | basic unit shear at grid A (left/below), between 2 and 4 (4090 lb / 100 ft) | `vb:A-:2-4` | -40.9 | 40.9 | plf |  | 6 (3.17) | 4 | 40.9 | ok |
+| 4 | basic unit shear at grid B, between 2 and 4 (V_B = 4510 - 200(15) = 1510 lb / 100 ft) | `vb:B:2-4` | 15.1 | -15.1 | plf |  | 6 (3.17) | 4 | -15.1 | ok |
+| 5 | basic unit shear at grid C (right/above), between 2 and 4 (4510 lb / 100 ft) | `vb:C+:2-4` | 45.1 | -45.1 | plf |  | 6 (3.17) | 4 | -45.1 | ok |
 | 6 | force to wall line A (book trial shift of 400 lb. Weighted-average rule (p14) gives 4612; exact closure of Fig 3.21 needs about 4580 (derived, not in book). tol spans 4579-4621) | `R:A` | 4,600 | 4,600 | lb |  | 13 | 7 | — | pending (phase 7) |
 | 7 | force to wall line B/C (weighted-average rule (p14) gives 5388) | `R:B/C` | 5,400 | 5,400 | lb |  | 13 | 7 | — | pending (phase 7) |
 | 8 | net unit shear at grid A (left/below), between 1 and 2 | `vnet:A-:1-2` | -28 | 28 | plf |  | 7 (3.18) | 7 | — | pending (phase 7) |
@@ -87,42 +87,42 @@ PDF `The Analysis of Irregular Shaped Example 3.4.pdf`, pages 1-13.
 
 | # | Quantity | Key | Book | Tool sign | Unit | T/C | Page (fig) | Phase | Tool | Status |
 |---|---|---|---|---|---|---|---|---|---|---|
-| 1 | force to wall line 2 (book: TD 5775 + diaphragm C-D 3600) | `R:2` | 9,375 | 9,375 | lb |  | 12 (3.26) | 4 | — | pending (phase 4) |
-| 2 | force to wall line 3 (figure check value; book route: 3180 (upper A-C) - 1155 (TD) + 3600 (C-D)) | `R:3` | 5,625 | 5,625 | lb |  | 11 (3.26) | 4 | — | pending (phase 4) |
-| 3 | unit shear in wall SW1 (9375 / (20 + 30)) | `vw:SW1` | 187.5 | 187.5 | plf |  | 12 | 4 | — | pending (phase 4) |
-| 4 | unit shear in wall SW2 | `vw:SW2` | 187.5 | 187.5 | plf |  | 12 | 4 | — | pending (phase 4) |
-| 5 | basic unit shear at grid 1 (right/above), between A and C (R1 = 4620 / 40; strut line 1 has no wall) | `vb:1+:A-C` | 115.5 | 115.5 | plf |  | 5 (3.23) | 4 | — | pending (phase 4) |
-| 6 | basic unit shear at grid 2, between A and C (upper section shear V2 = 1620 lb / 40) | `vb:2:A-C` | 40.5 | 40.5 | plf |  | 5 (3.23) | 4 | — | pending (phase 4) |
-| 7 | basic unit shear at grid 3 (left/below), between A and C (R3(upper) = 3180 / 40) | `vb:3-:A-C` | -79.5 | -79.5 | plf |  | 5 (3.23) | 4 | — | pending (phase 4) |
-| 8 | basic unit shear at grid 2 (right/above), between C and D (3600 / 60) | `vb:2+:C-D` | 60 | 60 | plf |  | 5 (3.23) | 4 | — | pending (phase 4) |
-| 9 | basic unit shear at grid 3 (left/below), between C and D | `vb:3-:C-D` | -60 | -60 | plf |  | 5 (3.23) | 4 | — | pending (phase 4) |
-| 10 | basic-field force in line 1 at grid B (115.5 x 20; the book loads the TD tip with the whole strut-line reaction R1 = 4620 lb) | `Nb:1:B` | -2,310 | -2,310 | lb | C | 12 (3.26) | 5 | — | pending (phase 5) |
-| 11 | TD1 force at support 2 (on TD at 2 acts +y (against the load)) | `tdR:TD1:2` | 5,775 | 5,775 | lb |  | 5 (3.23) | 6 | — | pending (phase 6) |
-| 12 | TD1 force at support 3 (on TD at 3 acts -y (same direction as the load; hold-down)) | `tdR:TD1:3` | 1,155 | 1,155 | lb |  | 5 (3.23) | 6 | — | pending (phase 6) |
-| 13 | TD1 unit shear between 1 and 2 (band along the TD span (x), overhang) | `vtd:TD1:1-2` | -231 | -231 | plf |  | 5 (3.23) | 6 | — | pending (phase 6) |
-| 14 | TD1 unit shear between 2 and 3 (back span) | `vtd:TD1:2-3` | 57.75 | 57.75 | plf |  | 5 (3.23) | 6 | — | pending (phase 6) |
-| 15 | net unit shear at grid 1 (right/above), between A and B (book prints +115.58, see errata) | `vnet:1+:A-B` | 115.5 | 115.5 | plf |  | 8 | 6 | — | pending (phase 6) |
-| 16 | net unit shear at grid 2, between A and B | `vnet:2:A-B` | 40.5 | 40.5 | plf |  | 7 (3.24) | 6 | — | pending (phase 6) |
-| 17 | net unit shear at grid 3 (left/below), between A and B | `vnet:3-:A-B` | -79.5 | -79.5 | plf |  | 8 | 6 | — | pending (phase 6) |
-| 18 | net unit shear at grid 1 (right/above), between B and C | `vnet:1+:B-C` | -115.5 | -115.5 | plf |  | 8 | 6 | — | pending (phase 6) |
-| 19 | net unit shear at grid 2 (left/below), between B and C | `vnet:2-:B-C` | -190.5 | -190.5 | plf |  | 8 | 6 | — | pending (phase 6) |
-| 20 | net unit shear at grid 2 (right/above), between B and C | `vnet:2+:B-C` | 98.25 | 98.25 | plf |  | 8 | 6 | — | pending (phase 6) |
-| 21 | net unit shear at grid 3 (left/below), between B and C | `vnet:3-:B-C` | -21.75 | -21.75 | plf |  | 8 | 6 | — | pending (phase 6) |
-| 22 | net unit shear at grid 2 (right/above), between C and D | `vnet:2+:C-D` | 60 | 60 | plf |  | 7 (3.24) | 6 | — | pending (phase 6) |
-| 23 | net unit shear at grid 3 (left/below), between C and D | `vnet:3-:C-D` | -60 | -60 | plf |  | 7 (3.24) | 6 | — | pending (phase 6) |
-| 24 | force in line A at grid 2 | `N:A:2` | -1,170 | -1,170 | lb | C | 9 (3.25) | 6 | — | pending (phase 6) |
-| 25 | max force in line A from 2 and 3 (at 20.25 ft right of 2 (x = 35.25), where the shear crosses zero) | `Nmax:A:2-3` | -1,580 | -1,580 | lb | C | 9 (3.25) | 6 | — | pending (phase 6) |
-| 26 | force in line A at grid 3 (diagram closes) | `N:A:3` | 0 | 0 | lb | ? | 9 | 6 | — | pending (phase 6) |
-| 27 | force in line B at grid 2 | `N:B:2` | 3,465 | 3,465 | lb | T | 9 (3.25) | 6 | — | pending (phase 6) |
-| 28 | force in line B at grid 3 (diagram closes) | `N:B:3` | 0 | 0 | lb | ? | 10 | 6 | — | pending (phase 6) |
-| 29 | force in line C at grid 2 | `N:C:2` | -2,295 | -2,295 | lb | C | 10 (3.25) | 6 | — | pending (phase 6) |
-| 30 | force in line C at grid 3 (diagram closes) | `N:C:3` | 0 | 0 | lb | ? | 10 | 6 | — | pending (phase 6) |
-| 31 | force in line 1 at grid B | `N:1:B` | -2,310 | -2,310 | lb | C | 12 (3.26) | 6 | — | pending (phase 6) |
-| 32 | force in line 1 at grid C (diagram closes) | `N:1:C` | 0 | 0 | lb | ? | 12 | 6 | — | pending (phase 6) |
-| 33 | force in line 2 at grid C (collector B-C into TD, summing from B) | `N:2:C` | -5,775 | -5,775 | lb | C | 12 (3.26) | 6 | — | pending (phase 6) |
-| 34 | force in line 2 at grid y=40 (bottom end of SW1; net 127.5 plf along the walls) | `N:2:y=40` | -3,225 | -3,225 | lb | C | 12 (3.26) | 6 | — | pending (phase 6) |
-| 35 | force in line 2 at grid y=30 (top end of SW2 (10 ft gap at -60 plf)) | `N:2:y=30` | -3,825 | -3,825 | lb | C | 12 (3.26) | 6 | — | pending (phase 6) |
-| 36 | force in line 2 at grid D (diagram closes) | `N:2:D` | 0 | 0 | lb | ? | 12 (3.26) | 6 | — | pending (phase 6) |
+| 1 | force to wall line 2 (book: TD 5775 + diaphragm C-D 3600) | `R:2` | 9,375 | 9,375 | lb |  | 12 (3.26) | 4 | 9,375 | ok |
+| 2 | force to wall line 3 (figure check value; book route: 3180 (upper A-C) - 1155 (TD) + 3600 (C-D)) | `R:3` | 5,625 | 5,625 | lb |  | 11 (3.26) | 4 | 5,625 | ok |
+| 3 | unit shear in wall SW1 (9375 / (20 + 30)) | `vw:SW1` | 187.5 | 187.5 | plf |  | 12 | 4 | 187.5 | ok |
+| 4 | unit shear in wall SW2 | `vw:SW2` | 187.5 | 187.5 | plf |  | 12 | 4 | 187.5 | ok |
+| 5 | basic unit shear at grid 1 (right/above), between A and C (R1 = 4620 / 40; strut line 1 has no wall) | `vb:1+:A-C` | 115.5 | 115.5 | plf |  | 5 (3.23) | 4 | 115.5 | ok |
+| 6 | basic unit shear at grid 2, between A and C (upper section shear V2 = 1620 lb / 40) | `vb:2:A-C` | 40.5 | 40.5 | plf |  | 5 (3.23) | 4 | 40.5 | ok |
+| 7 | basic unit shear at grid 3 (left/below), between A and C (R3(upper) = 3180 / 40) | `vb:3-:A-C` | -79.5 | -79.5 | plf |  | 5 (3.23) | 4 | -79.5 | ok |
+| 8 | basic unit shear at grid 2 (right/above), between C and D (3600 / 60) | `vb:2+:C-D` | 60 | 60 | plf |  | 5 (3.23) | 4 | 60 | ok |
+| 9 | basic unit shear at grid 3 (left/below), between C and D | `vb:3-:C-D` | -60 | -60 | plf |  | 5 (3.23) | 4 | -60 | ok |
+| 10 | basic-field force in line 1 at grid B (115.5 x 20; the book loads the TD tip with the whole strut-line reaction R1 = 4620 lb) | `Nb:1:B` | -2,310 | -2,310 | lb | C | 12 (3.26) | 5 | -2,310 | ok |
+| 11 | TD1 force at support 2 (on TD at 2 acts +y (against the load)) | `tdR:TD1:2` | 5,775 | 5,775 | lb |  | 5 (3.23) | 6 | 5,775 | ok |
+| 12 | TD1 force at support 3 (on TD at 3 acts -y (same direction as the load; hold-down)) | `tdR:TD1:3` | 1,155 | 1,155 | lb |  | 5 (3.23) | 6 | 1,155 | ok |
+| 13 | TD1 unit shear between 1 and 2 (band along the TD span (x), overhang) | `vtd:TD1:1-2` | -231 | -231 | plf |  | 5 (3.23) | 6 | -231 | ok |
+| 14 | TD1 unit shear between 2 and 3 (back span) | `vtd:TD1:2-3` | 57.75 | 57.75 | plf |  | 5 (3.23) | 6 | 57.75 | ok |
+| 15 | net unit shear at grid 1 (right/above), between A and B (book prints +115.58, see errata) | `vnet:1+:A-B` | 115.5 | 115.5 | plf |  | 8 | 6 | 115.5 | ok |
+| 16 | net unit shear at grid 2, between A and B | `vnet:2:A-B` | 40.5 | 40.5 | plf |  | 7 (3.24) | 6 | 40.5 | ok |
+| 17 | net unit shear at grid 3 (left/below), between A and B | `vnet:3-:A-B` | -79.5 | -79.5 | plf |  | 8 | 6 | -79.5 | ok |
+| 18 | net unit shear at grid 1 (right/above), between B and C | `vnet:1+:B-C` | -115.5 | -115.5 | plf |  | 8 | 6 | -115.5 | ok |
+| 19 | net unit shear at grid 2 (left/below), between B and C | `vnet:2-:B-C` | -190.5 | -190.5 | plf |  | 8 | 6 | -190.5 | ok |
+| 20 | net unit shear at grid 2 (right/above), between B and C | `vnet:2+:B-C` | 98.25 | 98.25 | plf |  | 8 | 6 | 98.25 | ok |
+| 21 | net unit shear at grid 3 (left/below), between B and C | `vnet:3-:B-C` | -21.75 | -21.75 | plf |  | 8 | 6 | -21.75 | ok |
+| 22 | net unit shear at grid 2 (right/above), between C and D | `vnet:2+:C-D` | 60 | 60 | plf |  | 7 (3.24) | 6 | 60 | ok |
+| 23 | net unit shear at grid 3 (left/below), between C and D | `vnet:3-:C-D` | -60 | -60 | plf |  | 7 (3.24) | 6 | -60 | ok |
+| 24 | force in line A at grid 2 | `N:A:2` | -1,170 | -1,170 | lb | C | 9 (3.25) | 6 | -1,170 | ok |
+| 25 | max force in line A from 2 and 3 (at 20.25 ft right of 2 (x = 35.25), where the shear crosses zero) | `Nmax:A:2-3` | -1,580 | -1,580 | lb | C | 9 (3.25) | 6 | -1,580.1 | ok |
+| 26 | force in line A at grid 3 (diagram closes) | `N:A:3` | 0 | 0 | lb | ? | 9 | 6 | 0 | ok |
+| 27 | force in line B at grid 2 | `N:B:2` | 3,465 | 3,465 | lb | T | 9 (3.25) | 6 | 3,465 | ok |
+| 28 | force in line B at grid 3 (diagram closes) | `N:B:3` | 0 | 0 | lb | ? | 10 | 6 | 0 | ok |
+| 29 | force in line C at grid 2 | `N:C:2` | -2,295 | -2,295 | lb | C | 10 (3.25) | 6 | -2,295 | ok |
+| 30 | force in line C at grid 3 (diagram closes) | `N:C:3` | 0 | 0 | lb | ? | 10 | 6 | 0 | ok |
+| 31 | force in line 1 at grid B | `N:1:B` | -2,310 | -2,310 | lb | C | 12 (3.26) | 6 | -2,310 | ok |
+| 32 | force in line 1 at grid C (diagram closes) | `N:1:C` | 0 | 0 | lb | ? | 12 | 6 | 0 | ok |
+| 33 | force in line 2 at grid C (collector B-C into TD, summing from B) | `N:2:C` | -5,775 | -5,775 | lb | C | 12 (3.26) | 6 | -5,775 | ok |
+| 34 | force in line 2 at grid y=40 (bottom end of SW1; net 127.5 plf along the walls) | `N:2:y=40` | -3,225 | -3,225 | lb | C | 12 (3.26) | 6 | -3,225 | ok |
+| 35 | force in line 2 at grid y=30 (top end of SW2 (10 ft gap at -60 plf)) | `N:2:y=30` | -3,825 | -3,825 | lb | C | 12 (3.26) | 6 | -3,825 | ok |
+| 36 | force in line 2 at grid D (diagram closes) | `N:2:D` | 0 | 0 | lb | ? | 12 (3.26) | 6 | 0 | ok |
 
 **Errata**
 - p5: TD back-span shear printed as 1115 / 20. Used: 1155 / 20 = 57.75 plf (result as printed).
@@ -149,75 +149,75 @@ PDF `The Analysis of Irregular Shaped Example 3.5.pdf`, pages 2-12.
 
 | # | Quantity | Key | Book | Tool sign | Unit | T/C | Page (fig) | Phase | Tool | Status |
 |---|---|---|---|---|---|---|---|---|---|---|
-| 1 | force to wall line 1 | `R:1` | 12,000 | 12,000 | lb |  | 5 | 4 | — | pending (phase 4) |
-| 2 | force to wall line 6 | `R:6` | 12,000 | 12,000 | lb |  | 5 | 4 | — | pending (phase 4) |
-| 3 | force to wall SW1 | `Rw:SW1` | 12,000 | 12,000 | lb |  | 11 | 4 | — | pending (phase 4) |
-| 4 | unit shear in wall SW1 (12000 / 16) | `vw:SW1` | 750 | 750 | plf |  | 11 | 4 | — | pending (phase 4) |
-| 5 | section shear at grid 2 | `V:2` | 4,000 | 4,000 | lb |  | 5 | 4 | — | pending (phase 4) |
-| 6 | section shear at grid 3 | `V:3` | 1,000 | 1,000 | lb |  | 5 | 4 | — | pending (phase 4) |
-| 7 | section shear at grid 4 | `V:4` | -3,000 | -3,000 | lb |  | 5 | 4 | — | pending (phase 4) |
-| 8 | section shear at grid 5 | `V:5` | -6,000 | -6,000 | lb |  | 5 | 4 | — | pending (phase 4) |
-| 9 | basic unit shear at grid 1 (right/above), full depth (12000 / 36) | `vb:1+:*` | 333.3 | 333.3 | plf |  | 5 (3.27) | 4 | — | pending (phase 4) |
-| 10 | basic unit shear at grid 2 (left/below), full depth | `vb:2-:*` | 111.1 | 111.1 | plf |  | 5 (3.27) | 4 | — | pending (phase 4) |
-| 11 | basic unit shear at grid 2 (right/above), full depth | `vb:2+:*` | 80 | 80 | plf |  | 5 (3.27) | 4 | — | pending (phase 4) |
-| 12 | basic unit shear at grid 3, full depth | `vb:3:*` | 20 | 20 | plf |  | 5 (3.27) | 4 | — | pending (phase 4) |
-| 13 | basic unit shear at grid 4, full depth | `vb:4:*` | -60 | -60 | plf |  | 5 (3.27) | 4 | — | pending (phase 4) |
-| 14 | basic unit shear at grid 5 (left/below), full depth | `vb:5-:*` | -120 | -120 | plf |  | 5 (3.27) | 4 | — | pending (phase 4) |
-| 15 | basic unit shear at grid 5 (right/above), full depth | `vb:5+:*` | -300 | -300 | plf |  | 5 (3.27) | 4 | — | pending (phase 4) |
-| 16 | basic unit shear at grid 6 (left/below), full depth | `vb:6-:*` | -600 | -600 | plf |  | 5 (3.27) | 4 | — | pending (phase 4) |
-| 17 | basic-field force in line C at grid 2 (M2 = 320,000 ft-lb / 36) | `Nb:C:2` | 8,889 | 8,889 | lb | T | 6 (3.28) | 5 | — | pending (phase 5) |
-| 18 | basic-field force in line B at grid 5 (M5 = 270,000 ft-lb / 20) | `Nb:B:5` | -13,500 | -13,500 | lb | C | 6 (3.28) | 5 | — | pending (phase 5) |
-| 19 | TD1 force at support D (on TD at D acts +x; chord load 8889 acts -x at C) | `tdR:TD1:D` | 6,400 | 6,400 | lb |  | 6 (3.28) | 6 | — | pending (phase 6) |
-| 20 | TD1 force at support A (on TD at A acts +x) | `tdR:TD1:A` | 2,489 | 2,489 | lb |  | 6 (3.28) | 6 | — | pending (phase 6) |
-| 21 | TD1 unit shear between C and D | `vtd:TD1:C-D` | 426.7 | 426.7 | plf |  | 6 (3.28) | 6 | — | pending (phase 6) |
-| 22 | TD1 unit shear between A and C | `vtd:TD1:A-C` | -165.9 | -165.9 | plf |  | 6 (3.28) | 6 | — | pending (phase 6) |
-| 23 | TD2 force at support D (on TD at D acts +x; chord load 13,500 acts -x at B) | `tdR:TD2:D` | 8,100 | 8,100 | lb |  | 6 (3.28) | 6 | — | pending (phase 6) |
-| 24 | TD2 force at support A (on TD at A acts +x) | `tdR:TD2:A` | 5,400 | 5,400 | lb |  | 6 (3.28) | 6 | — | pending (phase 6) |
-| 25 | TD2 unit shear between B and D | `vtd:TD2:B-D` | 540 | 540 | plf |  | 6 (3.28) | 6 | — | pending (phase 6) |
-| 26 | TD2 unit shear between A and B | `vtd:TD2:A-B` | -360 | -360 | plf |  | 6 (3.28) | 6 | — | pending (phase 6) |
-| 27 | TD1 aspect ratio (50/15, blocking required) | `aspect:TD1` | 3.33 | 3.33 | - |  | 4 | 6 | — | pending (phase 6) |
-| 28 | TD2 aspect ratio | `aspect:TD2` | 3.33 | 3.33 | - |  | 4 | 6 | — | pending (phase 6) |
-| 29 | net unit shear at grid 1 (right/above), between A and C (table rounds to +334) | `vnet:1+:A-C` | 333.3 | 333.3 | plf |  | 6 | 6 | — | pending (phase 6) |
-| 30 | net unit shear at grid 2 (left/below), between A and C (table rounds to +111) | `vnet:2-:A-C` | 111.1 | 111.1 | plf |  | 6 | 6 | — | pending (phase 6) |
-| 31 | net unit shear at grid 2 (right/above), between C and D | `vnet:2+:C-D` | 506.7 | 506.7 | plf |  | 7 | 6 | — | pending (phase 6) |
-| 32 | net unit shear at grid 2 (right/above), between A and C | `vnet:2+:A-C` | -85.9 | -85.9 | plf |  | 7 | 6 | — | pending (phase 6) |
-| 33 | net unit shear at grid 3 (left/below), between C and D | `vnet:3-:C-D` | 446.7 | 446.7 | plf |  | 7 | 6 | — | pending (phase 6) |
-| 34 | net unit shear at grid 3 (left/below), between A and C | `vnet:3-:A-C` | -145.9 | -145.9 | plf |  | 7 | 6 | — | pending (phase 6) |
-| 35 | net unit shear at grid 3 (right/above), full depth | `vnet:3+:*` | 20 | 20 | plf |  | 4 (3.29) | 6 | — | pending (phase 6) |
-| 36 | net unit shear at grid 4 (left/below), full depth | `vnet:4-:*` | -60 | -60 | plf |  | 4 (3.29) | 6 | — | pending (phase 6) |
-| 37 | net unit shear at grid 4 (right/above), between B and D | `vnet:4+:B-D` | 480 | 480 | plf |  | 7 | 6 | — | pending (phase 6) |
-| 38 | net unit shear at grid 4 (right/above), between A and B | `vnet:4+:A-B` | -420 | -420 | plf |  | 7 | 6 | — | pending (phase 6) |
-| 39 | net unit shear at grid 5 (left/below), between B and D | `vnet:5-:B-D` | 420 | 420 | plf |  | 7 | 6 | — | pending (phase 6) |
-| 40 | net unit shear at grid 5 (left/below), between A and B | `vnet:5-:A-B` | -480 | -480 | plf |  | 7 | 6 | — | pending (phase 6) |
-| 41 | net unit shear at grid 5 (right/above), between B and D | `vnet:5+:B-D` | -300 | -300 | plf |  | 7 | 6 | — | pending (phase 6) |
-| 42 | net unit shear at grid 6 (left/below), between B and D | `vnet:6-:B-D` | -600 | -600 | plf |  | 7 | 6 | — | pending (phase 6) |
-| 43 | force in line A at grid 2 (exact 8888.9) | `N:A:2` | -8,890 | -8,890 | lb | C | 8 (3.30) | 6 | — | pending (phase 6) |
-| 44 | force in line A at grid 3 (exact about 7150) | `N:A:3` | -7,151.5 | -7,151.5 | lb | C | 8 (3.30) | 6 | — | pending (phase 6) |
-| 45 | force in line A at grid CL (figure 7200; M/50 = 7200) | `N:A:CL` | -7,201.5 | -7,201.5 | lb | C | 8 (3.30) | 6 | — | pending (phase 6) |
-| 46 | force in line A at grid 4 (exact 6750) | `N:A:4` | -6,751.5 | -6,751.5 | lb | C | 9 (3.30) | 6 | — | pending (phase 6) |
-| 47 | force in line A at grid 5 (book 1.5 lb compression, "close enough") | `N:A:5` | 0 | 0 | lb | ? | 9 | 6 | — | pending (phase 6) |
-| 48 | force in line B at grid 4 (line B starts at grid 4) | `N:B:4` | 0 | 0 | lb | ? | 9 | 6 | — | pending (phase 6) |
-| 49 | force in line B at grid 5 (left/below) | `N:B:5-` | -13,500 | -13,500 | lb | C | 9 (3.30) | 6 | — | pending (phase 6) |
-| 50 | force in line B at grid 5 (right/above) | `N:B:5+` | -13,500 | -13,500 | lb | C | 9 (3.30) | 6 | — | pending (phase 6) |
-| 51 | force in line C at grid 2 (left/below) | `N:C:2-` | 8,890 | 8,890 | lb | T | 9 (3.30) | 6 | — | pending (phase 6) |
-| 52 | force in line C at grid 2 (right/above) (collector into TD1) | `N:C:2+` | 8,890 | 8,890 | lb | T | 9 (3.30) | 6 | — | pending (phase 6) |
-| 53 | force in line C at grid 3 (collector ends at grid 3) | `N:C:3` | 0 | 0 | lb | ? | 8 (3.30) | 6 | — | pending (phase 6) |
-| 54 | force in line D at grid 2 | `N:D:2` | 0 | 0 | lb | ? | 9 | 6 | — | pending (phase 6) |
-| 55 | force in line D at grid 3 (book prints -7150.5 tension) | `N:D:3` | 7,150.5 | 7,150.5 | lb | T | 9 (3.30) | 6 | — | pending (phase 6) |
-| 56 | force in line D at grid CL | `N:D:CL` | 7,200.5 | 7,200.5 | lb | T | 9 | 6 | — | pending (phase 6) |
-| 57 | force in line D at grid 4 | `N:D:4` | 6,750 | 6,750 | lb | T | 10 (3.30) | 6 | — | pending (phase 6) |
-| 58 | force in line D at grid 5 | `N:D:5` | 13,500 | 13,500 | lb | T | 10 (3.30) | 6 | — | pending (phase 6) |
-| 59 | force in line D at grid 6 (diagram closes) | `N:D:6` | 0 | 0 | lb | ? | 10 | 6 | — | pending (phase 6) |
-| 60 | force in line 1 at grid y=34 (end of SW1; net 416.7 plf over the wall, strut 333.3 x 20 below) | `N:1:y=34` | 6,667 | 6,667 | lb | T | 11 (3.31) | 6 | — | pending (phase 6) |
-| 61 | force in line 1 at grid C (diagram closes) | `N:1:C` | 0 | 0 | lb | ? | 11 | 6 | — | pending (phase 6) |
-| 62 | force in line 2 at grid C (right/above) (exact 7093.4) | `N:2:C+` | 7,092 | 7,092 | lb | T | 11 (3.31) | 6 | — | pending (phase 6) |
-| 63 | force in line 2 at grid C (left/below) | `N:2:C-` | 7,093.8 | 7,093.8 | lb | T | 11 (3.31) | 6 | — | pending (phase 6) |
-| 64 | force in line 3 at grid C (right/above) (exact 5973.5) | `N:3:C+` | -5,972.4 | -5,972.4 | lb | C | 11 (3.31) | 6 | — | pending (phase 6) |
-| 65 | force in line 3 at grid C (left/below) | `N:3:C-` | -5,973.8 | -5,973.8 | lb | C | 11 (3.31) | 6 | — | pending (phase 6) |
-| 66 | force in line 4 at grid B (right/above) | `N:4:B+` | 10,800 | 10,800 | lb | T | 11 (3.31) | 6 | — | pending (phase 6) |
-| 67 | force in line 4 at grid B (left/below) | `N:4:B-` | 10,800 | 10,800 | lb | T | 11 (3.31) | 6 | — | pending (phase 6) |
-| 68 | force in line 5 at grid B (right/above) | `N:5:B+` | -14,400 | -14,400 | lb | C | 12 (3.31) | 6 | — | pending (phase 6) |
-| 69 | force in line 5 at grid B (left/below) | `N:5:B-` | -14,400 | -14,400 | lb | C | 12 (3.31) | 6 | — | pending (phase 6) |
+| 1 | force to wall line 1 | `R:1` | 12,000 | 12,000 | lb |  | 5 | 4 | 12,000 | ok |
+| 2 | force to wall line 6 | `R:6` | 12,000 | 12,000 | lb |  | 5 | 4 | 12,000 | ok |
+| 3 | force to wall SW1 | `Rw:SW1` | 12,000 | 12,000 | lb |  | 11 | 4 | 12,000 | ok |
+| 4 | unit shear in wall SW1 (12000 / 16) | `vw:SW1` | 750 | 750 | plf |  | 11 | 4 | 750 | ok |
+| 5 | section shear at grid 2 | `V:2` | 4,000 | 4,000 | lb |  | 5 | 4 | 4,000 | ok |
+| 6 | section shear at grid 3 | `V:3` | 1,000 | 1,000 | lb |  | 5 | 4 | 1,000 | ok |
+| 7 | section shear at grid 4 | `V:4` | -3,000 | -3,000 | lb |  | 5 | 4 | -3,000 | ok |
+| 8 | section shear at grid 5 | `V:5` | -6,000 | -6,000 | lb |  | 5 | 4 | -6,000 | ok |
+| 9 | basic unit shear at grid 1 (right/above), full depth (12000 / 36) | `vb:1+:*` | 333.3 | 333.3 | plf |  | 5 (3.27) | 4 | 333.33 | ok |
+| 10 | basic unit shear at grid 2 (left/below), full depth | `vb:2-:*` | 111.1 | 111.1 | plf |  | 5 (3.27) | 4 | 111.11 | ok |
+| 11 | basic unit shear at grid 2 (right/above), full depth | `vb:2+:*` | 80 | 80 | plf |  | 5 (3.27) | 4 | 80 | ok |
+| 12 | basic unit shear at grid 3, full depth | `vb:3:*` | 20 | 20 | plf |  | 5 (3.27) | 4 | 20 | ok |
+| 13 | basic unit shear at grid 4, full depth | `vb:4:*` | -60 | -60 | plf |  | 5 (3.27) | 4 | -60 | ok |
+| 14 | basic unit shear at grid 5 (left/below), full depth | `vb:5-:*` | -120 | -120 | plf |  | 5 (3.27) | 4 | -120 | ok |
+| 15 | basic unit shear at grid 5 (right/above), full depth | `vb:5+:*` | -300 | -300 | plf |  | 5 (3.27) | 4 | -300 | ok |
+| 16 | basic unit shear at grid 6 (left/below), full depth | `vb:6-:*` | -600 | -600 | plf |  | 5 (3.27) | 4 | -600 | ok |
+| 17 | basic-field force in line C at grid 2 (M2 = 320,000 ft-lb / 36) | `Nb:C:2` | 8,889 | 8,889 | lb | T | 6 (3.28) | 5 | 8,888.9 | ok |
+| 18 | basic-field force in line B at grid 5 (M5 = 270,000 ft-lb / 20) | `Nb:B:5` | -13,500 | -13,500 | lb | C | 6 (3.28) | 5 | -13,500 | ok |
+| 19 | TD1 force at support D (on TD at D acts +x; chord load 8889 acts -x at C) | `tdR:TD1:D` | 6,400 | 6,400 | lb |  | 6 (3.28) | 6 | 6,400 | ok |
+| 20 | TD1 force at support A (on TD at A acts +x) | `tdR:TD1:A` | 2,489 | 2,489 | lb |  | 6 (3.28) | 6 | 2,488.9 | ok |
+| 21 | TD1 unit shear between C and D | `vtd:TD1:C-D` | 426.7 | 426.7 | plf |  | 6 (3.28) | 6 | 426.67 | ok |
+| 22 | TD1 unit shear between A and C | `vtd:TD1:A-C` | -165.9 | -165.9 | plf |  | 6 (3.28) | 6 | -165.93 | ok |
+| 23 | TD2 force at support D (on TD at D acts +x; chord load 13,500 acts -x at B) | `tdR:TD2:D` | 8,100 | 8,100 | lb |  | 6 (3.28) | 6 | 8,100 | ok |
+| 24 | TD2 force at support A (on TD at A acts +x) | `tdR:TD2:A` | 5,400 | 5,400 | lb |  | 6 (3.28) | 6 | 5,400 | ok |
+| 25 | TD2 unit shear between B and D | `vtd:TD2:B-D` | 540 | 540 | plf |  | 6 (3.28) | 6 | 540 | ok |
+| 26 | TD2 unit shear between A and B | `vtd:TD2:A-B` | -360 | -360 | plf |  | 6 (3.28) | 6 | -360 | ok |
+| 27 | TD1 aspect ratio (50/15, blocking required) | `aspect:TD1` | 3.33 | 3.33 | - |  | 4 | 6 | 3.33 | ok |
+| 28 | TD2 aspect ratio | `aspect:TD2` | 3.33 | 3.33 | - |  | 4 | 6 | 3.33 | ok |
+| 29 | net unit shear at grid 1 (right/above), between A and C (table rounds to +334) | `vnet:1+:A-C` | 333.3 | 333.3 | plf |  | 6 | 6 | 333.33 | ok |
+| 30 | net unit shear at grid 2 (left/below), between A and C (table rounds to +111) | `vnet:2-:A-C` | 111.1 | 111.1 | plf |  | 6 | 6 | 111.11 | ok |
+| 31 | net unit shear at grid 2 (right/above), between C and D | `vnet:2+:C-D` | 506.7 | 506.7 | plf |  | 7 | 6 | 506.67 | ok |
+| 32 | net unit shear at grid 2 (right/above), between A and C | `vnet:2+:A-C` | -85.9 | -85.9 | plf |  | 7 | 6 | -85.93 | ok |
+| 33 | net unit shear at grid 3 (left/below), between C and D | `vnet:3-:C-D` | 446.7 | 446.7 | plf |  | 7 | 6 | 446.67 | ok |
+| 34 | net unit shear at grid 3 (left/below), between A and C | `vnet:3-:A-C` | -145.9 | -145.9 | plf |  | 7 | 6 | -145.93 | ok |
+| 35 | net unit shear at grid 3 (right/above), full depth | `vnet:3+:*` | 20 | 20 | plf |  | 4 (3.29) | 6 | 20 | ok |
+| 36 | net unit shear at grid 4 (left/below), full depth | `vnet:4-:*` | -60 | -60 | plf |  | 4 (3.29) | 6 | -60 | ok |
+| 37 | net unit shear at grid 4 (right/above), between B and D | `vnet:4+:B-D` | 480 | 480 | plf |  | 7 | 6 | 480 | ok |
+| 38 | net unit shear at grid 4 (right/above), between A and B | `vnet:4+:A-B` | -420 | -420 | plf |  | 7 | 6 | -420 | ok |
+| 39 | net unit shear at grid 5 (left/below), between B and D | `vnet:5-:B-D` | 420 | 420 | plf |  | 7 | 6 | 420 | ok |
+| 40 | net unit shear at grid 5 (left/below), between A and B | `vnet:5-:A-B` | -480 | -480 | plf |  | 7 | 6 | -480 | ok |
+| 41 | net unit shear at grid 5 (right/above), between B and D | `vnet:5+:B-D` | -300 | -300 | plf |  | 7 | 6 | -300 | ok |
+| 42 | net unit shear at grid 6 (left/below), between B and D | `vnet:6-:B-D` | -600 | -600 | plf |  | 7 | 6 | -600 | ok |
+| 43 | force in line A at grid 2 (exact 8888.9) | `N:A:2` | -8,890 | -8,890 | lb | C | 8 (3.30) | 6 | -8,888.9 | ok |
+| 44 | force in line A at grid 3 (exact about 7150) | `N:A:3` | -7,151.5 | -7,151.5 | lb | C | 8 (3.30) | 6 | -7,150 | ok |
+| 45 | force in line A at grid CL (figure 7200; M/50 = 7200) | `N:A:CL` | -7,201.5 | -7,201.5 | lb | C | 8 (3.30) | 6 | -7,200 | ok |
+| 46 | force in line A at grid 4 (exact 6750) | `N:A:4` | -6,751.5 | -6,751.5 | lb | C | 9 (3.30) | 6 | -6,750 | ok |
+| 47 | force in line A at grid 5 (book 1.5 lb compression, "close enough") | `N:A:5` | 0 | 0 | lb | ? | 9 | 6 | 0 | ok |
+| 48 | force in line B at grid 4 (line B starts at grid 4) | `N:B:4` | 0 | 0 | lb | ? | 9 | 6 | 0 | ok |
+| 49 | force in line B at grid 5 (left/below) | `N:B:5-` | -13,500 | -13,500 | lb | C | 9 (3.30) | 6 | -13,500 | ok |
+| 50 | force in line B at grid 5 (right/above) | `N:B:5+` | -13,500 | -13,500 | lb | C | 9 (3.30) | 6 | -13,500 | ok |
+| 51 | force in line C at grid 2 (left/below) | `N:C:2-` | 8,890 | 8,890 | lb | T | 9 (3.30) | 6 | 8,888.9 | ok |
+| 52 | force in line C at grid 2 (right/above) (collector into TD1) | `N:C:2+` | 8,890 | 8,890 | lb | T | 9 (3.30) | 6 | 8,888.9 | ok |
+| 53 | force in line C at grid 3 (collector ends at grid 3) | `N:C:3` | 0 | 0 | lb | ? | 8 (3.30) | 6 | 0 | ok |
+| 54 | force in line D at grid 2 | `N:D:2` | 0 | 0 | lb | ? | 9 | 6 | 0 | ok |
+| 55 | force in line D at grid 3 (book prints -7150.5 tension) | `N:D:3` | 7,150.5 | 7,150.5 | lb | T | 9 (3.30) | 6 | 7,150 | ok |
+| 56 | force in line D at grid CL | `N:D:CL` | 7,200.5 | 7,200.5 | lb | T | 9 | 6 | 7,200 | ok |
+| 57 | force in line D at grid 4 | `N:D:4` | 6,750 | 6,750 | lb | T | 10 (3.30) | 6 | 6,750 | ok |
+| 58 | force in line D at grid 5 | `N:D:5` | 13,500 | 13,500 | lb | T | 10 (3.30) | 6 | 13,500 | ok |
+| 59 | force in line D at grid 6 (diagram closes) | `N:D:6` | 0 | 0 | lb | ? | 10 | 6 | 0 | ok |
+| 60 | force in line 1 at grid y=34 (end of SW1; net 416.7 plf over the wall, strut 333.3 x 20 below) | `N:1:y=34` | 6,667 | 6,667 | lb | T | 11 (3.31) | 6 | 6,666.7 | ok |
+| 61 | force in line 1 at grid C (diagram closes) | `N:1:C` | 0 | 0 | lb | ? | 11 | 6 | 0 | ok |
+| 62 | force in line 2 at grid C (right/above) (exact 7093.4) | `N:2:C+` | 7,092 | 7,092 | lb | T | 11 (3.31) | 6 | 7,093.3 | ok |
+| 63 | force in line 2 at grid C (left/below) | `N:2:C-` | 7,093.8 | 7,093.8 | lb | T | 11 (3.31) | 6 | 7,093.3 | ok |
+| 64 | force in line 3 at grid C (right/above) (exact 5973.5) | `N:3:C+` | -5,972.4 | -5,972.4 | lb | C | 11 (3.31) | 6 | -5,973.3 | ok |
+| 65 | force in line 3 at grid C (left/below) | `N:3:C-` | -5,973.8 | -5,973.8 | lb | C | 11 (3.31) | 6 | -5,973.3 | ok |
+| 66 | force in line 4 at grid B (right/above) | `N:4:B+` | 10,800 | 10,800 | lb | T | 11 (3.31) | 6 | 10,800 | ok |
+| 67 | force in line 4 at grid B (left/below) | `N:4:B-` | 10,800 | 10,800 | lb | T | 11 (3.31) | 6 | 10,800 | ok |
+| 68 | force in line 5 at grid B (right/above) | `N:5:B+` | -14,400 | -14,400 | lb | C | 12 (3.31) | 6 | -14,400 | ok |
+| 69 | force in line 5 at grid B (left/below) | `N:5:B-` | -14,400 | -14,400 | lb | C | 12 (3.31) | 6 | -14,400 | ok |
 
 **Errata**
 - p2: Text places the chord discontinuities at 2C and 3B. Used: 2C and 5B (Figs 3.27, 3.28).
@@ -243,56 +243,56 @@ PDF `The Analysis of Irregular Shaped Ch 4.1.pdf`, pages 2-11.
 
 | # | Quantity | Key | Book | Tool sign | Unit | T/C | Page (fig) | Phase | Tool | Status |
 |---|---|---|---|---|---|---|---|---|---|---|
-| 1 | force to wall line 1 | `R:1` | 15,000 | 15,000 | lb |  | 4 | 4 | — | pending (phase 4) |
-| 2 | force to wall line 5 | `R:5` | 15,000 | 15,000 | lb |  | 4 | 4 | — | pending (phase 4) |
-| 3 | section shear at grid 2 | `V:2` | 12,000 | 12,000 | lb |  | 4 | 4 | — | pending (phase 4) |
-| 4 | section shear at grid 3 | `V:3` | 8,000 | 8,000 | lb |  | 4 | 4 | — | pending (phase 4) |
-| 5 | section shear at grid 4 | `V:4` | 5,000 | 5,000 | lb |  | 4 | 4 | — | pending (phase 4) |
-| 6 | basic unit shear at grid 1 (right/above), full depth | `vb:1+:*` | 300 | 300 | plf |  | 4 (4.1) | 4 | — | pending (phase 4) |
-| 7 | basic unit shear at grid 2 (left/below), full depth | `vb:2-:*` | 240 | 240 | plf |  | 4 (4.1) | 4 | — | pending (phase 4) |
-| 8 | basic unit shear at grid 2 (right/above), between A and B | `vb:2+:A-B` | 300 | 300 | plf |  | 4 (4.1) | 4 | — | pending (phase 4) |
-| 9 | basic unit shear at grid 3 (left/below), between A and B | `vb:3-:A-B` | 200 | 200 | plf |  | 4 (4.1) | 4 | — | pending (phase 4) |
-| 10 | basic unit shear at grid 3 (right/above), full depth | `vb:3+:*` | 160 | 160 | plf |  | 4 (4.1) | 4 | — | pending (phase 4) |
-| 11 | basic unit shear at grid 4, full depth | `vb:4:*` | 100 | 100 | plf |  | 4 (4.1) | 4 | — | pending (phase 4) |
-| 12 | basic-field force in line B at grid 2 (book F2B = M2B / 40) | `Nb:B:2` | 5,062.5 | 5,062.5 | lb | T | 4 | 5 | — | pending (phase 5) |
-| 13 | basic-field force in line B at grid 3 (book F3B = M3B / 40) | `Nb:B:3` | 10,062.5 | 10,062.5 | lb | T | 4 | 5 | — | pending (phase 5) |
-| 14 | TD1 force at support A (reaction on TD at A acts to the left (-x)) | `tdR:TD1:A` | 1,012.5 | 1,012.5 | lb |  | 5 (4.2) | 6 | — | pending (phase 6) |
-| 15 | TD1 force at support C (reaction on TD at C acts to the left (-x)) | `tdR:TD1:C` | 4,050 | 4,050 | lb |  | 6 (4.2) | 6 | — | pending (phase 6) |
-| 16 | TD1 unit shear between A and B | `vtd:TD1:A-B` | 67.5 | 67.5 | plf |  | 5 (4.2) | 6 | — | pending (phase 6) |
-| 17 | TD1 unit shear between B and C | `vtd:TD1:B-C` | -270 | -270 | plf |  | 6 (4.2) | 6 | — | pending (phase 6) |
-| 18 | TD2 force at support A (reaction on TD at A acts to the right (+x)) | `tdR:TD2:A` | 2,012.5 | 2,012.5 | lb |  | 5 (4.2) | 6 | — | pending (phase 6) |
-| 19 | TD2 force at support C (reaction on TD at C acts to the right (+x)) | `tdR:TD2:C` | 8,050 | 8,050 | lb |  | 7 (4.2) | 6 | — | pending (phase 6) |
-| 20 | TD2 unit shear between A and B | `vtd:TD2:A-B` | -134.2 | -134.2 | plf |  | 7 (4.2) | 6 | — | pending (phase 6) |
-| 21 | TD2 unit shear between B and C | `vtd:TD2:B-C` | 536.7 | 536.7 | plf |  | 7 (4.2) | 6 | — | pending (phase 6) |
-| 22 | TD1 aspect ratio (50/15, blocking required) | `aspect:TD1` | 3.33 | 3.33 | - |  | 3 | 6 | — | pending (phase 6) |
-| 23 | TD2 aspect ratio | `aspect:TD2` | 3.33 | 3.33 | - |  | 3 | 6 | — | pending (phase 6) |
-| 24 | net unit shear at grid 1 (right/above), between A and B | `vnet:1+:A-B` | 367.5 | 367.5 | plf |  | 6 | 6 | — | pending (phase 6) |
-| 25 | net unit shear at grid 2 (left/below), between A and B | `vnet:2-:A-B` | 307.5 | 307.5 | plf |  | 6 | 6 | — | pending (phase 6) |
-| 26 | net unit shear at grid 2 (right/above), between A and B | `vnet:2+:A-B` | 300 | 300 | plf |  | 6 | 6 | — | pending (phase 6) |
-| 27 | net unit shear at grid 1 (right/above), between B and C | `vnet:1+:B-C` | 30 | 30 | plf |  | 6 | 6 | — | pending (phase 6) |
-| 28 | net unit shear at grid 2 (left/below), between B and C | `vnet:2-:B-C` | -30 | -30 | plf |  | 6 | 6 | — | pending (phase 6) |
-| 29 | net unit shear at grid 3 (right/above), between A and B | `vnet:3+:A-B` | 25.8 | 25.8 | plf |  | 7 | 6 | — | pending (phase 6) |
-| 30 | net unit shear at grid 3 (left/below), between A and B | `vnet:3-:A-B` | 200 | 200 | plf |  | 7 | 6 | — | pending (phase 6) |
-| 31 | net unit shear at grid 3 (right/above), between B and C | `vnet:3+:B-C` | 696.7 | 696.7 | plf |  | 7 | 6 | — | pending (phase 6) |
-| 32 | net unit shear at grid 4 (left/below), between A and B | `vnet:4-:A-B` | -34.2 | -34.2 | plf |  | 7 | 6 | — | pending (phase 6) |
-| 33 | net unit shear at grid 4 (left/below), between B and C | `vnet:4-:B-C` | 636.7 | 636.7 | plf |  | 7 | 6 | — | pending (phase 6) |
-| 34 | net unit shear at grid 4 (right/above), full depth | `vnet:4+:*` | 100 | 100 | plf |  | 7 | 6 | — | pending (phase 6) |
-| 35 | force in line B at grid 2 | `N:B:2` | 5,062.5 | 5,062.5 | lb | T | 8 (4.3) | 6 | — | pending (phase 6) |
-| 36 | force in line B at grid 3 (from the right of grid 3 the book gets 10,063.5 (rounded net shears); the diagram closes) | `N:B:3` | 10,062.5 | 10,062.5 | lb | T | 8 (4.3) | 6 | — | pending (phase 6) |
-| 37 | force in line B at grid 4 (diagram closes to zero) | `N:B:4` | 0 | 0 | lb | ? | 9 (4.3) | 6 | — | pending (phase 6) |
-| 38 | force in line A at grid 2 | `N:A:2` | -5,062.5 | -5,062.5 | lb | C | 9 (4.3) | 6 | — | pending (phase 6) |
-| 39 | force in line A at grid 3 | `N:A:3` | -10,062.5 | -10,062.5 | lb | C | 9 (4.3) | 6 | — | pending (phase 6) |
-| 40 | force in line A at grid 4 (similar triangles in 3-4: +83.2 / -146.2 lb) | `N:A:4` | -10,000 | -10,000 | lb | C | 9 (4.3) | 6 | — | pending (phase 6) |
-| 41 | force in line A at grid CL | `N:A:CL` | -11,250 | -11,250 | lb | C | 9 (4.3) | 6 | — | pending (phase 6) |
-| 42 | max force in line C from 1 and 2 (triangles +30 / -30 plf over 1-2; book gives the magnitude only) | `Nmax:C:1-2` | 112.5 | 112.5 | lb | ? | 8 (4.3) | 6 | — | pending (phase 6) |
-| 43 | force in line C at grid 4 | `N:C:4` | 10,000 | 10,000 | lb | T | 9 (4.3) | 6 | — | pending (phase 6) |
-| 44 | force in line C at grid CL | `N:C:CL` | 11,250 | 11,250 | lb | T | 9 (4.3) | 6 | — | pending (phase 6) |
-| 45 | force in line 2 at grid B (right/above) | `N:2:B+` | 300 | 300 | lb | T | 10 (4.4) | 6 | — | pending (phase 6) |
-| 46 | force in line 2 at grid B (left/below) | `N:2:B-` | 300 | 300 | lb | T | 10 (4.4) | 6 | — | pending (phase 6) |
-| 47 | force in line 3 at grid B (right/above) | `N:3:B+` | 6,968 | 6,968 | lb | T | 11 (4.4) | 6 | — | pending (phase 6) |
-| 48 | force in line 3 at grid B (left/below) | `N:3:B-` | 6,967 | 6,967 | lb | T | 11 (4.4) | 6 | — | pending (phase 6) |
-| 49 | force in line 4 at grid B (right/above) | `N:4:B+` | -5,368 | -5,368 | lb | C | 11 (4.4) | 6 | — | pending (phase 6) |
-| 50 | force in line 4 at grid B (left/below) | `N:4:B-` | -5,367 | -5,367 | lb | C | 11 (4.4) | 6 | — | pending (phase 6) |
+| 1 | force to wall line 1 | `R:1` | 15,000 | 15,000 | lb |  | 4 | 4 | 15,000 | ok |
+| 2 | force to wall line 5 | `R:5` | 15,000 | 15,000 | lb |  | 4 | 4 | 15,000 | ok |
+| 3 | section shear at grid 2 | `V:2` | 12,000 | 12,000 | lb |  | 4 | 4 | 12,000 | ok |
+| 4 | section shear at grid 3 | `V:3` | 8,000 | 8,000 | lb |  | 4 | 4 | 8,000 | ok |
+| 5 | section shear at grid 4 | `V:4` | 5,000 | 5,000 | lb |  | 4 | 4 | 5,000 | ok |
+| 6 | basic unit shear at grid 1 (right/above), full depth | `vb:1+:*` | 300 | 300 | plf |  | 4 (4.1) | 4 | 300 | ok |
+| 7 | basic unit shear at grid 2 (left/below), full depth | `vb:2-:*` | 240 | 240 | plf |  | 4 (4.1) | 4 | 240 | ok |
+| 8 | basic unit shear at grid 2 (right/above), between A and B | `vb:2+:A-B` | 300 | 300 | plf |  | 4 (4.1) | 4 | 300 | ok |
+| 9 | basic unit shear at grid 3 (left/below), between A and B | `vb:3-:A-B` | 200 | 200 | plf |  | 4 (4.1) | 4 | 200 | ok |
+| 10 | basic unit shear at grid 3 (right/above), full depth | `vb:3+:*` | 160 | 160 | plf |  | 4 (4.1) | 4 | 160 | ok |
+| 11 | basic unit shear at grid 4, full depth | `vb:4:*` | 100 | 100 | plf |  | 4 (4.1) | 4 | 100 | ok |
+| 12 | basic-field force in line B at grid 2 (book F2B = M2B / 40) | `Nb:B:2` | 5,062.5 | 5,062.5 | lb | T | 4 | 5 | 5,062.5 | ok |
+| 13 | basic-field force in line B at grid 3 (book F3B = M3B / 40) | `Nb:B:3` | 10,062.5 | 10,062.5 | lb | T | 4 | 5 | 10,062.5 | ok |
+| 14 | TD1 force at support A (reaction on TD at A acts to the left (-x)) | `tdR:TD1:A` | 1,012.5 | 1,012.5 | lb |  | 5 (4.2) | 6 | 1,012.5 | ok |
+| 15 | TD1 force at support C (reaction on TD at C acts to the left (-x)) | `tdR:TD1:C` | 4,050 | 4,050 | lb |  | 6 (4.2) | 6 | 4,050 | ok |
+| 16 | TD1 unit shear between A and B | `vtd:TD1:A-B` | 67.5 | 67.5 | plf |  | 5 (4.2) | 6 | 67.5 | ok |
+| 17 | TD1 unit shear between B and C | `vtd:TD1:B-C` | -270 | -270 | plf |  | 6 (4.2) | 6 | -270 | ok |
+| 18 | TD2 force at support A (reaction on TD at A acts to the right (+x)) | `tdR:TD2:A` | 2,012.5 | 2,012.5 | lb |  | 5 (4.2) | 6 | 2,012.5 | ok |
+| 19 | TD2 force at support C (reaction on TD at C acts to the right (+x)) | `tdR:TD2:C` | 8,050 | 8,050 | lb |  | 7 (4.2) | 6 | 8,050 | ok |
+| 20 | TD2 unit shear between A and B | `vtd:TD2:A-B` | -134.2 | -134.2 | plf |  | 7 (4.2) | 6 | -134.17 | ok |
+| 21 | TD2 unit shear between B and C | `vtd:TD2:B-C` | 536.7 | 536.7 | plf |  | 7 (4.2) | 6 | 536.67 | ok |
+| 22 | TD1 aspect ratio (50/15, blocking required) | `aspect:TD1` | 3.33 | 3.33 | - |  | 3 | 6 | 3.33 | ok |
+| 23 | TD2 aspect ratio | `aspect:TD2` | 3.33 | 3.33 | - |  | 3 | 6 | 3.33 | ok |
+| 24 | net unit shear at grid 1 (right/above), between A and B | `vnet:1+:A-B` | 367.5 | 367.5 | plf |  | 6 | 6 | 367.5 | ok |
+| 25 | net unit shear at grid 2 (left/below), between A and B | `vnet:2-:A-B` | 307.5 | 307.5 | plf |  | 6 | 6 | 307.5 | ok |
+| 26 | net unit shear at grid 2 (right/above), between A and B | `vnet:2+:A-B` | 300 | 300 | plf |  | 6 | 6 | 300 | ok |
+| 27 | net unit shear at grid 1 (right/above), between B and C | `vnet:1+:B-C` | 30 | 30 | plf |  | 6 | 6 | 30 | ok |
+| 28 | net unit shear at grid 2 (left/below), between B and C | `vnet:2-:B-C` | -30 | -30 | plf |  | 6 | 6 | -30 | ok |
+| 29 | net unit shear at grid 3 (right/above), between A and B | `vnet:3+:A-B` | 25.8 | 25.8 | plf |  | 7 | 6 | 25.83 | ok |
+| 30 | net unit shear at grid 3 (left/below), between A and B | `vnet:3-:A-B` | 200 | 200 | plf |  | 7 | 6 | 200 | ok |
+| 31 | net unit shear at grid 3 (right/above), between B and C | `vnet:3+:B-C` | 696.7 | 696.7 | plf |  | 7 | 6 | 696.67 | ok |
+| 32 | net unit shear at grid 4 (left/below), between A and B | `vnet:4-:A-B` | -34.2 | -34.2 | plf |  | 7 | 6 | -34.17 | ok |
+| 33 | net unit shear at grid 4 (left/below), between B and C | `vnet:4-:B-C` | 636.7 | 636.7 | plf |  | 7 | 6 | 636.67 | ok |
+| 34 | net unit shear at grid 4 (right/above), full depth | `vnet:4+:*` | 100 | 100 | plf |  | 7 | 6 | 100 | ok |
+| 35 | force in line B at grid 2 | `N:B:2` | 5,062.5 | 5,062.5 | lb | T | 8 (4.3) | 6 | 5,062.5 | ok |
+| 36 | force in line B at grid 3 (from the right of grid 3 the book gets 10,063.5 (rounded net shears); the diagram closes) | `N:B:3` | 10,062.5 | 10,062.5 | lb | T | 8 (4.3) | 6 | 10,062.5 | ok |
+| 37 | force in line B at grid 4 (diagram closes to zero) | `N:B:4` | 0 | 0 | lb | ? | 9 (4.3) | 6 | 0 | ok |
+| 38 | force in line A at grid 2 | `N:A:2` | -5,062.5 | -5,062.5 | lb | C | 9 (4.3) | 6 | -5,062.5 | ok |
+| 39 | force in line A at grid 3 | `N:A:3` | -10,062.5 | -10,062.5 | lb | C | 9 (4.3) | 6 | -10,062.5 | ok |
+| 40 | force in line A at grid 4 (similar triangles in 3-4: +83.2 / -146.2 lb) | `N:A:4` | -10,000 | -10,000 | lb | C | 9 (4.3) | 6 | -10,000 | ok |
+| 41 | force in line A at grid CL | `N:A:CL` | -11,250 | -11,250 | lb | C | 9 (4.3) | 6 | -11,250 | ok |
+| 42 | max force in line C from 1 and 2 (triangles +30 / -30 plf over 1-2; book gives the magnitude only) | `Nmax:C:1-2` | 112.5 | 112.5 | lb | ? | 8 (4.3) | 6 | 112.5 | ok |
+| 43 | force in line C at grid 4 | `N:C:4` | 10,000 | 10,000 | lb | T | 9 (4.3) | 6 | 10,000 | ok |
+| 44 | force in line C at grid CL | `N:C:CL` | 11,250 | 11,250 | lb | T | 9 (4.3) | 6 | 11,250 | ok |
+| 45 | force in line 2 at grid B (right/above) | `N:2:B+` | 300 | 300 | lb | T | 10 (4.4) | 6 | 300 | ok |
+| 46 | force in line 2 at grid B (left/below) | `N:2:B-` | 300 | 300 | lb | T | 10 (4.4) | 6 | 300 | ok |
+| 47 | force in line 3 at grid B (right/above) | `N:3:B+` | 6,968 | 6,968 | lb | T | 11 (4.4) | 6 | 6,966.7 | ok |
+| 48 | force in line 3 at grid B (left/below) | `N:3:B-` | 6,967 | 6,967 | lb | T | 11 (4.4) | 6 | 6,966.7 | ok |
+| 49 | force in line 4 at grid B (right/above) | `N:4:B+` | -5,368 | -5,368 | lb | C | 11 (4.4) | 6 | -5,366.7 | ok |
+| 50 | force in line 4 at grid B (left/below) | `N:4:B-` | -5,367 | -5,367 | lb | C | 11 (4.4) | 6 | -5,366.7 | ok |
 
 **Errata**
 - p6: The second net-shear table (right TD) repeats the left-TD table. Used: TD2 net shears from the p7 table.
@@ -312,66 +312,66 @@ PDF `The Analysis of Irregular Shaped Example 4.2.pdf`, pages 1-11. **Mirrored "
 
 | # | Quantity | Key | Book | Tool sign | Unit | T/C | Page (fig) | Phase | Tool | Status |
 |---|---|---|---|---|---|---|---|---|---|---|
-| 1 | basic unit shear at grid A (left/below), between 1 and 2 (500 lb / 15 ft) | `vb:A-:1-2` | -33.33 | 33.33 | plf |  | 3 (4.8) | 4 | — | pending (phase 4) |
-| 2 | basic unit shear at grid B, between 1 and 2 (V_B = 500 - 20(10) = 300 lb / 15 ft) | `vb:B:1-2` | 20 | -20 | plf |  | 3 | 4 | — | pending (phase 4) |
-| 3 | basic unit shear at grid C (right/above), between 1 and 2 | `vb:C+:1-2` | 33.33 | -33.33 | plf |  | 3 (4.8) | 4 | — | pending (phase 4) |
-| 4 | basic unit shear at grid A (left/below), between 2 and 3 (533.4 lb / 20 ft) | `vb:A-:2-3` | -26.67 | 26.67 | plf |  | 3 (4.8) | 4 | — | pending (phase 4) |
-| 5 | basic unit shear at grid B (right/above), between 2 and 3 | `vb:B+:2-3` | 26.67 | -26.67 | plf |  | 3 (4.8) | 4 | — | pending (phase 4) |
-| 6 | basic unit shear at grid A (left/below), between 3 and 5 (3833.3 lb / 115 ft) | `vb:A-:3-5` | -33.33 | 33.33 | plf |  | 4 (4.8) | 4 | — | pending (phase 4) |
-| 7 | basic unit shear at grid B, between 3 and 5 (not computed in the text; used in the p6 net-shear table (2300 lb / 115 ft)) | `vb:B:3-5` | 20 | -20 | plf |  | 6 | 4 | — | pending (phase 4) |
-| 8 | basic unit shear at grid C (right/above), between 3 and 5 | `vb:C+:3-5` | 33.33 | -33.33 | plf |  | 4 (4.8) | 4 | — | pending (phase 4) |
-| 9 | force to wall line A (book sums band reactions and TD reactions; equals whole-body statics) | `R:A` | 4,973.3 | 4,973.3 | lb |  | 7 | 4 | — | pending (phase 4) |
-| 10 | unit shear in wall SW1 (R_A / (15 + 50)) | `vw:SW1` | 76.52 | -76.52 | plf |  | 7 | 4 | — | pending (phase 4) |
-| 11 | unit shear in wall SW2 | `vw:SW2` | 76.52 | -76.52 | plf |  | 7 | 4 | — | pending (phase 4) |
-| 12 | basic-field force in line B at grid 2 (strut pulls TD1) | `Nb:B:2` | 266.7 | 266.7 | lb | T | 5 (4.9) | 5 | — | pending (phase 5) |
-| 13 | basic-field force in line B at grid 3 (strut pushes TD2) | `Nb:B:3` | -266.7 | -266.7 | lb | C | 5 (4.9) | 5 | — | pending (phase 5) |
-| 14 | TD1 force at support A (reaction on TD at A acts to the left (-x); book V_A = -53.34) | `tdR:TD1:A` | 53.34 | 53.34 | lb |  | 5 (4.9) | 6 | — | pending (phase 6) |
-| 15 | TD1 force at support C (reaction on TD at C acts to the left (-x); book V_C = +213.36) | `tdR:TD1:C` | 213.36 | 213.36 | lb |  | 5 (4.9) | 6 | — | pending (phase 6) |
-| 16 | TD1 unit shear between A and B | `vtd:TD1:A-B` | -3.56 | 3.56 | plf |  | 5 (4.9) | 6 | — | pending (phase 6) |
-| 17 | TD1 unit shear between B and C | `vtd:TD1:B-C` | 14.22 | -14.22 | plf |  | 5 (4.9) | 6 | — | pending (phase 6) |
-| 18 | TD2 force at support A (reaction on TD at A acts to the left (-x)) | `tdR:TD2:A` | 53.34 | 53.34 | lb |  | 5 (4.9) | 6 | — | pending (phase 6) |
-| 19 | TD2 force at support C (reaction on TD at C acts to the left (-x)) | `tdR:TD2:C` | 213.36 | 213.36 | lb |  | 5 (4.9) | 6 | — | pending (phase 6) |
-| 20 | TD2 unit shear between A and B | `vtd:TD2:A-B` | -3.56 | 3.56 | plf |  | 5 (4.9) | 6 | — | pending (phase 6) |
-| 21 | TD2 unit shear between B and C | `vtd:TD2:B-C` | 14.22 | -14.22 | plf |  | 5 (4.9) | 6 | — | pending (phase 6) |
-| 22 | net unit shear at grid A (left/below), between 1 and 2 | `vnet:A-:1-2` | -36.89 | 36.89 | plf |  | 6 | 6 | — | pending (phase 6) |
-| 23 | net unit shear at grid B (right/above), between 1 and 2 | `vnet:B+:1-2` | 16.44 | -16.44 | plf |  | 6 | 6 | — | pending (phase 6) |
-| 24 | net unit shear at grid B (left/below), between 1 and 2 | `vnet:B-:1-2` | 34.22 | -34.22 | plf |  | 6 | 6 | — | pending (phase 6) |
-| 25 | net unit shear at grid C (right/above), between 1 and 2 | `vnet:C+:1-2` | 47.55 | -47.55 | plf |  | 6 | 6 | — | pending (phase 6) |
-| 26 | net unit shear at grid A (left/below), between 3 and 4 | `vnet:A-:3-4` | -36.89 | 36.89 | plf |  | 6 | 6 | — | pending (phase 6) |
-| 27 | net unit shear at grid B (right/above), between 3 and 4 | `vnet:B+:3-4` | 16.44 | -16.44 | plf |  | 6 | 6 | — | pending (phase 6) |
-| 28 | net unit shear at grid B (left/below), between 3 and 4 | `vnet:B-:3-4` | 34.22 | -34.22 | plf |  | 6 | 6 | — | pending (phase 6) |
-| 29 | net unit shear at grid C (right/above), between 3 and 4 | `vnet:C+:3-4` | 47.55 | -47.55 | plf |  | 6 | 6 | — | pending (phase 6) |
-| 30 | net unit shear at grid A (left/below), between 2 and 3 | `vnet:A-:2-3` | -26.67 | 26.67 | plf |  | 6 (4.10) | 6 | — | pending (phase 6) |
-| 31 | net unit shear at grid B (right/above), between 2 and 3 | `vnet:B+:2-3` | 26.67 | -26.67 | plf |  | 6 (4.10) | 6 | — | pending (phase 6) |
-| 32 | net unit shear at grid A (left/below), between 4 and 5 | `vnet:A-:4-5` | -33.33 | 33.33 | plf |  | 6 (4.10) | 6 | — | pending (phase 6) |
-| 33 | net unit shear at grid C (right/above), between 4 and 5 | `vnet:C+:4-5` | 33.33 | -33.33 | plf |  | 6 (4.10) | 6 | — | pending (phase 6) |
-| 34 | force to wall SW3 (500 + 213.34) | `Rw:SW3` | 713.36 | 713.36 | lb |  | 7 | 6 | — | pending (phase 6) |
-| 35 | unit shear in wall SW3 | `vw:SW3` | 89.17 | -89.17 | plf |  | 7 | 6 | — | pending (phase 6) |
-| 36 | force to wall SW4 (33.33(115) + 213.34) | `Rw:SW4` | 4,046.3 | 4,046.3 | lb |  | 7 | 6 | — | pending (phase 6) |
-| 37 | unit shear in wall SW4 | `vw:SW4` | 80.92 | -80.92 | plf |  | 7 | 6 | — | pending (phase 6) |
-| 38 | force in line A at grid 2 | `N:A:2` | 594.4 | 594.4 | lb | T | 8 (4.11) | 6 | — | pending (phase 6) |
-| 39 | force in line A at grid 3 | `N:A:3` | 61.1 | 61.1 | lb | T | 8 (4.11) | 6 | — | pending (phase 6) |
-| 40 | force in line A at grid x=42 (left end of SW2) | `N:A:x=42` | -197.2 | -197.2 | lb | C | 8 (4.11) | 6 | — | pending (phase 6) |
-| 41 | force in line A at grid 4 | `N:A:4` | 119.8 | 119.8 | lb | T | 9 (4.11) | 6 | — | pending (phase 6) |
-| 42 | force in line A at grid x=92 (right end of SW2) | `N:A:x=92` | 1,933.3 | 1,933.3 | lb | T | 9 (4.11) | 6 | — | pending (phase 6) |
-| 43 | force in line A at grid 5 (diagram closes) | `N:A:5` | 0 | 0 | lb | ? | 9 (4.11) | 6 | — | pending (phase 6) |
-| 44 | force in line B at grid 2 | `N:B:2` | 266.7 | 266.7 | lb | T | 9 (4.11) | 6 | — | pending (phase 6) |
-| 45 | force in line B at grid 3 | `N:B:3` | -266.7 | -266.7 | lb | C | 9 (4.11) | 6 | — | pending (phase 6) |
-| 46 | force in line B at grid 4 (diagram closes) | `N:B:4` | 0 | 0 | lb | ? | 9 (4.11) | 6 | — | pending (phase 6) |
-| 47 | force in line C at grid x=8 (right end of SW3) | `N:C:x=8` | 332.9 | 332.9 | lb | T | 9 (4.11) | 6 | — | pending (phase 6) |
-| 48 | force in line C at grid 2 (diagram closes) | `N:C:2` | 0 | 0 | lb | ? | 9 (4.11) | 6 | — | pending (phase 6) |
-| 49 | force in line C at grid 4 | `N:C:4` | -713.3 | -713.3 | lb | C | 9 (4.11) | 6 | — | pending (phase 6) |
-| 50 | force in line C at grid x=100 (right end of SW4) | `N:C:x=100` | 1,666.8 | 1,666.8 | lb | T | 9 (4.11) | 6 | — | pending (phase 6) |
-| 51 | force in line C at grid 5 (diagram closes) | `N:C:5` | 0 | 0 | lb | ? | 10 (4.11) | 6 | — | pending (phase 6) |
-| 52 | force in line 1 at grid B (right/above) (+101.4 - 510.4) | `N:1:B+` | -409 | -409 | lb | C | 10 (4.12) | 6 | — | pending (phase 6) |
-| 53 | force in line 1 at grid B (left/below) | `N:1:B-` | -409 | -409 | lb | C | 11 (4.12) | 6 | — | pending (phase 6) |
-| 54 | max force in line 1 from A and B (interior extremum where the shear difference changes sign, 27.67 ft below A) | `Nmax:1:A-B` | -510.4 | -510.4 | lb | C | 10 (4.12) | 6 | — | pending (phase 6) |
-| 55 | force in line 2 at grid B (right/above) | `N:2:B+` | 409 | 409 | lb | T | 11 (4.12) | 6 | — | pending (phase 6) |
-| 56 | force in line 2 at grid B (left/below) | `N:2:B-` | 409 | 409 | lb | T | 11 (4.12) | 6 | — | pending (phase 6) |
-| 57 | force in line 3 at grid B (right/above) (book: same as grid 2, in compression) | `N:3:B+` | -409 | -409 | lb | C | 11 (4.12) | 6 | — | pending (phase 6) |
-| 58 | force in line 3 at grid B (left/below) | `N:3:B-` | -409 | -409 | lb | C | 11 (4.12) | 6 | — | pending (phase 6) |
-| 59 | force in line 4 at grid B (right/above) (Fig 4.12 prints 142.2) | `N:4:B+` | 142.4 | 142.4 | lb | T | 11 (4.12) | 6 | — | pending (phase 6) |
-| 60 | force in line 4 at grid B (left/below) | `N:4:B-` | 142.4 | 142.4 | lb | T | 11 (4.12) | 6 | — | pending (phase 6) |
+| 1 | basic unit shear at grid A (left/below), between 1 and 2 (500 lb / 15 ft) | `vb:A-:1-2` | -33.33 | 33.33 | plf |  | 3 (4.8) | 4 | 33.33 | ok |
+| 2 | basic unit shear at grid B, between 1 and 2 (V_B = 500 - 20(10) = 300 lb / 15 ft) | `vb:B:1-2` | 20 | -20 | plf |  | 3 | 4 | -20 | ok |
+| 3 | basic unit shear at grid C (right/above), between 1 and 2 | `vb:C+:1-2` | 33.33 | -33.33 | plf |  | 3 (4.8) | 4 | -33.33 | ok |
+| 4 | basic unit shear at grid A (left/below), between 2 and 3 (533.4 lb / 20 ft) | `vb:A-:2-3` | -26.67 | 26.67 | plf |  | 3 (4.8) | 4 | 26.67 | ok |
+| 5 | basic unit shear at grid B (right/above), between 2 and 3 | `vb:B+:2-3` | 26.67 | -26.67 | plf |  | 3 (4.8) | 4 | -26.67 | ok |
+| 6 | basic unit shear at grid A (left/below), between 3 and 5 (3833.3 lb / 115 ft) | `vb:A-:3-5` | -33.33 | 33.33 | plf |  | 4 (4.8) | 4 | 33.33 | ok |
+| 7 | basic unit shear at grid B, between 3 and 5 (not computed in the text; used in the p6 net-shear table (2300 lb / 115 ft)) | `vb:B:3-5` | 20 | -20 | plf |  | 6 | 4 | -20 | ok |
+| 8 | basic unit shear at grid C (right/above), between 3 and 5 | `vb:C+:3-5` | 33.33 | -33.33 | plf |  | 4 (4.8) | 4 | -33.33 | ok |
+| 9 | force to wall line A (book sums band reactions and TD reactions; equals whole-body statics) | `R:A` | 4,973.3 | 4,973.3 | lb |  | 7 | 4 | 4,973.3 | ok |
+| 10 | unit shear in wall SW1 (R_A / (15 + 50)) | `vw:SW1` | 76.52 | 76.52 | plf |  | 7 | 4 | 76.51 | ok |
+| 11 | unit shear in wall SW2 | `vw:SW2` | 76.52 | 76.52 | plf |  | 7 | 4 | 76.51 | ok |
+| 12 | basic-field force in line B at grid 2 (strut pulls TD1) | `Nb:B:2` | 266.7 | 266.7 | lb | T | 5 (4.9) | 5 | 266.67 | ok |
+| 13 | basic-field force in line B at grid 3 (strut pushes TD2) | `Nb:B:3` | -266.7 | -266.7 | lb | C | 5 (4.9) | 5 | -266.67 | ok |
+| 14 | TD1 force at support A (reaction on TD at A acts to the left (-x); book V_A = -53.34) | `tdR:TD1:A` | 53.34 | 53.34 | lb |  | 5 (4.9) | 6 | 53.33 | ok |
+| 15 | TD1 force at support C (reaction on TD at C acts to the left (-x); book V_C = +213.36) | `tdR:TD1:C` | 213.36 | 213.36 | lb |  | 5 (4.9) | 6 | 213.33 | ok |
+| 16 | TD1 unit shear between A and B | `vtd:TD1:A-B` | -3.56 | 3.56 | plf |  | 5 (4.9) | 6 | 3.56 | ok |
+| 17 | TD1 unit shear between B and C | `vtd:TD1:B-C` | 14.22 | -14.22 | plf |  | 5 (4.9) | 6 | -14.22 | ok |
+| 18 | TD2 force at support A (reaction on TD at A acts to the left (-x)) | `tdR:TD2:A` | 53.34 | 53.34 | lb |  | 5 (4.9) | 6 | 53.33 | ok |
+| 19 | TD2 force at support C (reaction on TD at C acts to the left (-x)) | `tdR:TD2:C` | 213.36 | 213.36 | lb |  | 5 (4.9) | 6 | 213.33 | ok |
+| 20 | TD2 unit shear between A and B | `vtd:TD2:A-B` | -3.56 | 3.56 | plf |  | 5 (4.9) | 6 | 3.56 | ok |
+| 21 | TD2 unit shear between B and C | `vtd:TD2:B-C` | 14.22 | -14.22 | plf |  | 5 (4.9) | 6 | -14.22 | ok |
+| 22 | net unit shear at grid A (left/below), between 1 and 2 | `vnet:A-:1-2` | -36.89 | 36.89 | plf |  | 6 | 6 | 36.89 | ok |
+| 23 | net unit shear at grid B (right/above), between 1 and 2 | `vnet:B+:1-2` | 16.44 | -16.44 | plf |  | 6 | 6 | -16.44 | ok |
+| 24 | net unit shear at grid B (left/below), between 1 and 2 | `vnet:B-:1-2` | 34.22 | -34.22 | plf |  | 6 | 6 | -34.22 | ok |
+| 25 | net unit shear at grid C (right/above), between 1 and 2 | `vnet:C+:1-2` | 47.55 | -47.55 | plf |  | 6 | 6 | -47.56 | ok |
+| 26 | net unit shear at grid A (left/below), between 3 and 4 | `vnet:A-:3-4` | -36.89 | 36.89 | plf |  | 6 | 6 | 36.89 | ok |
+| 27 | net unit shear at grid B (right/above), between 3 and 4 | `vnet:B+:3-4` | 16.44 | -16.44 | plf |  | 6 | 6 | -16.44 | ok |
+| 28 | net unit shear at grid B (left/below), between 3 and 4 | `vnet:B-:3-4` | 34.22 | -34.22 | plf |  | 6 | 6 | -34.22 | ok |
+| 29 | net unit shear at grid C (right/above), between 3 and 4 | `vnet:C+:3-4` | 47.55 | -47.55 | plf |  | 6 | 6 | -47.56 | ok |
+| 30 | net unit shear at grid A (left/below), between 2 and 3 | `vnet:A-:2-3` | -26.67 | 26.67 | plf |  | 6 (4.10) | 6 | 26.67 | ok |
+| 31 | net unit shear at grid B (right/above), between 2 and 3 | `vnet:B+:2-3` | 26.67 | -26.67 | plf |  | 6 (4.10) | 6 | -26.67 | ok |
+| 32 | net unit shear at grid A (left/below), between 4 and 5 | `vnet:A-:4-5` | -33.33 | 33.33 | plf |  | 6 (4.10) | 6 | 33.33 | ok |
+| 33 | net unit shear at grid C (right/above), between 4 and 5 | `vnet:C+:4-5` | 33.33 | -33.33 | plf |  | 6 (4.10) | 6 | -33.33 | ok |
+| 34 | force to wall SW3 (500 + 213.34) | `Rw:SW3` | 713.36 | 713.36 | lb |  | 7 | 6 | 713.33 | ok |
+| 35 | unit shear in wall SW3 | `vw:SW3` | 89.17 | 89.17 | plf |  | 7 | 6 | 89.17 | ok |
+| 36 | force to wall SW4 (33.33(115) + 213.34) | `Rw:SW4` | 4,046.3 | 4,046.3 | lb |  | 7 | 6 | 4,046.7 | ok |
+| 37 | unit shear in wall SW4 | `vw:SW4` | 80.92 | 80.92 | plf |  | 7 | 6 | 80.93 | ok |
+| 38 | force in line A at grid 2 | `N:A:2` | 594.4 | 594.4 | lb | T | 8 (4.11) | 6 | 594.36 | ok |
+| 39 | force in line A at grid 3 | `N:A:3` | 61.1 | 61.1 | lb | T | 8 (4.11) | 6 | 61.03 | ok |
+| 40 | force in line A at grid x=42 (left end of SW2) | `N:A:x=42` | -197.2 | -197.2 | lb | C | 8 (4.11) | 6 | -197.2 | ok |
+| 41 | force in line A at grid 4 | `N:A:4` | 119.8 | 119.8 | lb | T | 9 (4.11) | 6 | 119.79 | ok |
+| 42 | force in line A at grid x=92 (right end of SW2) | `N:A:x=92` | 1,933.3 | 1,933.3 | lb | T | 9 (4.11) | 6 | 1,933.3 | ok |
+| 43 | force in line A at grid 5 (diagram closes) | `N:A:5` | 0 | 0 | lb | ? | 9 (4.11) | 6 | 0 | ok |
+| 44 | force in line B at grid 2 | `N:B:2` | 266.7 | 266.7 | lb | T | 9 (4.11) | 6 | 266.67 | ok |
+| 45 | force in line B at grid 3 | `N:B:3` | -266.7 | -266.7 | lb | C | 9 (4.11) | 6 | -266.67 | ok |
+| 46 | force in line B at grid 4 (diagram closes) | `N:B:4` | 0 | 0 | lb | ? | 9 (4.11) | 6 | 0 | ok |
+| 47 | force in line C at grid x=8 (right end of SW3) | `N:C:x=8` | 332.9 | 332.9 | lb | T | 9 (4.11) | 6 | 332.89 | ok |
+| 48 | force in line C at grid 2 (diagram closes) | `N:C:2` | 0 | 0 | lb | ? | 9 (4.11) | 6 | 0 | ok |
+| 49 | force in line C at grid 4 | `N:C:4` | -713.3 | -713.3 | lb | C | 9 (4.11) | 6 | -713.33 | ok |
+| 50 | force in line C at grid x=100 (right end of SW4) | `N:C:x=100` | 1,666.8 | 1,666.8 | lb | T | 9 (4.11) | 6 | 1,666.7 | ok |
+| 51 | force in line C at grid 5 (diagram closes) | `N:C:5` | 0 | 0 | lb | ? | 10 (4.11) | 6 | 0 | ok |
+| 52 | force in line 1 at grid B (right/above) (+101.4 - 510.4) | `N:1:B+` | -409 | -409 | lb | C | 10 (4.12) | 6 | -408.89 | ok |
+| 53 | force in line 1 at grid B (left/below) | `N:1:B-` | -409 | -409 | lb | C | 11 (4.12) | 6 | -408.89 | ok |
+| 54 | max force in line 1 from A and B (interior extremum where the shear difference changes sign, 27.67 ft below A) | `Nmax:1:A-B` | -510.4 | -510.4 | lb | C | 10 (4.12) | 6 | -510.3 | ok |
+| 55 | force in line 2 at grid B (right/above) | `N:2:B+` | 409 | 409 | lb | T | 11 (4.12) | 6 | 408.89 | ok |
+| 56 | force in line 2 at grid B (left/below) | `N:2:B-` | 409 | 409 | lb | T | 11 (4.12) | 6 | 408.89 | ok |
+| 57 | force in line 3 at grid B (right/above) (book: same as grid 2, in compression) | `N:3:B+` | -409 | -409 | lb | C | 11 (4.12) | 6 | -408.89 | ok |
+| 58 | force in line 3 at grid B (left/below) | `N:3:B-` | -409 | -409 | lb | C | 11 (4.12) | 6 | -408.89 | ok |
+| 59 | force in line 4 at grid B (right/above) (Fig 4.12 prints 142.2) | `N:4:B+` | 142.4 | 142.4 | lb | T | 11 (4.12) | 6 | 142.22 | ok |
+| 60 | force in line 4 at grid B (left/below) | `N:4:B-` | 142.4 | 142.4 | lb | T | 11 (4.12) | 6 | 142.22 | ok |
 
 **Errata**
 - p7: SW3 net shear printed as 89.17 - 45.55 = 41.62. Used: diaphragm shear 47.55 plf; 41.62 plf is correct.
@@ -399,57 +399,57 @@ PDF `The Analysis of Irregular Shaped Ch 4.6.pdf`, pages 1-9.
 
 | # | Quantity | Key | Book | Tool sign | Unit | T/C | Page (fig) | Phase | Tool | Status |
 |---|---|---|---|---|---|---|---|---|---|---|
-| 1 | force to wall line 1 | `R:1` | 15,000 | 15,000 | lb |  | 2 | 4 | — | pending (phase 4) |
-| 2 | force to wall line 4 | `R:4` | 15,000 | 15,000 | lb |  | 2 | 4 | — | pending (phase 4) |
-| 3 | force to wall SW1 (line 1 continuous via strut: split by wall length 12/28) | `Rw:SW1` | 6,428.6 | 6,428.6 | lb |  | 8 | 4 | — | pending (phase 4) |
-| 4 | force to wall SW2 (16/28) | `Rw:SW2` | 8,571.4 | 8,571.4 | lb |  | 8 | 4 | — | pending (phase 4) |
-| 5 | unit shear in wall SW1 | `vw:SW1` | 535.7 | 535.7 | plf |  | 8 | 4 | — | pending (phase 4) |
-| 6 | unit shear in wall SW2 | `vw:SW2` | 535.7 | 535.7 | plf |  | 8 | 4 | — | pending (phase 4) |
-| 7 | basic unit shear at grid 1 (right/above), between A and B (15000 / (22 + 16)) | `vb:1+:A-B` | 394.7 | 394.7 | plf |  | 2 (4.13) | 4 | — | pending (phase 4) |
-| 8 | basic unit shear at grid 1 (right/above), between C and D | `vb:1+:C-D` | 394.7 | 394.7 | plf |  | 2 (4.13) | 4 | — | pending (phase 4) |
-| 9 | basic unit shear at grid 2 (left/below), between A and B | `vb:2-:A-B` | 305.3 | 305.3 | plf |  | 2 (4.13) | 4 | — | pending (phase 4) |
-| 10 | basic unit shear at grid 2 (left/below), between C and D | `vb:2-:C-D` | 317.8 | 317.8 | plf |  | 3 (4.13) | 4 | — | pending (phase 4) |
-| 11 | section shear at grid 2 (right/above) | `V:2+` | 11,800 | 11,800 | lb |  | 3 | 4 | — | pending (phase 4) |
-| 12 | basic unit shear at grid 2 (right/above), full depth | `vb:2+:*` | 210.7 | 210.7 | plf |  | 3 (4.13) | 4 | — | pending (phase 4) |
-| 13 | section shear at grid 3 | `V:3` | 8,800 | 8,800 | lb |  | 3 | 4 | — | pending (phase 4) |
-| 14 | basic unit shear at grid 3, full depth (book prints 8800/56 = +167.9; exact 157.14 (erratum p3)) | `vb:3:*` | 157.14 | 157.14 | plf |  | 3 (4.13) | 4 | — | pending (phase 4) |
-| 15 | section shear at grid 4 | `V:4` | -15,000 | -15,000 | lb |  | 3 | 4 | — | pending (phase 4) |
-| 16 | basic unit shear at grid 4 (left/below), full depth | `vb:4-:*` | -267.9 | -267.9 | plf |  | 3 (4.13) | 4 | — | pending (phase 4) |
-| 17 | basic-field force in line B at grid 2 (exact 5600.2) | `Nb:B:2` | 5,600 | 5,600 | lb | T | 3 | 5 | — | pending (phase 5) |
-| 18 | basic-field force in line C at grid 2 (exact 5699.8; p4: pushes on TD1) | `Nb:C:2` | -5,700 | -5,700 | lb | C | 3 | 5 | — | pending (phase 5) |
-| 19 | TD1 force at support A (reaction on TD at A acts to the right (+x); book V_A = -1771.4) | `tdR:TD1:A` | 1,771.4 | 1,771.4 | lb |  | 4 (4.14) | 6 | — | pending (phase 6) |
-| 20 | TD1 force at support D (reaction on TD at D acts to the left (-x); book V_D = -1871.4) | `tdR:TD1:D` | 1,871.4 | 1,871.4 | lb |  | 5 (4.14) | 6 | — | pending (phase 6) |
-| 21 | TD1 unit shear between A and B | `vtd:TD1:A-B` | -118.1 | -118.1 | plf |  | 4 (4.14) | 6 | — | pending (phase 6) |
-| 22 | TD1 unit shear between B and C | `vtd:TD1:B-C` | 255.24 | 255.24 | plf |  | 5 (4.14) | 6 | — | pending (phase 6) |
-| 23 | TD1 unit shear between C and D (book computes -124.8 but uses 124.2 in the net-shear table (erratum p5)) | `vtd:TD1:C-D` | -124.76 | -124.76 | plf |  | 5 (4.14) | 6 | — | pending (phase 6) |
-| 24 | TD1 aspect ratio (56/15, blocking required) | `aspect:TD1` | 3.73 | 3.73 | - |  | 2 | 6 | — | pending (phase 6) |
-| 25 | net unit shear at grid 1 (right/above), between A and B | `vnet:1+:A-B` | 394.7 | 394.7 | plf |  | 5 | 6 | — | pending (phase 6) |
-| 26 | net unit shear at grid 1 (right/above), between C and D | `vnet:1+:C-D` | 394.7 | 394.7 | plf |  | 5 | 6 | — | pending (phase 6) |
-| 27 | net unit shear at grid 2 (left/below), between A and B | `vnet:2-:A-B` | 305.3 | 305.3 | plf |  | 5 | 6 | — | pending (phase 6) |
-| 28 | net unit shear at grid 2 (left/below), between C and D | `vnet:2-:C-D` | 317.8 | 317.8 | plf |  | 5 | 6 | — | pending (phase 6) |
-| 29 | net unit shear at grid 2 (right/above), between A and B | `vnet:2+:A-B` | 92.6 | 92.6 | plf |  | 5 | 6 | — | pending (phase 6) |
-| 30 | net unit shear at grid 2 (right/above), between B and C (book 465.9) | `vnet:2+:B-C` | 465.95 | 465.95 | plf |  | 5 | 6 | — | pending (phase 6) |
-| 31 | net unit shear at grid 2 (right/above), between C and D (book 86.5 (uses 124.2, erratum p5)) | `vnet:2+:C-D` | 85.95 | 85.95 | plf |  | 5 | 6 | — | pending (phase 6) |
-| 32 | net unit shear at grid 3 (left/below), between A and B (book 49.8 (uses vb 167.9, erratum p3)) | `vnet:3-:A-B` | 39.05 | 39.05 | plf |  | 5 | 6 | — | pending (phase 6) |
-| 33 | net unit shear at grid 3 (left/below), between B and C (book 423.1 (erratum p3)) | `vnet:3-:B-C` | 412.38 | 412.38 | plf |  | 5 | 6 | — | pending (phase 6) |
-| 34 | net unit shear at grid 3 (left/below), between C and D (book 43.7 (errata p3 and p5)) | `vnet:3-:C-D` | 32.38 | 32.38 | plf |  | 5 | 6 | — | pending (phase 6) |
-| 35 | net unit shear at grid 3 (right/above), full depth (book 167.9 (erratum p3)) | `vnet:3+:*` | 157.14 | 157.14 | plf |  | 4 (4.14) | 6 | — | pending (phase 6) |
-| 36 | force in line B at grid 2 | `N:B:2` | 5,600 | 5,600 | lb | T | 6 (4.15) | 6 | — | pending (phase 6) |
-| 37 | force in line B at grid 3 (closes to zero; book labels this F2B) | `N:B:3` | 0 | 0 | lb | ? | 6 (4.15) | 6 | — | pending (phase 6) |
-| 38 | force in line C at grid 2 (book prints "+5700 lb compression") | `N:C:2` | -5,700 | -5,700 | lb | C | 6 (4.15) | 6 | — | pending (phase 6) |
-| 39 | force in line C at grid 3 (closes to zero) | `N:C:3` | 0 | 0 | lb | ? | 7 (4.15) | 6 | — | pending (phase 6) |
-| 40 | force in line 1 at grid y=44 (end of SW1; book 141(12) = 1692) | `N:1:y=44` | 1,691.7 | 1,691.7 | lb | T | 8 (4.16) | 6 | — | pending (phase 6) |
-| 41 | force in line 1 at grid B (book -2252 (arithmetic slip, erratum p8)) | `N:1:B` | -2,255.6 | -2,255.6 | lb | C | 8 (4.16) | 6 | — | pending (phase 6) |
-| 42 | force in line 1 at grid C (constant B to C) | `N:1:C` | -2,255.6 | -2,255.6 | lb | C | 8 (4.16) | 6 | — | pending (phase 6) |
-| 43 | force in line 1 at grid D (closure; book -2252 + 141(16) = 0) | `N:1:D` | 0 | 0 | lb | ? | 8 (4.16) | 6 | — | pending (phase 6) |
-| 44 | force in line 2 at grid B (book +4679.4) | `N:2:B` | 4,678.6 | 4,678.6 | lb | T | 8 (4.16) | 6 | — | pending (phase 6) |
-| 45 | force in line 2 at grid C (right/above) (from B side; book -3706.8) | `N:2:C+` | -3,708.6 | -3,708.6 | lb | C | 9 (4.16) | 6 | — | pending (phase 6) |
-| 46 | force in line 2 at grid C (left/below) (from D side; figure label -3700 (carries erratum p5)) | `N:2:C-` | -3,708.6 | -3,708.6 | lb | C | 7 (4.16) | 6 | — | pending (phase 6) |
-| 47 | force in line 2 at grid D (closure residual; book -6 (erratum p5)) | `N:2:D` | 0 | 0 | lb | ? | 9 (4.16) | 6 | — | pending (phase 6) |
-| 48 | force in line 3 at grid B (book 2598.2 compression) | `N:3:B` | -2,598.1 | -2,598.1 | lb | C | 9 (4.16) | 6 | — | pending (phase 6) |
-| 49 | force in line 3 at grid C (right/above) (from B side; book +1995.4) | `N:3:C+` | 1,996.2 | 1,996.2 | lb | T | 9 (4.16) | 6 | — | pending (phase 6) |
-| 50 | force in line 3 at grid C (left/below) (from D side; figure label 1987.2 (carries erratum p5)) | `N:3:C-` | 1,996.2 | 1,996.2 | lb | T | 7 (4.16) | 6 | — | pending (phase 6) |
-| 51 | force in line 3 at grid D (closure residual; book "8.2 lb compression" (erratum p5)) | `N:3:D` | 0 | 0 | lb | ? | 9 (4.16) | 6 | — | pending (phase 6) |
+| 1 | force to wall line 1 | `R:1` | 15,000 | 15,000 | lb |  | 2 | 4 | 15,000 | ok |
+| 2 | force to wall line 4 | `R:4` | 15,000 | 15,000 | lb |  | 2 | 4 | 15,000 | ok |
+| 3 | force to wall SW1 (line 1 continuous via strut: split by wall length 12/28) | `Rw:SW1` | 6,428.6 | 6,428.6 | lb |  | 8 | 4 | 6,428.6 | ok |
+| 4 | force to wall SW2 (16/28) | `Rw:SW2` | 8,571.4 | 8,571.4 | lb |  | 8 | 4 | 8,571.4 | ok |
+| 5 | unit shear in wall SW1 | `vw:SW1` | 535.7 | 535.7 | plf |  | 8 | 4 | 535.71 | ok |
+| 6 | unit shear in wall SW2 | `vw:SW2` | 535.7 | 535.7 | plf |  | 8 | 4 | 535.71 | ok |
+| 7 | basic unit shear at grid 1 (right/above), between A and B (15000 / (22 + 16)) | `vb:1+:A-B` | 394.7 | 394.7 | plf |  | 2 (4.13) | 4 | 394.74 | ok |
+| 8 | basic unit shear at grid 1 (right/above), between C and D | `vb:1+:C-D` | 394.7 | 394.7 | plf |  | 2 (4.13) | 4 | 394.74 | ok |
+| 9 | basic unit shear at grid 2 (left/below), between A and B | `vb:2-:A-B` | 305.3 | 305.3 | plf |  | 2 (4.13) | 4 | 305.28 | ok |
+| 10 | basic unit shear at grid 2 (left/below), between C and D | `vb:2-:C-D` | 317.8 | 317.8 | plf |  | 3 (4.13) | 4 | 317.74 | ok |
+| 11 | section shear at grid 2 (right/above) | `V:2+` | 11,800 | 11,800 | lb |  | 3 | 4 | 11,800 | ok |
+| 12 | basic unit shear at grid 2 (right/above), full depth | `vb:2+:*` | 210.7 | 210.7 | plf |  | 3 (4.13) | 4 | 210.71 | ok |
+| 13 | section shear at grid 3 | `V:3` | 8,800 | 8,800 | lb |  | 3 | 4 | 8,800 | ok |
+| 14 | basic unit shear at grid 3, full depth (book prints 8800/56 = +167.9; exact 157.14 (erratum p3)) | `vb:3:*` | 157.14 | 157.14 | plf |  | 3 (4.13) | 4 | 157.14 | ok |
+| 15 | section shear at grid 4 | `V:4` | -15,000 | -15,000 | lb |  | 3 | 4 | -15,000 | ok |
+| 16 | basic unit shear at grid 4 (left/below), full depth | `vb:4-:*` | -267.9 | -267.9 | plf |  | 3 (4.13) | 4 | -267.86 | ok |
+| 17 | basic-field force in line B at grid 2 (exact 5600.2) | `Nb:B:2` | 5,600 | 5,600 | lb | T | 3 | 5 | 5,600.2 | ok |
+| 18 | basic-field force in line C at grid 2 (exact 5699.8; p4: pushes on TD1) | `Nb:C:2` | -5,700 | -5,700 | lb | C | 3 | 5 | -5,699.8 | ok |
+| 19 | TD1 force at support A (reaction on TD at A acts to the right (+x); book V_A = -1771.4) | `tdR:TD1:A` | 1,771.4 | 1,771.4 | lb |  | 4 (4.14) | 6 | 1,771.6 | ok |
+| 20 | TD1 force at support D (reaction on TD at D acts to the left (-x); book V_D = -1871.4) | `tdR:TD1:D` | 1,871.4 | 1,871.4 | lb |  | 5 (4.14) | 6 | 1,871.2 | ok |
+| 21 | TD1 unit shear between A and B | `vtd:TD1:A-B` | -118.1 | -118.1 | plf |  | 4 (4.14) | 6 | -118.11 | ok |
+| 22 | TD1 unit shear between B and C | `vtd:TD1:B-C` | 255.24 | 255.24 | plf |  | 5 (4.14) | 6 | 255.24 | ok |
+| 23 | TD1 unit shear between C and D (book computes -124.8 but uses 124.2 in the net-shear table (erratum p5)) | `vtd:TD1:C-D` | -124.76 | -124.76 | plf |  | 5 (4.14) | 6 | -124.75 | ok |
+| 24 | TD1 aspect ratio (56/15, blocking required) | `aspect:TD1` | 3.73 | 3.73 | - |  | 2 | 6 | 3.73 | ok |
+| 25 | net unit shear at grid 1 (right/above), between A and B | `vnet:1+:A-B` | 394.7 | 394.7 | plf |  | 5 | 6 | 394.74 | ok |
+| 26 | net unit shear at grid 1 (right/above), between C and D | `vnet:1+:C-D` | 394.7 | 394.7 | plf |  | 5 | 6 | 394.74 | ok |
+| 27 | net unit shear at grid 2 (left/below), between A and B | `vnet:2-:A-B` | 305.3 | 305.3 | plf |  | 5 | 6 | 305.28 | ok |
+| 28 | net unit shear at grid 2 (left/below), between C and D | `vnet:2-:C-D` | 317.8 | 317.8 | plf |  | 5 | 6 | 317.74 | ok |
+| 29 | net unit shear at grid 2 (right/above), between A and B | `vnet:2+:A-B` | 92.6 | 92.6 | plf |  | 5 | 6 | 92.61 | ok |
+| 30 | net unit shear at grid 2 (right/above), between B and C (book 465.9) | `vnet:2+:B-C` | 465.95 | 465.95 | plf |  | 5 | 6 | 465.95 | ok |
+| 31 | net unit shear at grid 2 (right/above), between C and D (book 86.5 (uses 124.2, erratum p5)) | `vnet:2+:C-D` | 85.95 | 85.95 | plf |  | 5 | 6 | 85.97 | ok |
+| 32 | net unit shear at grid 3 (left/below), between A and B (book 49.8 (uses vb 167.9, erratum p3)) | `vnet:3-:A-B` | 39.05 | 39.05 | plf |  | 5 | 6 | 39.04 | ok |
+| 33 | net unit shear at grid 3 (left/below), between B and C (book 423.1 (erratum p3)) | `vnet:3-:B-C` | 412.38 | 412.38 | plf |  | 5 | 6 | 412.38 | ok |
+| 34 | net unit shear at grid 3 (left/below), between C and D (book 43.7 (errata p3 and p5)) | `vnet:3-:C-D` | 32.38 | 32.38 | plf |  | 5 | 6 | 32.39 | ok |
+| 35 | net unit shear at grid 3 (right/above), full depth (book 167.9 (erratum p3)) | `vnet:3+:*` | 157.14 | 157.14 | plf |  | 4 (4.14) | 6 | 157.14 | ok |
+| 36 | force in line B at grid 2 | `N:B:2` | 5,600 | 5,600 | lb | T | 6 (4.15) | 6 | 5,600.2 | ok |
+| 37 | force in line B at grid 3 (closes to zero; book labels this F2B) | `N:B:3` | 0 | 0 | lb | ? | 6 (4.15) | 6 | 0 | ok |
+| 38 | force in line C at grid 2 (book prints "+5700 lb compression") | `N:C:2` | -5,700 | -5,700 | lb | C | 6 (4.15) | 6 | -5,699.8 | ok |
+| 39 | force in line C at grid 3 (closes to zero) | `N:C:3` | 0 | 0 | lb | ? | 7 (4.15) | 6 | 0 | ok |
+| 40 | force in line 1 at grid y=44 (end of SW1; book 141(12) = 1692) | `N:1:y=44` | 1,691.7 | 1,691.7 | lb | T | 8 (4.16) | 6 | 1,691.7 | ok |
+| 41 | force in line 1 at grid B (book -2252 (arithmetic slip, erratum p8)) | `N:1:B` | -2,255.6 | -2,255.6 | lb | C | 8 (4.16) | 6 | -2,255.6 | ok |
+| 42 | force in line 1 at grid C (constant B to C) | `N:1:C` | -2,255.6 | -2,255.6 | lb | C | 8 (4.16) | 6 | -2,255.6 | ok |
+| 43 | force in line 1 at grid D (closure; book -2252 + 141(16) = 0) | `N:1:D` | 0 | 0 | lb | ? | 8 (4.16) | 6 | 0 | ok |
+| 44 | force in line 2 at grid B (book +4679.4) | `N:2:B` | 4,678.6 | 4,678.6 | lb | T | 8 (4.16) | 6 | 4,678.8 | ok |
+| 45 | force in line 2 at grid C (right/above) (from B side; book -3706.8) | `N:2:C+` | -3,708.6 | -3,708.6 | lb | C | 9 (4.16) | 6 | -3,708.3 | ok |
+| 46 | force in line 2 at grid C (left/below) (from D side; figure label -3700 (carries erratum p5)) | `N:2:C-` | -3,708.6 | -3,708.6 | lb | C | 7 (4.16) | 6 | -3,708.3 | ok |
+| 47 | force in line 2 at grid D (closure residual; book -6 (erratum p5)) | `N:2:D` | 0 | 0 | lb | ? | 9 (4.16) | 6 | 0 | ok |
+| 48 | force in line 3 at grid B (book 2598.2 compression) | `N:3:B` | -2,598.1 | -2,598.1 | lb | C | 9 (4.16) | 6 | -2,598.3 | ok |
+| 49 | force in line 3 at grid C (right/above) (from B side; book +1995.4) | `N:3:C+` | 1,996.2 | 1,996.2 | lb | T | 9 (4.16) | 6 | 1,996 | ok |
+| 50 | force in line 3 at grid C (left/below) (from D side; figure label 1987.2 (carries erratum p5)) | `N:3:C-` | 1,996.2 | 1,996.2 | lb | T | 7 (4.16) | 6 | 1,996 | ok |
+| 51 | force in line 3 at grid D (closure residual; book "8.2 lb compression" (erratum p5)) | `N:3:D` | 0 | 0 | lb | ? | 9 (4.16) | 6 | 0 | ok |
 
 **Errata**
 - p3: v3 = 8800/56 printed as +167.9 plf (value for grid 3 at 12 ft from grid 2, not 15 ft). Carried into Fig 4.13-4.16 and the grid-3 net shears on p5 (49.8, 423.1, 43.7). Member forces on line 3 do not depend on it. Used: vb at 3 = 157.14 plf; vnet 3- = 39.05 / 412.38 / 32.38 plf.
@@ -479,79 +479,79 @@ PDF `The Analysis of Irregular Shaped Ch 5.1 Example 5.1.pdf`, pages 8-21.
 
 | # | Quantity | Key | Book | Tool sign | Unit | T/C | Page (fig) | Phase | Tool | Status |
 |---|---|---|---|---|---|---|---|---|---|---|
-| 1 | force to wall line 1 | `R:1` | 16,000 | 16,000 | lb |  | 15 | 4 | — | pending (phase 4) |
-| 2 | force to wall line 6 | `R:6` | 16,000 | 16,000 | lb |  | 15 | 4 | — | pending (phase 4) |
-| 3 | section shear at grid 2 | `V:2` | 13,000 | 13,000 | lb |  | 15 | 4 | — | pending (phase 4) |
-| 4 | section shear at grid 3 | `V:3` | 10,600 | 10,600 | lb |  | 15 | 4 | — | pending (phase 4) |
-| 5 | section shear at grid 4 | `V:4` | 8,200 | 8,200 | lb |  | 15 | 4 | — | pending (phase 4) |
-| 6 | basic unit shear at grid 1 (right/above), full depth | `vb:1+:*` | 320 | 320 | plf |  | 15 (5.5) | 4 | — | pending (phase 4) |
-| 7 | basic unit shear at grid 2 (left/below), full depth | `vb:2-:*` | 260 | 260 | plf |  | 15 (5.5) | 4 | — | pending (phase 4) |
-| 8 | basic unit shear at grid 4 (right/above), full depth | `vb:4+:*` | 164 | 164 | plf |  | 15 (5.5) | 4 | — | pending (phase 4) |
-| 9 | basic unit shear at grid 5, full depth | `vb:5:*` | 104 | 104 | plf |  | 16 (5.5) | 4 | — | pending (phase 4) |
-| 10 | basic unit shear at grid 4 (left/below), between A and B (V4 split to the bands by width: 3153.8 lb / 10) | `vb:4-:A-B` | 315.4 | 315.4 | plf |  | 16 (5.8) | 4 | — | pending (phase 4) |
-| 11 | basic unit shear at grid 4 (left/below), between C and D (5046.2 lb / 16) | `vb:4-:C-D` | 315.4 | 315.4 | plf |  | 16 (5.8) | 4 | — | pending (phase 4) |
-| 12 | basic unit shear at grid 3, between A and B (element I/II, 4629.8 lb / 10 (load 123 plf in the band)) | `vb:3:A-B` | 463 | 463 | plf |  | 16 (5.8) | 4 | — | pending (phase 4) |
-| 13 | basic unit shear at grid 3, between C and D (element III/IV, 5970.2 lb / 16 (load 77 plf in the band)) | `vb:3:C-D` | 373.1 | 373.1 | plf |  | 17 (5.8) | 4 | — | pending (phase 4) |
-| 14 | basic unit shear at grid 2 (right/above), between A and B (6105.8 lb / 10; the averaged Fig 5.5 value 500 plf is superseded) | `vb:2+:A-B` | 610.6 | 610.6 | plf |  | 17 (5.8) | 4 | — | pending (phase 4) |
-| 15 | basic unit shear at grid 2 (right/above), between C and D (6894.2 lb / 16) | `vb:2+:C-D` | 430.9 | 430.9 | plf |  | 17 (5.8) | 4 | — | pending (phase 4) |
-| 16 | basic-field force in line A at grid 3 (book F3 = M3 / 50, inflection point at grid 3) | `Nb:A:3` | -7,182 | -7,182 | lb | C | 16 (5.8) | 5 | — | pending (phase 5) |
-| 17 | basic-field force in line D at grid 3 | `Nb:D:3` | 7,182 | 7,182 | lb | T | 16 (5.8) | 5 | — | pending (phase 5) |
-| 18 | basic-field force in line A at grid 4 | `Nb:A:4` | -11,852 | -11,852 | lb | C | 16 (5.8) | 5 | — | pending (phase 5) |
-| 19 | basic-field force in line B at grid 4 (disrupted chord into TD2) | `Nb:B:4` | 4,670.1 | 4,670.1 | lb | T | 16 (5.8) | 5 | — | pending (phase 5) |
-| 20 | basic-field force in line C at grid 4 (disrupted chord into TD2) | `Nb:C:4` | -4,131.2 | -4,131.2 | lb | C | 17 (5.8) | 5 | — | pending (phase 5) |
-| 21 | basic-field force in line D at grid 4 | `Nb:D:4` | 11,313 | 11,313 | lb | T | 17 (5.8) | 5 | — | pending (phase 5) |
-| 22 | basic-field force in line A at grid 2 (book prints -740.6 (opposite to its assumed direction); Fig 5.8 / 5.11 give 740.6) | `Nb:A:2` | -740.6 | -740.6 | lb | C | 17 (5.8) | 5 | — | pending (phase 5) |
-| 23 | basic-field force in line B at grid 2 (disrupted chord into TD1) | `Nb:B:2` | -6,441.4 | -6,441.4 | lb | C | 17 (5.8) | 5 | — | pending (phase 5) |
-| 24 | basic-field force in line C at grid 2 (disrupted chord into TD1) | `Nb:C:2` | 4,824.2 | 4,824.2 | lb | T | 17 (5.8) | 5 | — | pending (phase 5) |
-| 25 | basic-field force in line D at grid 2 | `Nb:D:2` | 2,357.8 | 2,357.8 | lb | T | 17 (5.8) | 5 | — | pending (phase 5) |
-| 26 | TD1 force at support A (force on TD at A acts to the right (+x)) | `tdR:TD1:A` | 3,609.4 | 3,609.4 | lb |  | 18 (5.9) | 6 | — | pending (phase 6) |
-| 27 | TD1 force at support D (force on TD at D acts to the left (-x); see errata) | `tdR:TD1:D` | 1,992.2 | 1,992.2 | lb |  | 18 (5.9) | 6 | — | pending (phase 6) |
-| 28 | TD1 unit shear between A and B | `vtd:TD1:A-B` | -240.6 | -240.6 | plf |  | 18 (5.9) | 6 | — | pending (phase 6) |
-| 29 | TD1 unit shear between B and C | `vtd:TD1:B-C` | 188.8 | 188.8 | plf |  | 18 (5.9) | 6 | — | pending (phase 6) |
-| 30 | TD1 unit shear between C and D | `vtd:TD1:C-D` | -132.8 | -132.8 | plf |  | 18 (5.9) | 6 | — | pending (phase 6) |
-| 31 | TD2 force at support A (force on TD at A acts to the right (+x)) | `tdR:TD2:A` | 2,414.1 | 2,414.1 | lb |  | 19 (5.10) | 6 | — | pending (phase 6) |
-| 32 | TD2 force at support D (force on TD at D acts to the left (-x)) | `tdR:TD2:D` | 1,875.2 | 1,875.2 | lb |  | 19 (5.10) | 6 | — | pending (phase 6) |
-| 33 | TD2 unit shear between A and B (printed unsigned; text and figure say negative) | `vtd:TD2:A-B` | -160.9 | -160.9 | plf |  | 19 (5.10) | 6 | — | pending (phase 6) |
-| 34 | TD2 unit shear between B and C | `vtd:TD2:B-C` | 150.4 | 150.4 | plf |  | 19 (5.10) | 6 | — | pending (phase 6) |
-| 35 | TD2 unit shear between C and D (printed unsigned as v_A; text and figure say negative) | `vtd:TD2:C-D` | -125 | -125 | plf |  | 19 (5.10) | 6 | — | pending (phase 6) |
-| 36 | TD1 aspect ratio (50/15, blocking required (also stated p15)) | `aspect:TD1` | 3.33 | 3.33 | - |  | 21 | 6 | — | pending (phase 6) |
-| 37 | TD2 aspect ratio | `aspect:TD2` | 3.33 | 3.33 | - |  | 21 | 6 | — | pending (phase 6) |
-| 38 | net unit shear at grid 1 (right/above), between A and B | `vnet:1+:A-B` | 79.4 | 79.4 | plf |  | 18 | 6 | — | pending (phase 6) |
-| 39 | net unit shear at grid 1 (right/above), between B and C | `vnet:1+:B-C` | 508.8 | 508.8 | plf |  | 18 | 6 | — | pending (phase 6) |
-| 40 | net unit shear at grid 1 (right/above), between C and D | `vnet:1+:C-D` | 187.2 | 187.2 | plf |  | 18 | 6 | — | pending (phase 6) |
-| 41 | net unit shear at grid 2 (left/below), between A and B | `vnet:2-:A-B` | 19.4 | 19.4 | plf |  | 18 | 6 | — | pending (phase 6) |
-| 42 | net unit shear at grid 2 (left/below), between B and C | `vnet:2-:B-C` | 448.8 | 448.8 | plf |  | 18 | 6 | — | pending (phase 6) |
-| 43 | net unit shear at grid 2 (left/below), between C and D | `vnet:2-:C-D` | 127.2 | 127.2 | plf |  | 18 | 6 | — | pending (phase 6) |
-| 44 | net unit shear at grid 4 (right/above), between A and B | `vnet:4+:A-B` | 3.1 | 3.1 | plf |  | 19 | 6 | — | pending (phase 6) |
-| 45 | net unit shear at grid 4 (right/above), between B and C | `vnet:4+:B-C` | 314.4 | 314.4 | plf |  | 19 | 6 | — | pending (phase 6) |
-| 46 | net unit shear at grid 4 (right/above), between C and D | `vnet:4+:C-D` | 39 | 39 | plf |  | 19 | 6 | — | pending (phase 6) |
-| 47 | net unit shear at grid 5 (left/below), between A and B | `vnet:5-:A-B` | -56.9 | -56.9 | plf |  | 19 | 6 | — | pending (phase 6) |
-| 48 | net unit shear at grid 5 (left/below), between B and C | `vnet:5-:B-C` | 254.4 | 254.4 | plf |  | 19 | 6 | — | pending (phase 6) |
-| 49 | net unit shear at grid 5 (left/below), between C and D | `vnet:5-:C-D` | -21 | -21 | plf |  | 19 | 6 | — | pending (phase 6) |
-| 50 | force in line 2 at grid C | `N:2:C` | 4,859.2 | 4,859.2 | lb | T | 19 (5.9) | 6 | — | pending (phase 6) |
-| 51 | force in line 2 at grid B | `N:2:B` | -5,912 | -5,912 | lb | C | 19 (5.9) | 6 | — | pending (phase 6) |
-| 52 | force in line 2 at grid A (closes; book uses 610 for 610.6 and still writes 0) | `N:2:A` | 0 | 0 | lb | ? | 19 (5.9) | 6 | — | pending (phase 6) |
-| 53 | force in line 4 at grid C (book magnitude, no T/C word; sign by statics (C), plotted on the opposite side to Fig 5.9 grid-2 T) | `N:4:C` | -4,422.4 | -4,422.4 | lb | ? | 20 (5.10) | 6 | — | pending (phase 6) |
-| 54 | force in line 4 at grid B (book prints -3123.2 (its own running sign); statics gives T) | `N:4:B` | 3,123.2 | 3,123.2 | lb | ? | 20 (5.10) | 6 | — | pending (phase 6) |
-| 55 | force in line 4 at grid A | `N:4:A` | 0 | 0 | lb | ? | 20 (5.10) | 6 | — | pending (phase 6) |
-| 56 | force in line 5 at grid C (statics gives T) | `N:5:C` | 2,000 | 2,000 | lb | ? | 20 (5.10) | 6 | — | pending (phase 6) |
-| 57 | force in line 5 at grid B (book prints +1609.6; statics gives C) | `N:5:B` | -1,609.6 | -1,609.6 | lb | ? | 20 (5.10) | 6 | — | pending (phase 6) |
-| 58 | force in line 5 at grid A | `N:5:A` | 0 | 0 | lb | ? | 20 (5.10) | 6 | — | pending (phase 6) |
-| 59 | force in line B at grid 2 (book 6441; sense from element II (Fig 5.8)) | `N:B:2` | -6,441.4 | -6,441.4 | lb | C | 20 (5.11) | 6 | — | pending (phase 6) |
-| 60 | force in line B at grid 3 (inflection point) | `N:B:3` | 0 | 0 | lb | ? | 20 (5.11) | 6 | — | pending (phase 6) |
-| 61 | force in line B at grid 4 (table 4670.4 (rounded shears), element value 4670.1, Fig 5.11 misprints 4760.4) | `N:B:4` | 4,670.1 | 4,670.1 | lb | T | 20 (5.11) | 6 | — | pending (phase 6) |
-| 62 | force in line B at grid 5 (diagram closes) | `N:B:5` | 0 | 0 | lb | ? | 20 (5.11) | 6 | — | pending (phase 6) |
-| 63 | force in line C at grid 2 (book 4824) | `N:C:2` | 4,824.2 | 4,824.2 | lb | T | 20 (5.11) | 6 | — | pending (phase 6) |
-| 64 | force in line C at grid 3 (inflection point) | `N:C:3` | 0 | 0 | lb | ? | 20 (5.11) | 6 | — | pending (phase 6) |
-| 65 | force in line C at grid 4 (book -4131) | `N:C:4` | -4,131.2 | -4,131.2 | lb | C | 20 (5.11) | 6 | — | pending (phase 6) |
-| 66 | force in line C at grid 5 (diagram closes) | `N:C:5` | 0 | 0 | lb | ? | 20 (5.11) | 6 | — | pending (phase 6) |
-| 67 | force in line A at grid 2 | `N:A:2` | -740.6 | -740.6 | lb | C | 21 (5.11) | 6 | — | pending (phase 6) |
-| 68 | force in line A at grid 3 | `N:A:3` | -7,182.2 | -7,182.2 | lb | C | 21 (5.11) | 6 | — | pending (phase 6) |
-| 69 | force in line A at grid 4 | `N:A:4` | -11,852.6 | -11,852.6 | lb | C | 21 (5.11) | 6 | — | pending (phase 6) |
-| 70 | force in line A at grid 5 (triangles +1.2 / -404.8 in 4-5; equals the no-opening value M5/50 = 11,448) | `N:A:5` | -11,449 | -11,449 | lb | C | 21 (5.11) | 6 | — | pending (phase 6) |
-| 71 | force in line D at grid 2 (book 2358) | `N:D:2` | 2,357.8 | 2,357.8 | lb | T | 21 (5.11) | 6 | — | pending (phase 6) |
-| 72 | force in line D at grid 4 | `N:D:4` | 11,313 | 11,313 | lb | T | 21 (5.11) | 6 | — | pending (phase 6) |
-| 73 | force in line D at grid 5 (see errata: book 11,433 then 11,448) | `N:D:5` | 11,448 | 11,448 | lb | T | 21 (5.11) | 6 | — | pending (phase 6) |
+| 1 | force to wall line 1 | `R:1` | 16,000 | 16,000 | lb |  | 15 | 4 | 16,000 | ok |
+| 2 | force to wall line 6 | `R:6` | 16,000 | 16,000 | lb |  | 15 | 4 | 16,000 | ok |
+| 3 | section shear at grid 2 | `V:2` | 13,000 | 13,000 | lb |  | 15 | 4 | 13,000 | ok |
+| 4 | section shear at grid 3 | `V:3` | 10,600 | 10,600 | lb |  | 15 | 4 | 10,600 | ok |
+| 5 | section shear at grid 4 | `V:4` | 8,200 | 8,200 | lb |  | 15 | 4 | 8,200 | ok |
+| 6 | basic unit shear at grid 1 (right/above), full depth | `vb:1+:*` | 320 | 320 | plf |  | 15 (5.5) | 4 | 320 | ok |
+| 7 | basic unit shear at grid 2 (left/below), full depth | `vb:2-:*` | 260 | 260 | plf |  | 15 (5.5) | 4 | 260 | ok |
+| 8 | basic unit shear at grid 4 (right/above), full depth | `vb:4+:*` | 164 | 164 | plf |  | 15 (5.5) | 4 | 164 | ok |
+| 9 | basic unit shear at grid 5, full depth | `vb:5:*` | 104 | 104 | plf |  | 16 (5.5) | 4 | 104 | ok |
+| 10 | basic unit shear at grid 4 (left/below), between A and B (V4 split to the bands by width: 3153.8 lb / 10) | `vb:4-:A-B` | 315.4 | 315.4 | plf |  | 16 (5.8) | 4 | 315.38 | ok |
+| 11 | basic unit shear at grid 4 (left/below), between C and D (5046.2 lb / 16) | `vb:4-:C-D` | 315.4 | 315.4 | plf |  | 16 (5.8) | 4 | 315.38 | ok |
+| 12 | basic unit shear at grid 3, between A and B (element I/II, 4629.8 lb / 10 (load 123 plf in the band)) | `vb:3:A-B` | 463 | 463 | plf |  | 16 (5.8) | 4 | 462.98 | ok |
+| 13 | basic unit shear at grid 3, between C and D (element III/IV, 5970.2 lb / 16 (load 77 plf in the band)) | `vb:3:C-D` | 373.1 | 373.1 | plf |  | 17 (5.8) | 4 | 373.13 | ok |
+| 14 | basic unit shear at grid 2 (right/above), between A and B (6105.8 lb / 10; the averaged Fig 5.5 value 500 plf is superseded) | `vb:2+:A-B` | 610.6 | 610.6 | plf |  | 17 (5.8) | 4 | 610.58 | ok |
+| 15 | basic unit shear at grid 2 (right/above), between C and D (6894.2 lb / 16) | `vb:2+:C-D` | 430.9 | 430.9 | plf |  | 17 (5.8) | 4 | 430.88 | ok |
+| 16 | basic-field force in line A at grid 3 (book F3 = M3 / 50, inflection point at grid 3) | `Nb:A:3` | -7,182 | -7,182 | lb | C | 16 (5.8) | 5 | -7,182 | ok |
+| 17 | basic-field force in line D at grid 3 | `Nb:D:3` | 7,182 | 7,182 | lb | T | 16 (5.8) | 5 | 7,182 | ok |
+| 18 | basic-field force in line A at grid 4 | `Nb:A:4` | -11,852 | -11,852 | lb | C | 16 (5.8) | 5 | -11,852.2 | ok |
+| 19 | basic-field force in line B at grid 4 (disrupted chord into TD2) | `Nb:B:4` | 4,670.1 | 4,670.1 | lb | T | 16 (5.8) | 5 | 4,670.2 | ok |
+| 20 | basic-field force in line C at grid 4 (disrupted chord into TD2) | `Nb:C:4` | -4,131.2 | -4,131.2 | lb | C | 17 (5.8) | 5 | -4,131.1 | ok |
+| 21 | basic-field force in line D at grid 4 | `Nb:D:4` | 11,313 | 11,313 | lb | T | 17 (5.8) | 5 | 11,313.1 | ok |
+| 22 | basic-field force in line A at grid 2 (book prints -740.6 (opposite to its assumed direction); Fig 5.8 / 5.11 give 740.6) | `Nb:A:2` | -740.6 | -740.6 | lb | C | 17 (5.8) | 5 | -740.58 | ok |
+| 23 | basic-field force in line B at grid 2 (disrupted chord into TD1) | `Nb:B:2` | -6,441.4 | -6,441.4 | lb | C | 17 (5.8) | 5 | -6,441.4 | ok |
+| 24 | basic-field force in line C at grid 2 (disrupted chord into TD1) | `Nb:C:2` | 4,824.2 | 4,824.2 | lb | T | 17 (5.8) | 5 | 4,824.1 | ok |
+| 25 | basic-field force in line D at grid 2 | `Nb:D:2` | 2,357.8 | 2,357.8 | lb | T | 17 (5.8) | 5 | 2,357.9 | ok |
+| 26 | TD1 force at support A (force on TD at A acts to the right (+x)) | `tdR:TD1:A` | 3,609.4 | 3,609.4 | lb |  | 18 (5.9) | 6 | 3,609.4 | ok |
+| 27 | TD1 force at support D (force on TD at D acts to the left (-x); see errata) | `tdR:TD1:D` | 1,992.2 | 1,992.2 | lb |  | 18 (5.9) | 6 | 1,992.1 | ok |
+| 28 | TD1 unit shear between A and B | `vtd:TD1:A-B` | -240.6 | -240.6 | plf |  | 18 (5.9) | 6 | -240.63 | ok |
+| 29 | TD1 unit shear between B and C | `vtd:TD1:B-C` | 188.8 | 188.8 | plf |  | 18 (5.9) | 6 | 188.8 | ok |
+| 30 | TD1 unit shear between C and D | `vtd:TD1:C-D` | -132.8 | -132.8 | plf |  | 18 (5.9) | 6 | -132.81 | ok |
+| 31 | TD2 force at support A (force on TD at A acts to the right (+x)) | `tdR:TD2:A` | 2,414.1 | 2,414.1 | lb |  | 19 (5.10) | 6 | 2,414.2 | ok |
+| 32 | TD2 force at support D (force on TD at D acts to the left (-x)) | `tdR:TD2:D` | 1,875.2 | 1,875.2 | lb |  | 19 (5.10) | 6 | 1,875.1 | ok |
+| 33 | TD2 unit shear between A and B (printed unsigned; text and figure say negative) | `vtd:TD2:A-B` | -160.9 | -160.9 | plf |  | 19 (5.10) | 6 | -160.95 | ok |
+| 34 | TD2 unit shear between B and C | `vtd:TD2:B-C` | 150.4 | 150.4 | plf |  | 19 (5.10) | 6 | 150.4 | ok |
+| 35 | TD2 unit shear between C and D (printed unsigned as v_A; text and figure say negative) | `vtd:TD2:C-D` | -125 | -125 | plf |  | 19 (5.10) | 6 | -125.01 | ok |
+| 36 | TD1 aspect ratio (50/15, blocking required (also stated p15)) | `aspect:TD1` | 3.33 | 3.33 | - |  | 21 | 6 | 3.33 | ok |
+| 37 | TD2 aspect ratio | `aspect:TD2` | 3.33 | 3.33 | - |  | 21 | 6 | 3.33 | ok |
+| 38 | net unit shear at grid 1 (right/above), between A and B | `vnet:1+:A-B` | 79.4 | 79.4 | plf |  | 18 | 6 | 79.37 | ok |
+| 39 | net unit shear at grid 1 (right/above), between B and C | `vnet:1+:B-C` | 508.8 | 508.8 | plf |  | 18 | 6 | 508.8 | ok |
+| 40 | net unit shear at grid 1 (right/above), between C and D | `vnet:1+:C-D` | 187.2 | 187.2 | plf |  | 18 | 6 | 187.19 | ok |
+| 41 | net unit shear at grid 2 (left/below), between A and B | `vnet:2-:A-B` | 19.4 | 19.4 | plf |  | 18 | 6 | 19.37 | ok |
+| 42 | net unit shear at grid 2 (left/below), between B and C | `vnet:2-:B-C` | 448.8 | 448.8 | plf |  | 18 | 6 | 448.8 | ok |
+| 43 | net unit shear at grid 2 (left/below), between C and D | `vnet:2-:C-D` | 127.2 | 127.2 | plf |  | 18 | 6 | 127.19 | ok |
+| 44 | net unit shear at grid 4 (right/above), between A and B | `vnet:4+:A-B` | 3.1 | 3.1 | plf |  | 19 | 6 | 3.05 | ok |
+| 45 | net unit shear at grid 4 (right/above), between B and C | `vnet:4+:B-C` | 314.4 | 314.4 | plf |  | 19 | 6 | 314.4 | ok |
+| 46 | net unit shear at grid 4 (right/above), between C and D | `vnet:4+:C-D` | 39 | 39 | plf |  | 19 | 6 | 38.99 | ok |
+| 47 | net unit shear at grid 5 (left/below), between A and B | `vnet:5-:A-B` | -56.9 | -56.9 | plf |  | 19 | 6 | -56.95 | ok |
+| 48 | net unit shear at grid 5 (left/below), between B and C | `vnet:5-:B-C` | 254.4 | 254.4 | plf |  | 19 | 6 | 254.4 | ok |
+| 49 | net unit shear at grid 5 (left/below), between C and D | `vnet:5-:C-D` | -21 | -21 | plf |  | 19 | 6 | -21.01 | ok |
+| 50 | force in line 2 at grid C | `N:2:C` | 4,859.2 | 4,859.2 | lb | T | 19 (5.9) | 6 | 4,859.1 | ok |
+| 51 | force in line 2 at grid B | `N:2:B` | -5,912 | -5,912 | lb | C | 19 (5.9) | 6 | -5,912.1 | ok |
+| 52 | force in line 2 at grid A (closes; book uses 610 for 610.6 and still writes 0) | `N:2:A` | 0 | 0 | lb | ? | 19 (5.9) | 6 | 0 | ok |
+| 53 | force in line 4 at grid C (book magnitude, no T/C word; sign by statics (C), plotted on the opposite side to Fig 5.9 grid-2 T) | `N:4:C` | -4,422.4 | -4,422.4 | lb | ? | 20 (5.10) | 6 | -4,422.3 | ok |
+| 54 | force in line 4 at grid B (book prints -3123.2 (its own running sign); statics gives T) | `N:4:B` | 3,123.2 | 3,123.2 | lb | ? | 20 (5.10) | 6 | 3,123.3 | ok |
+| 55 | force in line 4 at grid A | `N:4:A` | 0 | 0 | lb | ? | 20 (5.10) | 6 | 0 | ok |
+| 56 | force in line 5 at grid C (statics gives T) | `N:5:C` | 2,000 | 2,000 | lb | ? | 20 (5.10) | 6 | 2,000.1 | ok |
+| 57 | force in line 5 at grid B (book prints +1609.6; statics gives C) | `N:5:B` | -1,609.6 | -1,609.6 | lb | ? | 20 (5.10) | 6 | -1,609.5 | ok |
+| 58 | force in line 5 at grid A | `N:5:A` | 0 | 0 | lb | ? | 20 (5.10) | 6 | 0 | ok |
+| 59 | force in line B at grid 2 (book 6441; sense from element II (Fig 5.8)) | `N:B:2` | -6,441.4 | -6,441.4 | lb | C | 20 (5.11) | 6 | -6,441.4 | ok |
+| 60 | force in line B at grid 3 (inflection point) | `N:B:3` | 0 | 0 | lb | ? | 20 (5.11) | 6 | 0 | ok |
+| 61 | force in line B at grid 4 (table 4670.4 (rounded shears), element value 4670.1, Fig 5.11 misprints 4760.4) | `N:B:4` | 4,670.1 | 4,670.1 | lb | T | 20 (5.11) | 6 | 4,670.2 | ok |
+| 62 | force in line B at grid 5 (diagram closes) | `N:B:5` | 0 | 0 | lb | ? | 20 (5.11) | 6 | 0 | ok |
+| 63 | force in line C at grid 2 (book 4824) | `N:C:2` | 4,824.2 | 4,824.2 | lb | T | 20 (5.11) | 6 | 4,824.1 | ok |
+| 64 | force in line C at grid 3 (inflection point) | `N:C:3` | 0 | 0 | lb | ? | 20 (5.11) | 6 | 0 | ok |
+| 65 | force in line C at grid 4 (book -4131) | `N:C:4` | -4,131.2 | -4,131.2 | lb | C | 20 (5.11) | 6 | -4,131.1 | ok |
+| 66 | force in line C at grid 5 (diagram closes) | `N:C:5` | 0 | 0 | lb | ? | 20 (5.11) | 6 | 0 | ok |
+| 67 | force in line A at grid 2 | `N:A:2` | -740.6 | -740.6 | lb | C | 21 (5.11) | 6 | -740.58 | ok |
+| 68 | force in line A at grid 3 | `N:A:3` | -7,182.2 | -7,182.2 | lb | C | 21 (5.11) | 6 | -7,182 | ok |
+| 69 | force in line A at grid 4 | `N:A:4` | -11,852.6 | -11,852.6 | lb | C | 21 (5.11) | 6 | -11,852.2 | ok |
+| 70 | force in line A at grid 5 (triangles +1.2 / -404.8 in 4-5; equals the no-opening value M5/50 = 11,448) | `N:A:5` | -11,449 | -11,449 | lb | C | 21 (5.11) | 6 | -11,448 | ok |
+| 71 | force in line D at grid 2 (book 2358) | `N:D:2` | 2,357.8 | 2,357.8 | lb | T | 21 (5.11) | 6 | 2,357.9 | ok |
+| 72 | force in line D at grid 4 | `N:D:4` | 11,313 | 11,313 | lb | T | 21 (5.11) | 6 | 11,313.1 | ok |
+| 73 | force in line D at grid 5 (see errata: book 11,433 then 11,448) | `N:D:5` | 11,448 | 11,448 | lb | T | 21 (5.11) | 6 | 11,448 | ok |
 
 **Errata**
 - p11: Fig 5.8 labels the shear sums at grids 3 and 4 as "ΣV2". Used: V:3 = 10,600 and V:4 = 8,200 lb.

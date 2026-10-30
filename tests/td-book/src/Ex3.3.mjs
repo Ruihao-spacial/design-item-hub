@@ -25,6 +25,11 @@ export default {
       { line: 'B/C', mark: 'SW3', axis: 'y', at: 0, from: 57, to: 65 },
       { line: 'B/C', mark: 'SW4', axis: 'y', at: 0, from: 110, to: 125 },
     ],
+    // Book sub-diaphragms (p3, Fig 3.17): band 1-2 spans B to A; band 2-4 spans C to A
+    diaphragms: [
+      { mark: 'D1', x: [0, 25], y: [15, 50], supports: ['B', 'A'] },
+      { mark: 'D2', x: [25, 125], y: [0, 50], supports: ['C', 'A'] },
+    ],
     tds: [
       { mark: 'TD1', x: [25, 45], y: [0, 50], supports: ['A', 'C'], loads: [{ grid: 'B', side: '-' }] },
     ],

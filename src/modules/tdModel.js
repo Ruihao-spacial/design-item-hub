@@ -15,9 +15,9 @@ export const newTd = (mark, x1, x2, y1, y2, dir) => ({
 // A diaphragm for one load direction: its rectangle (clipped to the sheathed plan) spans between two support lines
 export const newDiaphragm = (mark, dir, x1, x2, y1, y2, supports) => ({
   id: uid('dg'), mark: s(mark), dir: dir === 'x' ? 'x' : 'y', x1: s(x1), x2: s(x2), y1: s(y1), y2: s(y2),
-  supports: supports || [], sheathing: '', blocked: null,
+  supports: supports || [], sheathing: '', blocked: null, bandSplit: '',
 });
-export const newLoad = (acts, mode) => ({ id: uid('ld'), acts: acts || '-y', mode: mode || 'seismic', psf: '', edgeId: '', segments: [] });
+export const newLoad = (acts, mode) => ({ id: uid('ld'), acts: acts || '-y', mode: mode || 'seismic', kind: '', psf: '', edgeId: '', segments: [] });
 export const newSegment = (from, to, w) => ({ from: s(from), to: s(to), w: s(w), w2: '' });
 
 // A new item: a 100 × 50 ft rectangle on grids 1-2 / A-B, seismic load and one diaphragm in each direction

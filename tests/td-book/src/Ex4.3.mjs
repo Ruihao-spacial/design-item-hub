@@ -24,6 +24,8 @@ export default {
       { line: '1', mark: 'SW2', axis: 'x', at: 0, from: 0, to: 16 },
       { line: '4', mark: 'SW3', axis: 'x', at: 150, from: 0, to: 56 },
     ],
+    // Whole plan. Opening at wall line 1: the book shares the section shear by band width at line 1 (auto rule, p3)
+    diaphragms: [{ mark: 'D1', x: [0, 150], y: [0, 56], supports: ['1', '4'] }],
     tds: [
       { mark: 'TD1', x: [16, 31], y: [0, 56], supports: ['A', 'D'],
         loads: [{ grid: 'B', side: '-' }, { grid: 'C', side: '-' }] },

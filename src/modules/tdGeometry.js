@@ -34,10 +34,10 @@ export function parsePlan(inputs) {
     x1: Math.min(num(d.x1), num(d.x2)), x2: Math.max(num(d.x1), num(d.x2)),
     y1: Math.min(num(d.y1), num(d.y2)), y2: Math.max(num(d.y1), num(d.y2)),
     supports: (d.supports || []).map(id => gridById.get(id) || null),
-    sheathing: d.sheathing || '', blocked: d.blocked,
+    sheathing: d.sheathing || '', blocked: d.blocked, bandSplit: d.bandSplit || '',
   }));
   const loads = (inputs.loads || []).map(l => ({
-    id: l.id, acts: ['+x', '-x', '+y', '-y'].includes(l.acts) ? l.acts : '-y', mode: ['seismic', 'area', 'line'].includes(l.mode) ? l.mode : 'line',
+    id: l.id, acts: ['+x', '-x', '+y', '-y'].includes(l.acts) ? l.acts : '-y', mode: ['seismic', 'area', 'line'].includes(l.mode) ? l.mode : 'line', kind: l.kind === 'E' || l.kind === 'W' ? l.kind : '',
     psf: num(l.psf), edge: l.edgeId ? gridById.get(l.edgeId) || null : null,
     segments: (l.segments || []).map(s => ({ from: num(s.from), to: num(s.to), w: num(s.w), w2: s.w2 === '' || s.w2 === undefined ? null : num(s.w2) })),
   }));
@@ -277,4 +277,58 @@ export function planBounds(plan) {
   if (!xs.length) xs.push(0, 100);
   if (!ys.length) ys.push(0, 50);
   return { x1: Math.min(...xs), x2: Math.max(...xs), y1: Math.min(...ys), y2: Math.max(...ys) };
+}
+
+// A drawn TD in the skill's local frame (wood-diaph-transfer, SKILL.md §2): y along the TD span from the bottom
+// support (y = 0) to the top support (y = W), x along the TD length L (edge x1 = lower plan coordinate).
+// Plan → local keeps the plan axes (a swap of x and y keeps the shear sign). A cantilever overhang must lie below
+// the bottom support (y1 < 0): an overhang on the high side mirrors y (ySign = −1), and plan unit shears / support
+// forces then change sign into and out of the engine; P and member forces do not.
+// Returns { ok, issues[], geometry: { td_support, td_span, td_length, td_y1, td_side1, td_has_load2, td_y2, td_side2 },
+//   spanAxis, ySign, bottom, top (grids), edgeX1, edgeX2 (plan coordinates), loads: [{ grid, y, side }] (top first) }.
+export function tdFrame(t) {
+  const issues = [];
+  const out = { ok: false, issues, geometry: null };
+  if (t.supports.length !== 2 || t.supports.some(g => !g || !fin(g.at)) || t.supports[0].axis !== t.supports[1].axis) {
+    issues.push('pick two support lines that run the same way');
+    return out;
+  }
+  const ax = t.supports[0].axis; // grids of axis 'x' sit at x = const → the TD spans along plan x
+  const [sLo, sHi] = t.supports.map(g => g.at).sort((a, b) => a - b);
+  const [lo, hi] = ax === 'x' ? [t.x1, t.x2] : [t.y1, t.y2];
+  const [e1, e2] = ax === 'x' ? [t.y1, t.y2] : [t.x1, t.x2];
+  const W = sHi - sLo, L = e2 - e1;
+  let ySign = 1;
+  if (t.overhang) {
+    const mid = (t.overhang[0] + t.overhang[1]) / 2;
+    if (mid > sHi - EPS) ySign = -1;
+    else if (!(mid < sLo + EPS)) issues.push('the overhang must lie outside the two supports');
+  }
+  const loc = s => (ySign > 0 ? s - sLo : sHi - s);
+  const [bottom, top] = ySign > 0 ? [sLo, sHi] : [sHi, sLo];
+  const gridAtPos = at => t.supports.find(g => Math.abs(g.at - at) < EPS);
+  const loads = t.loads.filter(l => l.grid && fin(l.grid.at)).map(l => ({ grid: l.grid, y: r2(loc(l.grid.at)), side: l.side === '-' ? -1 : 1 }))
+    .sort((a, b) => b.y - a.y);
+  Object.assign(out, { spanAxis: ax, ySign, bottom: gridAtPos(bottom), top: gridAtPos(top), edgeX1: e1, edgeX2: e2, loads });
+  if (!(W > EPS)) issues.push('the two supports are the same line');
+  if (!(L > EPS)) issues.push('the TD has no length');
+  if (!loads.length) issues.push('add the load line where the cut chord / strut enters');
+  const support = t.overhang ? 'cantilever' : 'simple';
+  if (support === 'cantilever') {
+    const tip = r2(loc(ySign > 0 ? t.overhang[0] : t.overhang[1]));
+    if (loads.length > 1) issues.push('a cantilever TD takes one load, at the tip');
+    else if (loads.length && Math.abs(loads[0].y - tip) > 0.01) issues.push('the load line of a cantilever TD must be at the tip of the overhang');
+    if (fin(lo) && fin(hi) && (Math.abs(loc(lo) - tip) > 0.01 && Math.abs(loc(hi) - tip) > 0.01)) issues.push('the TD rectangle must reach the tip of the overhang');
+  } else {
+    if (loads.length > 2) issues.push('at most 2 load lines');
+    if (loads.some(l => !(l.y > EPS && l.y < W - EPS))) issues.push('load lines must lie between the supports');
+  }
+  const [l1, l2] = loads;
+  out.geometry = {
+    td_support: support, td_span: r2(W), td_length: r2(L),
+    td_y1: l1 ? l1.y : null, td_side1: l1 ? l1.side : null,
+    td_has_load2: !!l2, td_y2: l2 ? l2.y : 0, td_side2: l2 ? l2.side : 1, // placeholders when absent, as the skill's tests
+  };
+  out.ok = !issues.length;
+  return out;
 }
