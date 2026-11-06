@@ -3,7 +3,45 @@
 Branch `diaphragm-analysis` (off `master` 71cdfb5; module renamed from Transfer Diaphragm 2026-10-29). Plan: `~/.claude/plans/read-the-md-files-composed-kite.md` (approved 2026-10-29).
 Guide: `docs/diaphragm-analysis.md`. Book cases: `docs/diaphragm-analysis-book-cases.md`.
 
-## Next session — start here (set 2026-11-05)
+## Next session — start here (set 2026-11-06, end of session)
+**State:** everything is committed and pushed.
+- Commit **87aceab** on `da-phase3-td-engine` (everything since 5e7f607).
+- **PR #7** is stacked on #6 (`diaphragm-analysis`); merge order **#5 → #6 → #7** (GitHub retargets #7 to master).
+- CALC_VERSION **td-v12**; SWD CALC_VERSION unchanged (v24), no SWD schema bump.
+- `npm test` green (671 ok), build OK, 9 books 649 / 649.
+- SWD freeze: 36 repo items identical; local DB snapshot `supabase/backups/swd-freeze-db-2026-11-05e.json` (git-ignored).
+
+**Built 2026-11-05/06** (details in the guide and the sections below):
+- grids: N-S / E-W tabs, extents, shared grids;
+- SWD ↔ DA grid link and elevation zoom;
+- SWD walls that end at a floor;
+- DA walls of the story above: engine, force levels, collector from–to (grids or diaphragm edges);
+- fixes from user tests 26997 / 26996 (TD drag, offset-line weights, blocking errors).
+
+**Verified (2026-11-06):** DA = SWD wall by wall after Update, on 26996:
+- capacity method: equal v / capacity in the offset line;
+- deflection method: equal δ;
+- mixed nailing;
+- base shear 30 k and the transfer balance.
+
+All in `tests/daCase26996.test.mjs`.
+
+**Open, next session:**
+1. **User test, mixed case** (noted 2026-11-05, see below): walls above partly into the diaphragm, partly straight
+   down; build a fixture from it.
+2. **G11:** TDs at the collector ends — the TD engine does not take a concentrated load of a wall above on its load
+   line inside the TD (`tdDerive` would count it in P / the edge shears). Needed for option 3, and for ticked walls
+   whose load lands inside an offset-line strut TD.
+3. **Small items:**
+   - DA wall-share labels on a line with continuing walls above show only the diaphragm part (SWD adds the rest) —
+     maybe label "+ X k from above";
+   - B5 calc-sheet note on posts under a wall that ends at a floor;
+   - wall drag snap to grids in the SWD elevation.
+4. Phase 8 (PDF, upgrade script) on hold.
+
+**User test projects (local DB):** 26999 ADU, 26997 Horizontal Offset Walls, 26996 notch + SW-19 + offset line 1/2.
+
+## Earlier start-here (set 2026-11-05, during the session — history)
 **State** — still all uncommitted on `da-phase3-td-engine` (since 5e7f607; the 11-04 commit did not happen — user's call).
 CALC_VERSION td-v11 (unchanged). `npm test` green, build OK, book-cases doc unchanged (649 / 649).
 

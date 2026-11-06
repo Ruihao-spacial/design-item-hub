@@ -8,6 +8,13 @@ SWD changes for the DA "walls above / transfer" work (plan `docs/diaphragm-analy
 are allowed only behind the DA link. Existing SWD items and their elevations must not change, because production
 projects use SWD. Guard: `tests/swdFreeze.test.mjs` (in `npm test`) and `npm run swd:freeze -- --db --check <file>` for
 the local DB (README, Tests).
+- 2026-11-06: all committed (87aceab, PR #7 stacked on #6). SWD changes in it, all gated on the DA link:
+  - grid link (`shearWallPlanLink.js`);
+  - walls that end at a floor (`shearWallCalc.js` transferOn / endsAtFloorIds / lineWithTransfer, G2 text in
+    `shearWallChecks.js`);
+  - transfer balance on Loading.
+
+  Ungated: elevation zoom (view only). No CALC_VERSION / schema bump; freeze proves unlinked items unchanged.
 - 2026-11-05 step 3 built: grid link (`shearWallPlanLink.js`; Loading → Plan grids → Adopt; line header "Starts at";
   grid layer on the elevation). It is inactive unless adopted; no schema bump (new fields `inputs.planLink`,
   `line.planOrigin` are optional, absent = before). Freeze identical (36 repo / 37 DB items).
