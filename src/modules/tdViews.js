@@ -121,6 +121,15 @@ const fmtK = v => (Math.round(v * 1000) / 1000).toString();
 // What the Analysis views are showing (seismic: the force level and its factor; wind: as entered)
 export function forcesShown(cs, lvl, k, fl, q) {
   if (cs.kind !== 'E') return 'Forces shown: wind, 1.0W as entered on the Plan tab (no factor).';
+  // walls of the story above (step 7): the levels name both parts
+  const ab = (cs.above || []).filter(a => a.V);
+  if (ab.length) {
+    const marks = ab.map(a => a.mark).join(', ');
+    const om = fmtK(fl.omega0 ?? 2.5) + (fl.increase ? ' × 1.25' : '');
+    if (lvl === 'D') return `Forces shown: seismic, DIAPHRAGM level = own level × k_D ${fmtK(k)} + walls above (${marks}) × Ω₀ ${om} (ASCE 7-22 §12.10.1.1, Type 4) — for unit shears, chords and struts. Shear Wall Design receives the 1.0E line forces, not these.`;
+    if (lvl === 'C') return `Forces shown: seismic, COLLECTOR level = (own level + walls above ${marks}) × k_C ${fmtK(k)} — read collectors, drag struts and distributors here. Shear Wall Design receives the 1.0E line forces, not these.`;
+    return `Forces shown: seismic 1.0E: own level (F_x${fl.fx !== null ? ' = ' + fl.fx + ' k' : ''}) + walls of the story above (${marks}, 1.0E from Shear Wall Design) — as analysed; the line forces sent to Shear Wall Design are these.`;
+  }
   const src = 'F_x' + (fl.fx !== null ? ' = ' + fl.fx + ' k' : '') + (Number.isFinite(q) ? ' (q = ' + (Math.round(q * 100) / 100) + ' psf)' : '');
   if (lvl === 'D') return `Forces shown: seismic, DIAPHRAGM level = 1.0E × k_D ${fmtK(k)} (F_px / F_x, Setup) — for unit shears, chords and struts. Shear Wall Design receives the 1.0E line forces, not these.`;
   if (lvl === 'C') return `Forces shown: seismic, COLLECTOR level = 1.0E × k_C ${fmtK(k)} (Setup) — read collectors / drag struts here. Shear Wall Design receives the 1.0E line forces, not these.`;
@@ -251,7 +260,9 @@ export function renderAnalysis(plan, results, pick) {
   const fl = results.forceLevels || { fx: null, diaphragm: 1, collector: 1 };
   const lvl = cs0.kind === 'E' ? (pick.level || 'E') : 'E';
   const k = lvl === 'D' ? fl.diaphragm : lvl === 'C' ? fl.collector : 1;
-  const cs = scaleCase(cs0, k);
+  // diaphragm level with walls above (step 7): the run with the walls above × Ω₀ / k_D, × k_D (calcAll levelD)
+  const dCase = lvl === 'D' && results.levelD ? results.levelD.find(c => c.id === cs0.id) || null : null;
+  const cs = scaleCase(dCase || cs0, k);
   const lvBar = el('div', { style: { display: 'flex', gap: '6px', flexWrap: 'wrap', alignItems: 'center', marginBottom: '0.4rem' } });
   if (cs0.kind === 'E') {
     lvBar.appendChild(el('span', { style: { fontSize: '0.78rem', color: 'var(--ink-secondary)' } }, 'Force level:'));
@@ -261,6 +272,16 @@ export function renderAnalysis(plan, results, pick) {
   box.appendChild(lvBar);
   box.appendChild(el('div', { className: 'td-forces-shown', style: { fontSize: '0.82rem', fontWeight: 600, margin: '0 0 0.5rem', padding: '4px 8px', borderLeft: '3px solid var(--accent)', background: 'var(--surface-2, #f8fafc)' } },
     forcesShown(cs0, lvl, k, fl, results.q)));
+  // the walls of the story above at the level shown (step 7)
+  const abv = (cs0.above || []).filter(a => a.V);
+  if (abv.length) {
+    const f = lvl === 'D' ? (fl.transfer ?? 2.5) : lvl === 'C' ? k : 1;
+    const t = el('table', { className: 'dynamic-table', 'data-abovevalues': lvl, style: { fontSize: '0.78rem', marginBottom: '0.5rem' } });
+    t.appendChild(el('tr', null, el('th', null, 'Wall above'), el('th', null, 'Line'), el('th', null, 'Goes'), el('th', null, 'V 1.0 (lb)'), el('th', null, 'V shown (lb)'), el('th', null, 'Into the floor (plf)')));
+    for (const a of abv) t.appendChild(el('tr', null, el('td', null, a.mark), el('td', null, a.line), el('td', null, a.kind === 'transfer' ? '↓ into this diaphragm' : '↕ down its line'),
+      el('td', { className: 'mono' }, f0(a.V)), el('td', { className: 'mono' }, f0(a.V * f)), el('td', { className: 'mono', title: 'Wall-to-floor transfer connection: V / wall length' }, f0(a.V * f / Math.max(1e-9, a.to - a.from)))));
+    box.appendChild(el('div', { className: 'table-scroll' }, t));
+  }
   const view = pick.view || 1;
   const zs = pick.zoom || { zoom: 1, panX: 0, panY: 0 }; // shared by every view and case (held by the module)
   const ov = pick.overlays || { lines: true, outlines: true };
@@ -288,6 +309,13 @@ export function renderAnalysis(plan, results, pick) {
   if ((cs0.paused || []).length) {
     box.appendChild(pausedPanel(cs0, view));
     if (view > 1) return box; // gate: nothing of the incomplete net field is drawn
+  } else if (cs0.failed) { // the line forces do not balance the load (calcAll): nothing of this case is valid but the basic shear
+    box.appendChild(el('div', { className: 'td-paused', style: { border: '1px solid var(--fail)', color: 'var(--fail)', borderRadius: '6px', padding: '6px 10px', fontSize: '0.85rem', marginBottom: '6px' } },
+      el('strong', null, 'FAILED — ' + cs0.failed + '. '), view === 1 ? 'The basic shear below is valid; the line forces and wall shares are not (held from Shear Wall Design).' : 'TD shear, net shear and member forces are not reported. Basic shear: Basic v_b.'));
+    if (view > 1) return box;
+  } else if (cs0.notClosed) { // balances, but member runs stay open (user 2026-11-04): shown, held from SWD
+    box.appendChild(el('div', { className: 'td-failed', style: { border: '1px solid var(--fail)', color: 'var(--fail)', borderRadius: '6px', padding: '6px 10px', fontSize: '0.85rem', marginBottom: '6px' } },
+      el('strong', null, 'FAILED — member runs do not close. '), 'The line forces are held from Shear Wall Design. ' + (view === 4 ? 'Open runs: ' + cs0.notClosed + '.' : 'View 4 shows the open member runs.')));
   }
   box.appendChild(canvas);
   box.appendChild(legendBox);
@@ -462,14 +490,21 @@ export function runExtremes(r) {
   return { T, C };
 }
 
-// Phase 7: the offset-line iteration, one row per pass (line forces, TD loads, closure)
+// Closure solver (tdClosure.js): one row per pass (line / collector forces, TD loads, closure)
 function offsetTable(cs) {
   const o = cs.offset, box = el('div');
   const names = o.passes[0].lines.map(l => l.name), tds = o.passes[0].tdP.map(t => t.mark);
-  box.appendChild(el('div', { className: 'section-header', style: { marginTop: '0.8rem' } }, 'Offset wall lines — line forces iterated to closure'));
+  box.appendChild(el('div', { className: 'section-header', style: { marginTop: '0.8rem' } }, 'Closure solver — hand-over forces iterated to closure'));
+  const what = [
+    ...o.groups.map(g => `offset wall line ${g.name} = walls ${g.walls.join(', ')} on grids ${g.grids.join(', ')} (one line of resistance, shared by wall length)`),
+    ...(o.unknowns || []).filter(u => u.kind === 'collector').map(u => `${u.label} (concentrated load; that diaphragm's basic shear is recomputed each pass)`),
+    ...(o.unknowns || []).filter(u => u.kind === 'td').map(u => `${u.label}: share of the held TD's reaction`),
+  ];
   box.appendChild(el('p', { style: { fontSize: '0.78rem', color: 'var(--ink-secondary)' } },
-    o.groups.map(g => `${g.name} = walls ${g.walls.join(', ')} on grids ${g.grids.join(', ')} (one line of resistance, shared by wall length)`).join('; ')
-    + '. Pass 0 = flexible line forces; each pass moves every wall line by the closure residual of its member runs and runs the TDs again, until every run on a wall line closes.'));
+    (what.length ? what.join('; ') + '. ' : '')
+    + 'Pass 0 = flexible line forces. Each pass moves these forces and every wall-line force together (Gauss–Newton on the closure residuals of all member runs) and runs the TDs again, until every member run closes.'));
+  if ((o.unknowns || []).length) box.appendChild(el('p', { style: { fontSize: '0.78rem', color: 'var(--ink-secondary)' } },
+    'Change from the flexible start: ' + o.unknowns.map(u => `${u.label} ${u.value >= 0 ? '+' : ''}${f0(u.value)} lb`).join(' · ')));
   const t = el('table', { className: 'dynamic-table', style: { fontSize: '0.8rem' } });
   t.appendChild(el('tr', null, ...['Pass', ...names.map(n => n + ' (lb)'), ...tds.map(m => 'P ' + m + ' (lb)'), 'Largest residual (lb)', 'Open runs'].map(h => el('th', null, h))));
   for (const p of o.passes) t.appendChild(el('tr', null, el('td', null, String(p.pass)),
@@ -478,7 +513,7 @@ function offsetTable(cs) {
     el('td', { className: 'mono' }, f1(p.maxRes)),
     el('td', { style: { color: p.open ? 'var(--fail)' : 'var(--pass)' } }, p.open ? String(p.open) : '0 ✓')));
   box.appendChild(el('div', { className: 'table-scroll' }, t));
-  if (!o.converged) box.appendChild(el('p', { style: { fontSize: '0.8rem', color: 'var(--fail)' } }, `No closure after ${o.passes.length - 1} passes — check the walls, TDs and load lines of the offset line.`));
+  if (!o.converged) box.appendChild(el('p', { style: { fontSize: '0.8rem', color: 'var(--fail)' } }, `No closure after ${o.passes.length - 1} passes — check the walls, TDs, load lines and collectors listed above.`));
   return box;
 }
 

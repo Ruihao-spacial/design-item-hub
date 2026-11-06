@@ -8,7 +8,7 @@
 //                 (windward = the side the load comes from), so at an opening the two strips load different bands
 //   line mode     w(s) of the segments, shared by the diaphragms covering the section in proportion to their depth;
 //                 with an `edge` grid only by the diaphragms whose depth contains that line
-// where d(s) is the diaphragm's sheathed depth at s (its rectangle ∩ the sheathed plan). Within an interval between
+// where d(s) is the diaphragm's sheathed depth at s (its pieces ∩ the sheathed plan). Within an interval between
 // break coordinates d is constant and line loads are linear, so the statics below are exact.
 //
 // Sign: V(s) = sum of the forces (plan axis of the load) on the part of the diaphragm with smaller s; unit shear
@@ -33,7 +33,7 @@
 // that have it as a load line (equal split between TDs, book Ex 4.2), and each TD passes it by statics to its own
 // supports (Ex 3.4); repeated while a TD support has no wall. Wall shares: by wall length, or (linked Shear Wall
 // Design) in proportion to the shares Shear Wall Design's own calcAll gives the walls of the line (tdWallLink.js).
-import { sectionBands, breakCoords, spanAxis, pointInPolygon } from './tdGeometry.js';
+import { sectionBands, diaphragmBands, breakCoords, spanAxis, pointInPolygon } from './tdGeometry.js';
 
 const EPS = 1e-6;
 const fin = v => Number.isFinite(v);
@@ -55,7 +55,6 @@ export function loadCases(plan) {
 }
 
 // Intersect sheathed bands with [c1, c2]
-const clip = (bands, c1, c2) => bands.map(([a, b]) => [Math.max(a, c1), Math.min(b, c2)]).filter(([a, b]) => b - a > EPS);
 const width = bands => bands.reduce((s, [a, b]) => s + b - a, 0);
 
 // Value of a line-load segment at s (null outside)
@@ -84,7 +83,7 @@ export function analyseCase(plan, lc, ctx = {}) {
     if (!ok) issues.push({ code: 'dg-unsupported', msg: `Diaphragm ${d.mark || '?'} (${lc.dir}): needs two support lines across the span — not analysed.`, ref: d.id });
     return ok;
   });
-  const bandsOf = (d, s, side = '') => { const [c1, c2] = across(d); return clip(sectionBands(plan, ax, s, side), c1, c2); };
+  const bandsOf = (d, s, side = '') => diaphragmBands(plan, d, ax, s, side); // the plan's bands within d's pieces at s
   const sigma = l => (l.acts.startsWith('-') ? -1 : 1);
 
   // Load on diaphragm d, band k (or the whole diaphragm when band is null), at s inside an interval (mid = its midpoint)
@@ -122,8 +121,7 @@ export function analyseCase(plan, lc, ctx = {}) {
         if (v === null || segAt(g, mid) === null) continue; // segment must cover the interval
         // diaphragms that take this load at this section
         const takers = usable.filter(o => {
-          const [a, b] = along(o);
-          if (!(mid > a + EPS && mid < b - EPS)) return false;
+          if (!bandsOf(o, mid).length) return false; // o has a piece at this section
           if (l.edge && fin(l.edge.at)) { const [c1, c2] = across(o); return l.edge.at >= c1 - EPS && l.edge.at <= c2 + EPS; }
           return true;
         });
@@ -150,7 +148,9 @@ export function analyseCase(plan, lc, ctx = {}) {
     const [lo, hi] = along(d);
     const sup = d.supports.map(g => g.at).sort((a, b) => a - b);
     if (sup[0] < lo - EPS || sup[1] > hi + EPS) { issues.push({ code: 'dg-support-out', msg: `Diaphragm ${d.mark}: a support line lies outside it.`, ref: d.id }); continue; }
-    const pts = sortU([lo, hi, ...sup, ...brk, ...loadEnds, ...plan.grids.filter(g => g.axis === ax).map(g => g.at)].filter(v => fin(v) && v >= lo - EPS && v <= hi + EPS));
+    // concentrated loads from wall-less collector lines that end in this diaphragm (G7): { at, F (plan sign), line }
+    const points = (ctx.points || []).filter(p => p.dgId === d.id && fin(p.F) && p.at > lo + EPS && p.at < hi - EPS);
+    const pts = sortU([lo, hi, ...sup, ...brk, ...loadEnds, ...points.map(p => p.at), ...plan.grids.filter(g => g.axis === ax).map(g => g.at)].filter(v => fin(v) && v >= lo - EPS && v <= hi + EPS));
     // intervals with their bands and band loads at both ends
     const iv = [];
     for (let i = 0; i < pts.length - 1; i++) {
@@ -165,13 +165,18 @@ export function analyseCase(plan, lc, ctx = {}) {
     const [p1, p2] = sup;
     let F = 0, M = 0;
     for (const x of iv) { F += force(x.wa, x.wb, x.b - x.a); M += moment(x.wa, x.wb, x.a, x.b - x.a, p1); }
+    // the diaphragm's own load; points come from other diaphragms (G7) or, ext, from walls of the story above that end
+    // at this floor (step 6) — those are load from outside this level, so they count in the diaphragm's load
+    let Fw = F;
+    for (const p of points) { F += p.F; M += p.F * (p.at - p1); if (p.ext) Fw += p.F; }
     const R2 = -M / (p2 - p1), R1 = -F - R2;
     const reactions = [{ at: p1, R: R1 }, { at: p2, R: R2 }];
+    const jumps = [...reactions, ...points.map(p => ({ at: p.at, R: p.F }))]; // section-shear steps along s
     const supGrid = at => d.supports.find(g => Math.abs(g.at - at) < EPS);
     // section shear V along s (total), walking from lo; reactions applied when passing a support
     let V = 0;
     for (const x of iv) {
-      for (const r of reactions) if (Math.abs(r.at - x.a) < EPS) V += r.R;
+      for (const r of jumps) if (Math.abs(r.at - x.a) < EPS) V += r.R;
       x.Va = V;
       V += force(x.wa, x.wb, x.b - x.a);
       x.Vb = V;
@@ -203,6 +208,14 @@ export function analyseCase(plan, lc, ctx = {}) {
       }
       const sRef = override === 'low' ? A : override === 'high' ? B : override === 'mid' ? (A + B) / 2 : auto;
       stretches.push({ a: A, b: B, sInf, sRef, rule: override ? rule + '; width split set by the user (' + override + ')' : rule });
+      // G3 (user 2026-11-02): the opening-edge members' forces depend on stiffness (opening study). Only for an
+      // opening — a gap between the bands outside the outline is a notch (Ch 8.4 Diaphragm 5, sections A / B)
+      const sMid = (A + B) / 2, bs = st[0].bands;
+      const isOpening = bs.slice(1).some((b, q) => {
+        const c = (bs[q][1] + b[0]) / 2;
+        return plan.outline.length >= 3 && pointInPolygon(...(ax === 'x' ? [sMid, c] : [c, sMid]), plan.outline);
+      });
+      if (isOpening) issues.push({ code: 'opening-collectors', warn: true, msg: `Diaphragm ${d.mark}: opening ${+A.toFixed(2)}–${+B.toFixed(2)} — the forces in the opening-edge collectors depend on the stiffness of sheathing and chords; the visual method may under-estimate them (study: up to 2–3×). Design them with a margin (docs/diaphragm-analysis-opening-study.md).`, ref: d.id });
       // V and band loads at sRef; then each band integrates its own load both ways
       const k = st.findIndex(x => sRef >= x.a - EPS && sRef <= x.b + EPS);
       const x0 = st[k], t = (sRef - x0.a) / (x0.b - x0.a);
@@ -215,7 +228,7 @@ export function analyseCase(plan, lc, ctx = {}) {
         bd.Va = Vband[m] - force(bd.wa, wRef, sRef - x0.a);
         bd.Vb = Vband[m] + force(wRef, bd.wb, x0.b - sRef);
       });
-      const supSplit = (x, at, sgn) => reactions.filter(r => Math.abs(r.at - at) < EPS).reduce((s, r) => s + sgn * r.R, 0) / width(x.bands);
+      const supSplit = (x, at, sgn) => jumps.filter(r => Math.abs(r.at - at) < EPS).reduce((s, r) => s + sgn * r.R, 0) / width(x.bands);
       for (let m = k + 1; m < st.length; m++) {
         const prev = st[m - 1], x = st[m];
         const jump = supSplit(x, x.a, 1); // reaction inside the stretch: shared by width (noted)
@@ -226,14 +239,15 @@ export function analyseCase(plan, lc, ctx = {}) {
         const jump = supSplit(x, x.b, 1);
         x.bw.forEach((bd, q) => { bd.Vb = next.bw[q].Va - jump * (bd.hi - bd.lo); bd.Va = bd.Vb - force(bd.wa, bd.wb, x.b - x.a); });
       }
-      if (st.some((x, m) => m > 0 && reactions.some(r => Math.abs(r.at - x.a) < EPS)))
-        issues.push({ code: 'dg-support-in-stretch', warn: true, msg: `Diaphragm ${d.mark}: a support inside an opening stretch — its reaction is shared by the bands by width.`, ref: d.id });
+      if (st.some((x, m) => m > 0 && jumps.some(r => Math.abs(r.at - x.a) < EPS)))
+        issues.push({ code: 'dg-support-in-stretch', warn: true, msg: `Diaphragm ${d.mark}: a support or concentrated load inside an opening stretch — it is shared by the bands by width.`, ref: d.id });
       i = j + 1;
     }
     for (const x of iv) x.bw.forEach(bd => { const wd = bd.hi - bd.lo; bd.va = bd.Va / wd; bd.vb = bd.Vb / wd; });
     out.push({
-      id: d.id, mark: d.mark, lo, hi, across: across(d), bandSplit: override || 'auto', stretches,
-      load: F,
+      id: d.id, mark: d.mark, lo, hi, across: across(d), bandSplit: override || 'auto', chordCut: d.chordCut || '', stretches,
+      load: Fw,
+      points: points.map(p => ({ at: p.at, F: p.F, line: p.line, ...(p.ext ? { ext: true, mark: p.mark } : {}) })),
       supports: reactions.map(r => { const g = supGrid(r.at); return { gridId: g ? g.id : null, name: g ? g.name : '?', at: r.at, R: r.R }; }),
       intervals: iv.map(x => ({ a: x.a, b: x.b, Va: x.Va, Vb: x.Vb, Ma: x.Ma, Mb: x.Mb, wa: x.wa, wb: x.wb, d: width(x.bands),
         bands: x.bw.map(bd => ({ lo: bd.lo, hi: bd.hi, wa: bd.wa, wb: bd.wb, Va: bd.Va, Vb: bd.Vb, va: bd.va, vb: bd.vb })) })),
@@ -301,6 +315,22 @@ export function lineForces(plan, cs) {
       moved = true;
     }
     if (!moved) break;
+  }
+  // G7: a wall-less line with no TD left holding a force hands it, as a concentrated load at the line, to the
+  // diaphragm(s) of the case that span across it (book Ch 8.4: the collector on B into the main diaphragm 5). Shared
+  // by depth when several do. The receiving basic field is recomputed with it (basicCase).
+  for (const e of map.values()) {
+    if (hasWall(e.gridId) || e.into || Math.abs(e.F) < EPS) continue;
+    const recv = cs.diaphragms.filter(d => e.at > d.lo + EPS && e.at < d.hi - EPS && !d.supports.some(sp => sp.gridId === e.gridId))
+      .map(d => ({ d, depth: (sectionAt({ diaphragms: [d] }, e.at, '+').parts[0] || { bands: [] }).bands.reduce((t, b) => t + b.hi - b.lo, 0) }))
+      .filter(x => x.depth > EPS);
+    if (!recv.length) continue;
+    const F = e.F, total = recv.reduce((t, x) => t + x.depth, 0);
+    e.F = 0;
+    e.into = recv.map(x => x.d.mark);
+    e.intoDiaphragm = recv.map(x => ({ id: x.d.id, mark: x.d.mark, share: x.depth / total }));
+    e.handed = F;
+    e.from.push({ src: 'to diaphragm ' + e.into.join(', ') + ' (concentrated load)', F: -F, parts: null });
   }
   const lines = [...map.values()].map(e => {
     const g = gridById.get(e.gridId);
@@ -382,23 +412,109 @@ export function lineGroups(plan, cs) {
   return [...by.values()].filter(g => g.gridIds.length > 1);
 }
 
+// The parts of a group grid that hold the group's walls (G8, book Ch 8.4: SW6 on E is in line D/E, SW7 on the other
+// part of E acts alone). No parts known → the whole line.
+function groupParts(ln, ws) {
+  const parts = (ln && ln.parts) || [];
+  return parts.filter(p => ws.some(w => w.to > p.lo + EPS && w.from < p.hi - EPS));
+}
+
+// A group's flexible force (plan sign): Σ over its grids of the parts that hold its walls
+export function groupForce(plan, cs, grp) {
+  let F = 0;
+  for (const id of grp.gridIds) {
+    const ln = cs.lines.find(l => l.gridId === id);
+    if (!ln) continue;
+    const own = groupParts(ln, grp.walls.filter(w => w.gridId === id));
+    F += own.length ? own.reduce((t, p) => t + p.F, 0) : ln.F;
+  }
+  return F;
+}
+
 // A group's force F (plan sign) to its walls by length across all its grids (a rigid line, SDPWS 4.3.5.5.1 exception;
-// book Ex 3.3 p4: SW1 on B shares with SW3 / SW4 on C); each grid line's force = Σ its walls' shares. A group grid
-// with no diaphragm reaction gets a line entry.
-export function shareGroup(plan, cs, grp, F) {
-  const len = grp.walls.reduce((t, w) => t + w.to - w.from, 0);
+// book Ex 3.3 p4: SW1 on B shares with SW3 / SW4 on C); each grid line's force = Σ its walls' shares + the force of
+// its other parts, which keep their own walls (G8). A group grid with no diaphragm reaction gets a line entry.
+// basis (linked walls, option B — tdWallLink.swdWallShares): { method, weights: { wallId: w }, above: { gridId: plan-sign
+// lb } } — the group's story shear T = F + Σ above is shared by the weights the way Shear Wall Design shares a line
+// (capacity × length, or equal δ); each grid's force = its walls' share − the force from above on that grid.
+// Without a basis (typed walls): by wall length, nothing from above (the book's rigid line).
+export function shareGroup(plan, cs, grp, F, basis = null) {
+  const wt = w => { const v = basis && basis.weights ? basis.weights[w.id] : undefined; return Number.isFinite(v) && v >= 0 ? v : w.to - w.from; };
+  const sumW = grp.walls.reduce((t, w) => t + wt(w), 0) || 1;
+  const above = id => (basis && basis.above && Number.isFinite(basis.above[id]) ? basis.above[id] : 0);
+  const T = F + grp.gridIds.reduce((t, id) => t + above(id), 0);
+  const gridF = id => grp.walls.filter(w => w.gridId === id).reduce((t, w) => t + T * wt(w) / sumW, 0) - above(id);
+  const tag = basis ? 'swd-' + (basis.method || 'capacity') : 'group';
   for (const id of grp.gridIds) {
     let ln = cs.lines.find(l => l.gridId === id);
     if (!ln) { const g = plan.gridById.get(id); cs.lines.push(ln = { gridId: id, name: g.name, at: g.at, F: 0, from: [], parts: [], noWall: false }); }
     const ws = grp.walls.filter(w => w.gridId === id);
-    ln.F = ws.reduce((t, w) => t + F * (w.to - w.from) / len, 0);
+    const own = groupParts(ln, ws), others = (ln.parts || []).filter(p => !own.includes(p));
+    const Fg = gridF(id), wOn = ws.reduce((t, w) => t + wt(w), 0) || 1;
+    for (const p of own) {
+      p.F = ws.filter(w => w.to > p.lo + EPS && w.from < p.hi - EPS).reduce((t, w) => t + Fg * wt(w) / wOn, 0);
+      p.P = p.F * cs.sigma;
+    }
+    ln.F = Fg + others.reduce((t, p) => t + p.F, 0);
     ln.P = ln.F * cs.sigma;
     ln.group = grp.name;
-    ln.walls = ws.map(w => {
-      const share = F * cs.sigma * (w.to - w.from) / len;
-      return { id: w.id, mark: w.mark, from: w.from, to: w.to, length: w.to - w.from, share, v: share / (w.to - w.from), basis: 'group' };
-    });
+    ln.walls = [...ws.map(w => {
+      const share = Fg * cs.sigma * wt(w) / wOn;
+      return { id: w.id, mark: w.mark, from: w.from, to: w.to, length: w.to - w.from, share, v: share / (w.to - w.from), basis: tag };
+    }), ...(others.length ? wallShares(plan, { gridId: id, parts: others }, ln.weights || null).filter(w => !ws.some(x => x.id === w.id)) : [])];
   }
+}
+
+// The concentrated loads of the walls above that end at this floor, from a case's cs.above (basicCase ctx.above)
+export function aboveLoads(cs) {
+  return (cs.above || []).filter(a => a.kind === 'transfer' && a.V).map(a => ({ mark: a.mark, line: a.line, gridId: a.gridId, at: a.at, F: (cs.sigma || 1) * a.V, collector: a.collector || null }));
+}
+
+// Basic field and line forces of a load case, with the concentrated loads of wall-less collectors into the
+// diaphragms that span across them (G7) — staged: a receiving diaphragm's reactions may feed another collector.
+// delta: Map(collector gridId → extra force, plan sign) — the closure solver's unknown (TD reactions on the collector).
+//
+// ctx.above (step 6, user 2026-11-05): walls of the story above that end at this floor — [{ mark, line, gridId, at, F }]
+// (F plan sign, lb). Each is a concentrated load at its grid on the diaphragm(s) of the case spanning across it, shared
+// by depth (as G7); one on a support line or outside every diaphragm is not applied (c.aboveMissed).
+export function basicCase(plan, lc, ctx = {}, delta = null) {
+  let points = [], c, lf;
+  const ext = [], missed = [];
+  if ((ctx.above || []).length) {
+    const c0 = analyseCase(plan, lc, { ...ctx, points: [] });
+    const depthOf = (d, at) => (sectionAt({ diaphragms: [d] }, at, '+').parts[0] || { bands: [] }).bands.reduce((t, b) => t + b.hi - b.lo, 0);
+    for (const a of ctx.above) {
+      let recv = c0.diaphragms.filter(d => a.at > d.lo + EPS && a.at < d.hi - EPS && !d.supports.some(sp => Math.abs(sp.at - a.at) < EPS))
+        .map(d => ({ d, depth: depthOf(d, a.at) })).filter(x => x.depth > EPS);
+      // collector from–to (option 2): only the diaphragms lying between its ends take the force; a diaphragm the stretch
+      // ends inside cannot (its load would be on part of its depth — that is a TD case)
+      if (a.collector) {
+        const { lo, hi } = a.collector;
+        const inside = recv.filter(x => x.d.across[0] >= lo - EPS && x.d.across[1] <= hi + EPS);
+        const cut = recv.filter(x => x.d.across[1] > lo + EPS && x.d.across[0] < hi - EPS && !inside.includes(x));
+        if (cut.length) { missed.push({ ...a, reason: 'inside', diaphragms: cut.map(x => x.d.mark) }); continue; }
+        recv = inside;
+      }
+      if (!recv.length) { missed.push(a); continue; }
+      const total = recv.reduce((t, x) => t + x.depth, 0);
+      for (const x of recv) ext.push({ dgId: x.d.id, at: a.at, F: a.F * x.depth / total, line: a.line, mark: a.mark, ext: true });
+    }
+    points = ext;
+  }
+  for (let stage = 0; stage < 8; stage++) {
+    c = analyseCase(plan, lc, { ...ctx, points });
+    lf = lineForces(plan, c);
+    const next = [...ext];
+    for (const e of lf.lines) if (e.intoDiaphragm) {
+      e.handedTotal = e.handed + ((delta && delta.get(e.gridId)) || 0);
+      for (const r of e.intoDiaphragm) next.push({ dgId: r.id, at: e.at, F: e.handedTotal * r.share, line: e.name });
+    }
+    const same = next.length === points.length && next.every((p, i) => p.dgId === points[i].dgId && Math.abs(p.F - points[i].F) < 1e-9);
+    if (same) break;
+    points = next;
+  }
+  if (missed.length) c.aboveMissed = missed;
+  return { c, lf };
 }
 
 // Section at s (side '-' / '+' / ''): per diaphragm covering s, its bands with V and v, and the total V

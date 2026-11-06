@@ -2,7 +2,8 @@
 // and the book tests. Returns a number, NaN (keys that should agree do not), or null (not reached by the tool yet).
 //   R:<line>   force to a line (load-direction sign)        Rw:<wall> / vw:<wall>   wall share (lb) / unit shear (plf)
 //   V:<station>[±][:<band>]   section shear                  vb:<station>[±]:<band>|*   basic unit shear
-//   tdR:<TD>:<grid> |force TD ↔ support|   vtd:<TD>:<band> TD unit shear   aspect:<TD>   vnet:… as vb on the net field
+//   tdR:<TD>:<grid> |force TD ↔ support|   tdP:<TD>:<grid> |TD load at that load line|   vtd:<TD>:<band> TD unit shear
+//   aspect:<TD>   vnet:… as vb on the net field
 //   N:<line>:<station> member force on the net field (tdNet)   Nmax:<line>:<from>-<to> max |N| along the run
 //   Nb:<line>:<station>[±]    member force on the basic field (tdMembers.js); no side at a cut = the side where the
 //                             line is a band edge / inside the opening stretch
@@ -10,6 +11,7 @@
 import { sectionAt } from './tdBasicShear.js';
 import { chordForce, crossForce } from './tdMembers.js';
 import { vNetAt, memberN } from './tdNet.js';
+import { tdFrame } from './tdGeometry.js';
 
 const near = (a, b) => Math.abs(a - b) <= Math.max(1e-3 * Math.abs(b), 0.01);
 
@@ -24,6 +26,11 @@ export function toolValue(key, plan, analysis) {
       const l = c.lines.find(x => x.name === rest[0]);
       if (l) return l.P;
     }
+    // a wall line name that is not a grid (G8: SW7 on E acts alone as line E7): Σ its walls' shares
+    for (const c of cases) {
+      const ws = c.lines.flatMap(l => l.walls || []).filter(w => (plan.walls.find(x => x.id === w.id) || {}).line === rest[0]);
+      if (ws.length) return ws.reduce((t, w) => t + w.share, 0);
+    }
     return null;
   }
   if (kind === 'Rw' || kind === 'vw') {
@@ -35,6 +42,13 @@ export function toolValue(key, plan, analysis) {
   }
   if (kind === 'Nb') return memberValue(rest, plan, cases);
   if (kind === 'tdR' || kind === 'vtd' || kind === 'aspect') return tdValue(kind, rest, plan, analysis);
+  if (kind === 'tdP') { // |load the TD takes at that load line| (td_P1 / td_P2 in the frame's load order, top first)
+    const r = (analysis.tdRuns || []).find(x => x.mark === rest[0] && x.skill);
+    const t = plan.tds.find(x => x.mark === rest[0]);
+    if (!r || !t) return null;
+    const k = tdFrame(t).loads.findIndex(l => l.grid.name === rest[1]);
+    return k < 0 ? null : Math.abs(r.P ? r.P[k] : r.skill['td_P' + (k + 1)]);
+  }
   if (kind === 'N' || kind === 'Nmax') return netMember(kind, rest, plan, cases);
   if (kind === 'vnet') return netShear(rest, plan, cases);
   if (kind !== 'V' && kind !== 'vb') return null;

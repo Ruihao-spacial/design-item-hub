@@ -121,6 +121,7 @@ export default {
     { page: 2, what: 'Fig 3.27 labels the shear at 6 as V6 = 600 plf.', use: 'vb:6- = -600 plf as computed on p5' },
   ],
   assumptions: [
+    { what: 'One diaphragm D1 spanning wall lines 1 to 6, made of 3 pieces that follow the outline: D1.1 = 1-2 x C-A, D1.2 = 2-5 x D-A, D1.3 = 5-6 x D-B (reviewed with the user 2026-11-02).', why: 'The book analyses the whole plan as one beam (p2 "120 ft long by 50 ft in width"; Fig 3.27: R = wL/2, v = V / depth at each section) with TD1 / TD2 at the cut chords 2C / 5B. Grids 2 and 5 carry no wall or strut into a TD, so they are not supports and the plan is not split there; Ex 8.1 (Section 8.3, Fig 8.7) does the same ("double offset diaphragm" 1-6) and splits only at the interior wall line 6.' },
     { what: 'B at y = 20, C at y = 14 (B above C).', why: 'From 30 ft A-B and 20 ft B-D at the right, 36 ft A-C and 14 ft C-D at the left (Figs 3.27, 3.28).' },
     { what: 'SW1 at the top of line 1 (y = 34-50), strut 20 ft below; SW2 full depth of the right part (y = 0-20).', why: 'Fig 3.27 and p11 (16 ft wall, 20 ft strut).' },
     { what: 'Load 200 plf along x = 0-120 acting -y; on 90-120 it is applied at line B.', why: 'Fig 3.27 shows the load at the top edge of each part; R = wL/2.' },

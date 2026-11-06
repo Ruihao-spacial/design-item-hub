@@ -3,24 +3,280 @@
 Branch `diaphragm-analysis` (off `master` 71cdfb5; module renamed from Transfer Diaphragm 2026-10-29). Plan: `~/.claude/plans/read-the-md-files-composed-kite.md` (approved 2026-10-29).
 Guide: `docs/diaphragm-analysis.md`. Book cases: `docs/diaphragm-analysis-book-cases.md`.
 
-## Next session — start here (set 2026-10-30, Phase 7)
-**State**
-- Branch `da-phase3-td-engine`: Phases 3–6 (4d9782f) and, on 2026-10-30, Phase 7 + the review rounds below (result
-  views, loads on Setup, wind mode, force levels, TD gate) committed and pushed. PRs #5 / #6 still open; no PR for
-  this branch yet. `npm test` green (DA: Plan 22, Link 9, Engine 10, Basic 10, Td 8, Net 11, Offset 5, Loads 7),
-  build OK, no Shear Wall Design / DLRS file changed.
-- Book: **366 / 366** values of phases 4–7 match, nothing pending (`docs/diaphragm-analysis-book-cases.md`); the book's
-  non-closing first run of Ex 3.3 (37 values) is reproduced in the Offset test.
+## Next session — start here (set 2026-11-05)
+**State** — still all uncommitted on `da-phase3-td-engine` (since 5e7f607; the 11-04 commit did not happen — user's call).
+CALC_VERSION td-v11 (unchanged). `npm test` green, build OK, book-cases doc unchanged (649 / 649).
+
+**Topic: horizontal (out-of-plane) offset walls** — user test project **26997 "Horizontal Offset Walls"** (walls on 2 / B /
+C stop at the 2nd floor, carried by 1 / A / D). Plan: `docs/diaphragm-analysis-offset-transfer-plan-2026-11-05.md`
+(first draft + section 9 "User answers"); approved build plan `~/.claude/plans/response-to-q1-confirmed-rippling-creek.md`.
+
+**User decisions 2026-11-05:** diaphragm level = k_D·A + Ω₀·T (× 1.25 if §12.3.3.5 applies; ASCE 7-22 §12.10.1.1);
+collector level = k_C·(A + T); 1.0E = A + T to SWD; V_w from SWD's own wall split; per-wall SWD flag "ends at this floor →
+diaphragm below" (auto when the line has no wall below, tick on a mixed line); SWD ↔ DA grid link = Option 1, **only for
+SWD items linked to DA — existing SWD items and elevations must not change** (production); DA grids on N-S / E-W tabs with
+extents; SWD sees only the grids that cross its line.
+
+**Built 2026-11-05 (build step 1 of 8, Part C):** grid tabs + bounded grids (guide, Plan model). User checked it in the
+browser — confirmed.
+**Built 2026-11-05 (step 2, SWD safety harness):** `tests/swdFreeze.test.mjs` + `scripts/swdFreeze.mjs` (README, Tests).
+Baseline = 36 repo SWD items, 541 parts (results, form, results page, PDF, every elevation), written before any SWD change.
+The guard fires (a wall moved 0.1 ft → elevation; a story force → results / PDF). Local DB snapshot (37 SWD items):
+`supabase/backups/swd-freeze-db-2026-11-05.json` — after each SWD step run `npm run swd:freeze -- --db --check
+supabase/backups/swd-freeze-db-2026-11-05.json` (no item is linked to DA yet, so all 37 must stay identical).
+Finding: this branch vs `origin/master` (production) differs on every item, only through the open PRs:
+- PR #6: the SWD form gets an empty div and `title=""` attributes (DA link box; nothing visible).
+- PR #5: SWD v24 WSWH TSS-kit anchors, stacked rod arm B, PDF appendix.
+Those differences are already reviewed; the freeze proves that nothing *new* changes.
+
+**Built 2026-11-05 (step 3, grid link):** guide section "Grid link with Shear Wall Design". The SWD freeze is identical for
+all 36 repo items and all 37 local DB items. `npm test` green, build OK, book doc unchanged. Not checked in a real
+browser. New fixtures `tests/fixtures/da-user/hov-swd.json`, `hov-roof.json`, `hov-2nd.json` (26997 as saved
+2026-11-05).
+**User check for step 3 (26997):**
+1. SWD → Loading: tick both DA items, then **Adopt plan grids**.
+2. E-W / N-S tabs: each line header has "Starts at". Set B and C to grid 1 (x 0) and line 2 to grid A (y 0) if that is
+   how the positions were meant.
+3. The elevations show the grid bubbles and the teal diaphragm stretch per level.
+4. Open + save both DA items: walls placed from the SWD start; the `link-length` errors are gone.
+
+**User comments on step 3 (2026-11-05), fixed** (guide, "Grid link … User comments"):
+1. One grid for all levels: a DA item owns the grids, the others use them read-only.
+2. The update notice that would not go away came from jsonb key order; the copy is now compared by value.
+3. The line-length check is removed (`link-wall-sheathing` warning instead), and the SWD line length comes from the plan.
+
+Tests green, freeze identical (36 repo / 37 DB items, snapshot `supabase/backups/swd-freeze-db-2026-11-05b.json` taken
+after the user's 26997 edits), book doc unchanged.
+**User check:**
+1. DA - 2nd Floor → Grids & outline → "shared from DA - Roof", or the other way round. Edit grids only in the owner.
+2. SWD: no grid-link notice after saving; line lengths show "(plan)".
+3. DA Setup: no length column or errors.
+
+**2nd round of comments (same day), fixed:**
+- Adopt panel: shared grids are one choice.
+- Adopted items open with their line lengths from the plan (C / D were missing on the N-S lines).
+- Zoom on every SWD elevation.
+
+**Toolbar fix:** zoom / Expand moved into the elevation toolbar row (they covered Find). The freeze proves only the
+buttons moved (36 repo / 37 DB items identical).
+**Built 2026-11-05 (step 4, SWD transfer):** guide section "Walls that end at a floor — SWD side". Not checked in a
+browser. B4 (transfer balance check) moves to step 6; B5 (calc-sheet note on posts) is deferred.
+
+**USER TEST TO DO (user request 2026-11-05) — mixed transfer case:** a level where some walls of the story above hand
+their force to the diaphragm (offset, `endsAtFloor` / no wall below) while other walls continue straight down to the
+level below. Do it both on one line (mixed line: SW-1 ticked, SW-3 not) and across lines (B ends, 3 continues).
+Check:
+- in SWD: the transfer per line, the G2 rows, the story shear of the line below = rest only, base shear = Σ levels;
+- in DA (after step 6): only the transfer walls load the diaphragm, through walls only drag along their own line, and
+  the line forces sent back to SWD do not count any wall twice.
+Build a fixture of it for `tests/swdTransfer.test.mjs` / the step 6 test when the user has drawn it.
+
+**Built 2026-11-05 (step 5, DA walls above, drawn only):** guide section "Walls of the story above — DA side". Tests
+green, book doc unchanged. New DB snapshot `supabase/backups/swd-freeze-db-2026-11-05d.json` (after the user saved
+26997 at 22:21).
+**User check (26997):** DA - 2nd Floor → Plan tab: the Roof-story walls dashed beside grids 2 / B / C (amber ↓) and 3
+(grey ↕); Shear walls page table; warnings above-type4 (and above-linkback / above-origin if SWD is not ticked / not
+adopted).
+
+**Highlight (user 2026-11-05):** a wall picked on the Shear walls page (either table) or on the plan gets a pink halo +
+bold label; walls of the story above are selectable too; no Delete for SWD walls.
+**Built 2026-11-05 (step 6, engine, td-v12):** guide section "Walls of the story above — the engine". The 26997 hand calc
+matched; tests green, book doc unchanged, SWD freeze identical (37 DB items).
+**User check (26997):**
+1. Draw the 2nd-floor diaphragms: along x on A / D; along y on 1 / 3.
+2. Have roof loads in SWD: Update in SWD after the Roof DA is drawn, or type them.
+3. Open DA - 2nd Floor. Expect line forces A / D 15 k and line 1 13.57 k (with the hand-calc loads), and the
+   distributor diagrams on B / C in View 4.
+
+**Built 2026-11-05 (step 7, force levels):** guide section "Walls of the story above — the engine", force levels. Tests
+green, book doc unchanged, SWD freeze identical (37 DB items).
+**User question 2026-11-05 — collector on grid 2 only from B to C (2nd floor, load along y):** three options compared;
+**user chose option 2 — BUILT same day** (guide section "Collector extent of the walls above"). Option 3 (TDs at the
+collector ends) stays open as gap G11. The options:
+1. Full depth (today).
+2. Collector extent picked per line: a load rule; its ends must be on diaphragm edges.
+3. TDs at the collector ends: the book method.
+
+Found while comparing:
+- **Bug fixed:** `tdMembers.crossForce` did not break at the ends of the walls above, so a TD read the wrong strut force
+  (8 000 instead of −2 000 lb). Regression test in `tests/daTransfer.test.mjs`.
+- **Gap (G11):** the TD engine stops (E_TD_CLOSURE, S930) when the basic field has a concentrated load of a wall above
+  on the TD's load line inside the TD. Option 3 needs `tdDerive` to take that load as part of P / the edge shears.
+
+**User test project 26996 (2026-11-05)** — 2nd floor did not run (fixtures `tests/fixtures/da-user/t96-*.json`, test
+`tests/daCase26996.test.mjs`):
+1. **Model:** load along x, diaphragm D1 supported on A / C, but C has no wall below. Effects:
+   - its 8.6 k had no wall (`line-no-wall`);
+   - SW-13 / SW-14 above C sat on a support line (`above-no-diaphragm`).
+
+   Fix (user): supports A / D. Then x runs: A 15.12 / D 14.88 k.
+2. **Bug (fixed):** load along y, TD1 (load line 2, strut of offset line 1/2) read the drag of SW-5 / SW-7 along grid 2
+   as a cut strut force. Those walls continue down line 2 to SW-19. The 10 k was counted twice, and grid 2 / 1 / 3 were
+   left open.
+   - Fix: a TD's P and outside shears leave out walls above that continue down their line (`wallR` opts.noThrough in
+     `crossForce` and `tdDerive`).
+   - Result: y closes; lines 1 / 2 / 3 = 5.90 / −1.20 / 5.30 k (Σ 10 k own).
+   - Line 2 is negative: the offset line shares the 10 k from above between SW-19 and line 1 by capacity × length, so
+     part of it goes to line 1 through TD1.
+   - Warning `swd-group-rounds` (SWD shares did not settle in 6 rounds): **cause found and fixed** (item 5).
+4. TD1 shallower than 70 / 4 = 17.5 ft → `E_TD_ASPECT` (SDPWS 4:1 blocked) — model, not a bug.
+5. **Bug (fixed):** the offset-line weights used the line's running story shear from the top. With SW-5 / SW-7 ending
+   at the floor (step 4), that sum still held their 10 k, so SW-19's capacity × length was scaled by 2.89 / 12.89 and
+   shrank every round.
+   - Fix: the level's story shear = Σ of SWD's wall shares there (`tdWallLink.swdWallShares`).
+   - Now SW-19 (20 ft) = SW-9 + SW-10 (7.24 k vs 3.62 + 3.62), settled in 1 round.
+   - Fixtures `t96b-*.json`.
+3. **Ticking SW-5 / SW-7 "ends at this floor"** instead would hit gap G11: their load would sit on TD1's load line inside
+   TD1.
+
+**Step 8 = user test on 26997** (incl. the mixed case noted above):
+1. Draw the 2nd-floor diaphragms.
+2. SWD Update (roof loads).
+3. DA - 2nd Floor:
+   - line forces;
+   - View 4 distributors on B / C;
+   - Analysis force levels 1.0E / Diaphragm / Collector with the walls-above table;
+   - Setup Ω₀ / +25 %.
+4. SWD Loading transfer balance ✓.
+Then commit (user's call): everything since 5e7f607 is still uncommitted.
+
+## Earlier start-here (set 2026-11-04) (history)
+**State** — still all uncommitted on `da-phase3-td-engine` (since 5e7f607); the user commits at the end of the
+2026-11-04 session. CALC_VERSION **td-v11**. `npm test` green, `npx vite build` OK, book-cases doc 649 / 649 (only Ex
+3.4's overhang text changed: "2 → 1"). SWD / DLRS files untouched. Not checked in a real browser by Claude.
+
+**User answers 2026-11-04:** Q1 no warning for a TD support line without a wall (Ex 3.5's TD has none). Q2 a case
+that balances but does not close FAILS and is held from SWD — built. Q3 commit at the end of this session.
+
+**Built 2026-11-04** (guide, section "TD overhangs and loads anywhere"):
+- Overhangs picked by grid (from a support to the tip grid), one per support — a TD may overhang both; typed
+  overhangs converted on open; checks `td-overhang`, `td-overhang-tip`, `td-overhang-grid`; `td-past-support` also on
+  an end without an overhang.
+- Any number of TD loads anywhere from tip to tip (between, on a support, on either overhang): superposed runs
+  span / cantilever / mirrored cantilever / straight into the support; Auto load lines search the overhangs.
+- Q2: open member runs → FAILED, line forces held, diagrams kept.
+
+**User's Roof item (DA "ADU - Roof", saved 2026-11-04 17:47):** on open its typed overhang 0–5 becomes "from 5 to 6";
+it then shows `td-past-support` (TD2 y 29–32 past support 2). Fix in the editor: draw TD2 y 0–29, or add a second
+overhang "from 2 to 1.7". Either way E-W runs and closes (SW-8 / SW-10 / SW-6 = 4888 / 3945 / 7908 lb).
+
+**Still open:** step E (bounds for a strip without a wall) on hold; Phase 8 on hold; TD supports from the plan later.
+
+**Next session:** the user opens the Roof item in the browser (first real-browser check of td-v11), fixes TD2 (y 0–29
+or overhang 2 → 1.7), tries the overhang picks / + overhang / load lines on the TD card, and brings findings → plan → build on go.
+
+## Earlier start-here (set 2026-11-03, after the user's test — history)
+**State** — still all uncommitted on `da-phase3-td-engine` (since 5e7f607). User test of project 26999 (Cotoros ADU
+Test: SWD "ADU Shearwall Lines", DA Roof, DA 2nd Floor) → plan `docs/diaphragm-analysis-fix-plan-2026-11-03.md`,
+steps **A–D built** (user go), step E (bounds for a strip without a wall) **on hold**. CALC_VERSION **td-v10**.
+`npm test` green (595 ok), build OK, book-cases doc unchanged (649 / 649), SWD / DLRS files untouched. Not checked in a
+real browser by Claude.
+
+**Built:** load-line rules (other-direction walls, wall across a gap), strut TD side 'both', any number of load lines
+(superposed engine runs, proved on all 19 book TDs), solver equilibrium + FAILED gate (held from SWD), offset line needs
+a strut (`group-no-path`, user decision D1), checks `load-opposite`, `load-seismic-twice`, `grid-off-plan`,
+`wall-in-span`, `td-past-support`. Details: guide, section "User test 2026-11-03".
+
+**Open (reported to the user, not built):**
+1. Roof E-W as saved: balances, but 7 runs open — TD2 is supported on 6 / 1.7, which have no walls (its reactions have
+   nowhere to go). With TD2 on wall lines 5 / 2 (y 5–29): 20 / 22 close, SW-8 / SW-10 / SW-6 = 1312 / 7073 / 8355 lb;
+   chords O / B in the overhang below y = 5 stay open (73 / 130 lb) — no TD placement for them found yet (stop-and-report).
+   Possible check: warn when a TD's support line has no wall and hands its reaction on to nothing.
+2. A case that balances but does not close still sends its line forces to SWD (as before) — the user may want them held.
+3. 2nd floor as saved: SW-9 takes 0 (warning `wall-in-span`); case D (3 diaphragms) is the user's model.
+
+**Decisions the user will answer next session (asked 2026-11-03, end of session):**
+- Q1: add a warning when a TD's support line has no shear wall (its reaction has nowhere to go — Roof E-W TD2 on 6 / 1.7)?
+- Q2: hold the line forces of a case that balances but does not close (open member runs) from Shear Wall Design, like a
+  FAILED case? Today they are still sent.
+- Q3: checkpoint commit of everything since 5e7f607 now?
+Also pending: step E (bounds for a strip without a wall) on hold; Roof overhang chords O / B (open item 1).
+
+**Next session:** read this start-here + the plan doc; take the user's answers to Q1–Q3 → short plan → build on go.
+
+## Earlier start-here (2026-11-03, end of day — history)
+**State** — all uncommitted on `da-phase3-td-engine` (nothing since 5e7f607 is committed: pieces, G1–G10, Ex 8.1 / 8.4,
+closure solver, everything below). `npm test` green, `npx vite build` OK, CALC_VERSION td-v9, Shear Wall Design files
+unchanged. Book: **all 9 examples 649 / 649** (Ex 3.3–5.1 366, Ex 8.1 146, Ex 8.4 96). Not checked in a real browser by
+Claude (Node stand-in DOM) — the user's own test is the first.
+
+**User, now:** build an example of their own in a new item and test the DA module (UI + calcs); bring the findings
+next session. Guide for it: `docs/diaphragm-analysis-manual-test.md` (Ex 4.1 / Ex 8.4 steps, log table). Before that:
+re-seed DA-BOOK (`node scripts/daSeedBook.mjs --apply`, 9 items) so the book items show td-v9.
+
+**Done 2026-11-03** (details in the guide `docs/diaphragm-analysis.md`):
+- Book case **Ex 8.4** (Ch 8.4, 13 errata; G10: the book's SW5 + SW6 total leaves out TD1's strut force) and the
+  **general closure solver** `tdClosure.js` (replaces `tdOffset.js`; G2, G7, G8, G9). Ex 8.1 100 → 146.
+- Closure tolerance **30 lb / 5 %** — check limit only; the solver closes to ~0.
+- **No seismic load / No wind load** (Setup, first on the page; `inputs.noLoad`; warning when neither).
+- **TD load lines Auto** (found from the plan, 20 / 20 book TDs; Set by hand kept; old TDs → Auto when they match).
+  Supports stay as entered (user: keep for now).
+- **Linked walls:** offset lines of resistance on Setup → Shear wall link (`wallLink.groups`), split like Shear Wall
+  Design (capacity × length or equal δ, force from above kept per line; repeated with SWD until settled — option B);
+  **several SWD lines on one grid** ("E 4-7", "E 8-9", or grid / span set by hand; `wallLink.lineGrid`), length checked
+  against the span, each SWD line gets its own walls' force; checks for overlap, one continuous part, wall outside span.
+- **Plan tab editor:** input pages Grids & outline / Diaphragms & TDs / Shear walls (page buttons and load direction in
+  the right column); sections ▾ / ▸ kept collapsed across redraws, pages and directions; a row is selected when one
+  of its fields is edited; **Lock grid lines** (`inputs.gridsLocked`); outline corners **picked on the plan** (⌖, +⌖,
+  + Corner (pick)); numbered corner dots and a ring on the selected corner; Delete removes a corner; other-direction
+  diaphragms / TDs named with their issues; no diaphragm / TD before the outline is closed; no value change by mouse
+  wheel; "Ref only" grid column explained.
+- New stored fields (no schema change, normaliser defaults): `noLoad`, `gridsLocked`, `tds[].loadsMode`,
+  `wallLink.groups`, `wallLink.lineGrid`.
 
 **Next**
-1. User: re-seed DA-BOOK (`npm run da:seed -- --apply`; PowerShell `$env:SB_EMAIL` / `$env:SB_PASSWORD` first);
-   review Analysis Views 1–4 (Ex 3.3: pass table under the line forces), TDs, Checks, Verification next to the book
-   figures (Ex 3.4: review the cantilever limits first — TD / net values wait for it).
-2. Open (user): closure tolerance values — rule max(fixed lb, % of run max) is in; values kept at 1 lb / 1 %
-   (`CLOSURE_LB` / `CLOSURE_REL`, tdNet.js). Should the iteration stop at the tolerance (now) or run on until the
-   residual is ~0 (start-independent result)?
-3. Phase 8: PDF reports (Views 1–4, TD tables, step trace, pass table), upgrade script, README.
-4. For the skill author: T05 misprint; stray shell text at the end of `references/citations.md`.
+1. The user's test findings → plan, review, fix (the user reviews a plan before each implementation step).
+2. Commit a checkpoint when the user says so (no push / PR unless asked).
+3. On hold (user): Phase 8 — PDF reports, upgrade script for saved items (schema 2), README.
+4. Possible later: TD supports found from the plan (like the load lines); SWD wind weights use per-wall wind capacity.
+
+## Earlier start-here (2026-11-02, late — history)
+- Ex 8.1 was 100 / 146, waiting for the closure solver; pieces (schema 2), hard checks, G1, G3–G6, opening study done.
+
+## Gap register — Ex 8.1 / Ch 8.4 (2026-11-02, user decisions)
+Found while checking the book's complex examples (Ex 8.1 = §8.3 N-S, Ch 8.4 = same building E-W). Values that depend
+on an open gap show as DIFF in `docs/diaphragm-analysis-book-cases.md`; they are never adjusted to match.
+
+| # | Gap | Status | Decision and reasoning |
+|---|---|---|---|
+| G1 | A TD load line taking members from both sides (Ex 8.1 TD1 line B: chord 5250 from the left + collector from the right) | **Done** | Load side `'both'` (panel: left / right / both): P = N at the high edge − N at the low edge. The TD engine uses the side only for its own collector output (side × P), so its shears / reactions need only the sum; members are integrated by the tool anyway. |
+| G2 | Split of an opening-edge collector between the TDs at its two ends, incl. a TD's reaction into it (Ex 8.1 collector B: TD2's 600 lb; book 550 / 1783.3 by trial and error) | **Done 2026-11-03** | Closure solver unknown `td`: a TD reaction on a line that loads two or more other TDs splits between them (one unknown per loaded TD); with one loaded TD the member rule stands (Ex 8.1 line D: G4 decides, closure cannot). Result 553 / 1781 (exact closure), book 550 / 1783.3; Ex 8.1 146 / 146 (N:B:4 and TD3 B-E carry a 3 lb / 0.06 plf rounding tolerance for the book's trial and error). |
+| G3 | Where an opening-edge member carries zero (Ex 8.1 A.2: book zero at the band's zero-shear point, 2043 / 282; tool had mid-opening, 1841 / 81) | **Done** | Closure does not fix it (both splits close every line). Automatic rule: zero at the band's **zero-shear point when the band's shear changes sign inside the opening**, else at the inflection (Ch 5). Ex 4.3 / 5.1 bands never change sign → unchanged; Ex 8.1 matches the book. The opening sits at the low-shear / high-moment zone in Ex 8.1, near the support in Ex 5.1 — location, not load direction, is the difference. Plus a **warning** on every opening: the opening study shows these forces depend on stiffness and both rules sit at the low end (up to 2–3× under). |
+| G4 | Force of a chord cut inside an opening stretch (Ex 8.1 chord D at grid 4; book M4/80 = 3000) | **Done** | Per-diaphragm setting `chordCut`, **default section M/H at the cut**, override Vierendeel (consistent: M/H at the inflection with that section's depth, outer chord follows the outermost band → 2759.6). First chosen default Vierendeel; **reversed by the opening study**: section within −6…+9 % of a stiffness reference on 9 layouts, Vierendeel −24…−30 % (unconservative), stable across stiffness. Closure does not decide it (Ex 8.1 closes for 3000 → B split 553 / 1781, and for 2759.6 → 72 / 2213). The old code mixed M(62.5) with the depth at grid 4 (2929.7) — a bug. Note: just left of the cut neither rule balances the section moment (short by P × the 10 ft D→E step = the couple TD2 carries). |
+| G5 | A wall ending inside a TD segment (Ex 8.1 TD4 on line 6: SW2 0–25, SW3 80–90) | **Done** | The engine gets the segment **average** of the exact outside-shear profile (tdDerive), so its closure sees the true ∫ v; the net field / members use the exact profile anyway. The engine-vs-integrator check skips such edges and says why. |
+| G6 | A TD edge whose line carries on past the TD (Ex 8.1 TD2's line 5 above B, closing only at A) | **Done** | That edge is checked on its **whole line** (existing line closure check), not as a TD stop; the engine's closure tolerance is opened and the other edges are checked in runTds against CLOSURE_TOL; warning on the TDs tab. |
+| G7 | A wall-less collector line delivering a concentrated force into a diaphragm spanning across it (Ch 8.4: collector B 14,804 lb into D5; D6 hangs off D5) | **Done 2026-11-03** | `lineForces`: a wall-less line with no TD left holding force hands it to the diaphragm(s) of the case spanning across it (not supported by it), shared by depth; `analyseCase` takes it as a point load (shear jump, shared by width inside an opening stretch); `basicCase` stages the cases where a receiving diaphragm feeds another collector. Closure solver unknown `collector` = the extra force from TD reactions on the collector. |
+| G8 | Two lines of resistance on one grid, each part taking the force entering its own part (Ch 8.4 line E: SW6 with SW5 as "D/E", SW7 alone; 9327 lb per section) | **Done 2026-11-03** | A group takes only the parts of a grid that hold its walls (`groupForce`, `shareGroup`); the other parts keep their own force and walls (SW7 = line "E7" 9326 lb). Book key `R:<wall line name>` = Σ its walls when the name is not a grid. |
+| G9 | The closure iteration must recompute the basic field of a diaphragm receiving collector loads (Ch 8.4: TD1 → collector B → D5 → SW5 / SW6 → strut D4 → TD1) | **Done 2026-11-03** | `tdClosure.closeCase`: each evaluation re-runs `basicCase` with the collector unknowns, then wall shares, TDs, net field, members; Gauss–Newton (finite-difference Jacobian, tiny ridge) on all member-run residuals; linear statics → one step closes exactly. Ex 3.3 1 pass, Ex 8.1 1 pass, Ex 8.4 1 pass; 4–13 ms. |
+| G10 | The book stops iterating early (Ch 8.4 line E: "F7 = +137.5 lb … close enough") | **Explained 2026-11-03** | Not only early stopping: the book's SW5 + SW6 total (2520 + 1465 + 2625 + 9333 = 15,944.7) leaves out TD1's reaction at D (its strut force 137.4; TD1 carries 3150 = 1548 + 1465 + 137.4), so line E ends at +137.5 ≈ P. The tool includes it: P = 159.7, D/E 16,078 lb, every line closes. Ex 8.4 values that depend on it carry a G10 tolerance (erratum p11). |
+
+**Experiments behind G2 / G4 (scratch copy, TD loads overridden; not in the repo):** book TD loads → all 22 runs close
+and 140 / 146 match; the 6 left were book slips (now errata) → 146 / 146 possible. Mixing the book's B split with the
+tool's A.2 split still closes (A.2 free). With TD2's load fixed, the B split that closes is unique (Newton on TD1-right
+/ TD3-B); TD2's load itself is not fixed by closure (one free constant = the G4 rule).
+
+**Opening study** (`docs/diaphragm-analysis-opening-study.md`, `scripts/study/`): stringer-panel stiffness reference;
+validated (regular diaphragm exact, Ex 3.5 / 4.1 / 4.3 within ~1–2 %); results above (G3, G4).
+
+**Other decisions this day:**
+- Ex 3.3 line A (802.5 / 3388.5 / 3236 / 36): book slips (20.5 and 40.9 plf instead of a uniform 30.5 plf in the TD
+  band); the tool's chain is kept (errata note in Ex3.3.mjs).
+- **Diaphragm pieces** (schema 2): a diaphragm is one or more rectangles (D1.1 …) analysed as one beam; openings belong
+  to the plan; **hard checks** — pieces and TDs inside the outline (exact) and not over an opening, pieces not
+  overlapping, one region. Upgrade cuts schema-1 rectangles into pieces (same results; rectangle kept in x1..y2 as the
+  record). Editor: + Piece, Fill between supports, piece rows, per-piece edges, Delete removes a piece first. Reason:
+  the book splits a plan into separate diaphragms only at support lines (walls, struts into TDs — Ex 3.3, 3.4, 4.2,
+  Ex 8.1 at wall line 6, Ch 8.4 at collectors); a depth change / notch / opening is not a split (Ex 3.5, Ex 8.1 §8.3
+  "double offset diaphragm") — so one diaphragm must be able to follow an irregular outline.
+- Plan tab: Show filter (diaphragms / TDs / openings), view only.
+- Ex 8.1 errata added: N:B:4 and N:6:A.2 senses (the book's own arithmetic), N:B:9 = 3500 (book 1750), rounding
+  tolerance on three closing zeros; p11 grid 4 label, p35 line 8 at C, TD3 30.45 / 30.46.
+- CALC_VERSION: td-v7 (pieces, G5, G6, consistent Vierendeel), td-v8 (G4 section default, G3 rule, warning).
+- Code: tdGeometry (`splitRegion`, `diaphragmBands`, `onSheathing`, `partsConnected`, checks; TD load side 'both'),
+  tdMigrate (schema 2), tdModel (`newDiaphragm(mark, dir, parts, supports)`), tdBasicShear (bands by piece; opening
+  warning), tdMembers (`chordCut`, `zeroShearPoint`), tdDerive (G1, G5, `continuingEdges` G6), tdNet (check note),
+  tdPlanEditor (pieces, filter, settings), tdBookKeys (`tdP`), toInputs / daBookDoc (pieces). Fixtures:
+  legacy-td/schema1-ex35-rect-diaphragm.json, schema1-ex51-rect-diaphragm-opening.json.
 
 ## TD gate (2026-10-30, user)
 - Ex 3.4 without "Reviewed — limits met": only TD1 paused; the net field / members still ran without it and showed

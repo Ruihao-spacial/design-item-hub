@@ -1,0 +1,654 @@
+{
+ "note": "User test 2026-11-03, project 26999 Cotoros ADU Test: Shear Wall Design item ADU Shearwall Lines (walls of Roof and 2nd Floor). Frozen copy of the local DB.",
+ "type": "shear_wall_design",
+ "inputs": {
+  "cd": "4",
+  "ie": "1",
+  "sds": "1.84",
+  "refs": {
+   "diaphragmSources": [
+    "03469ee3-898c-46ae-ae53-2b2674ff9b1c",
+    "4363d3f4-5120-4885-beb6-278d7e03e022"
+   ]
+  },
+  "notes": "",
+  "alphaS": "",
+  "levels": [
+   {
+    "id": "lvl-1",
+    "name": "Roof",
+    "floorToFloor": "10.5",
+    "anchorageType": "auto",
+    "floorClearSpan": "16"
+   },
+   {
+    "id": "lvl-2",
+    "name": "2nd Floor",
+    "floorToFloor": "10.5",
+    "anchorageType": "auto",
+    "floorClearSpan": "16"
+   }
+  ],
+  "omega0": "2.5",
+  "wswhFc": "2500",
+  "species": "SPF",
+  "driftRow": "fourStory",
+  "loadType": "seismic",
+  "lrfdHalfL": true,
+  "pdfReport": "summary",
+  "postGrade": "spf_pt_no2",
+  "sheathing": "ply",
+  "woodGrade": "spf_no1no2",
+  "directions": [
+   {
+    "id": "dir-1",
+    "rho": 1,
+    "name": "N-S",
+    "lines": [
+     {
+      "id": "ln-1",
+      "name": "A",
+      "beams": [],
+      "walls": [
+       {
+        "id": "w-1",
+        "mark": "SW-1",
+        "length": "4.67",
+        "method": "segmented",
+        "levelId": "lvl-1",
+        "openings": [],
+        "position": "9.5",
+        "wswhJoist": "12",
+        "wswhWidth": "18",
+        "narrowPier": false,
+        "systemType": "sheathed",
+        "wallDLTypeId": "wdt-1",
+        "wswhCondition": "concrete",
+        "nailingPattern": "",
+        "wswhFloorDepth": "12",
+        "jambPostOverride": "",
+        "postLeftOverride": "",
+        "ftaoStrapOverride": "",
+        "postRightOverride": "",
+        "wswhAnchorOverride": "",
+        "anchorageLeftOverride": "",
+        "anchorageRightOverride": ""
+       },
+       {
+        "id": "w-2",
+        "mark": "SW-2",
+        "length": "3.75",
+        "method": "segmented",
+        "levelId": "lvl-1",
+        "openings": [],
+        "position": "20.25",
+        "wswhJoist": "12",
+        "wswhWidth": "18",
+        "narrowPier": false,
+        "systemType": "sheathed",
+        "wallDLTypeId": "wdt-1",
+        "wswhCondition": "concrete",
+        "nailingPattern": "",
+        "wswhFloorDepth": "12",
+        "jambPostOverride": "",
+        "postLeftOverride": "",
+        "ftaoStrapOverride": "",
+        "postRightOverride": "",
+        "wswhAnchorOverride": "",
+        "anchorageLeftOverride": "",
+        "anchorageRightOverride": ""
+       },
+       {
+        "id": "w-3",
+        "mark": "SW-3",
+        "length": "14.5",
+        "method": "segmented",
+        "levelId": "lvl-2",
+        "openings": [],
+        "position": "9.5",
+        "wswhJoist": "12",
+        "wswhWidth": "18",
+        "narrowPier": false,
+        "systemType": "sheathed",
+        "wallDLTypeId": "wdt-1",
+        "wswhCondition": "concrete",
+        "nailingPattern": "",
+        "wswhFloorDepth": "12",
+        "jambPostOverride": "",
+        "postLeftOverride": "",
+        "ftaoStrapOverride": "",
+        "postRightOverride": "",
+        "wswhAnchorOverride": "",
+        "anchorageLeftOverride": "",
+        "anchorageRightOverride": ""
+       }
+      ],
+      "levelLoads": {
+       "lvl-1": {
+        "wind": "",
+        "seismic": ""
+       },
+       "lvl-2": {
+        "wind": "",
+        "seismic": ""
+       }
+      },
+      "driftBypass": "",
+      "totalLength": "27",
+      "distReviewed": [],
+      "distribution": "",
+      "gravityLoads": {
+       "lvl-1": {
+        "loads": [
+         {
+          "D": "29.4",
+          "L": "",
+          "Lr": "20",
+          "id": "gl-1",
+          "end": 29,
+          "trib": "4",
+          "shape": "full",
+          "start": 0,
+          "perArea": true,
+          "position": 0,
+          "assemblyId": ""
+         }
+        ]
+       },
+       "lvl-2": {
+        "loads": [
+         {
+          "D": "32.1",
+          "L": "40",
+          "Lr": "",
+          "id": "gl-2",
+          "end": 29,
+          "trib": "0.67",
+          "shape": "full",
+          "start": 0,
+          "perArea": true,
+          "position": 0,
+          "assemblyId": ""
+         }
+        ]
+       }
+      },
+      "supportPosts": [
+       {
+        "id": "sp-1",
+        "mark": "P-1",
+        "levelId": "lvl-2",
+        "position": 14.17,
+        "postOverride": "",
+        "anchorageOverride": ""
+       },
+       {
+        "id": "sp-2",
+        "mark": "P-2",
+        "levelId": "lvl-2",
+        "position": 20.25,
+        "postOverride": "",
+        "anchorageOverride": ""
+       }
+      ],
+      "wallThickness": ""
+     },
+     {
+      "id": "ln-3",
+      "name": "E",
+      "beams": [],
+      "walls": [
+       {
+        "id": "w-4",
+        "mark": "SW-4",
+        "length": "15",
+        "method": "segmented",
+        "levelId": "lvl-1",
+        "openings": [],
+        "position": "10",
+        "wswhJoist": "12",
+        "wswhWidth": "18",
+        "narrowPier": false,
+        "systemType": "sheathed",
+        "wallDLTypeId": "wdt-1",
+        "wswhCondition": "concrete",
+        "nailingPattern": "",
+        "wswhFloorDepth": "12",
+        "jambPostOverride": "",
+        "postLeftOverride": "",
+        "ftaoStrapOverride": "",
+        "postRightOverride": "",
+        "wswhAnchorOverride": "",
+        "anchorageLeftOverride": "",
+        "anchorageRightOverride": ""
+       },
+       {
+        "id": "w-5",
+        "mark": "SW-5",
+        "length": "15",
+        "method": "segmented",
+        "levelId": "lvl-2",
+        "openings": [],
+        "position": "10",
+        "wswhJoist": "12",
+        "wswhWidth": "18",
+        "narrowPier": false,
+        "systemType": "sheathed",
+        "wallDLTypeId": "wdt-1",
+        "wswhCondition": "concrete",
+        "nailingPattern": "",
+        "wswhFloorDepth": "12",
+        "jambPostOverride": "",
+        "postLeftOverride": "",
+        "ftaoStrapOverride": "",
+        "postRightOverride": "",
+        "wswhAnchorOverride": "",
+        "anchorageLeftOverride": "",
+        "anchorageRightOverride": ""
+       }
+      ],
+      "levelLoads": {
+       "lvl-1": {
+        "wind": "",
+        "seismic": ""
+       },
+       "lvl-2": {
+        "wind": "",
+        "seismic": ""
+       }
+      },
+      "driftBypass": "",
+      "totalLength": "30",
+      "distReviewed": [],
+      "distribution": "",
+      "gravityLoads": {
+       "lvl-1": {
+        "loads": [
+         {
+          "D": "29.4",
+          "L": "",
+          "Lr": "20",
+          "id": "gl-3",
+          "end": 30,
+          "trib": "4",
+          "shape": "full",
+          "start": 0,
+          "perArea": true,
+          "position": 0,
+          "assemblyId": ""
+         }
+        ]
+       },
+       "lvl-2": {
+        "loads": [
+         {
+          "D": "32.1",
+          "L": "40",
+          "Lr": "",
+          "id": "gl-4",
+          "end": 30,
+          "trib": "0.67",
+          "shape": "full",
+          "start": 0,
+          "perArea": true,
+          "position": 0,
+          "assemblyId": ""
+         }
+        ]
+       }
+      },
+      "supportPosts": [],
+      "wallThickness": ""
+     }
+    ]
+   },
+   {
+    "id": "dir-2",
+    "rho": 1,
+    "name": "E-W",
+    "lines": [
+     {
+      "id": "ln-2",
+      "name": "2",
+      "beams": [],
+      "walls": [
+       {
+        "id": "w-6",
+        "mark": "SW-6",
+        "length": "7.75",
+        "method": "segmented",
+        "levelId": "lvl-1",
+        "openings": [],
+        "position": "3.75",
+        "wswhJoist": "12",
+        "wswhWidth": "18",
+        "narrowPier": false,
+        "systemType": "sheathed",
+        "wallDLTypeId": "wdt-1",
+        "wswhCondition": "concrete",
+        "nailingPattern": "",
+        "wswhFloorDepth": "12",
+        "jambPostOverride": "",
+        "postLeftOverride": "",
+        "ftaoStrapOverride": "",
+        "postRightOverride": "",
+        "wswhAnchorOverride": "",
+        "anchorageLeftOverride": "",
+        "anchorageRightOverride": ""
+       },
+       {
+        "id": "w-7",
+        "mark": "SW-7",
+        "length": "7.75",
+        "method": "segmented",
+        "levelId": "lvl-2",
+        "openings": [],
+        "position": "3.75",
+        "wswhJoist": "12",
+        "wswhWidth": "18",
+        "narrowPier": false,
+        "systemType": "sheathed",
+        "wallDLTypeId": "wdt-1",
+        "wswhCondition": "concrete",
+        "nailingPattern": "",
+        "wswhFloorDepth": "12",
+        "jambPostOverride": "",
+        "postLeftOverride": "",
+        "ftaoStrapOverride": "",
+        "postRightOverride": "",
+        "wswhAnchorOverride": "",
+        "anchorageLeftOverride": "",
+        "anchorageRightOverride": ""
+       }
+      ],
+      "levelLoads": {
+       "lvl-1": {
+        "wind": "",
+        "seismic": ""
+       },
+       "lvl-2": {
+        "wind": "",
+        "seismic": ""
+       }
+      },
+      "driftBypass": "",
+      "totalLength": "38",
+      "distReviewed": [],
+      "distribution": "",
+      "gravityLoads": {
+       "lvl-1": {
+        "loads": [
+         {
+          "D": "29.4",
+          "L": "",
+          "Lr": "20",
+          "id": "gl-6",
+          "end": 38,
+          "trib": "13.5",
+          "shape": "full",
+          "start": 0,
+          "perArea": true,
+          "position": 0,
+          "assemblyId": ""
+         }
+        ]
+       },
+       "lvl-2": {
+        "loads": [
+         {
+          "D": "32.1",
+          "L": "40",
+          "Lr": "",
+          "id": "gl-7",
+          "end": 38,
+          "trib": "10.5",
+          "shape": "full",
+          "start": 0,
+          "perArea": true,
+          "position": 0,
+          "assemblyId": ""
+         }
+        ]
+       }
+      },
+      "supportPosts": [],
+      "wallThickness": ""
+     },
+     {
+      "id": "ln-4",
+      "name": "4",
+      "beams": [],
+      "walls": [
+       {
+        "id": "w-8",
+        "mark": "SW-8",
+        "length": 4,
+        "method": "segmented",
+        "levelId": "lvl-1",
+        "openings": [],
+        "position": "3",
+        "wswhJoist": "12",
+        "wswhWidth": "18",
+        "narrowPier": false,
+        "systemType": "sheathed",
+        "wallDLTypeId": "wdt-1",
+        "wswhCondition": "concrete",
+        "nailingPattern": "",
+        "wswhFloorDepth": "12",
+        "jambPostOverride": "",
+        "postLeftOverride": "",
+        "ftaoStrapOverride": "",
+        "postRightOverride": "",
+        "wswhAnchorOverride": "",
+        "anchorageLeftOverride": "",
+        "anchorageRightOverride": ""
+       },
+       {
+        "id": "w-9",
+        "mark": "SW-9",
+        "length": 4,
+        "method": "segmented",
+        "levelId": "lvl-2",
+        "openings": [],
+        "position": "3",
+        "wswhJoist": "12",
+        "wswhWidth": "18",
+        "narrowPier": false,
+        "systemType": "sheathed",
+        "wallDLTypeId": "wdt-1",
+        "wswhCondition": "concrete",
+        "nailingPattern": "",
+        "wswhFloorDepth": "12",
+        "jambPostOverride": "",
+        "postLeftOverride": "",
+        "ftaoStrapOverride": "",
+        "postRightOverride": "",
+        "wswhAnchorOverride": "",
+        "anchorageLeftOverride": "",
+        "anchorageRightOverride": ""
+       }
+      ],
+      "levelLoads": {
+       "lvl-1": {
+        "wind": "",
+        "seismic": ""
+       },
+       "lvl-2": {
+        "wind": "",
+        "seismic": ""
+       }
+      },
+      "driftBypass": "",
+      "totalLength": "13",
+      "distReviewed": [],
+      "distribution": "",
+      "gravityLoads": {
+       "lvl-1": {
+        "loads": [
+         {
+          "D": "29.4",
+          "L": "",
+          "Lr": "20",
+          "id": "gl-9",
+          "end": 13,
+          "trib": "13.5",
+          "shape": "full",
+          "start": 0,
+          "perArea": true,
+          "position": 0,
+          "assemblyId": ""
+         }
+        ]
+       },
+       "lvl-2": {
+        "loads": [
+         {
+          "D": "32.1",
+          "L": "40",
+          "Lr": "",
+          "id": "gl-10",
+          "end": 13,
+          "trib": "10.5",
+          "shape": "full",
+          "start": 0,
+          "perArea": true,
+          "position": 0,
+          "assemblyId": ""
+         }
+        ]
+       }
+      },
+      "supportPosts": [],
+      "wallThickness": ""
+     },
+     {
+      "id": "ln-5",
+      "name": "5",
+      "beams": [],
+      "walls": [
+       {
+        "id": "w-10",
+        "mark": "SW-10",
+        "length": "7.75",
+        "method": "segmented",
+        "levelId": "lvl-1",
+        "openings": [],
+        "position": "0",
+        "wswhJoist": "12",
+        "wswhWidth": "18",
+        "narrowPier": false,
+        "systemType": "sheathed",
+        "wallDLTypeId": "wdt-1",
+        "wswhCondition": "concrete",
+        "nailingPattern": "",
+        "wswhFloorDepth": "12",
+        "jambPostOverride": "",
+        "postLeftOverride": "",
+        "ftaoStrapOverride": "",
+        "postRightOverride": "",
+        "wswhAnchorOverride": "",
+        "anchorageLeftOverride": "",
+        "anchorageRightOverride": ""
+       },
+       {
+        "id": "w-11",
+        "mark": "SW-11",
+        "length": "7.75",
+        "method": "segmented",
+        "levelId": "lvl-2",
+        "openings": [],
+        "position": "0",
+        "wswhJoist": "12",
+        "wswhWidth": "18",
+        "narrowPier": false,
+        "systemType": "sheathed",
+        "wallDLTypeId": "wdt-1",
+        "wswhCondition": "concrete",
+        "nailingPattern": "",
+        "wswhFloorDepth": "12",
+        "jambPostOverride": "",
+        "postLeftOverride": "",
+        "ftaoStrapOverride": "",
+        "postRightOverride": "",
+        "wswhAnchorOverride": "",
+        "anchorageLeftOverride": "",
+        "anchorageRightOverride": ""
+       }
+      ],
+      "levelLoads": {
+       "lvl-1": {
+        "wind": "",
+        "seismic": ""
+       },
+       "lvl-2": {
+        "wind": "",
+        "seismic": ""
+       }
+      },
+      "driftBypass": "",
+      "totalLength": "16",
+      "distReviewed": [],
+      "distribution": "",
+      "gravityLoads": {
+       "lvl-1": {
+        "loads": [
+         {
+          "D": "29.4",
+          "L": "",
+          "Lr": "20",
+          "id": "gl-11",
+          "end": 16,
+          "trib": "15",
+          "shape": "full",
+          "start": 0,
+          "perArea": true,
+          "position": 0,
+          "assemblyId": ""
+         }
+        ]
+       },
+       "lvl-2": {
+        "loads": [
+         {
+          "D": "32.1",
+          "L": "40",
+          "Lr": "",
+          "id": "gl-12",
+          "end": 16,
+          "trib": "11",
+          "shape": "full",
+          "start": 0,
+          "perArea": true,
+          "position": 0,
+          "assemblyId": ""
+         }
+        ]
+       }
+      },
+      "supportPosts": [],
+      "wallThickness": ""
+     }
+    ]
+   }
+  ],
+  "driftBypass": false,
+  "wallDLTypes": [
+   {
+    "id": "wdt-1",
+    "psf": "12.8",
+    "name": "Exterior"
+   },
+   {
+    "id": "wdt-2",
+    "psf": "8.4",
+    "name": "Interior"
+   }
+  ],
+  "distribution": "capacity",
+  "riskCategory": "II",
+  "wallThickness": "6",
+  "windDriftLimit": "400",
+  "detachedOneTwoFamily": true,
+  "seismicDesignCategory": "E"
+ }
+}

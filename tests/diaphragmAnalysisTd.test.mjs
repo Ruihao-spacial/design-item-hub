@@ -10,10 +10,11 @@ if (!globalThis.document) {
   const { window, document } = parseHTML('<!doctype html><html><body></body></html>');
   Object.assign(globalThis, { window, document, Node: window.Node });
 }
-const { tdFrame } = await import('../src/modules/tdGeometry.js');
+const { tdFrame, parsePlan, planErrors } = await import('../src/modules/tdGeometry.js');
+const { normalizeInputs } = await import('../src/modules/tdMigrate.js');
 const { sectionAt } = await import('../src/modules/tdBasicShear.js');
 const { chordForce, crossForce } = await import('../src/modules/tdMembers.js');
-const { deriveTd, CLOSURE_TOL } = await import('../src/modules/tdDerive.js');
+const { deriveTd, CLOSURE_TOL, continuingEdges } = await import('../src/modules/tdDerive.js');
 const { toolValue } = await import('../src/modules/tdBookKeys.js');
 const { defaultInputs, newLoad, newSegment } = await import('../src/modules/tdModel.js');
 const { diaphragmAnalysis, calcAll, planWithLinks } = await import('../src/modules/diaphragmAnalysis.js');
@@ -144,8 +145,7 @@ test('overhang on the high side (Ex 3.4 mirrored left–right): y mirrored, same
     const X = v => String(75 - Number(v));
     i.grids.filter(g => g.axis === 'x').forEach(g => { g.at = X(g.at); });
     i.outline = i.outline.map(p => ({ x: X(p.x), y: p.y })).reverse();
-    for (const o of [...i.tds, ...i.diaphragms]) [o.x1, o.x2] = [X(o.x2), X(o.x1)];
-    i.tds[0].overhang = [X(i.tds[0].overhang[1]), X(i.tds[0].overhang[0])];
+    for (const o of [...i.tds, ...i.diaphragms.flatMap(d => d.parts)]) [o.x1, o.x2] = [X(o.x2), X(o.x1)];
     i.loads.forEach(l => l.segments.forEach(s => { [s.from, s.to] = [X(s.to), X(s.from)]; }));
     i.tds[0].engineer.cantileverOk = true;
   }).r;
@@ -166,6 +166,112 @@ test('TDs tab: derived loads with how they were found, shears per segment, resul
   assert.ok(txt.includes('Vierendeel') && txt.includes('-6,441'), 'P1 of TD1 with its derivation');
   assert.ok(txt.includes('s2 (y2 → y1)'));
   assert.equal((txt.match(/✓ results/g) || []).length, 2);
+});
+
+// ── Ex 8.1 gaps G4–G6 (user 2026-11-02) ──
+test('G4: chord cut inside an opening stretch (Ex 8.1 chord D at grid 4) — section M/H default 3000, Vierendeel setting 2759.6', () => {
+  const vier = run('Ex8.1', i => { i.diaphragms[0].chordCut = 'vierendeel'; }).r.analysis.cases[0];
+  const sect = run('Ex8.1', i => { i.diaphragms[0].chordCut = ''; }).r.analysis.cases[0]; // default = section (book p8)
+  assert.ok(close(chordForce(vier, 10, 60, '-').N, 2759.6, 1e-4), 'Vierendeel: M(62.5)/90 + Σ unit shears along the outer chord');
+  assert.ok(close(chordForce(sect, 10, 60, '-').N, 3000, 1e-9), 'section: 240,000 / 80');
+  assert.match(chordForce(sect, 10, 60, '-').how, /section rule/);
+  // the outer chord A is continuous across grid 4 (nothing ends there): same force on both sides
+  assert.ok(close(chordForce(vier, 90, 60, '-').N, chordForce(vier, 90, 60, '+').N, 1e-9));
+  // outer chords start from M/H at the inflection with the inflection section's depth (A at 90, E at 0: H = 90)
+  assert.ok(close(chordForce(vier, 0, 62.5, '').N, (10000 * 62.5 - 100 * 62.5 ** 2) / 90, 1e-6));
+  // G3: the A.2 member (upper band changes sign at 68.23) is 0 at the zero-shear point; B (lower band, one sign) at
+  // the inflection. Only TD loads come from this basic field; reported members are integrated from the net field.
+  const a2 = chordForce(vier, 80, 68.2, '');
+  assert.ok(Math.abs(chordForce(vier, 80, a2.zeroShear, '').N) < 1e-6, 'A.2 zero at its zero-shear point');
+  assert.ok(close(a2.zeroShear, 68.23, 1e-3));
+  assert.ok(Math.abs(chordForce(vier, 50, 62.5, '').N) < 1e-6, 'B zero at the inflection');
+  assert.ok(close(chordForce(sect, 80, 50, '+').N, -2042.7, 1e-4), 'A.2 into TD1 = book 2043 (p13)');
+  assert.equal(toolValue('Nb:D:4-', planWithLinks(run('Ex8.1').inputs).plan, run('Ex8.1').r.analysis), 3000);
+});
+
+test('G5: a wall ending inside a TD segment (Ex 8.1 TD4 on line 6) — the engine gets the segment average and closes', () => {
+  const { r } = run('Ex8.1');
+  const t4 = r.analysis.tdRuns.find(x => x.mark === 'TD4');
+  assert.equal(t4.terminal, 'OUTPUT');
+  assert.match(t4.how.td_vo_avg, /average/);
+  assert.ok(t4.outputs.td_closure_rel <= CLOSURE_TOL);
+  assert.deepEqual(t4.inexactEdges, ['x1']);
+  // the book TDs of Ex 3.3–5.1 keep their inputs (no averaging): checked by the T01–T08 tests; none is flagged
+  for (const id of ['Ex3.3', 'Ex3.4', 'Ex3.5', 'Ex4.1', 'Ex4.2', 'Ex4.3', 'Ex5.1'])
+    for (const t of run(id, i => i.tds.forEach(x => { x.engineer.cantileverOk = true; })).r.analysis.tdRuns) assert.ok(!t.how || !t.how.td_vo_avg, id + ' ' + t.mark);
+});
+
+test('G6: an edge carrying on past the TD (Ex 8.1 TD2, line 5 above B) is closed on its line; the case is not paused', () => {
+  const { r, plan } = run('Ex8.1');
+  const t2 = r.analysis.tdRuns.find(x => x.mark === 'TD2');
+  assert.equal(t2.terminal, 'OUTPUT');
+  assert.deepEqual(t2.continues.map(c => [c.edge, c.line, c.past]), [['x2', '5', 'B']]);
+  assert.ok(t2.issues.some(i => i.code === 'td-edge-continues' && i.warn));
+  assert.deepEqual(r.analysis.cases[0].paused, []);
+  assert.ok(r.analysis.tdRuns.every(x => x.terminal === 'OUTPUT'), 'all five TDs run');
+  // no TD of the other examples has a continuing edge (their results are unchanged)
+  for (const id of ['Ex3.3', 'Ex3.4', 'Ex3.5', 'Ex4.1', 'Ex4.2', 'Ex4.3', 'Ex5.1']) {
+    const x = run(id);
+    for (const t of x.plan.tds) assert.deepEqual(continuingEdges(x.plan, t, tdFrame(t)), [], id + ' ' + t.mark);
+  }
+  assert.ok(plan.tds.length === 5);
+});
+
+// ---- TD load lines found from the plan (user 2026-11-03) ----
+const BOOK_IDS = ['Ex3.3', 'Ex3.4', 'Ex3.5', 'Ex4.1', 'Ex4.2', 'Ex4.3', 'Ex5.1', 'Ex8.1', 'Ex8.4'];
+const lineKey = ls => ls.map(l => (l.grid ? l.grid.name : l.grid) + ' ' + l.side).sort().join(', ');
+
+test('Auto load lines: all 20 book TDs found from the plan (grid and side) with the entered lines erased; every book value unchanged', () => {
+  let n = 0;
+  for (const id of BOOK_IDS) {
+    const b = book(id), { r, plan } = run(id, i => i.tds.forEach(t => { t.loads = []; t.loadsMode = 'auto'; t.engineer.cantileverOk = true; })); // Ex 3.4: the book accepts its cantilever
+    for (const t of plan.tds) {
+      const want = b.layout.tds.find(x => x.mark === t.mark).loads.map(l => l.grid + ' ' + l.side).sort().join(', ');
+      assert.equal(lineKey(t.loads), want, id + ' ' + t.mark);
+      assert.ok(t.found.every(f => f.why), 'each line says why');
+      n++;
+    }
+    const fails = b.expected.filter(e => {
+      const want = e.vTool ?? e.v, got = toolValue(e.k, plan, r.analysis), tol = e.tol ?? Math.max(0.005 * Math.abs(want), 1);
+      return got === null || Number.isNaN(got) || Math.abs(got - want) > tol;
+    }).map(e => e.k);
+    assert.deepEqual(fails, [], id);
+  }
+  assert.equal(n, 20);
+});
+
+test('Auto load lines: none found → warning, the TD carries nothing and does not pause its case; more than 2 → plan error asking to set them by hand', () => {
+  // Ex 4.1 with the notch filled: TD1 finds nothing
+  const { r } = run('Ex4.1', i => { i.outline = [{ x: '0', y: '0' }, { x: '150', y: '0' }, { x: '150', y: '50' }, { x: '0', y: '50' }]; });
+  assert.ok(r.warnings.some(w => w.code === 'td-loads' && /no load line found/.test(w.msg)));
+  const t1 = r.tdRuns.find(x => x.mark === 'TD1');
+  assert.equal(t1.terminal, 'NOT_RUN');
+  assert.ok(t1.issues.some(i => i.code === 'td-no-load'));
+  assert.equal(r.analysis.cases[0].paused.length, 0, 'a TD with nothing to carry does not pause');
+  // three notch / opening edges inside one TD: found, no error (any number since 2026-11-03, superposed runs)
+  const inputs = bookToInputs(book('Ex4.1'));
+  inputs.grids.push({ id: 'gE', name: 'E', axis: 'y', at: '20', ref: false }, { id: 'gF', name: 'F', axis: 'y', at: '30', ref: false });
+  inputs.openings.push({ id: 'o1', name: '', x1: '15', x2: '35', y1: '20', y2: '30' });
+  const plan3 = parsePlan(inputs), errs = planErrors(plan3);
+  assert.ok(!errs.some(e => e.code === 'td-loads-max'), errs.map(e => e.msg).join(' | '));
+  assert.ok(plan3.tds.some(t => t.loads.length === 3));
+});
+
+test('upgrade: a TD saved before is Auto when its lines are the found ones, else Set by hand (kept), and the card shows what the plan gives', () => {
+  const inputs = bookToInputs(book('Ex4.1'));
+  inputs.tds.forEach(t => { delete t.loadsMode; });
+  inputs.tds[1].loads[0].side = '+'; // the DA-manual slip: TD2 on B from the right
+  normalizeInputs(inputs);
+  assert.deepEqual(inputs.tds.map(t => t.loadsMode), ['auto', 'manual']);
+  assert.equal(inputs.tds[1].loads[0].side, '+', 'kept as entered');
+  const box = document.createElement('div');
+  diaphragmAnalysis.renderForm(box, inputs, () => {}, [], () => {}, {});
+  const btn = t => [...box.querySelectorAll('button')].find(b => b.textContent === t || b.textContent.startsWith(t));
+  btn('Plan').dispatchEvent(new window.Event('click'));
+  btn('Diaphragms & TDs').dispatchEvent(new window.Event('click'));
+  const at = box.textContent.indexOf('The plan gives');
+  assert.ok(box.textContent.includes('The plan gives: B left (Auto would use these).'), 'manual TD2 shows the found line: ' + box.textContent.slice(at - 80, at + 80));
+  assert.ok(box.querySelector('[data-found="B"]') && /outline \/ notch edge at x = 15/.test(box.textContent), 'auto TD1 lists its line with the reason');
 });
 
 console.log(passed + ' passed');

@@ -204,6 +204,7 @@ export async function renderItemForm(container, state, { moduleId, itemId, onBac
   container.appendChild(statusRow);
 
   const projectItems = state.items || [];
+  formHooks.itemId = state._itemId || null; // a module can leave its own item out of a list of project items
 
   function renderModuleForm(formInputs) {
     clearEl(formBody);

@@ -79,8 +79,15 @@ for (const s of sources) {
   out.push(`- **Grids** x: ${gx}; y: ${gy}`);
   out.push(`- **Outline** ${L.outline.map(p => `(${p[0]}, ${p[1]})`).join(' → ')}; sheathed area ${sheathedArea(L)} sf`);
   if ((L.openings || []).length) out.push(`- **Openings** ${L.openings.map(o => `${o.name || ''} x ${o.x[0]}–${o.x[1]}, y ${o.y[0]}–${o.y[1]}`).join('; ')}`);
+  {
+    // diaphragms of the item as built by bookToInputs: each with its supports and its pieces (D1.1, D1.2 …)
+    const inp = bookToInputs(s), gname = id => (inp.grids.find(g => g.id === id) || {}).name || '?';
+    const dgs = inp.diaphragms.map(d => `${d.mark} (load along ${d.dir}, spans ${d.supports.map(gname).join(' / ')}${L.diaphragms ? '' : ', whole plan'}): ` +
+      d.parts.map((q, i) => `${d.mark}.${i + 1} x ${q.x1}–${q.x2}, y ${q.y1}–${q.y2}`).join('; '));
+    out.push(`- **Diaphragms** ${dgs.join(' · ') || 'none'}`);
+  }
   out.push(`- **Walls** ${(L.walls || []).map(w => `${w.mark} (line ${w.line}, ${w.axis} = ${w.at}, ${w.from}–${w.to})`).join('; ') || 'none'}`);
-  out.push(`- **TDs** ${(L.tds || []).map(t => `${t.mark} x ${t.x[0]}–${t.x[1]}, y ${t.y[0]}–${t.y[1]}, supports ${t.supports.join(' / ')}, loads ${t.loads.map(l => `${l.grid} (${l.side})`).join(', ')}${t.overhang ? `, overhang ${t.overhang.join('–')}` : ''}`).join('; ') || 'none'}`);
+  out.push(`- **TDs** ${(L.tds || []).map(t => `${t.mark} x ${t.x[0]}–${t.x[1]}, y ${t.y[0]}–${t.y[1]}, supports ${t.supports.join(' / ')}, loads ${t.loads.map(l => `${l.grid} (${l.side})`).join(', ')}${t.overhangs ? `, overhang ${t.overhangs.map(o => o.join(' → ')).join(', ')}` : t.overhang ? `, overhang ${t.overhang.join('–')}` : ''}`).join('; ') || 'none'}`);
   out.push(`- **Load** ${(L.loads || []).map(l => `${l.mode} acting ${l.acts}: ${(l.segments || []).map(g => `${g.w}${g.w2 !== undefined ? '→' + g.w2 : ''} ${l.mode === 'area' ? 'psf' : 'plf'} over ${g.from}–${g.to}`).join(', ')}`).join('; ')}`);
   out.push('');
   out.push('| # | Quantity | Key | Book | Tool sign | Unit | T/C | Page (fig) | Phase | Tool | Status |');

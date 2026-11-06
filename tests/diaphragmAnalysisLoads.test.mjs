@@ -17,6 +17,9 @@ const { defaultInputs } = await import('../src/modules/tdModel.js');
 const { normalizeInputs } = await import('../src/modules/tdMigrate.js');
 const { diaphragmAnalysis, calcAll, planWithLinks, forceLevels, linkLineForces } = await import('../src/modules/diaphragmAnalysis.js');
 const V = await import('../src/modules/tdViews.js');
+const E = await import('../src/modules/tdPlanEditor.js');
+const { parsePlan } = await import('../src/modules/tdGeometry.js');
+const { CLOSURE_LB, CLOSURE_REL, closureTol } = await import('../src/modules/tdNet.js');
 const { bookToInputs } = await import('./td-book/src/toInputs.mjs');
 
 const book = id => JSON.parse(fs.readFileSync(new URL('./td-book/' + id + '.json', import.meta.url), 'utf8'));
@@ -81,8 +84,10 @@ test('load strip w(s): seismic q·d(s) steps with the depth (Ex 4.1 notch), line
 
 test('force levels: Setup factors; Analysis shows 1.0E / diaphragm / collector level with a "Forces shown" line; SWD line forces stay at 1.0E', () => {
   const i = seismicItem(); i.level.diaphragmFactor = '1.25'; i.level.collectorFactor = '2.5';
-  assert.deepEqual(forceLevels(i), { fx: 100, diaphragm: 1.25, collector: 2.5 });
-  assert.deepEqual(forceLevels(defaultInputs()), { fx: null, diaphragm: 1, collector: 1 });
+  // + the transfer factor of the walls above (step 7, 2026-11-05): Ω₀ typed / SWD / 2.5, × 1.25 when ticked
+  const tf = { omega0: 2.5, omega0From: 'default', increase: false, transfer: 2.5 };
+  assert.deepEqual(forceLevels(i), { fx: 100, diaphragm: 1.25, collector: 2.5, ...tf });
+  assert.deepEqual(forceLevels(defaultInputs()), { fx: null, diaphragm: 1, collector: 1, ...tf });
   const r = calcAll(i), cs = r.analysis.cases.find(c => c.dir === 'y');
   const sc = V.scaleCase(cs, 1.25);
   assert.ok(Math.abs(sc.lines[0].P - 1.25 * cs.lines[0].P) < 1e-9 && Math.abs(sc.members[0].runs[0].max - 1.25 * cs.members[0].runs[0].max) < 1e-9);
@@ -118,7 +123,13 @@ test('Setup pages: Seismic loading (level, F_x, factors, E loads), Wind loading 
   const click = t => [...box.querySelectorAll('button')].find(b => b.textContent === t).dispatchEvent(new window.Event('click'));
   click('Setup');
   assert.ok(box.textContent.includes('Level and story force F') && box.textContent.includes('Seismic loads (E)'));
-  assert.ok(box.textContent.includes('+ Seismic load along y') && box.textContent.includes('+ Seismic load along x'));
+  // one seismic F_x / ΣA load per direction (user test 2026-11-03): a new item has one each, so no "+ Seismic load"
+  assert.ok(!box.textContent.includes('+ Seismic load along') && box.textContent.includes('One seismic F_x / ΣA load per direction'));
+  const del = () => [...box.querySelectorAll('button')].filter(b => b.title === 'Delete load');
+  del()[0].dispatchEvent(new window.Event('click')); // the y load
+  assert.ok(box.textContent.includes('+ Seismic load along y') && !box.textContent.includes('+ Seismic load along x'));
+  click('+ Seismic load along y');
+  assert.ok(!box.textContent.includes('+ Seismic load along'));
   click('Wind loading');
   assert.ok(box.textContent.includes('Wind loads (W)') && !box.textContent.includes('Level and story force'));
   click('+ Wind load along y');
@@ -139,6 +150,7 @@ test('Setup pages: Seismic loading (level, F_x, factors, E loads), Wind loading 
   diaphragmAnalysis.renderForm(box2, b5, () => {}, [], () => {}, {});
   const click2 = t => [...box2.querySelectorAll('button')].find(b => b.textContent === t).dispatchEvent(new window.Event('click'));
   click2('Plan');
+  click2('Diaphragms & TDs'); // the loads note sits on the Diaphragms & TDs page (2026-11-03)
   assert.ok(box2.textContent.includes('Loads are entered on the Setup tab') && !box2.textContent.includes('+ Load along'));
   click2('Setup'); click2('Wind loading');
   assert.equal([...box2.querySelectorAll('button')].filter(b => b.title === 'Delete load').length, 2);
@@ -151,6 +163,202 @@ test('gate and Shear Wall Design: a paused offset-line case holds its line force
   assert.deepEqual([lf({}, [{ mark: 'TD1' }]).W, lf({}, [{ mark: 'TD1' }]).E], [null, 2.5], 'W held (offset + paused); E sent (no offset line, line forces do not need the TD run)');
   assert.equal(lf({}, []).W, 2.5, 'sent once the TD runs');
   assert.equal(lf(undefined, [{ mark: 'TD1' }]).W, 2.5, 'no offset line: sent');
+});
+
+// ---- 2026-11-03 (user): "No seismic load" / "No wind load", closure tolerance 30 lb / 5 %, Plan input pages
+test('no-load declaration: warning until a load is entered or "No … load" is pressed; declared loads stay stored but are not analysed', () => {
+  const inputs = bookToInputs(book('Ex4.1')); // wind (line) only
+  normalizeInputs(inputs);
+  assert.deepEqual(inputs.noLoad, { E: false, W: false }, 'default: nothing declared');
+  let r = calcAll(inputs);
+  assert.ok(r.warnings.some(w => w.code === 'no-load-E') && !r.warnings.some(w => w.code === 'no-load-W'));
+  // press the button on Setup → Seismic loading
+  const box = document.createElement('div');
+  diaphragmAnalysis.renderForm(box, inputs, () => {}, [], () => {}, {});
+  const click = t => [...box.querySelectorAll('button')].find(b => b.textContent === t).dispatchEvent(new window.Event('click'));
+  click('Setup'); click('Seismic loading');
+  const txt = box.textContent;
+  assert.ok(txt.indexOf('No seismic load') < txt.indexOf('Level and story force'), '"No seismic load" is the first thing on the page');
+  click('No seismic load');
+  assert.ok(box.textContent.includes('Level and story force') && !box.textContent.includes('Seismic force levels') && !box.textContent.includes('Seismic loads (E)'), 'declared: only the level stays');
+  assert.equal(inputs.noLoad.E, true);
+  assert.ok(box.textContent.includes('Declared: this level has no seismic load'));
+  r = calcAll(inputs);
+  assert.ok(!r.warnings.some(w => /^no-load/.test(w.code)));
+  // "No wind load" with the wind load still stored: kept, not analysed; undo brings it back
+  const before = JSON.stringify(inputs.loads);
+  inputs.noLoad.W = true;
+  r = calcAll(inputs);
+  assert.equal(r.analysis.cases.length, 0);
+  assert.equal(JSON.stringify(inputs.loads), before, 'loads not deleted');
+  inputs.noLoad.W = false;
+  assert.ok(Math.abs(toolValue('R:1', planWithLinks(inputs).plan, calcAll(inputs).analysis) - 15000) < 1e-6);
+});
+
+test('closure tolerance 30 lb / 5 % for the checks; the solver still closes exactly (Ex 3.3 R_A 4580.5, not the flexible 4790)', () => {
+  assert.equal(CLOSURE_LB, 30); assert.equal(CLOSURE_REL, 0.05);
+  assert.equal(closureTol(100), 30); assert.equal(closureTol(-2000), 100);
+  const inputs = bookToInputs(book('Ex3.3'));
+  const r = calcAll(inputs);
+  assert.ok(Math.abs(toolValue('R:A', planWithLinks(inputs).plan, r.analysis) - 4580.5) < 1);
+  const o = r.analysis.cases[0].offset;
+  assert.ok(o.converged && o.passes[o.passes.length - 1].maxRes < 0.01);
+});
+
+test('Plan tab pages: Grids & outline / Diaphragms & TDs / Shear walls, each with its own tools and tables; picking an item opens its page', () => {
+  const inputs = bookToInputs(book('Ex8.4'));
+  const box = document.createElement('div');
+  diaphragmAnalysis.renderForm(box, inputs, () => {}, [], () => {}, {});
+  const btn = t => [...box.querySelectorAll('button')].find(b => b.textContent === t);
+  const click = t => btn(t).dispatchEvent(new window.Event('click'));
+  click('Plan');
+  // the page buttons sit in the right column, after the drawing and above the inputs
+  const pages = box.querySelector('.td-pages'), all = [...box.querySelectorAll('*')];
+  const drawing = all.find(e => e.tagName.toLowerCase() === 'svg' && e.querySelector('g'));
+  assert.ok(all.indexOf(pages) > all.indexOf(drawing), 'page bar after the drawing');
+  assert.ok(pages.nextSibling && pages.nextSibling.textContent.includes('Grid lines (shared)'), 'page bar directly above the inputs');
+  const has = t => box.textContent.includes(t);
+  assert.ok(has('Grid lines (shared)') && has('Outline (shared') && has('Openings (shared)') && !has('Transfer diaphragms —') && !has('Shear walls (shared)'));
+  assert.ok(btn('Outline') && !btn('TD') && !btn('Wall') && !has('Load direction:'));
+  click('Diaphragms & TDs');
+  assert.ok(has('Diaphragms — load along') && has('Transfer diaphragms —') && has('Load direction:') && !has('Grid lines (shared)'));
+  assert.ok(btn('TD') && btn('+ Piece') && !btn('Outline'));
+  // load direction: right column, under the page buttons; the tool row keeps its place (first row of the left column)
+  { const all = [...box.querySelectorAll('*')], dirEl = box.querySelector('.td-dir');
+    assert.ok(all.indexOf(dirEl) > all.indexOf(box.querySelector('.td-pages')), 'direction under the page buttons');
+    const drawing = all.find(e => e.tagName.toLowerCase() === 'svg' && e.querySelector('g'));
+    assert.ok(all.indexOf(dirEl) > all.indexOf(drawing), 'not above the drawing / tool row'); }
+  click('Shear walls');
+  assert.ok(has('Shear walls (shared)') && has('offset line of resistance') && btn('Wall') && !btn('TD'));
+});
+
+test('user 2026-11-03 (DA-manual Ex 4.1): a leftover diaphragm of the other direction is named on the Diaphragms page with its issues; no diaphragm / TD without a closed outline', () => {
+  const inputs = bookToInputs(book('Ex4.1'));
+  normalizeInputs(inputs);
+  // the user's item: an uncut 0-100 × 0-50 diaphragm along x whose support grids were deleted
+  inputs.diaphragms.push({ id: 'dg-old', mark: 'D1', dir: 'x', parts: [{ id: 'dg-old-p1', x1: '0', x2: '100', y1: '0', y2: '50' }], supports: ['gone-1', 'gone-2'], sheathing: '', blocked: null, bandSplit: '', chordCut: '' });
+  const r = calcAll(inputs);
+  assert.ok(r.errors.some(e => e.ref === 'dg-old' && /outside the outline/.test(e.msg)) && r.errors.some(e => e.ref === 'dg-old' && /support lines/.test(e.msg)));
+  const box = document.createElement('div');
+  diaphragmAnalysis.renderForm(box, inputs, () => {}, [], () => {}, {});
+  const btn = t => [...box.querySelectorAll('button')].find(b => b.textContent === t);
+  [...box.querySelectorAll('button')].find(b => b.textContent.startsWith('Plan')).dispatchEvent(new window.Event('click'));
+  btn('Diaphragms & TDs').dispatchEvent(new window.Event('click'));
+  assert.ok(box.textContent.includes('Load along x: 1 diaphragm(s) D1 — 2 plan issue(s)'), 'named on the y page');
+  btn('Show load along x').dispatchEvent(new window.Event('click'));
+  assert.ok(box.textContent.includes('Diaphragms — load along x'));
+  // no outline yet: the Diaphragm tool refuses instead of storing an uncut rectangle
+  const bare = bookToInputs(book('Ex4.1'));
+  bare.outline = []; bare.diaphragms = [];
+  const st = E.newEditorState(); st.tool = 'diaphragm';
+  E.applyClick(bare, parsePlan(bare), st, { x: 0, y: 0 });
+  assert.equal(E.applyClick(bare, parsePlan(bare), st, { x: 150, y: 50 }), false);
+  assert.equal(bare.diaphragms.length, 0);
+  assert.ok(/outline first/.test(st.message));
+});
+
+test('Plan panel (user 2026-11-03): a row is selected when one of its fields is edited; sections show ▾ / ▸ and stay collapsed across redraws, pages and directions', () => {
+  const inputs = bookToInputs(book('Ex8.4'));
+  const box = document.createElement('div');
+  diaphragmAnalysis.renderForm(box, inputs, () => {}, [], () => {}, {});
+  const btn = t => [...box.querySelectorAll('button')].find(b => b.textContent === t || b.textContent.startsWith(t));
+  const click = t => btn(t).dispatchEvent(new window.Event('click'));
+  const sec = k => box.querySelector('[data-section="' + k + '"]');
+  const collapse = k => { const d = sec(k); d.open = false; d.dispatchEvent(new window.Event('toggle')); };
+  click('Plan');
+  // focus in grid 4's "At" field → that row is selected and highlighted at once
+  const g4 = inputs.grids.find(g => g.name === '4');
+  const row = box.querySelector('[data-selrow="grid:' + g4.id + '"]');
+  row.querySelector('input[type=number]').dispatchEvent(new window.Event('focusin', { bubbles: true }));
+  assert.ok(row.style.background, 'highlighted in place');
+  assert.equal([...box.querySelectorAll('[data-selrow]')].filter(r => r.style.background).length, 1);
+  // collapse "Grid lines", then redraw (add a corner on the outline) and switch pages: still collapsed, arrow ▸
+  assert.equal(sec('Grid lines (shared)').querySelector('.td-sec-arrow').textContent, '▾');
+  collapse('Grid lines (shared)');
+  click('+ Corner');
+  assert.equal(sec('Grid lines (shared)').open, false, 'kept after a redraw');
+  assert.equal(sec('Grid lines (shared)').querySelector('.td-sec-arrow').textContent, '▸');
+  assert.ok(row.isConnected === false && box.querySelector('[data-selrow="grid:' + g4.id + '"]').style.background, 'selection kept after the redraw');
+  click('Diaphragms & TDs');
+  collapse('Transfer diaphragms');
+  const tdCard = box.querySelector('[data-selrow^="td:"]');
+  assert.ok(tdCard, 'TD cards are selectable rows');
+  click('Load along y'); click('Load along x');
+  assert.equal(sec('Transfer diaphragms').open, false, 'kept across directions');
+  assert.ok(sec('Diaphragms').open);
+  const dCard = box.querySelector('[data-selrow^="diaphragm:"]');
+  dCard.querySelector('input').dispatchEvent(new window.Event('focusin', { bubbles: true }));
+  assert.ok(dCard.style.background, 'diaphragm card selected by editing its mark');
+  click('Shear walls');
+  const wRow = box.querySelector('[data-selrow^="wall:"]');
+  wRow.querySelector('input').dispatchEvent(new window.Event('focusin', { bubbles: true }));
+  assert.ok(wRow.style.background, 'wall row selected by editing it');
+  click('Grids & outline');
+  assert.equal(sec('Grid lines (shared)').open, false, 'kept across pages');
+});
+
+test('Grids & outline (user 2026-11-03): headings left-aligned; Lock grid lines (stored; read-only, no add / delete / grid tools); pick outline corners on the plan', () => {
+  const inputs = bookToInputs(book('Ex4.1'));
+  normalizeInputs(inputs);
+  assert.equal(inputs.gridsLocked, false);
+  const box = document.createElement('div');
+  diaphragmAnalysis.renderForm(box, inputs, () => {}, [], () => {}, {});
+  const btn = t => [...box.querySelectorAll('button')].find(b => b.textContent === t || b.textContent.startsWith(t));
+  const click = t => btn(t).dispatchEvent(new window.Event('click'));
+  click('Plan');
+  const sum = box.querySelector('[data-section="Grid lines (shared)"] summary');
+  assert.equal(sum.style.justifyContent, 'flex-start');
+  // lock
+  box.querySelector('[data-gridlock]').dispatchEvent(new window.Event('click'));
+  assert.equal(inputs.gridsLocked, true);
+  const gridRows = [...box.querySelectorAll('[data-selrow^="grid:"]')];
+  assert.ok(gridRows.length && gridRows.every(r => !r.querySelector('input[type=number], input[type=text]') && !r.querySelector('button')), 'names / positions read-only, no delete');
+  assert.ok(!btn('+ Grid ↕') && btn('Grid ↕').disabled && btn('Grid ↔').disabled, 'no add, grid tools off');
+  const st = E.newEditorState(); st.sel = { kind: 'grid', id: inputs.grids[0].id };
+  assert.equal(E.deleteSelected(inputs, st), false); assert.ok(/locked/.test(st.message));
+  st.tool = 'gridx'; assert.equal(E.applyClick(inputs, parsePlan(inputs), st, { x: 70, y: 20 }), false);
+  box.querySelector('[data-gridlock]').dispatchEvent(new window.Event('click'));
+  assert.equal(inputs.gridsLocked, false);
+  assert.ok(btn('+ Grid ↕'));
+  // pick: ⌖ on corner 2 → the next click on the plan sets it; +⌖ inserts after; + Corner (pick) appends
+  box.querySelectorAll('[data-pick="⌖"]')[1].dispatchEvent(new window.Event('click'));
+  assert.ok(box.textContent.includes('Click the point for the outline corner'));
+  const pk = E.newEditorState(); pk.tool = 'cornerpick'; pk.pick = { index: 1, insert: false };
+  assert.equal(E.applyClick(inputs, parsePlan(inputs), pk, { x: 15, y: 0 }), true);
+  assert.deepEqual(inputs.outline[1], { x: '15', y: '0' });
+  assert.equal(pk.tool, 'select');
+  const n = inputs.outline.length;
+  pk.tool = 'cornerpick'; pk.pick = { index: 1, insert: true };
+  E.applyClick(inputs, parsePlan(inputs), pk, { x: 15, y: 5 });
+  assert.equal(inputs.outline.length, n + 1); assert.deepEqual(inputs.outline[2], { x: '15', y: '5' });
+  pk.tool = 'cornerpick'; pk.pick = { index: 1, insert: false }; E.handleEscape(pk);
+  assert.equal(pk.tool, 'select'); assert.equal(pk.pick, null);
+});
+
+test('outline corners on the plan (user 2026-11-03): numbered dots on Grids & outline; a selected row (click or field focus) rings its corner; Delete removes it', () => {
+  const inputs = bookToInputs(book('Ex4.1'));
+  const box = document.createElement('div');
+  diaphragmAnalysis.renderForm(box, inputs, () => {}, [], () => {}, {});
+  const btn = t => [...box.querySelectorAll('button')].find(b => b.textContent === t || b.textContent.startsWith(t));
+  btn('Plan').dispatchEvent(new window.Event('click'));
+  assert.equal(box.querySelectorAll('[data-corner-dot]').length, inputs.outline.length, 'every corner numbered');
+  assert.equal(box.querySelectorAll('[data-corner-mark]').length, 0);
+  // click row 3 → ring at corner 3 (15, 10)
+  box.querySelector('[data-selrow="corner:2"]').dispatchEvent(new window.Event('click'));
+  const mark = box.querySelector('[data-corner-mark]');
+  assert.ok(mark && mark.textContent.includes('#3 (15, 10)'), mark && mark.textContent);
+  // focus in row 5's x field → the ring moves at once (no redraw)
+  box.querySelector('[data-selrow="corner:4"] input').dispatchEvent(new window.Event('focusin', { bubbles: true }));
+  const marks = box.querySelectorAll('[data-corner-mark]');
+  assert.equal(marks.length, 1); assert.ok(marks[0].textContent.startsWith('#5'));
+  // other pages: no corner dots
+  btn('Diaphragms & TDs').dispatchEvent(new window.Event('click'));
+  assert.equal(box.querySelectorAll('[data-corner-dot]').length, 0);
+  // Delete removes the selected corner
+  const st = E.newEditorState(); st.sel = { kind: 'corner', id: 0 };
+  const n = inputs.outline.length;
+  assert.equal(E.deleteSelected(inputs, st), true);
+  assert.equal(inputs.outline.length, n - 1);
 });
 
 console.log(passed + ' passed');

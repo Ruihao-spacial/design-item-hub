@@ -14,9 +14,10 @@ import { vAt, wallR } from './tdMembers.js';
 import { lineParts } from './tdBasicShear.js';
 
 const EPS = 1e-6, NUDGE = 1e-5;
-// Member closure (user 2026-10-30): a run closes when |residual| ≤ the larger of a fixed force and a share of the run's
-// largest |N| — the fixed floor lets a run with small forces pass, the share scales with large ones.
-export const CLOSURE_REL = 0.01, CLOSURE_LB = 1;
+// Member closure (user 2026-10-30; values 30 lb / 5 % user 2026-11-03): a run closes when |residual| ≤ the larger of a
+// fixed force and a share of the run's largest |N| — the fixed floor lets a run with small forces pass, the share
+// scales with large ones. This is the pass / fail limit of the checks; the closure solver itself runs to ~0.
+export const CLOSURE_REL = 0.05, CLOSURE_LB = 30;
 export const closureTol = max => Math.max(CLOSURE_LB, CLOSURE_REL * Math.abs(max));
 export const closes = r => Math.abs(r.residual) <= closureTol(r.max);
 const uniq = a => [...new Set(a.filter(Number.isFinite).map(v => Math.round(v * 1e6) / 1e6))].sort((p, q) => p - q);
@@ -31,8 +32,9 @@ export function tdFields(plan, cs, runs, frames) {
     const g = r.skill, o = r.outputs, ys = f.ySign, base = f.bottom.at;
     const P = y => base + ys * y;
     const W = g.td_span, y1 = g.td_y1, y2 = g.td_has_load2 ? g.td_y2 : y1;
-    const segLocal = g.td_support === 'cantilever' ? [[0, W, o.td_v_s1], [y1, 0, o.td_v_s3]]
-      : [[y1, W, o.td_v_s1], ...(g.td_has_load2 ? [[y2, y1, o.td_v_s2]] : []), [0, y2, o.td_v_s3]];
+    const segLocal = r.segsLocal ? r.segsLocal // three or more load lines: superposed runs (tdDerive.superpose)
+      : g.td_support === 'cantilever' ? [[0, W, o.td_v_s1], [y1, 0, o.td_v_s3]]
+        : [[y1, W, o.td_v_s1], ...(g.td_has_load2 ? [[y2, y1, o.td_v_s2]] : []), [0, y2, o.td_v_s3]];
     const segs = segLocal.map(([a, b, v]) => { const p = P(a), q = P(b); return { lo: Math.min(p, q), hi: Math.max(p, q), v: ys * v }; });
     out.push({ tdId: t.id, mark: t.mark, rect: { x1: t.x1, x2: t.x2, y1: t.y1, y2: t.y2 }, along: f.spanAxis, segs,
       top: f.top ? f.top.name : null, bottom: f.bottom ? f.bottom.name : null });
@@ -72,6 +74,7 @@ export function breaks(plan, cs, fields) {
   }
   for (const g of plan.grids) (g.axis === cs.axis ? S : C).push(g.at);
   for (const w of plan.walls) if (w.axis === cs.axis) C.push(w.from, w.to);
+  for (const a of cs.above || []) if (a.axis === cs.axis) C.push(a.from, a.to); // walls of the story above (step 6)
   const ext = [Math.min(...cs.diaphragms.map(d => d.lo)), Math.max(...cs.diaphragms.map(d => d.hi)),
     Math.min(...cs.diaphragms.map(d => d.across[0])), Math.max(...cs.diaphragms.map(d => d.across[1]))];
   return { S: uniq(S).filter(v => v >= ext[0] - EPS && v <= ext[1] + EPS), C: uniq(C).filter(v => v >= ext[2] - EPS && v <= ext[3] + EPS) };
@@ -180,15 +183,23 @@ export function netChecks(plan, cs, runs, frames) {
     out.push({ caseId: cs.id, code: 'td', ok: okRun, warn: r.terminal === 'NOT_RUN' || r.terminal.startsWith('ENGINEER_INPUT'),
       msg: `${tag}: TD ${r.mark} — ${okRun ? 'results; closure ' + (r.outputs.td_closure_rel * 100).toFixed(3) + ' %, aspect ' + r.outputs.td_aspect.toFixed(2) + (r.outputs.td_blocking_required ? ', blocking required' : '') : r.terminal}` });
     if (!okRun) continue;
+    if (r.superposed) {
+      out.push({ caseId: cs.id, code: 'td-edges', ok: true, warn: true, msg: `${tag}: TD ${r.mark} edge members — not compared (superposed from ${r.superposed.runs.length} engine runs, one per load line; the engine's edge values hold for one load each). The member diagrams integrate the full net field and the closure check covers the edges.` });
+      if ((r.flags || []).some(fl => fl.id === 'W_SEISMIC_COLLECTOR_AMPLIFICATION'))
+        out.push({ caseId: cs.id, code: 'seismic', ok: true, warn: true, msg: `${tag}: TD ${r.mark} — collector forces are unamplified; collector design must apply Ω₀ / the 25 % increase where required (ASCE 7 §12.10.2.1, §12.3.3.4).` });
+      continue;
+    }
     // skill edge members vs the integrator
     const f = frames.get(r.tdId), g = r.skill, o = r.outputs;
     const pos = y => f.bottom.at + f.ySign * y;
     const y0 = g.td_support === 'cantilever' ? g.td_y1 : 0; // a cantilever runs from its tip
     const lo = Math.min(pos(y0), pos(g.td_span)), hi = Math.max(pos(y0), pos(g.td_span));
     const fam = f.spanAxis === cs.axis ? 'chord' : 'cross'; // edges run along the TD span
-    const diffs = [];
+    const diffs = [], skipped = [];
     let compared = 0;
     for (const [x, e] of [['x1', f.edgeX1], ['x2', f.edgeX2]]) {
+      // outside shear changes inside a segment (G5): the engine's edge values are segment approximations
+      if ((r.inexactEdges || []).includes(x)) { skipped.push(x); continue; }
       const m = (cs.members || []).find(q => q.family === fam && Math.abs(q.at - e) < 1e-6);
       const run = m && m.runs.find(q => Math.abs(q.from - lo) < 1e-4 && Math.abs(q.to - hi) < 1e-4);
       if (!run) continue;
@@ -199,7 +210,8 @@ export function netChecks(plan, cs, runs, frames) {
       }
     }
     out.push({ caseId: cs.id, code: 'td-edges', ok: !diffs.length, warn: !compared,
-      msg: `${tag}: TD ${r.mark} edge members — ` + (!compared ? 'not compared (the edge lines continue past the TD)' : `skill = integrator (${compared} values)`) + (diffs.length ? ': ' + diffs.join('; ') : '') });
+      msg: `${tag}: TD ${r.mark} edge members — ` + (!compared ? 'not compared (the edge lines continue past the TD)' : `skill = integrator (${compared} values)`) + (diffs.length ? ': ' + diffs.join('; ') : '')
+        + (skipped.length ? `; edge ${skipped.join(', ')} not compared — a wall or sheathing edge ends inside a TD segment, so the engine's edge values are approximate; the member diagram uses the exact profile` : '') });
     if ((r.flags || []).some(fl => fl.id === 'W_SEISMIC_COLLECTOR_AMPLIFICATION'))
       out.push({ caseId: cs.id, code: 'seismic', ok: true, warn: true, msg: `${tag}: TD ${r.mark} — collector forces are unamplified; collector design must apply Ω₀ / the 25 % increase where required (ASCE 7 §12.10.2.1, §12.3.3.4).` });
   }

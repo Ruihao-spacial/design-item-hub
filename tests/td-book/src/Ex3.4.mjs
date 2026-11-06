@@ -28,7 +28,7 @@ export default {
       { mark: 'D2', x: [15, 75], y: [0, 60], supports: ['2', '3'] },
     ],
     tds: [
-      { mark: 'TD1', x: [0, 75], y: [60, 80], supports: ['2', '3'], overhang: [0, 15],
+      { mark: 'TD1', x: [0, 75], y: [60, 80], supports: ['2', '3'], overhangs: [['2', '1']],
         loads: [{ grid: '1', side: '+' }] },
     ],
     loads: [{ acts: '-y', mode: 'line', segments: [{ from: 0, to: 75, w: 200 }] }],

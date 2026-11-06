@@ -224,7 +224,7 @@ const tdOf = (over) => parsePlan({
   grids: [{ id: 'g1', name: '1', axis: 'x', at: '0' }, { id: 'g2', name: '2', axis: 'x', at: '20' }, { id: 'g3', name: '3', axis: 'x', at: '80' },
     { id: 'g4', name: '4', axis: 'x', at: '95' }, { id: 'gA', name: 'A', axis: 'y', at: '0' }, { id: 'gB', name: 'B', axis: 'y', at: '30' }, { id: 'gC', name: 'C', axis: 'y', at: '50' }],
   outline: [], openings: [], walls: [], diaphragms: [], loads: [],
-  tds: [{ id: 't', mark: 'TD1', dir: 'y', x1: '20', x2: '80', y1: '30', y2: '50', supports: ['g2', 'g3'], loads: [], overhang: null, ...over }],
+  tds: [{ id: 't', mark: 'TD1', dir: 'y', x1: '20', x2: '80', y1: '30', y2: '50', supports: ['g2', 'g3'], loads: [], loadsMode: 'manual', overhang: null, ...over }], // load lines set by hand: their checks
 }).tds[0];
 
 test('tdFrame: TD spanning along plan x; overhang on the high side mirrors y; issues for bad load lines', () => {
@@ -241,9 +241,17 @@ test('tdFrame: TD spanning along plan x; overhang on the high side mirrors y; is
   f = tdFrame(tdOf({ x2: '95', overhang: ['80', '95'], loads: [{ gridId: 'g4', side: '+' }] }));
   assert.ok(f.ok, f.issues.join());
   assert.deepEqual([f.ySign, f.bottom.name, f.top.name, f.geometry.td_y1], [-1, '3', '2', -15]);
-  // cantilever load not at the tip; three load lines; missing supports
-  assert.ok(/tip/.test(tdFrame(tdOf({ x2: '95', overhang: ['80', '95'], loads: [{ gridId: 'g2', side: '+' }] })).issues.join()));
-  assert.ok(/at most 2/.test(tdFrame(tdOf({ supports: ['gA', 'gC'], x1: '20', x2: '80', y1: '0', y2: '50',
+  // a load outside the tips; on a support (allowed since 2026-11-04: straight into it); three load lines; missing supports
+  assert.ok(/between the tips/.test(tdFrame(tdOf({ x2: '95', overhang: ['80', '95'], loads: [{ gridId: 'g1', side: '+' }] })).issues.join()));
+  assert.ok(tdFrame(tdOf({ x2: '95', overhang: ['80', '95'], loads: [{ gridId: 'g2', side: '+' }] })).ok);
+  // overhangs picked by grid (2026-11-04), both ends: tips at local −20 / 75, no mirroring; the TD must reach both tips
+  f = tdFrame(tdOf({ x1: '0', x2: '95', overhangs: [{ fromId: 'g2', toId: 'g1' }, { fromId: 'g3', toId: 'g4' }], loads: [{ gridId: 'g1', side: '-' }, { gridId: 'g4', side: '+' }] }));
+  assert.ok(f.ok, f.issues.join());
+  assert.deepEqual([f.ySign, f.tips.bottom, f.tips.top, f.bottom.name, f.geometry.td_support], [1, -20, 75, '2', 'cantilever']);
+  assert.ok(/reach the tip/.test(tdFrame(tdOf({ x1: '0', overhangs: [{ fromId: 'g2', toId: 'g1' }, { fromId: 'g3', toId: 'g4' }], loads: [{ gridId: 'g1', side: '-' }] })).issues.join()));
+  assert.ok(!tdFrame(tdOf({ x1: '0', overhangs: [{ fromId: 'g2', toId: 'g1' }, { fromId: 'g2', toId: 'g1' }], loads: [{ gridId: 'g1', side: '-' }] })).ok, 'two overhangs from one support');
+  // three load lines on a simple TD: allowed since 2026-11-03 (superposed engine runs, tdDerive.superpose)
+  assert.ok(!/at most/.test(tdFrame(tdOf({ supports: ['gA', 'gC'], x1: '20', x2: '80', y1: '0', y2: '50',
     loads: [{ gridId: 'gB' }, { gridId: 'gB' }, { gridId: 'gB' }] })).issues.join()));
   assert.ok(!tdFrame(tdOf({ supports: ['g2'] })).ok);
 });

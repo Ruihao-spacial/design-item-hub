@@ -1,4 +1,4 @@
-// Diaphragm Analysis — Phase 7: offset wall lines, line forces iterated to closure (tdOffset.js).
+// Diaphragm Analysis — Phase 7: offset wall lines, line forces iterated to closure (tdClosure.js, the general closure solver).
 // Book Ex 3.3: every phase-7 value of the corrected run; the book's first run (equal split wL/2) reproduced and shown
 // not to close; the iteration converges from any start; walls group only by one wall line name on two or more grids;
 // the other book examples are not touched; pass table on the Analysis tab, offset check on the Checks tab.
@@ -16,7 +16,7 @@ const { tdFrame } = await import('../src/modules/tdGeometry.js');
 const { runTds } = await import('../src/modules/tdDerive.js');
 const { lineGroups } = await import('../src/modules/tdBasicShear.js');
 const { closes } = await import('../src/modules/tdNet.js');
-const { offsetIterate } = await import('../src/modules/tdOffset.js');
+const { closeCase: offsetIterate } = await import('../src/modules/tdClosure.js');
 const { diaphragmAnalysis, calcAll, planWithLinks, analyse } = await import('../src/modules/diaphragmAnalysis.js');
 const { bookToInputs } = await import('./td-book/src/toInputs.mjs');
 
@@ -110,10 +110,62 @@ test('Analysis tab: pass table under the line forces; Checks tab: offset check',
   diaphragmAnalysis.renderForm(box, inputs, () => {}, [], () => {}, {});
   const click = t => [...box.querySelectorAll('button')].find(b => b.textContent === t).dispatchEvent(new window.Event('click'));
   click('Analysis');
-  assert.ok(box.textContent.includes('Offset wall lines — line forces iterated to closure'));
+  assert.ok(box.textContent.includes('Closure solver — hand-over forces iterated to closure'));
   assert.ok(box.textContent.includes('by length across B/C') && box.textContent.includes('P TD1 (lb)'));
   click('Checks');
   assert.ok(box.textContent.includes('offset wall line B/C') && box.textContent.includes('iterated to closure'));
+});
+
+// ---- general closure solver (2026-11-03): collectors into a diaphragm (G7), parts of a group grid (G8), the
+// receiving basic field recomputed (G9), TD reactions split between loaded TDs (G2)
+test('book Ex 8.4 (Ch 8.4, E-W): all 96 values; every member run closes; one solver pass', () => {
+  const b = book('Ex8.4'), { r, plan } = run('Ex8.4');
+  assert.equal(b.expected.length, 96);
+  assert.deepEqual(compare(b.expected, plan, r.analysis), []);
+  const cs = r.analysis.cases[0];
+  assert.ok(cs.offset.converged && cs.offset.passes.length === 2, 'flexible start + one Gauss–Newton step');
+  assert.ok(r.checks.every(c => c.ok), r.checks.filter(c => !c.ok).map(c => c.msg).join('; '));
+  // the strut force D into TD1 that closes every line (the book stops at 137.4, G10)
+  assert.ok(Math.abs(toolValue('tdP:TD1:D', plan, r.analysis) - 159.7) < 0.5);
+  assert.ok(!r.warnings.some(w => /opening 0–15/.test(w.msg)), 'sections A / B of Diaphragm 5 are a notch, not an opening');
+});
+
+test('G7: a wall-less collector with no TD hands its force to the diaphragm spanning across it as a concentrated load', () => {
+  const { r } = run('Ex8.4');
+  const cs = r.analysis.cases[0];
+  const B = cs.lines.find(l => l.name === 'B');
+  assert.deepEqual(B.into, ['D5']);
+  assert.equal(B.F, 0);
+  const d5 = cs.diaphragms.find(d => d.mark === 'D5');
+  assert.equal(d5.points.length, 1);
+  assert.ok(Math.abs(d5.points[0].F * cs.sigma - B.handedTotal * cs.sigma) < 1e-6 && d5.points[0].at === 50);
+  // basic field: the section shear steps by the point load at B (book: −137 above, +74.5 below)
+  const iv = d5.intervals, above = iv.find(i => Math.abs(i.a - 50) < 1e-6), below = iv.find(i => Math.abs(i.b - 50) < 1e-6);
+  assert.ok(Math.abs(above.Va - below.Vb - d5.points[0].F) < 1e-6);
+  assert.ok(!r.warnings.some(w => w.code === 'line-no-wall'));
+  // equilibrium: Σ line forces = the load (the collector itself carries nothing to a wall)
+  const sum = cs.lines.reduce((t, l) => t + l.P, 0);
+  assert.ok(Math.abs(sum - 4.2 * 13250) < 1e-6, String(sum));
+});
+
+test('G8: a group takes only the parts of a grid holding its walls; another wall on the grid keeps its own force', () => {
+  const { r, plan } = run('Ex8.4');
+  const E = r.analysis.cases[0].lines.find(l => l.name === 'E');
+  assert.equal(E.group, 'D/E');
+  const sw6 = E.walls.find(w => w.mark === 'SW6'), sw7 = E.walls.find(w => w.mark === 'SW7');
+  assert.equal(sw6.basis, 'group');
+  assert.equal(sw7.basis, 'length');
+  assert.ok(Math.abs(toolValue('R:E7', plan, r.analysis) - sw7.share) < 1e-9);
+  assert.ok(Math.abs(toolValue('vw:SW5', plan, r.analysis) - toolValue('vw:SW6', plan, r.analysis)) < 1e-9, 'D/E shares by length');
+});
+
+test('G2: Ex 8.1 — TD2\'s reaction on collector B split between TD1 and TD3 by closure; all 146 values', () => {
+  const b = book('Ex8.1'), { r, plan } = run('Ex8.1');
+  assert.deepEqual(compare(b.expected, plan, r.analysis), []);
+  const u = r.analysis.cases[0].offset.unknowns;
+  assert.ok(u.some(x => x.kind === 'td' && /TD1 at B/.test(x.label)) && u.some(x => x.kind === 'td' && /TD3 at B/.test(x.label)));
+  assert.ok(!u.some(x => x.kind === 'td' && /^TD2 at/.test(x.label)), 'TD2 alone on line D: the chord rule (G4) stands');
+  assert.ok(r.checks.every(c => c.ok), r.checks.filter(c => !c.ok).map(c => c.msg).join('; '));
 });
 
 console.log(passed + ' passed');
