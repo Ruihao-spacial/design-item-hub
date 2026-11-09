@@ -32,8 +32,9 @@ Plan coordinates: **x to the right, y up**, as drawn in the book figure. Feet.
 | `outline` | `[[x, y], ...]` | Rectilinear sheathed outline, corners in order (counter-clockwise). |
 | `openings` | `[{ name, x: [x1, x2], y: [y1, y2] }]` | Unsheathed rectangles inside the outline. |
 | `walls` | `[{ line, mark, axis, at, from, to }]` | One per shear wall: `line` = wall-line name, `axis`/`at` = the grid it sits on, `from`/`to` = extent along the line (ft). |
-| `tds` | `[{ mark, x: [x1, x2], y: [y1, y2], supports: [grid, grid], loads: [{ grid, side }] }]` | Transfer diaphragm rectangle. `supports` = the two lines it spans between (cantilever: add `overhang: [y1, y2]` or `[x1, x2]`). `loads` = the line where the disrupted chord/strut enters, `side` = `'-'` or `'+'` (the side of the TD the cut member comes from, in plan coordinates). |
-| `loads` | `[{ acts: '+x'\|'-x'\|'+y'\|'-y', mode: 'line', edge?, segments: [{ from, to, w, w2? }] }]` | Line load along the span, plf. `from`/`to` are coordinates along the span axis. `w2` for a linearly varying segment. `edge` = the grid line the load is applied along (e.g. windward chord A, leeward chord D); it decides which band carries it where an opening or notch splits the depth. Without `edge` the load is shared by the bands in proportion to their depth. Use `mode: 'area', psf` only if the book gives psf. |
+| `diaphragms` | `[{ mark, x: [x1, x2], y: [y1, y2], supports: [grid, grid], bandSplit? }]` or `[{ mark, parts: [[x1, x2, y1, y2], …], supports, … }]` (optional) | The book's (sub-)diaphragms of the load direction: a rectangle (cut to the sheathing at the depth changes / around openings into pieces) or its pieces given directly, and the two lines it spans between (a line without a wall delivers into the TD whose load line it is, Ex 3.4). `chordCut` = a chord cut inside an opening stretch: `'section'` / omitted = M/H at the cut (default), `'vierendeel'` = from the inflection. `bandSplit` = where the bands beside an opening share the section shear by width: `'low'` / `'high'` end of the opening stretch along the span, or `'mid'` (default). Without `diaphragms`: one whole-plan diaphragm between the outermost wall lines. |
+| `tds` | `[{ mark, x: [x1, x2], y: [y1, y2], supports: [grid, grid], loads: [{ grid, side }] }]` | Transfer diaphragm rectangle. `supports` = the two lines it spans between (cantilever: add `overhangs: [[support, tip]]` — grid names, from a support to the grid at the tip, one per support; the older typed `overhang: [y1, y2]` is still read). `loads` = the line where the disrupted chord/strut enters, `side` = `'-'` or `'+'` (the side of the TD the cut member comes from, in plan coordinates), or `'both'` when members enter from both sides (Ex 8.1 TD1 line B). |
+| `loads` | `[{ acts: '+x'\|'-x'\|'+y'\|'-y', mode: 'line', edge?, segments: [{ from, to, w, w2? }] }]` | Line load along the span, plf. `from`/`to` are coordinates along the span axis. `w2` for a linearly varying segment. `edge` = the grid line the load is applied along (e.g. windward chord A, leeward chord D); it decides which band carries it where an opening or notch splits the depth. Without `edge` the load is shared by the bands in proportion to their depth. Use `mode: 'area', psf` only if the book gives psf; `kind: 'E'` marks it seismic (Ch 8.4: C_s × DL). |
 
 ## Expected values
 `{ k, v, unit, sense?, page, fig?, phase, tol?, note? }`
@@ -74,8 +75,10 @@ between two grids running across the section.
 ## Signs
 The tool reports unit shears with the **Ex 4.1 "+" element** (force on the −x face +y, on the +x face −y, on the top
 face −x, on the bottom face +x), the same as the skill. Some examples draw the mirror element (Ex 3.3, Ex 4.2). Keep
-the book's printed signs in the source and set `shearElement: 'mirrored'`; the build negates `vb`, `vtd`, `vnet` and
-`vw` for those files and the doc shows both. Member forces are tension + in every file.
+the book's printed signs in the source and set `shearElement: 'mirrored'`; the build negates the sheathing shears
+`vb`, `vtd` and `vnet` for those files and the doc shows both. Line forces `R`, wall shares `Rw` and wall unit shears
+`vw` are positive in the load direction (the wall resists the load), so they are never negated. Member forces are
+tension + in every file.
 
 ## Errata and assumptions
 - `errata: [{ page, what, use }]`: a misprint, and the value the test uses instead.

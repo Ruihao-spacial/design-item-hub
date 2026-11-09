@@ -1,0 +1,379 @@
+{
+ "note": "User test 2026-11-03: DA 2nd Floor — E-W: one D1 on 5 / 2 (SW-9 on line 4 takes nothing); lines 4 and 5 are separate (no strut, user decision D1).",
+ "type": "diaphragm_analysis",
+ "inputs": {
+  "tds": [
+   {
+    "id": "td-mw1ez2bh-8",
+    "x1": "3",
+    "x2": "13",
+    "y1": "8",
+    "y2": "29",
+    "dir": "y",
+    "mark": "TD3",
+    "loads": [],
+    "engineer": {
+     "closureTol": "",
+     "regionClear": null,
+     "cantileverOk": null
+    },
+    "overhang": null,
+    "supports": [
+     "gr-mw1bal4b-q",
+     "gr-mw1bauk1-s"
+    ],
+    "loadsMode": "auto"
+   },
+   {
+    "id": "td-mw1ez65p-9",
+    "x1": "22",
+    "x2": "35",
+    "y1": "5",
+    "y2": "29",
+    "dir": "y",
+    "mark": "TD4",
+    "loads": [
+     {
+      "side": "-",
+      "gridId": "gr-mw1exhor-7"
+     }
+    ],
+    "engineer": {
+     "closureTol": "",
+     "regionClear": null,
+     "cantileverOk": null
+    },
+    "overhang": null,
+    "supports": [
+     "gr-mw1bal4b-q",
+     "gr-mw1bb719-t"
+    ],
+    "loadsMode": "manual"
+   },
+   {
+    "id": "td-mw1f507p-c",
+    "x1": "3",
+    "x2": "35",
+    "y1": "11.67",
+    "y2": "29",
+    "dir": "x",
+    "mark": "TD1",
+    "loads": [
+     {
+      "side": "-",
+      "gridId": "gr-mw1b77f1-j"
+     },
+     {
+      "side": "-",
+      "gridId": "gr-mw1b7m2v-l"
+     }
+    ],
+    "engineer": {
+     "closureTol": "",
+     "regionClear": null,
+     "cantileverOk": null
+    },
+    "overhang": null,
+    "supports": [
+     "gr-mw1b7prm-m",
+     "gr-mw1b0y48-a"
+    ],
+    "loadsMode": "manual"
+   }
+  ],
+  "refs": {
+   "wallSource": "ce979665-7e4a-4aa5-ad25-ac38ac1cc375"
+  },
+  "grids": [
+   {
+    "at": "0",
+    "id": "gr-mw1b0y48-9",
+    "ref": false,
+    "axis": "x",
+    "name": "O"
+   },
+   {
+    "at": "3",
+    "id": "gr-mw1b0y48-a",
+    "ref": false,
+    "axis": "x",
+    "name": "A"
+   },
+   {
+    "at": "13",
+    "id": "gr-mw1b77f1-j",
+    "ref": false,
+    "axis": "x",
+    "name": "B"
+   },
+   {
+    "at": "17.5",
+    "id": "gr-mw1b7lfz-k",
+    "ref": false,
+    "axis": "x",
+    "name": "C"
+   },
+   {
+    "at": "22",
+    "id": "gr-mw1b7m2v-l",
+    "ref": false,
+    "axis": "x",
+    "name": "D"
+   },
+   {
+    "at": "35",
+    "id": "gr-mw1b7prm-m",
+    "ref": false,
+    "axis": "x",
+    "name": "E"
+   },
+   {
+    "at": "38",
+    "id": "gr-mw1b7qyw-n",
+    "ref": false,
+    "axis": "x",
+    "name": "F"
+   },
+   {
+    "at": "32",
+    "id": "gr-mw1bakla-p",
+    "ref": false,
+    "axis": "y",
+    "name": "1.7"
+   },
+   {
+    "at": "29",
+    "id": "gr-mw1bal4b-q",
+    "ref": false,
+    "axis": "y",
+    "name": "2"
+   },
+   {
+    "at": "37",
+    "id": "gr-mw1baqe1-r",
+    "ref": false,
+    "axis": "y",
+    "name": "1"
+   },
+   {
+    "at": "8",
+    "id": "gr-mw1bauk1-s",
+    "ref": false,
+    "axis": "y",
+    "name": "4"
+   },
+   {
+    "at": "5",
+    "id": "gr-mw1bb719-t",
+    "ref": false,
+    "axis": "y",
+    "name": "5"
+   },
+   {
+    "at": "0",
+    "id": "gr-mw1bbczt-u",
+    "ref": false,
+    "axis": "y",
+    "name": "6"
+   },
+   {
+    "at": "27",
+    "id": "gr-mw1bj41n-w",
+    "ref": false,
+    "axis": "y",
+    "name": "3"
+   },
+   {
+    "at": "2",
+    "id": "gr-mw1c465k-1",
+    "ref": false,
+    "axis": "y",
+    "name": "5.5"
+   },
+   {
+    "at": "11.67",
+    "id": "gr-mw1exhor-7",
+    "ref": false,
+    "axis": "y",
+    "name": "3.8"
+   }
+  ],
+  "level": {
+   "fx": "8.26",
+   "name": "2nd Floor",
+   "collectorFactor": "",
+   "diaphragmFactor": ""
+  },
+  "loads": [
+   {
+    "id": "ld-mw1b0y48-f",
+    "psf": "",
+    "acts": "-y",
+    "kind": "",
+    "mode": "seismic",
+    "edgeId": "",
+    "segments": []
+   },
+   {
+    "id": "ld-mw1b0y48-g",
+    "psf": "",
+    "acts": "+x",
+    "kind": "",
+    "mode": "seismic",
+    "edgeId": "",
+    "segments": []
+   }
+  ],
+  "notes": "",
+  "walls": [],
+  "noLoad": {
+   "E": false,
+   "W": true
+  },
+  "outline": [
+   {
+    "x": "3",
+    "y": "8"
+   },
+   {
+    "x": "3",
+    "y": "29"
+   },
+   {
+    "x": "35",
+    "y": "29"
+   },
+   {
+    "x": "35",
+    "y": "5"
+   },
+   {
+    "x": "22",
+    "y": "5"
+   },
+   {
+    "x": "22",
+    "y": "11.67"
+   },
+   {
+    "x": "13",
+    "y": "11.67"
+   },
+   {
+    "x": "13",
+    "y": "8"
+   }
+  ],
+  "openings": [],
+  "wallLink": {
+   "dirMap": {},
+   "groups": [],
+   "origins": {},
+   "lineGrid": {
+    "ln-1": {
+     "toId": "gr-mw1bb719-t",
+     "fromId": "gr-mw1bakla-p"
+    },
+    "ln-2": {
+     "toId": "gr-mw1b7qyw-n",
+     "fromId": "gr-mw1b0y48-9"
+    },
+    "ln-3": {
+     "toId": "gr-mw1c465k-1",
+     "fromId": "gr-mw1bakla-p"
+    },
+    "ln-4": {
+     "toId": "gr-mw1b77f1-j",
+     "fromId": "gr-mw1b0y48-9"
+    },
+    "ln-5": {
+     "toId": "gr-mw1b7qyw-n",
+     "fromId": "gr-mw1b7m2v-l"
+    }
+   }
+  },
+  "diaphragm": {
+   "blocked": true,
+   "sheathing": "wsp"
+  },
+  "pdfReport": "summary",
+  "diaphragms": [
+   {
+    "id": "dg-mw1clkkc-2",
+    "dir": "y",
+    "mark": "D1",
+    "parts": [
+     {
+      "id": "dg-mw1clkkc-2-p1",
+      "x1": "3",
+      "x2": "13",
+      "y1": "8",
+      "y2": "29"
+     },
+     {
+      "id": "dg-mw1clkkc-2-p2",
+      "x1": "13",
+      "x2": "22",
+      "y1": "11.67",
+      "y2": "29"
+     },
+     {
+      "id": "dg-mw1clkkc-2-p3",
+      "x1": "22",
+      "x2": "35",
+      "y1": "5",
+      "y2": "29"
+     }
+    ],
+    "blocked": null,
+    "chordCut": "",
+    "supports": [
+     "gr-mw1b0y48-a",
+     "gr-mw1b7prm-m"
+    ],
+    "bandSplit": "",
+    "sheathing": ""
+   },
+   {
+    "id": "dg-mw1conxy-4",
+    "dir": "x",
+    "mark": "D1",
+    "parts": [
+     {
+      "id": "dg-mw1conxy-4-p1",
+      "x1": "3",
+      "x2": "13",
+      "y1": "8",
+      "y2": "29"
+     },
+     {
+      "id": "dg-mw1conxy-4-p2",
+      "x1": "22",
+      "x2": "35",
+      "y1": "5",
+      "y2": "29"
+     },
+     {
+      "id": "dg-mw1conxy-4-p3",
+      "x1": "13",
+      "x2": "22",
+      "y1": "11.67",
+      "y2": "29"
+     }
+    ],
+    "blocked": null,
+    "chordCut": "",
+    "supports": [
+     "gr-mw1bb719-t",
+     "gr-mw1bal4b-q"
+    ],
+    "bandSplit": "",
+    "sheathing": ""
+   }
+  ],
+  "codeEdition": "CBC-2025",
+  "designBasis": "ASD",
+  "gridsLocked": true,
+  "schemaVersion": 2
+ }
+}

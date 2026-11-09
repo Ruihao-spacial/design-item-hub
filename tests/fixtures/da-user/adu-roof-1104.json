@@ -1,0 +1,390 @@
+{
+ "note": "User test 2026-11-04: DA \"ADU - Roof\" as saved 17:47 UTC — E-W TD2 on 5 / 2 with typed overhang 0–5 (tip grid 6), load lines 4 (−), 5 (both, a support), 5.5 (+, on the overhang, short of the tip); TD2 drawn y 0–32 (3 ft past support 2).",
+ "type": "diaphragm_analysis",
+ "inputs": {
+  "tds": [
+   {
+    "id": "td-mw1cnlr9-3",
+    "x1": "13",
+    "x2": "22",
+    "y1": "0",
+    "y2": "32",
+    "dir": "y",
+    "mark": "TD1",
+    "loads": [
+     {
+      "side": "-",
+      "gridId": "gr-mw1bb719-t"
+     },
+     {
+      "side": "+",
+      "gridId": "gr-mw1c465k-1"
+     }
+    ],
+    "engineer": {
+     "closureTol": "",
+     "regionClear": null,
+     "cantileverOk": null
+    },
+    "overhang": null,
+    "supports": [
+     "gr-mw1bakla-p",
+     "gr-mw1bbczt-u"
+    ],
+    "loadsMode": "manual"
+   },
+   {
+    "id": "td-mw1cxddc-5",
+    "x1": "13",
+    "x2": "22",
+    "y1": "0",
+    "y2": "32",
+    "dir": "x",
+    "mark": "TD2",
+    "loads": [
+     {
+      "side": "-",
+      "gridId": "gr-mw1bauk1-s"
+     },
+     {
+      "side": "both",
+      "gridId": "gr-mw1bb719-t"
+     },
+     {
+      "side": "+",
+      "gridId": "gr-mw1c465k-1"
+     }
+    ],
+    "engineer": {
+     "closureTol": "",
+     "regionClear": null,
+     "cantileverOk": null
+    },
+    "overhang": [
+     "0",
+     "5"
+    ],
+    "supports": [
+     "gr-mw1bb719-t",
+     "gr-mw1bal4b-q"
+    ],
+    "loadsMode": "manual"
+   }
+  ],
+  "refs": {
+   "wallSource": "ce979665-7e4a-4aa5-ad25-ac38ac1cc375"
+  },
+  "grids": [
+   {
+    "at": "0",
+    "id": "gr-mw1b0y48-9",
+    "ref": false,
+    "axis": "x",
+    "name": "O"
+   },
+   {
+    "at": "3",
+    "id": "gr-mw1b0y48-a",
+    "ref": false,
+    "axis": "x",
+    "name": "A"
+   },
+   {
+    "at": "13",
+    "id": "gr-mw1b77f1-j",
+    "ref": false,
+    "axis": "x",
+    "name": "B"
+   },
+   {
+    "at": "17.5",
+    "id": "gr-mw1b7lfz-k",
+    "ref": false,
+    "axis": "x",
+    "name": "C"
+   },
+   {
+    "at": "22",
+    "id": "gr-mw1b7m2v-l",
+    "ref": false,
+    "axis": "x",
+    "name": "D"
+   },
+   {
+    "at": "35",
+    "id": "gr-mw1b7prm-m",
+    "ref": false,
+    "axis": "x",
+    "name": "E"
+   },
+   {
+    "at": "38",
+    "id": "gr-mw1b7qyw-n",
+    "ref": false,
+    "axis": "x",
+    "name": "F"
+   },
+   {
+    "at": "32",
+    "id": "gr-mw1bakla-p",
+    "ref": false,
+    "axis": "y",
+    "name": "1.7"
+   },
+   {
+    "at": "29",
+    "id": "gr-mw1bal4b-q",
+    "ref": false,
+    "axis": "y",
+    "name": "2"
+   },
+   {
+    "at": "37",
+    "id": "gr-mw1baqe1-r",
+    "ref": false,
+    "axis": "y",
+    "name": "1"
+   },
+   {
+    "at": "8",
+    "id": "gr-mw1bauk1-s",
+    "ref": false,
+    "axis": "y",
+    "name": "4"
+   },
+   {
+    "at": "5",
+    "id": "gr-mw1bb719-t",
+    "ref": false,
+    "axis": "y",
+    "name": "5"
+   },
+   {
+    "at": "0",
+    "id": "gr-mw1bbczt-u",
+    "ref": false,
+    "axis": "y",
+    "name": "6"
+   },
+   {
+    "at": "27",
+    "id": "gr-mw1bj41n-w",
+    "ref": false,
+    "axis": "y",
+    "name": "3"
+   },
+   {
+    "at": "2",
+    "id": "gr-mw1c465k-1",
+    "ref": false,
+    "axis": "y",
+    "name": "5.5"
+   }
+  ],
+  "level": {
+   "fx": "16.74",
+   "name": "Roof",
+   "collectorFactor": "",
+   "diaphragmFactor": ""
+  },
+  "loads": [
+   {
+    "id": "ld-mw1b0y48-f",
+    "psf": "",
+    "acts": "-y",
+    "kind": "",
+    "mode": "seismic",
+    "edgeId": "",
+    "segments": []
+   },
+   {
+    "id": "ld-mw1b0y48-g",
+    "psf": "",
+    "acts": "+x",
+    "kind": "",
+    "mode": "seismic",
+    "edgeId": "",
+    "segments": []
+   }
+  ],
+  "notes": "",
+  "walls": [],
+  "noLoad": {
+   "E": false,
+   "W": true
+  },
+  "outline": [
+   {
+    "x": "0",
+    "y": "5"
+   },
+   {
+    "x": "0",
+    "y": "32"
+   },
+   {
+    "x": "38",
+    "y": "32"
+   },
+   {
+    "x": "38",
+    "y": "2"
+   },
+   {
+    "x": "22",
+    "y": "2"
+   },
+   {
+    "x": "22",
+    "y": "0"
+   },
+   {
+    "x": "13",
+    "y": "0"
+   },
+   {
+    "x": "13",
+    "y": "5"
+   }
+  ],
+  "openings": [],
+  "wallLink": {
+   "dirMap": {},
+   "groups": [
+    {
+     "id": "grp-mw1cr1sl-0",
+     "name": "4/5",
+     "exclude": [],
+     "lineIds": [
+      "ln-4",
+      "ln-5"
+     ]
+    }
+   ],
+   "origins": {},
+   "lineGrid": {
+    "ln-4": {
+     "toId": "gr-mw1b77f1-j",
+     "fromId": "gr-mw1b0y48-9"
+    },
+    "ln-5": {
+     "toId": "gr-mw1b7qyw-n",
+     "fromId": "gr-mw1b7m2v-l"
+    }
+   }
+  },
+  "diaphragm": {
+   "blocked": true,
+   "sheathing": "wsp"
+  },
+  "pdfReport": "summary",
+  "diaphragms": [
+   {
+    "id": "dg-mw1clkkc-2",
+    "dir": "y",
+    "mark": "D1",
+    "parts": [
+     {
+      "id": "dg-mw1clkkc-2-p1",
+      "x1": "0",
+      "x2": "13",
+      "y1": "5",
+      "y2": "32"
+     },
+     {
+      "id": "dg-mw1clkkc-2-p2",
+      "x1": "13",
+      "x2": "22",
+      "y1": "0",
+      "y2": "32"
+     },
+     {
+      "id": "dg-mw1clkkc-2-p3",
+      "x1": "22",
+      "x2": "38",
+      "y1": "2",
+      "y2": "32"
+     }
+    ],
+    "blocked": null,
+    "chordCut": "",
+    "supports": [
+     "gr-mw1b0y48-a",
+     "gr-mw1b7prm-m"
+    ],
+    "bandSplit": "",
+    "sheathing": ""
+   },
+   {
+    "id": "dg-mw1conxy-4",
+    "dir": "x",
+    "mark": "D1",
+    "parts": [
+     {
+      "id": "dg-mw1conxy-4-p1",
+      "x1": "0",
+      "x2": "13",
+      "y1": "5",
+      "y2": "32"
+     }
+    ],
+    "blocked": null,
+    "chordCut": "",
+    "supports": [
+     "gr-mw1bauk1-s",
+     "gr-mw1bal4b-q"
+    ],
+    "bandSplit": "",
+    "sheathing": ""
+   },
+   {
+    "id": "dg-mw2em0tf-1",
+    "dir": "x",
+    "mark": "D2",
+    "parts": [
+     {
+      "id": "dg-mw2em0tf-1-p1",
+      "x1": "13",
+      "x2": "22",
+      "y1": "0",
+      "y2": "32"
+     }
+    ],
+    "blocked": null,
+    "chordCut": "",
+    "supports": [
+     "gr-mw1bb719-t",
+     "gr-mw1bal4b-q"
+    ],
+    "bandSplit": "",
+    "sheathing": ""
+   },
+   {
+    "id": "dg-mw2em2ml-2",
+    "dir": "x",
+    "mark": "D3",
+    "parts": [
+     {
+      "id": "dg-mw2em2ml-2-p1",
+      "x1": "22",
+      "x2": "38",
+      "y1": "2",
+      "y2": "32"
+     }
+    ],
+    "blocked": null,
+    "chordCut": "",
+    "supports": [
+     "gr-mw1bb719-t",
+     "gr-mw1bal4b-q"
+    ],
+    "bandSplit": "",
+    "sheathing": ""
+   }
+  ],
+  "codeEdition": "CBC-2025",
+  "designBasis": "ASD",
+  "gridsLocked": true,
+  "schemaVersion": 2
+ }
+}

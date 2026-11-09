@@ -103,6 +103,38 @@
         "to": 125
       }
     ],
+    "diaphragms": [
+      {
+        "mark": "D1",
+        "x": [
+          0,
+          25
+        ],
+        "y": [
+          15,
+          50
+        ],
+        "supports": [
+          "B",
+          "A"
+        ]
+      },
+      {
+        "mark": "D2",
+        "x": [
+          25,
+          125
+        ],
+        "y": [
+          0,
+          50
+        ],
+        "supports": [
+          "C",
+          "A"
+        ]
+      }
+    ],
     "tds": [
       {
         "mark": "TD1",
@@ -492,7 +524,7 @@
       "page": 4,
       "phase": 7,
       "note": "Figs 3.17/3.18 print it negative (erratum)",
-      "vTool": -161.3
+      "vTool": 161.3
     },
     {
       "k": "vw:SW2",
@@ -500,7 +532,7 @@
       "unit": "plf",
       "page": 4,
       "phase": 7,
-      "vTool": -500
+      "vTool": 500
     },
     {
       "k": "vw:SW3",
@@ -508,7 +540,7 @@
       "unit": "plf",
       "page": 4,
       "phase": 7,
-      "vTool": -161.3
+      "vTool": 161.3
     },
     {
       "k": "vw:SW4",
@@ -516,7 +548,7 @@
       "unit": "plf",
       "page": 4,
       "phase": 7,
-      "vTool": -161.3
+      "vTool": 161.3
     },
     {
       "k": "N:B:x=8",
@@ -831,8 +863,8 @@
     },
     {
       "page": 13,
-      "what": "Fig 3.21 line A values 802.5, 3388.5, 3236 and 36 do not follow from R_A = 4600 lb and the corrected TD shear (net -30.5 plf in TD band A, SW2 460 plf). The chain gives 852.5 C, 3442.5 T, 3290 T, 18 T.",
-      "use": "recomputed chain, with tolerance"
+      "what": "Fig 3.21 line A values 802.5, 3388.5, 3236 and 36: arithmetic slips in the second run, not the closure tolerance (N at x=30 = 28(25) + v(5) does not depend on R_A). The book did recompute the TD for the new reactions (P = 693.6, TD shear 693.6(15/50)/20 = 10.40 plf in band A-B, 24.28 in band B-C; line C 416.6 / 957.8 / 75 and line A x=40 to 3 at 30.5 plf follow from it), and it is not a shift of the Fig 3.20 diagram (changes 57.5 / 430.8 / 423 / 351 along A). Net shear on A across the TD band (grids 2-3) is one value, 40.9 - 10.40 = 30.5 plf, but the printed chain uses three: 20.5 plf from 2 to x=30 (102.5 / 5; likely 30.5 mistyped, = the 50 lb), 40.9 plf under SW2 (wall net 460 - 40.9, TD shear left out, 104 lb more) and 30.5 plf from x=40 to 3. With 30.5 throughout: 852.5 C, 3442.5 T, 3290 T, 18 T at grid 4, which equals the own 18 of the book at grid 4 on line C (the two residuals must be equal and opposite; the printed 36 is not). Reviewed with the user 2026-11-02.",
+      "use": "recomputed chain (tool), with tolerance"
     },
     {
       "page": 13,

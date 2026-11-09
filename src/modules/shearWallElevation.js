@@ -9,6 +9,18 @@ import { lcRef } from './shearWallCombos.js';
 import { WSWH_WIDTHS, WSWH_CONDITIONS, WSWH_JOISTS, anchorRows, anchorId, isWswh, wswhWidthFt, TSS_KIT_NOTE } from './shearWallWswh.js';
 
 const GUTTER = 80;
+// Grid link with Diaphragm Analysis (user 2026-11-05, shearWallPlanLink.js): the plan view of a line is attached to the
+// line object by the caller (setElevationPlan) only for an item that adopted the plan grids. A line without one is
+// laid out and drawn exactly as before (no band, no layer).
+const PLAN_VIEWS = new WeakMap();
+const PLAN_BAND_H = 26;
+export function setElevationPlan(line, view) { if (!line || typeof line !== 'object') return; if (view) PLAN_VIEWS.set(line, view); else PLAN_VIEWS.delete(line); }
+const planOf = line => (line && typeof line === 'object' ? PLAN_VIEWS.get(line) || null : null);
+// Transfer to the diaphragm below (step 4): ids of the walls whose force ends at the floor under them, attached by SWD
+// only for an item linked to Diaphragm Analysis; marked "↓ to diaphragm" on the elevation. None = drawn as before.
+const TRANSFER_WALLS = new WeakMap();
+// get: () => Set of wall ids (recomputed at each draw, so a tick or a wall added below shows at once)
+export function setElevationTransfer(line, get) { if (!line || typeof line !== 'object') return; if (typeof get === 'function') TRANSFER_WALLS.set(line, get); else TRANSFER_WALLS.delete(line); }
 const RULER_H = 24;
 const MIN_LEVEL_H = 60;
 const MIN_LEVEL_H_HW = 120;
@@ -188,7 +200,8 @@ export function computeElevationLayout(line, levels, opts) {
   const totalLen = parseFloat(line.totalLength) || 60;
   const targetW = o.width || 600;
   const drawW = targetW - GUTTER - 20;
-  const pxPerFt = o.pxPerFt > 0 ? o.pxPerFt : Math.max(drawW / totalLen, MIN_PX_PER_FT);
+  // zoom (user 2026-11-05): interactive view only; 1 (or none) = fit to the width as before
+  const pxPerFt = o.pxPerFt > 0 ? o.pxPerFt : Math.max(drawW / totalLen, MIN_PX_PER_FT) * (o.zoom > 0 ? o.zoom : 1);
   const svgW = GUTTER + totalLen * pxPerFt + 20;
   const yMult = anyOverlay ? Y_MULT_HARDWARE : Y_MULT_DEFAULT;
   const minLvlH = anyOverlay ? MIN_LEVEL_H_HW : MIN_LEVEL_H;
@@ -201,7 +214,8 @@ export function computeElevationLayout(line, levels, opts) {
   // T/C rows per level: 3, more where a narrow wall lists its two ends on separate L: / R: rows
   const tcRows = showForces && o.results ? tcRowsByLevel(line, levels, o.results, o.combo || 'governing', pxPerFt) : {};
 
-  let totalH = RULER_H + 10;
+  const plan = planOf(line);
+  let totalH = RULER_H + 10 + (plan ? PLAN_BAND_H : 0);
   const levelYs = [];
   levels.forEach((lvl, i) => {
     const ftH = parseFloat(lvl.floorToFloor) || 10;
@@ -237,7 +251,9 @@ export function computeElevationLayout(line, levels, opts) {
     if (fdnBand) totalH += fdnBand.h;
   }
   totalH += 10;
-  return { totalLen, pxPerFt, svgW, totalH, levelYs, fdnBand, showForces, showHW };
+  const out = { totalLen, pxPerFt, svgW, totalH, levelYs, fdnBand, showForces, showHW };
+  if (plan) out.plan = plan;
+  return out;
 }
 
 // Beam bottom sits on its story's floor line
@@ -1189,6 +1205,39 @@ function drawSvgLegend(svg, legend, y0, P) {
 // The scene. S: { svg, layout, line, levels, results, combo, P, placer, notes, sel, handlers, live }
 //   live (tool only): { rel, highlightActive, placementMode, onLevelClick(e, lv), onWallMousedown(e, pw), onWallClick(e, lv) }
 //   handlers (tool only): beam / post click (see drawTransferElements)
+// Grid link layer (only with a plan view): the grids that cross the line (dashed, bubble in the band above the top
+// level) and, at each floor / roof line, the stretch of that level's diaphragm on this line (from Diaphragm Analysis).
+function drawPlanLayer(S) {
+  const { svg, layout, P } = S;
+  const { plan, totalLen, pxPerFt, totalH, levelYs } = layout;
+  const g = svgEl('g', { 'data-planlayer': '1', 'pointer-events': 'none' });
+  const top = RULER_H + 10, bandMid = top + PLAN_BAND_H / 2, bottom = levelYs.length ? levelYs[levelYs.length - 1].floorY : totalH - RULER_H;
+  const X = ft => GUTTER + ft * pxPerFt;
+  const caption = plan.grid ? 'grid ' + plan.grid.name + ' — position 0 at ' + (plan.grid.axis === 'x' ? 'y' : 'x') + ' = ' + plan.origin : 'position 0 at ' + plan.origin;
+  g.appendChild(svgEl('text', { x: 4, y: bandMid + 3, fill: P.inkTertiary, 'font-size': String(ELEV_FS.levelSub) }, 'Plan grids'));
+  g.appendChild(svgEl('text', { x: X(totalLen) + 6, y: bandMid + 3, fill: P.inkTertiary, 'font-size': String(ELEV_FS.levelSub) }, caption));
+  for (const c of plan.cross) {
+    if (c.x < -1e-6 || c.x > totalLen + 1e-6) continue;
+    const x = X(c.x);
+    g.appendChild(svgEl('line', { x1: x, y1: bandMid + 9, x2: x, y2: bottom, stroke: '#64748b', 'stroke-width': 0.8, 'stroke-dasharray': '8,3,2,3', 'data-grid': c.name }));
+    g.appendChild(svgEl('circle', { cx: x, cy: bandMid, r: 9, fill: P.surface, stroke: '#64748b', 'stroke-width': 1 }));
+    g.appendChild(svgEl('text', { x, y: bandMid + 3.5, 'text-anchor': 'middle', fill: '#334155', 'font-size': String(ELEV_FS.levelSub), 'font-weight': '600' }, c.name));
+  }
+  // diaphragm stretch per level, drawn on that level's top line (the floor / roof the level's walls are under)
+  for (const e of plan.extents) {
+    const lv = levelYs.find(l => l.id === e.levelId);
+    if (!lv) continue;
+    for (const [a, b] of e.segs) {
+      const a1 = Math.max(0, a), b1 = Math.min(totalLen, b);
+      if (b1 - a1 < 1e-6) continue;
+      const bar = svgEl('rect', { x: X(a1), y: lv.y - 2, width: (b1 - a1) * pxPerFt, height: 3, fill: '#0d9488', opacity: 0.55, 'data-extent': e.levelId });
+      bar.appendChild(svgEl('title', null, (lv.name || '') + ' diaphragm on this line: ' + Math.round((b - a) * 100) / 100 + ' ft'));
+      g.appendChild(bar);
+    }
+  }
+  svg.appendChild(g);
+}
+
 export function drawElevationScene(S) {
   const { svg, layout, line, levels, results, P, placer } = S;
   const live = S.live || null;
@@ -1250,7 +1299,22 @@ export function drawElevationScene(S) {
     svg.appendChild(svgEl('line', { x1: 0, y1: fdnY, x2: svgW, y2: fdnY, stroke: P.border, 'stroke-width': 1.5, 'pointer-events': 'none' }));
   }
 
+  if (layout.plan) drawPlanLayer(S);
+
   const parts = drawParts(line, levels);
+  const endsGet = TRANSFER_WALLS.get(line) || null;
+  const endsHere = endsGet ? endsGet() : null;
+  if (endsHere && endsHere.size) {
+    for (const w of line.walls || []) {
+      if (!endsHere.has(w.id)) continue;
+      const lv = levelYs.find(l => l.id === w.levelId);
+      if (!lv) continue;
+      const r = wallRectOf(w, lv, beams, pxPerFt);
+      const x = r.x + r.w / 2, y = lv.bodyY + lv.bodyH - 4;
+      const t = svgEl('text', { x, y, 'text-anchor': 'middle', fill: '#b45309', 'font-size': '8', 'font-weight': '600', 'pointer-events': 'none', 'data-endsatfloor': w.id }, '↓ to diaphragm');
+      S.svg.appendChild(t);
+    }
+  }
   drawWallAuditMarks(S, parts.map(p => p.part));
 
   const rel = live && live.rel;
@@ -1611,6 +1675,7 @@ export function renderElevation(container, line, levels, wallDLTypes, callbacks)
     if (!quickEdit.hidden && !quickEdit.contains(e.target)) hideQuickEdit();
   }
 
+  let viewControls = null; // zoom + Expand group, kept at the right end of the row (set below)
   function buildToolbar() {
     clearEl(toolbarRow);
     const btnStyle = (mode) => ({
@@ -1628,6 +1693,7 @@ export function renderElevation(container, line, levels, wallDLTypes, callbacks)
       onClick() { placementMode = 'post'; buildToolbar(); } }, '+ Post'));
     toolbarRow.appendChild(el('span', { style: { fontSize: '0.75rem', color: 'var(--ink-tertiary)', marginLeft: '0.5rem' } }, 'Del = delete selected · Esc = deselect'));
     toolbarRow.appendChild(findSelect);
+    if (viewControls) toolbarRow.appendChild(viewControls);
   }
   buildToolbar();
 
@@ -1654,8 +1720,37 @@ export function renderElevation(container, line, levels, wallDLTypes, callbacks)
 
   let isExpanded = false;
   let lastS = null; // last drawn state, for hit-testing / scroll-to
-  const expandBtn = el('button', { className: 'btn btn-sm btn-ghost', type: 'button', style: { position: 'absolute', top: '4px', right: '4px', zIndex: '5' },
+  // Expand and zoom sit at the right end of the toolbar row, in its flow (user 2026-11-05: absolute buttons covered Find)
+  const expandBtn = el('button', { className: 'btn btn-sm btn-ghost', type: 'button', 'data-elevview': 'expand',
     onClick() { toggleExpand(); } }, 'Expand');
+
+  // Zoom (user 2026-11-05): − / + / Fit and Ctrl + wheel about the cursor; the box scrolls both ways. Zoom 1 = fit to the
+  // width (the drawing as before). Changes only the view, never the line.
+  let zoom = 1;
+  const ZOOM_MIN = 0.5, ZOOM_MAX = 8;
+  const zoomLabel = el('span', { className: 'mono', style: { fontSize: '0.75rem', minWidth: '3.2em', textAlign: 'center' } }, '100%');
+  function setZoom(z, anchorPx) {
+    const nz = Math.min(ZOOM_MAX, Math.max(ZOOM_MIN, z));
+    if (Math.abs(nz - zoom) < 1e-9) return;
+    const oldPx = lastS ? lastS.layout.pxPerFt : null;
+    const ax = anchorPx != null ? anchorPx : (svgContainer.clientWidth || 600) / 2;
+    const ftAt = oldPx ? (svgContainer.scrollLeft + ax - GUTTER) / oldPx : null;
+    zoom = nz;
+    zoomLabel.textContent = Math.round(zoom * 100) + '%';
+    drawSVG();
+    if (ftAt != null && lastS) svgContainer.scrollLeft = Math.max(0, GUTTER + ftAt * lastS.layout.pxPerFt - ax);
+  }
+  const zbtn = (t, title, fn) => el('button', { className: 'btn btn-sm btn-ghost', type: 'button', title, onClick: fn }, t);
+  const zoomBox = el('div', { 'data-elevzoom': '1', style: { marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: '2px', flexShrink: '0' } },
+    zbtn('−', 'Zoom out', () => setZoom(zoom / 1.25)), zoomLabel, zbtn('+', 'Zoom in (Ctrl + wheel)', () => setZoom(zoom * 1.25)), zbtn('Fit', 'Fit the line to the width', () => setZoom(1)), expandBtn);
+  viewControls = zoomBox;
+  toolbarRow.appendChild(zoomBox);
+  svgContainer.addEventListener('wheel', (e) => {
+    if (!e.ctrlKey) return; // plain wheel scrolls
+    e.preventDefault();
+    const r = svgContainer.getBoundingClientRect();
+    setZoom(zoom * (e.deltaY < 0 ? 1.15 : 1 / 1.15), e.clientX - r.left);
+  }, { passive: false });
 
   function toggleExpand() {
     isExpanded = !isExpanded;
@@ -1708,7 +1803,7 @@ export function renderElevation(container, line, levels, wallDLTypes, callbacks)
     const containerW = Math.max(svgContainer.clientWidth || 600, 400);
     const showForces = !!(wallResults && showForcesOn && currentCombo !== null);
     const showHW = !!(wallResults && showHardwareOn);
-    const layout = computeElevationLayout(line, levels, { width: containerW, showForces, showHW, results: wallResults, combo: currentCombo });
+    const layout = computeElevationLayout(line, levels, { width: containerW, showForces, showHW, results: wallResults, combo: currentCombo, zoom });
     const { totalLen, pxPerFt, svgW, totalH, levelYs } = layout;
     if (!isExpanded) {
       const viewH = (typeof window !== 'undefined' && window.innerHeight) || 800;
@@ -1895,7 +1990,6 @@ export function renderElevation(container, line, levels, wallDLTypes, callbacks)
       }
     });
 
-    wrapper.insertBefore(expandBtn, svgContainer);
     svgContainer.appendChild(svg);
   }
 
@@ -2005,6 +2099,16 @@ export function renderElevation(container, line, levels, wallDLTypes, callbacks)
     [['sheathed', 'Sheathed wood shear wall'], ['wswh', 'Simpson Strong-Wall WSWH']].forEach(([v, label]) =>
       typeSel.appendChild(el('option', { value: v, selected: (w.systemType || 'sheathed') === v }, label)));
     propPanel.appendChild(panelRow(panelField('Wall type', typeSel)));
+    // transfer to the diaphragm below (step 4, items linked to Diaphragm Analysis only)
+    const tInfo = callbacks && callbacks.transferInfo ? callbacks.transferInfo(w) : null;
+    if (tInfo) {
+      propPanel.appendChild(el('div', { 'data-transferrow': w.id, style: { fontSize: '0.8rem', margin: '0 0 0.5rem', color: 'var(--ink-secondary)' } },
+        tInfo.mode === 'auto'
+          ? el('span', null, '↓ Ends at the ' + tInfo.belowName + ' floor: no wall below on this line, so its force goes into the ' + tInfo.belowName + ' diaphragm (Diaphragm Analysis carries it to the other lines).')
+          : el('label', { style: { display: 'flex', gap: '6px', alignItems: 'center' } },
+            el('input', { type: 'checkbox', checked: !!w.endsAtFloor, onChange(e) { if (e.target.checked) w.endsAtFloor = true; else delete w.endsAtFloor; markChanged(); drawSVG(); renderPropPanel(); } }),
+            'Ends at the ' + tInfo.belowName + ' floor → its force goes into the diaphragm, not down this line (out-of-plane offset). Leave off when the line\'s walls below take it (collector along the line).')));
+    }
     if (isWswh(w)) renderWswhEditor(w);
     else {
       const nailSel = el('select', { className: 'form-select', style: { width: '130px' }, onChange(e) { w.nailingPattern = e.target.value; markChanged(); } });

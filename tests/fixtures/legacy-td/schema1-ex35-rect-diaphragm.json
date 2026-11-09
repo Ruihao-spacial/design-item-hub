@@ -1,0 +1,239 @@
+{
+  "note": "Ex3.5 as saved under schema 1: one diaphragm = one rectangle over the whole outline bounding box (frozen 2026-11-02, before diaphragm pieces)",
+  "schemaVersion": 1,
+  "sumA": 4540,
+  "inputs": {
+    "schemaVersion": 1,
+    "codeEdition": "CBC-2025",
+    "designBasis": "ASD",
+    "pdfReport": "summary",
+    "refs": {},
+    "notes": "",
+    "level": {
+      "name": "Ex3.5",
+      "fx": ""
+    },
+    "diaphragm": {
+      "sheathing": "wsp",
+      "blocked": true
+    },
+    "grids": [
+      {
+        "id": "gr-Ex3.5-0",
+        "name": "1",
+        "axis": "x",
+        "at": "0",
+        "ref": false
+      },
+      {
+        "id": "gr-Ex3.5-1",
+        "name": "2",
+        "axis": "x",
+        "at": "40",
+        "ref": false
+      },
+      {
+        "id": "gr-Ex3.5-2",
+        "name": "3",
+        "axis": "x",
+        "at": "55",
+        "ref": false
+      },
+      {
+        "id": "gr-Ex3.5-3",
+        "name": "CL",
+        "axis": "x",
+        "at": "60",
+        "ref": true
+      },
+      {
+        "id": "gr-Ex3.5-4",
+        "name": "4",
+        "axis": "x",
+        "at": "75",
+        "ref": false
+      },
+      {
+        "id": "gr-Ex3.5-5",
+        "name": "5",
+        "axis": "x",
+        "at": "90",
+        "ref": false
+      },
+      {
+        "id": "gr-Ex3.5-6",
+        "name": "6",
+        "axis": "x",
+        "at": "120",
+        "ref": false
+      },
+      {
+        "id": "gr-Ex3.5-7",
+        "name": "D",
+        "axis": "y",
+        "at": "0",
+        "ref": false
+      },
+      {
+        "id": "gr-Ex3.5-8",
+        "name": "C",
+        "axis": "y",
+        "at": "14",
+        "ref": false
+      },
+      {
+        "id": "gr-Ex3.5-9",
+        "name": "B",
+        "axis": "y",
+        "at": "20",
+        "ref": false
+      },
+      {
+        "id": "gr-Ex3.5-10",
+        "name": "A",
+        "axis": "y",
+        "at": "50",
+        "ref": false
+      }
+    ],
+    "outline": [
+      {
+        "x": "0",
+        "y": "14"
+      },
+      {
+        "x": "40",
+        "y": "14"
+      },
+      {
+        "x": "40",
+        "y": "0"
+      },
+      {
+        "x": "120",
+        "y": "0"
+      },
+      {
+        "x": "120",
+        "y": "20"
+      },
+      {
+        "x": "90",
+        "y": "20"
+      },
+      {
+        "x": "90",
+        "y": "50"
+      },
+      {
+        "x": "0",
+        "y": "50"
+      }
+    ],
+    "openings": [],
+    "walls": [
+      {
+        "id": "wl-Ex3.5-0",
+        "line": "1",
+        "mark": "SW1",
+        "gridId": "gr-Ex3.5-0",
+        "from": "34",
+        "to": "50"
+      },
+      {
+        "id": "wl-Ex3.5-1",
+        "line": "6",
+        "mark": "SW2",
+        "gridId": "gr-Ex3.5-6",
+        "from": "0",
+        "to": "20"
+      }
+    ],
+    "diaphragms": [
+      {
+        "id": "dg-Ex3.5-0",
+        "mark": "D1",
+        "dir": "y",
+        "x1": "0",
+        "x2": "120",
+        "y1": "0",
+        "y2": "50",
+        "supports": [
+          "gr-Ex3.5-0",
+          "gr-Ex3.5-6"
+        ],
+        "sheathing": "",
+        "blocked": null
+      }
+    ],
+    "tds": [
+      {
+        "id": "td-Ex3.5-0",
+        "mark": "TD1",
+        "dir": "y",
+        "x1": "40",
+        "x2": "55",
+        "y1": "0",
+        "y2": "50",
+        "supports": [
+          "gr-Ex3.5-10",
+          "gr-Ex3.5-7"
+        ],
+        "loads": [
+          {
+            "gridId": "gr-Ex3.5-8",
+            "side": "-"
+          }
+        ],
+        "overhang": null,
+        "engineer": {
+          "regionClear": null,
+          "cantileverOk": null,
+          "closureTol": ""
+        }
+      },
+      {
+        "id": "td-Ex3.5-1",
+        "mark": "TD2",
+        "dir": "y",
+        "x1": "75",
+        "x2": "90",
+        "y1": "0",
+        "y2": "50",
+        "supports": [
+          "gr-Ex3.5-10",
+          "gr-Ex3.5-7"
+        ],
+        "loads": [
+          {
+            "gridId": "gr-Ex3.5-9",
+            "side": "+"
+          }
+        ],
+        "overhang": null,
+        "engineer": {
+          "regionClear": null,
+          "cantileverOk": null,
+          "closureTol": ""
+        }
+      }
+    ],
+    "loads": [
+      {
+        "id": "ld-Ex3.5-0",
+        "acts": "-y",
+        "mode": "line",
+        "psf": "",
+        "edgeId": "",
+        "segments": [
+          {
+            "from": "0",
+            "to": "120",
+            "w": "200",
+            "w2": ""
+          }
+        ]
+      }
+    ]
+  }
+}

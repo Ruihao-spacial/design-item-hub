@@ -5,20 +5,23 @@ let _uid = 0;
 export const uid = p => p + '-' + Date.now().toString(36) + '-' + (++_uid).toString(36);
 const s = v => (v === undefined || v === null ? '' : String(v));
 
-export const newGrid = (name, axis, at) => ({ id: uid('gr'), name: s(name), axis: axis === 'y' ? 'y' : 'x', at: s(at), ref: false });
+export const newGrid = (name, axis, at) => ({ id: uid('gr'), name: s(name), axis: axis === 'y' ? 'y' : 'x', at: s(at), ref: false, from: '', to: '' });
 export const newOpening = (x1, x2, y1, y2) => ({ id: uid('op'), name: '', x1: s(x1), x2: s(x2), y1: s(y1), y2: s(y2) });
 export const newWall = (gridId, from, to, line, mark) => ({ id: uid('wl'), line: s(line), mark: s(mark), gridId: gridId || '', from: s(from), to: s(to) });
 export const newTd = (mark, x1, x2, y1, y2, dir) => ({
-  id: uid('td'), mark: s(mark), dir: dir === 'x' ? 'x' : 'y', x1: s(x1), x2: s(x2), y1: s(y1), y2: s(y2), supports: [], loads: [], overhang: null,
+  id: uid('td'), mark: s(mark), dir: dir === 'x' ? 'x' : 'y', x1: s(x1), x2: s(x2), y1: s(y1), y2: s(y2), supports: [], loads: [], loadsMode: 'auto', overhangs: [],
   engineer: { regionClear: null, cantileverOk: null, closureTol: '' },
 });
-// A diaphragm for one load direction: its rectangle (clipped to the sheathed plan) spans between two support lines
-export const newDiaphragm = (mark, dir, x1, x2, y1, y2, supports) => ({
-  id: uid('dg'), mark: s(mark), dir: dir === 'x' ? 'x' : 'y', x1: s(x1), x2: s(x2), y1: s(y1), y2: s(y2),
-  supports: supports || [], sheathing: '', blocked: null,
-});
-export const newLoad = (acts, mode) => ({ id: uid('ld'), acts: acts || '-y', mode: mode || 'seismic', psf: '', edgeId: '', segments: [] });
-export const newSegment = (from, to, w) => ({ from: s(from), to: s(to), w: s(w), w2: '' });
+// A diaphragm for one load direction: one or more rectangles on the sheathing (pieces, [{ x1, x2, y1, y2 }]),
+// analysed as one beam between two support lines
+export const newPart = (id, r) => ({ id, x1: s(r.x1), x2: s(r.x2), y1: s(r.y1), y2: s(r.y2) });
+export const newDiaphragm = (mark, dir, parts, supports) => {
+  const id = uid('dg');
+  return { id, mark: s(mark), dir: dir === 'x' ? 'x' : 'y', parts: (parts || []).map((r, i) => newPart(id + '-p' + (i + 1), r)),
+    supports: supports || [], sheathing: '', blocked: null, bandSplit: '', chordCut: '' };
+};
+export const newLoad = (acts, mode) => ({ id: uid('ld'), acts: acts || '-y', mode: mode || 'seismic', kind: '', psf: '', edgeId: '', segments: [] });
+export const newSegment = (from, to, w) => ({ from: s(from), to: s(to), w: s(w), w2: '', wl: '' }); // wind mode: w windward, wl leeward
 
 // A new item: a 100 × 50 ft rectangle on grids 1-2 / A-B, seismic load and one diaphragm in each direction
 export function defaultInputs() {
@@ -30,7 +33,7 @@ export function defaultInputs() {
     grids: [g1, g2, gA, gB],
     outline: [{ x: '0', y: '0' }, { x: '100', y: '0' }, { x: '100', y: '50' }, { x: '0', y: '50' }],
     openings: [], walls: [], tds: [],
-    diaphragms: [newDiaphragm('D1', 'y', 0, 100, 0, 50, [g1.id, g2.id]), newDiaphragm('D1', 'x', 0, 100, 0, 50, [gA.id, gB.id])],
+    diaphragms: [newDiaphragm('D1', 'y', [{ x1: 0, x2: 100, y1: 0, y2: 50 }], [g1.id, g2.id]), newDiaphragm('D1', 'x', [{ x1: 0, x2: 100, y1: 0, y2: 50 }], [gA.id, gB.id])],
     loads: [newLoad('-y', 'seismic'), newLoad('+x', 'seismic')],
   };
 }

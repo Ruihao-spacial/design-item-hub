@@ -3,6 +3,22 @@
 Open items after the 2026-09-22 elevation review rounds and Phase 4 round 1 (R1–R3, 2026-09-24).
 Branches: `shearwall-load-path` (pushed, merge to `master` by someone else), `results-and-links` (G4, pushed 2026-09-24), `phase4-r1-r3` (Phase 4 round 1 + distribution + results by line; pushed 2026-09-24; CALC_VERSION v7, schema v6), `phase4-round2` (P9, R4, R6, WSWH, live loads, results / report rework; local 2026-09-28, not pushed; CALC_VERSION v9, schema v8), `sw-verification` (off phase4-round2; checks, drift sizing, solid segmented walls, calc sheet + S0–S7, verification cases, drift sizing with anchorage, verification split, F-DD1 equal-δ solver, zero-share warnings + engineer review, UI / report restructure, wind drift limit, PDF report + elevation rework, one shared elevation renderer, PDF calc sheet = tool calc sheet, drift in every method case; committed and pushed to GitHub 2026-10-01; CALC_VERSION v18, schema v12).
 
+## Note 2026-11-05 — SWD freeze (Diaphragm Analysis transfer work)
+SWD changes for the DA "walls above / transfer" work (plan `docs/diaphragm-analysis-offset-transfer-plan-2026-11-05.md`)
+are allowed only behind the DA link. Existing SWD items and their elevations must not change, because production
+projects use SWD. Guard: `tests/swdFreeze.test.mjs` (in `npm test`) and `npm run swd:freeze -- --db --check <file>` for
+the local DB (README, Tests).
+- 2026-11-06: all committed (87aceab, PR #7 stacked on #6). SWD changes in it, all gated on the DA link:
+  - grid link (`shearWallPlanLink.js`);
+  - walls that end at a floor (`shearWallCalc.js` transferOn / endsAtFloorIds / lineWithTransfer, G2 text in
+    `shearWallChecks.js`);
+  - transfer balance on Loading.
+
+  Ungated: elevation zoom (view only). No CALC_VERSION / schema bump; freeze proves unlinked items unchanged.
+- 2026-11-05 step 3 built: grid link (`shearWallPlanLink.js`; Loading → Plan grids → Adopt; line header "Starts at";
+  grid layer on the elevation). It is inactive unless adopted; no schema bump (new fields `inputs.planLink`,
+  `line.planOrigin` are optional, absent = before). Freeze identical (36 repo / 37 DB items).
+
 ## Next session — start here (set 2026-10-29)
 **State:**
 - `sw-design-data-appendix` committed (`5539efd`, CALC_VERSION **v24**, schema **13**) and pushed;

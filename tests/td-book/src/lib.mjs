@@ -39,7 +39,7 @@ const KINDS = {
 };
 
 // Unit-shear kinds follow the "+" sheathing element; the tool uses the Ex 4.1 element (FORMAT.md, Signs)
-export const SHEAR_KINDS = new Set(['vb', 'vtd', 'vnet', 'vw']);
+export const SHEAR_KINDS = new Set(['vb', 'vtd', 'vnet']); // sheathing shears only: wall shares / wall unit shears are in the load-direction sense (Phase 4)
 export function toolValue(src, e) {
   return src.shearElement === 'mirrored' && SHEAR_KINDS.has(parseKey(e.k).kind) ? -e.v : e.v;
 }
@@ -94,6 +94,11 @@ export function validate(src) {
   }
   for (const l of L.loads || []) {
     if (l.edge !== undefined && !grids.has(l.edge)) err.push(`load: unknown edge grid ${l.edge}`);
+  }
+  for (const d of L.diaphragms || []) {
+    if ((d.supports || []).length !== 2) err.push(`diaphragm ${d.mark}: two supports`);
+    for (const s of d.supports || []) if (!grids.has(s)) err.push(`diaphragm ${d.mark}: unknown support ${s}`);
+    if (d.bandSplit !== undefined && !['low', 'high', 'mid'].includes(d.bandSplit)) err.push(`diaphragm ${d.mark}: bandSplit low | high | mid`);
   }
   for (const t of L.tds || []) {
     for (const s of t.supports || []) if (!grids.has(s)) err.push(`td ${t.mark}: unknown support ${s}`);

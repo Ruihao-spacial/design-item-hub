@@ -26,6 +26,40 @@ export function accumulateStoryShear(levelLoads, levels) {
   return result;
 }
 
+// === Transfer to the diaphragm below (user 2026-11-05, build step 4; plan docs/diaphragm-analysis-offset-transfer-plan-2026-11-05.md)
+// Only for an SWD item linked to Diaphragm Analysis (a ticked DA source, Loading); every other item takes none of this.
+// A wall whose force ends at the floor below it (out-of-plane offset, ASCE 7-22 Table 12.3-1 Type 4) hands its story
+// shear to that floor's diaphragm (the DA item of the level below carries it to other lines) instead of to the walls
+// below it on its line. Such a wall: its line has no wall at the next level down (automatic), or the engineer ticked
+// endsAtFloor on a line that continues (mixed line). Bottom-story walls never (they stand on the foundation).
+export const transferOn = inputs => (((inputs || {}).refs || {}).diaphragmSources || []).length > 0;
+export function endsAtFloorIds(inputs, line, levels) {
+  const out = new Set();
+  if (!transferOn(inputs)) return out;
+  const walls = line.walls || [];
+  levels.forEach((lvl, i) => {
+    const below = levels[i + 1];
+    if (!below) return;
+    const continues = walls.some(w => w.levelId === below.id);
+    for (const w of walls) if (w.levelId === lvl.id && (!continues || w.endsAtFloor === true)) out.add(w.id);
+  });
+  return out;
+}
+// The line as the calc sees it: the story shear transferred at a level is taken off the line at the level below
+// (levelLoads(below) − transferred), so the story shears below, the split, deflection and the checks follow by themselves.
+// tr: { levelId: { E, W } } (kip, 1.0 level)
+export function lineWithTransfer(line, levels, tr) {
+  const ll = JSON.parse(JSON.stringify(line.levelLoads || {}));
+  levels.forEach((lvl, i) => {
+    const t = tr[lvl.id], below = levels[i + 1];
+    if (!t || !below || (!t.E && !t.W)) return;
+    const e = ll[below.id] || (ll[below.id] = { seismic: '', wind: '' });
+    e.seismic = String((parseFloat(e.seismic) || 0) - t.E);
+    e.wind = String((parseFloat(e.wind) || 0) - t.W);
+  });
+  return { ...line, levelLoads: ll };
+}
+
 export function distributeByCapacity(walls, storyShear, capMap) {
   if (!walls.length) return [];
   const items = walls.map(w => {
@@ -741,9 +775,33 @@ export function calcAll(inputs) {
       };
     };
     const perLine = (dir.lines || []).map(line => {
-      const res = sizeForDrift(line, inputs, levels, (floor) => solveDistribution(line, inputs, levels, (ln, forced) => runLine(ln, forced, floor)), (id) => anchorageTableOfLevel(id, line.wallThickness || globalThickness), NAILING_TABLE, group);
-      const ck = lineChecks(line, res, { inputs, levels, rho: dir.rho });
+      const solve = (ln) => sizeForDrift(ln, inputs, levels, (floor) => solveDistribution(ln, inputs, levels, (l2, forced) => runLine(l2, forced, floor)), (id) => anchorageTableOfLevel(id, line.wallThickness || globalThickness), NAILING_TABLE, group);
+      let res = solve(line);
+      let used = line, transfer = null;
+      // transfer to the diaphragm below (step 4): the flagged walls' shares leave the line at the floor under them;
+      // repeated until those shares settle (a mixed line's split depends on them; top-down, one level per pass)
+      const ends = endsAtFloorIds(inputs, line, levels);
+      if (ends.size) {
+        let tr = {};
+        for (let pass = 0; pass < levels.length + 3; pass++) {
+          const next = {};
+          for (const pl of res.perLevel) {
+            const fw = pl.walls.filter(w => ends.has(w.wallId));
+            if (!fw.length) continue;
+            next[pl.levelId] = { E: fw.reduce((a, w) => a + (w.shareExact_1E || 0), 0), W: fw.reduce((a, w) => a + (w.shareExact_1W || 0), 0), walls: fw.map(w => w.mark) };
+          }
+          const moved = Object.keys({ ...tr, ...next }).some(k => Math.abs(((tr[k] || {}).E || 0) - ((next[k] || {}).E || 0)) > 1e-6 || Math.abs(((tr[k] || {}).W || 0) - ((next[k] || {}).W || 0)) > 1e-6);
+          if (!moved && pass > 0) break;
+          tr = next;
+          used = lineWithTransfer(line, levels, tr);
+          res = solve(used);
+        }
+        transfer = levels.map((lvl, i) => (tr[lvl.id] && levels[i + 1] ? { levelId: lvl.id, levelName: lvl.name || '', belowId: levels[i + 1].id, belowName: levels[i + 1].name || '',
+          E: tr[lvl.id].E, W: tr[lvl.id].W, walls: tr[lvl.id].walls } : null)).filter(Boolean);
+      }
+      const ck = lineChecks(used, res, { inputs, levels, rho: dir.rho, transfer });
       res.checks = ck.checks; res.checksFailed = ck.failed;
+      if (transfer) res.transfer = transfer;
       return res;
     });
 
