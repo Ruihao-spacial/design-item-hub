@@ -269,8 +269,12 @@ test('upgrade: a TD saved before is Auto when its lines are the found ones, else
   const btn = t => [...box.querySelectorAll('button')].find(b => b.textContent === t || b.textContent.startsWith(t));
   btn('Plan').dispatchEvent(new window.Event('click'));
   btn('Diaphragms & TDs').dispatchEvent(new window.Event('click'));
+  // TDs tab, one card per sub-tab (2026-11-06)
+  box.querySelector('[data-dgtab="td"]').dispatchEvent(new window.Event('click'));
+  box.querySelector('[data-subtab="TD2"]').dispatchEvent(new window.Event('click'));
   const at = box.textContent.indexOf('The plan gives');
   assert.ok(box.textContent.includes('The plan gives: B left (Auto would use these).'), 'manual TD2 shows the found line: ' + box.textContent.slice(at - 80, at + 80));
+  box.querySelector('[data-subtab="TD1"]').dispatchEvent(new window.Event('click'));
   assert.ok(box.querySelector('[data-found="B"]') && /outline \/ notch edge at x = 15/.test(box.textContent), 'auto TD1 lists its line with the reason');
 });
 

@@ -176,8 +176,26 @@ export function crossForce(cs, g, c, tdRanges = []) {
   const [a, b] = seg;
   const freeA = near(a, lo) && !tdRanges.some(r => near(r[0], a) || near(r[1], a));
   const freeB = near(b, hi) && !tdRanges.some(r => near(r[0], b) || near(r[1], b));
-  if (freeA) return { N: integ(a, c), how: 'integrated from the free end at ' + +a.toFixed(2) };
-  if (freeB) return { N: -integ(c, b), how: 'integrated from the free end at ' + +b.toFixed(2) };
+  // A wall of this line running past the TD edge into the TD (user test 26998, 2026-11-06: SW-8 y 54–57.5, TD1 from 57):
+  // the part inside takes its share straight out of the member, not through the TD shear — so it belongs to P, as if
+  // the member were integrated on to the wall end (the TD's own field there is not part of P).
+  const wallIn = (lo2, hi2) => {
+    let t = 0;
+    for (const w of (ln && ln.walls) || []) {
+      const p = Math.max(w.from, lo2), r = Math.min(w.to, hi2);
+      if (r - p > EPS && w.length > EPS) t += cs.sigma * w.share / w.length * (r - p);
+    }
+    return t;
+  };
+  const tdFrom = c0 => tdRanges.find(r => near(r[0], c0)), tdTo = c0 => tdRanges.find(r => near(r[1], c0));
+  if (freeA) {
+    const td = near(c, b) ? tdFrom(c) : null, extra = td ? wallIn(c, td[1]) : 0;
+    return { N: integ(a, c) + extra, how: 'integrated from the free end at ' + +a.toFixed(2) + (Math.abs(extra) > 0.5 ? ` + ${Math.round(extra)} lb of the wall part inside the TD` : '') };
+  }
+  if (freeB) {
+    const td = near(c, a) ? tdTo(c) : null, extra = td ? wallIn(td[0], c) : 0;
+    return { N: -(integ(c, b) + extra), how: 'integrated from the free end at ' + +b.toFixed(2) + (Math.abs(extra) > 0.5 ? ` + ${Math.round(extra)} lb of the wall part inside the TD` : '') };
+  }
   const Q = integ(a, b);
   return { N: -Q / 2 + integ(a, c), how: 'between two TDs: split equally (book Ex 4.2)' };
 }

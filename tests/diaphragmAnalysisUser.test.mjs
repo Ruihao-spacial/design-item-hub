@@ -328,7 +328,7 @@ test('11-04 j: TD card — overhangs picked by grid ("from" a support "to" a gri
   const { parsePlan } = await import('../src/modules/tdGeometry.js');
   const i = structuredClone(fx('adu-roof-1104').inputs), G = n => i.grids.find(g => g.name === n).id;
   normalizeInputs(i);
-  const st = { ...newEditorState(), page: 'diaphragms', dir: 'x' };
+  const st = { ...newEditorState(), page: 'diaphragms', dir: 'x', sel: { kind: 'td', id: i.tds.find(x => x.mark === 'TD2').id } }; // TDs tab, TD2 (2026-11-06)
   const draw = () => { const box = document.createElement('div'); box.appendChild(renderPlanEditor({ inputs: i, plan: parsePlan(i), errors: [], state: st, refresh() {} })); return box; };
   let box = draw();
   assert.equal(box.querySelectorAll('[data-overhang]').length, 1);

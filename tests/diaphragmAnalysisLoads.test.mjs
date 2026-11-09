@@ -218,10 +218,10 @@ test('Plan tab pages: Grids & outline / Diaphragms & TDs / Shear walls, each wit
   assert.ok(all.indexOf(pages) > all.indexOf(drawing), 'page bar after the drawing');
   assert.ok(pages.nextSibling && pages.nextSibling.textContent.includes('Grid lines (shared)'), 'page bar directly above the inputs');
   const has = t => box.textContent.includes(t);
-  assert.ok(has('Grid lines (shared)') && has('Outline (shared') && has('Openings (shared)') && !has('Transfer diaphragms —') && !has('Shear walls (shared)'));
+  assert.ok(has('Grid lines (shared)') && has('Outline (shared') && has('Openings (shared)') && !box.querySelector('.td-dgtabs') && !has('Shear walls (shared)'));
   assert.ok(btn('Outline') && !btn('TD') && !btn('Wall') && !has('Load direction:'));
   click('Diaphragms & TDs');
-  assert.ok(has('Diaphragms — load along') && has('Transfer diaphragms —') && has('Load direction:') && !has('Grid lines (shared)'));
+  assert.ok(box.querySelector('[data-dgtab="diaphragm"]') && box.querySelector('[data-dgtab="td"]') && has('Load direction:') && !has('Grid lines (shared)'), 'Diaphragms / TDs tabs (2026-11-06)');
   assert.ok(btn('TD') && btn('+ Piece') && !btn('Outline'));
   // load direction: right column, under the page buttons; the tool row keeps its place (first row of the left column)
   { const all = [...box.querySelectorAll('*')], dirEl = box.querySelector('.td-dir');
@@ -246,7 +246,7 @@ test('user 2026-11-03 (DA-manual Ex 4.1): a leftover diaphragm of the other dire
   btn('Diaphragms & TDs').dispatchEvent(new window.Event('click'));
   assert.ok(box.textContent.includes('Load along x: 1 diaphragm(s) D1 — 2 plan issue(s)'), 'named on the y page');
   btn('Show load along x').dispatchEvent(new window.Event('click'));
-  assert.ok(box.textContent.includes('Diaphragms — load along x'));
+  assert.ok(box.querySelector('[data-selrow="diaphragm:dg-old"]'), 'the x diaphragm card is shown (Diaphragms tab, its sub-tab)');
   // no outline yet: the Diaphragm tool refuses instead of storing an uncut rectangle
   const bare = bookToInputs(book('Ex4.1'));
   bare.outline = []; bare.diaphragms = [];
@@ -280,12 +280,12 @@ test('Plan panel (user 2026-11-03): a row is selected when one of its fields is 
   assert.equal(sec('Grid lines (shared)').querySelector('.td-sec-arrow').textContent, '▸');
   assert.ok(row.isConnected === false && box.querySelector('[data-selrow="grid:' + g4.id + '"]').style.background, 'selection kept after the redraw');
   click('Diaphragms & TDs');
-  collapse('Transfer diaphragms');
+  box.querySelector('[data-dgtab="td"]').dispatchEvent(new window.Event('click')); // tabs (2026-11-06)
   const tdCard = box.querySelector('[data-selrow^="td:"]');
   assert.ok(tdCard, 'TD cards are selectable rows');
   click('Load along y'); click('Load along x');
-  assert.equal(sec('Transfer diaphragms').open, false, 'kept across directions');
-  assert.ok(sec('Diaphragms').open);
+  assert.ok(box.querySelector('[data-dgtab="td"]').className.includes('btn-primary'), 'TDs tab kept across directions');
+  box.querySelector('[data-dgtab="diaphragm"]').dispatchEvent(new window.Event('click'));
   const dCard = box.querySelector('[data-selrow^="diaphragm:"]');
   dCard.querySelector('input').dispatchEvent(new window.Event('focusin', { bubbles: true }));
   assert.ok(dCard.style.background, 'diaphragm card selected by editing its mark');

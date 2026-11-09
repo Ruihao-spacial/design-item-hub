@@ -34,15 +34,21 @@ const crossAxis = cs => (cs.axis === 'x' ? 'y' : 'x');
 // "x 15–75, y 60–80" for a cell given along the span (s) and across it (c)
 const where = (cs, a, b, p, q) => `${cs.axis} ${f1(a)}–${f1(b)}, ${crossAxis(cs)} ${f1(p)}–${f1(q)}`;
 
-// The plan in result mode at the shared zoom; `layer` goes just above the sheathing (under the plan lines)
+// The plan in result mode at the shared zoom; `layer` goes just above the sheathing (under the plan lines: shear
+// fills), `top` above everything the plan draws (member diagrams and force labels — walls must not hide them, user
+// 2026-11-06). ov.walls / ov.above false hide the walls of this level (below the diaphragm) / of the story above.
 const paintPlan = (plan, cs, zs = {}, ov = {}, cls = 'td-view') => {
   TS = zs.text || TEXT_DEFAULT;
-  const state = { ...newEditorState(), dir: cs.dir, sel: null, zoom: zs.zoom || 1, panX: zs.panX || 0, panY: zs.panY || 0 };
+  const base = newEditorState();
+  const state = { ...base, dir: cs.dir, sel: null, zoom: zs.zoom || 1, panX: zs.panX || 0, panY: zs.panY || 0,
+    layers: { ...base.layers, walls: ov.walls !== false, above: ov.above !== false } };
   const d = drawPlan(plan, state, [], { result: true, outlines: ov.outlines !== false });
   const layer = svg('g', { class: cls });
   const first = d.group.querySelector('polygon');
   if (first && first.nextSibling) d.group.insertBefore(layer, first.nextSibling); else d.group.appendChild(layer);
-  return { root: d.svg, v: d.view, layer, group: d.group };
+  const top = svg('g', { class: cls + ' ' + cls + '-top' });
+  d.group.appendChild(top);
+  return { root: d.svg, v: d.view, layer, top, group: d.group };
 };
 
 // Line forces at the support lines, wall shares at the walls (overlay, every view)
@@ -64,7 +70,7 @@ function drawLineForces(plan, cs, v, layer) {
 // View 1 (Basic v_b) for one case. zs: shared zoom { zoom, panX, panY }; ov: overlays { lines, outlines }.
 // Returns { svg, group, view, scale: { max, unit, name } }.
 export function drawBasicShear(plan, cs, zs = {}, ov = {}) {
-  const { root, v, layer: paint, group } = paintPlan(plan, cs, zs, ov, 'td-view1');
+  const { root, v, layer: paint, top, group } = paintPlan(plan, cs, zs, ov, 'td-view1');
   const vmax = Math.max(1e-9, ...cs.diaphragms.flatMap(d => d.intervals.flatMap(i => i.bands.flatMap(b => [Math.abs(b.va), Math.abs(b.vb)]))));
   const rect = (a, b, lo, hi) => (cs.axis === 'x' ? { x1: a, x2: b, y1: lo, y2: hi } : { x1: lo, x2: hi, y1: a, y2: b });
   for (const d of cs.diaphragms) for (const iv of d.intervals) for (const bd of iv.bands) {
@@ -85,7 +91,7 @@ export function drawBasicShear(plan, cs, zs = {}, ov = {}) {
       if (Math.abs(bd.va - bd.vb) >= 0.05) paint.appendChild(at(iv.b, bd.vb, 'end'));
     }
   }
-  if (ov.lines !== false) drawLineForces(plan, cs, v, paint);
+  if (ov.lines !== false) drawLineForces(plan, cs, v, top);
   return { svg: root, group, view: v, scale: { max: vmax, unit: 'plf', name: 'v_b' } };
 }
 
@@ -298,6 +304,8 @@ export function renderAnalysis(plan, results, pick) {
   box.appendChild(el('div', { style: { display: 'flex', gap: '6px 12px', flexWrap: 'wrap', alignItems: 'center', fontSize: '0.8rem', marginBottom: '4px' } },
     check(ov.lines !== false, 'line forces & wall shares', x => pick.setOverlays({ ...ov, lines: x })),
     check(ov.outlines !== false, 'diaphragm / TD outlines', x => pick.setOverlays({ ...ov, outlines: x })),
+    check(ov.walls !== false, 'walls below (this level)', x => pick.setOverlays({ ...ov, walls: x })),
+    (plan.wallsAbove || []).length ? check(ov.above !== false, 'walls above (story above)', x => pick.setOverlays({ ...ov, above: x })) : null,
     ...(view === 4 ? [['chord', 'members along the span (chords, struts)'], ['cross', 'across the span (collectors, drag struts)']].map(([k, t]) =>
       check(show[k] !== false, t, x => pick.setShow({ ...show, [k]: x }))) : []),
     el('span', { style: { flex: 1 } }),
@@ -391,7 +399,7 @@ const toXY = (cs, s, c) => (cs.axis === 'x' ? [s, c] : [c, s]);
 
 // View 2: the TD unit shears on their segments (the TD mark comes with its outline)
 export function drawTdShear(plan, cs, zs = {}, ov = {}) {
-  const { root, v, layer, group } = paintPlan(plan, cs, zs, ov);
+  const { root, v, layer, top, group } = paintPlan(plan, cs, zs, ov);
   const fields = cs.fields || [];
   const vmax = Math.max(1e-9, ...fields.flatMap(f => f.segs.map(s => Math.abs(s.v))));
   for (const f of fields) for (const sg of f.segs) {
@@ -401,13 +409,13 @@ export function drawTdShear(plan, cs, zs = {}, ov = {}) {
       `v_TD ${f1(sg.v)} plf · ${f.mark} · x ${f1(r.x1)}–${f1(r.x2)}, y ${f1(r.y1)}–${f1(r.y2)}`));
     layer.appendChild(label(v.sx((r.x1 + r.x2) / 2), v.sy((r.y1 + r.y2) / 2) + 3, f1(sg.v), { 'font-weight': 600 }));
   }
-  if (ov.lines !== false) drawLineForces(plan, cs, v, layer);
+  if (ov.lines !== false) drawLineForces(plan, cs, v, top);
   return { svg: root, group, view: v, scale: { max: vmax, unit: 'plf', name: 'v_TD' } };
 }
 
 // View 3: net unit shear v_b + v_TD, cell by cell (values at the cell ends along the span)
 export function drawNetShear(plan, cs, zs = {}, ov = {}) {
-  const { root, v, layer, group } = paintPlan(plan, cs, zs, ov);
+  const { root, v, layer, top, group } = paintPlan(plan, cs, zs, ov);
   const fields = cs.fields || [];
   const { S, C } = breaks(plan, cs, fields);
   const cells = [];
@@ -430,14 +438,14 @@ export function drawNetShear(plan, cs, zs = {}, ov = {}) {
     layer.appendChild(at(c.a, c.va, 'start'));
     if (Math.abs(c.va - c.vb) >= 0.05 && len >= 60 * TS) layer.appendChild(at(c.b, c.vb, 'end'));
   }
-  if (ov.lines !== false) drawLineForces(plan, cs, v, layer);
+  if (ov.lines !== false) drawLineForces(plan, cs, v, top);
   return { svg: root, group, view: v, scale: { max: vmax, unit: 'plf', name: 'v_net' } };
 }
 
 // View 4: member force diagrams on their lines (tension blue, compression red); max of each run labelled; at a
 // zoom ≥ 200 % also N at the grid crossings and wall ends; a run that does not close is marked "open" at its end.
 export function drawMembers(plan, cs, show = { chord: true, cross: true }, zs = {}, ov = {}) {
-  const { root, v, layer, group } = paintPlan(plan, cs, zs, ov);
+  const { root, v, layer, top, group } = paintPlan(plan, cs, zs, ov);
   const ms = (cs.members || []).filter(m => show[m.family] !== false);
   const nmax = Math.max(1e-9, ...ms.flatMap(m => m.runs.map(r => Math.abs(r.max))));
   const H = 34 / nmax; // px per lb
@@ -457,13 +465,13 @@ export function drawMembers(plan, cs, show = { chord: true, cross: true }, zs = 
       const [p0, n0] = pts[i], [p1, n1] = pts[i + 1];
       if (p1 - p0 < 1e-9) continue;
       const poly = [xy(p0, 0), xy(p0, n0), xy(p1, n1), xy(p1, 0)].map(q => q.join(',')).join(' ');
-      layer.appendChild(tip(svg('polygon', { points: poly, fill: n0 + n1 >= 0 ? POS : NEG, 'fill-opacity': 0.35, stroke: n0 + n1 >= 0 ? POS : NEG, 'stroke-width': 0.6 }),
+      top.appendChild(tip(svg('polygon', { points: poly, fill: n0 + n1 >= 0 ? POS : NEG, 'fill-opacity': 0.35, stroke: n0 + n1 >= 0 ? POS : NEG, 'stroke-width': 0.6 }),
         `${m.name}: N ${tc(n0)} → ${tc(n1)} at ${along} ${f1(p0)}–${f1(p1)}`));
     }
     const sideLabel = (p, n, txt, attrs = {}) => { const [lx, ly] = xy(p, n); return label(lx, ly + (n >= 0 ? -3 : 10 * TS), txt, { 'font-size': 9, ...attrs }); };
     // largest tension and largest compression of the run (a run can have both)
     const ext = runExtremes(r);
-    for (const x of [ext.T, ext.C]) if (x) layer.appendChild(sideLabel(x.at, x.N, 'max ' + tc(x.N), { fill: x.N >= 0 ? '#1d4ed8' : '#b91c1c', 'font-weight': 600 }));
+    for (const x of [ext.T, ext.C]) if (x) top.appendChild(sideLabel(x.at, x.N, 'max ' + tc(x.N), { fill: x.N >= 0 ? '#1d4ed8' : '#b91c1c', 'font-weight': 600 }));
     if (detail) {
       // N at the grids crossing the member and at the wall ends on it (skip the maxima, already labelled)
       const stations = [...plan.grids.filter(g => g.axis === along).map(g => g.at),
@@ -471,12 +479,12 @@ export function drawMembers(plan, cs, show = { chord: true, cross: true }, zs = 
       for (const p of [...new Set(stations)]) {
         if (p < r.from - 1e-6 || p > r.to + 1e-6 || [ext.T, ext.C].some(x => x && Math.abs(p - x.at) < 1e-3)) continue;
         const n = memberN(m, p);
-        if (n !== null && Math.abs(n) >= 0.5) layer.appendChild(sideLabel(p, n, tc(n), { fill: '#374151' }));
+        if (n !== null && Math.abs(n) >= 0.5) top.appendChild(sideLabel(p, n, tc(n), { fill: '#374151' }));
       }
     }
-    if (!closes(r)) layer.appendChild(sideLabel(r.to, r.residual, 'open ' + tc(r.residual), { fill: '#b91c1c', 'font-weight': 700 }));
+    if (!closes(r)) top.appendChild(sideLabel(r.to, r.residual, 'open ' + tc(r.residual), { fill: '#b91c1c', 'font-weight': 700 }));
   }
-  if (ov.lines !== false) drawLineForces(plan, cs, v, layer);
+  if (ov.lines !== false) drawLineForces(plan, cs, v, top);
   return { svg: root, group, view: v, scale: { max: nmax, unit: 'lb', name: 'N' } };
 }
 const tc = n => (n >= 0 ? 'T ' : 'C ') + f0(Math.abs(n));

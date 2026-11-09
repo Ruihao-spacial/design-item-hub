@@ -238,6 +238,7 @@ test('review 2026-10-29: diaphragm tool guesses its supports; an off-grid TD sti
   diaphragmAnalysis.renderForm(box, inputs, () => {}, [], () => {}, {});
   [...box.querySelectorAll('button')].find(b => b.textContent.startsWith('Plan')).dispatchEvent(new window.Event('click'));
   [...box.querySelectorAll('button')].find(b => b.textContent === 'Diaphragms & TDs').dispatchEvent(new window.Event('click'));
+  box.querySelector('[data-dgtab="td"]').dispatchEvent(new window.Event('click')); // TDs tab (2026-11-06)
   const shown = [...box.querySelectorAll('select')].map(s => [...s.querySelectorAll('option')].find(o => o.selected)).filter(o => o && o.value === t.supports[0]);
   assert.ok(shown.length >= 1, 'TD support A is the selected option of a support select');
 });

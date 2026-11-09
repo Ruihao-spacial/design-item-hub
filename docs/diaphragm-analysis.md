@@ -34,6 +34,14 @@ collector and drag force, with a closure check on each member.
 7. **Net field** = basic + TD shears; member diagrams on the net field.
 
 ## Plan model
+- UI (user 2026-11-06, view only, no stored field): **messages under the plan** — errors and warnings grouped by
+  type (`tdMessages.js`: grids not on this plan (own group), grids, outline and openings, diaphragms, TDs, wall
+  lines, walls above, Shear Wall Design link, loads, other), errors first, numbered E1… / W1…; groups collapse
+  (kept across redraws). **Diaphragms & TDs page**: a Diaphragms tab and a TDs tab (count, red ● on an error), a
+  sub-tab per item showing its one card; a sub-tab selects the item on the plan, an item picked on the plan opens
+  its tab. **Analysis views**: member diagrams and force / wall-share labels drawn above the walls (layer
+  `td-view-top`); switches *walls below (this level)* and *walls above (story above)*. Test `tests/daUi.test.mjs`
+  (project 26998, fixtures `t98-*`).
 - Editor details (user 2026-11-03): panel sections collapse (▾ / ▸; kept in the editor state across redraws, pages
   and directions); editing any field of a row selects that row at once (no redraw); **Lock grid lines**
   (`inputs.gridsLocked`: names / positions read-only, no add / delete, grid tools off); outline corners **picked on
@@ -77,6 +85,51 @@ collector and drag force, with a closure check on each member.
   misses the outline; Auto TD load lines skip a grid that stops before the TD edge. Helpers `gridReaches`,
   `gridCovers` (tdGeometry). Tests `tests/diaphragmAnalysisGrids.test.mjs`. Next: Shear Wall Design sees only the grids
   that cross its line (plan `docs/diaphragm-analysis-offset-transfer-plan-2026-11-05.md`, Part A).
+
+## How to draw diaphragms and TDs (modelling guide, user test 26998, 2026-11-06)
+Rules found on project 26998 "Cotoros Main Test" Roof (fixtures `tests/fixtures/da-user/t98-*.json`). Every rule
+was tested: each wrong layout below failed closure; the layout described here closes both directions
+(Σ 60 k each way). Work one load direction at a time.
+
+**1. Start from the wall lines, not the outline.** List the lines with walls for this direction (26998 along y:
+B, C/D, G/H.3, M; along x: 2/3, 5/6, 8, 9). Only these are diaphragm supports. A wall-less grid as a support fails
+(`line-no-wall`), unless a TD is drawn on purpose to take its force (rule 4, kind 2). 26998 first try: x diaphragms
+on 1.7, 9 (x 57–66) and 8.8 — no walls there.
+
+**2. One diaphragm per bay between two adjacent wall lines.** A notch or a change of depth is *not* a split: one
+diaphragm, several pieces, one beam. Overhangs past the outer support are fine (26998: x 0–11 past B, 109–112
+past M). Split only at a wall line, or for an offset line (rule 3). Adjacent diaphragms with the same two supports
+can be one diaphragm (26998 x: D4 + D5 on 7 / 6, D6 + D7 on 8 / 6 give identical results merged).
+
+**3. Offset line — each wall on the support line of its own diaphragm part (book Ex 3.3).** Split the bay along the
+load direction where the strut leaves the walls of one line. 26998 C/D: the tab x 8–27, y 39.5–51 is a diaphragm on
+B / C; above y = 51 D1 spans B / D. G/H.3: below y = 57 the parts on D / G and G / H.3; above, D2 on D / H.3. A wall
+of the group inside a diaphragm that spans to its partner line double-counts (the strut line carries its basic force
+plus the TD load; residual = the TD's P) — 26998 first try, C inside D1 on B / D, G inside D2 on D / H.3.
+
+**4. TDs — only three kinds:**
+
+| Kind | When | How to draw | 26998 |
+|---|---|---|---|
+| 1. Offset-line strut | every offset line (rule D1) | starts where the strut leaves its wall part; supports = the diaphragm it enters; load line = the strut grid | TD1 (C, y 51–57, B / D); TD4 (G, y 57–72, D / H.3) |
+| 2. Wall-less support | a diaphragm supported on a line without walls, on purpose | load line = that line; the TD spans between wall lines | TD2 (F, from D4 on F / G); x: TD5 (line 4, from D8), TD6 (line 7), TD8 (struts 3 / 5 of the 2/3, 5/6 offset lines) |
+| 3. Chord step | the diaphragm edge steps (re-entrant corner, notch) | full depth, edge to edge, on the deeper side of the step; supports = the two edge grids; load line = the stepped edge grid (book Ex 3.5, Ex 4.1) | TD9 (step at x = 100: 8.8 / 1.7, line 4); TD3 (step at x = 8: 7 / 2.6, line 6) |
+
+**5. Do not draw:**
+- a TD on a line that runs the full depth of its diaphragm through sheathing — the basic field already closes it, the
+  TD counts its force twice (26998: TD3 on L, TD1 on A.8, TD4 on F; residual = −2098 / 773 / 497 lb = exactly P);
+- a TD that no force reaches (NOT_RUN; 26998 x TD7 on 2.6);
+- a TD behind another on the same load line — the first takes the load, the second gets nothing (26998 TD2 above TD1).
+
+**6. Load lines:** Auto first; if it lists a full-depth line or an overhang tip, set by hand.
+
+**7. Reading the Checks:** `line-no-wall` / `line-part-no-wall` → a support without a wall (rule 1–2);
+`wall-in-span` → split there or make an offset line (rule 3); an open member run with residual = a TD's P → that TD
+double-counts (rule 5); open runs on edge lines at a corner → a chord-step TD is missing (rule 4, kind 3).
+
+**Order for a new level:** grids, outline, walls (SWD link) → diaphragms bay by bay for one direction, calculate →
+clear `line-no-wall` / `wall-in-span` before any TD → TDs kind 1, 2, 3, calculating after each and reading which
+member runs are still open → the other direction.
 
 ## Shear Wall Design link (Phase 2, option B)
 - Shear Wall Design owns the walls (all types, all levels) and the distribution method; this plan owns the grids.
@@ -253,6 +306,9 @@ collector and drag force, with a closure check on each member.
     - now: one message per line naming the fix, no source for a wall whose force is not placed, the case FAILED
       ("cannot be placed") and held from SWD.
 - **Plan:** the collector is drawn as an amber line with end bars (full depth: nothing drawn).
+- **Limit (user 2026-11-06, 26998 2nd Floor grid 6):** one collector per line — all walls above on that line share it,
+  and blank = the whole line. Walls above landing on different diaphragms cannot yet each have their own collector
+  (backlog, open item 6).
 - **26997** (collector B–C on line 2), `tests/daTransfer.test.mjs`:
   - D2 takes all 10 k; D2 at line 1 = 3 + 8.571 k, 192.9 plf (full depth: 136 plf); D3 / D1 take 1 k each;
   - line 1 = 13.571 k (unchanged);
@@ -372,6 +428,10 @@ collector and drag force, with a closure check on each member.
   sum of both edges for a load line with side 'both' (G1), or the wall-less line force handed into it (strut TD);
   edge / outside shears from the basic field, + a wall on an edge (averaged per segment where a wall or sheathing
   edge ends inside the segment — G5).
+- **Wall of the load line inside the TD (td-v13, user test 26998):** a wall on a strut TD's load line that runs past
+  the TD edge into the TD takes its share straight out of the member there; that part is added to P (as if the
+  member were integrated on to the wall end). Before, P stopped at the TD edge and the member did not close
+  (26998 2nd Floor: SW-8 0.5 ft into TD1, −405 lb on B).
 - Engineer inputs: region clear = drawn TD; cantilever = the engineer's review of the listed limits (UNVERIFIED);
   closure tolerance = 1 % of |P1| + |P2| (code constant).
 

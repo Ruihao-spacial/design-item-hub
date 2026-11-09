@@ -9,6 +9,7 @@
 // outline / openings / diaphragms / TDs and wall ends → 0.5 ft. Wheel = zoom about the cursor; drag the background
 // (Select) = pan. Edits go through applyClick / the panel and then refresh(true); view changes call refresh(false).
 import { el } from '../utils.js';
+import { groupMessages, renderMessages } from './tdMessages.js';
 import { planBounds, spanAxis, DIR_LABEL, splitRegion, partName, diaphragmArea, parsePlan, gridReaches } from './tdGeometry.js';
 import { loadProfile, loadKind } from './tdBasicShear.js';
 import { newGrid, newOpening, newWall, newTd, newDiaphragm, newPart, newLoad, newSegment, nextMark, uid } from './tdModel.js';
@@ -55,7 +56,7 @@ export function newEditorState() {
 
 // Plan tab show / hide filter (view only, not stored): diaphragms, TDs, openings
 export const LAYERS = [['diaphragms', 'Diaphragms'], ['tds', 'TDs'], ['openings', 'Openings']];
-const LAYERS_ON = { diaphragms: true, tds: true, openings: true, above: true };
+const LAYERS_ON = { diaphragms: true, tds: true, openings: true, above: true, walls: true };
 const shown = (state, key) => !state.layers || state.layers[key] !== false;
 // extra: more [key, label] layers shown only when the plan has them (walls of the story above, step 5)
 export function layerFilter(state, onChange, extra = []) {
@@ -674,7 +675,7 @@ export function drawPlan(plan, state, errors, opts = {}) {
   }
 
   // walls
-  for (const w of plan.walls) {
+  for (const w of shown(state, 'walls') ? plan.walls : []) {
     if (!w.axis || !fin(w.from) || !fin(w.to)) continue;
     const col = isSel('wall', w.id) ? C.sel : bad.has(w.id) ? C.err : w.linked ? C.wallLinked : C.wall;
     const [x1, y1, x2, y2] = w.axis === 'x' ? [v.sx(w.at), v.sy(w.from), v.sx(w.at), v.sy(w.to)] : [v.sx(w.from), v.sy(w.at), v.sx(w.to), v.sy(w.at)];
@@ -877,7 +878,7 @@ function drawEdgePreview(overlay, plan, v, d, s) {
 
 // The editor: direction switch, toolbar, drawing, panel. refresh(inputsChanged) redraws (recalculates when true).
 // loadCases / q (optional): the analysis cases, for the w(s) load strip.
-export function renderPlanEditor({ inputs, plan, errors, state, refresh, wallsLinked = false, loadCases = null, q = null }) {
+export function renderPlanEditor({ inputs, plan, errors, warnings = [], state, refresh, wallsLinked = false, loadCases = null, q = null }) {
   if (wallsLinked && state.tool === 'wall') state.tool = 'select';
   const page = pageOf(state), pageTools = PAGES.find(p => p[0] === page)[2];
   if (state.tool !== 'select' && !pageTools.includes(state.tool)) { state.tool = 'select'; state.pending = []; }
@@ -908,12 +909,12 @@ export function renderPlanEditor({ inputs, plan, errors, state, refresh, wallsLi
   const swdOwned = state.sel && (state.sel.kind === 'above' || (state.sel.kind === 'wall' && String(state.sel.id).startsWith('swd:')));
   if (state.sel && !swdOwned) bar.appendChild(el('button', { type: 'button', className: 'btn btn-ghost btn-sm', style: { color: 'var(--fail)' }, onClick() { if (deleteSelected(inputs, state)) refresh(true); } }, 'Delete selected'));
   box.appendChild(bar);
-  box.appendChild(el('div', { style: { fontSize: '0.78rem', color: state.message ? 'var(--ink-primary, #111)' : 'var(--ink-tertiary)', minHeight: '2.4em', marginBottom: '0.3rem' } },
+  box.appendChild(el('div', { style: { fontSize: '0.78rem', color: state.message ? 'var(--ink)' : 'var(--ink-tertiary)', minHeight: '2.4em', marginBottom: '0.3rem' } },
     state.message || HINT[state.tool]));
 
   let edgeDrag = null; // { kind, id, edge, at }
   const { svg: drawing, group, overlay, view } = drawPlan(plan, state, errors, {
-    onPick: state.tool === 'select' ? (kind, id, part) => { state.sel = part ? { kind, id, part } : { kind, id }; if (PAGE_OF[kind]) state.page = PAGE_OF[kind]; refresh(false); } : null,
+    onPick: state.tool === 'select' ? (kind, id, part) => { state.sel = part ? { kind, id, part } : { kind, id }; if (PAGE_OF[kind]) state.page = PAGE_OF[kind]; if (kind === 'diaphragm' || kind === 'td') state.dgTab = kind; refresh(false); } : null,
     onEdgeDown: state.tool === 'select' ? (kind, id, edge, part) => { edgeDrag = { kind, id, edge, part, at: null }; } : null,
     loadCases, q, outline: inputs.outline,
   });
@@ -988,7 +989,8 @@ export function renderPlanEditor({ inputs, plan, errors, state, refresh, wallsLi
   if (typeof document !== 'undefined') document.addEventListener('keydown', state._onKey);
 
   box.appendChild(el('div', { style: { display: 'flex', gap: '1rem', alignItems: 'flex-start', flexWrap: 'wrap' } },
-    el('div', { style: { flex: '1 1 600px', minWidth: 0 } }, drawing, coords, planLegend()),
+    el('div', { style: { flex: '1 1 600px', minWidth: 0 } }, drawing, coords, planLegend(),
+      renderMessages(groupMessages((errors || []).filter(e => !e.warn), [...(errors || []).filter(e => e.warn), ...(warnings || [])]), state)),
     el('div', { style: { flex: '0 1 400px', minWidth: '300px' } }, pageBar, page === 'diaphragms' ? dirBar : null, renderPanel(inputs, plan, state, refresh, wallsLinked))));
   return box;
 }
@@ -1095,7 +1097,7 @@ const section = (title, ...kids) => {
   d.addEventListener('toggle', () => { st.collapsed[key] = !d.open; arrow.textContent = d.open ? '▾' : '▸'; });
   return d;
 };
-const SEL_BG = '#fdf2f8';
+const SEL_BG = 'var(--sel-bg)'; // theme token (light pink / dark: translucent), so the row text stays readable
 const rowStyle = (state, kind, id) => (state.sel && state.sel.kind === kind && state.sel.id === id ? { background: SEL_BG } : null);
 let focusCtx = null;
 // onFocusin handler of a row / card: select it and highlight it in place (other rows lose the highlight)
@@ -1147,108 +1149,116 @@ function renderPanel(inputs, plan, state, refresh, wallsLinked = false) {
     }
   }
 
-  // diaphragms of this direction
-  if (page === 'diaphragms') {
-    const body = el('div');
-    const list = inputs.diaphragms.filter(d => d.dir === dir);
-    const sAxis = spanAxis(dir);
-    body.appendChild(el('p', { style: small }, 'For the load along ' + dir + ' each diaphragm spans between two ' + (sAxis === 'x' ? '↕' : '↔') + ' support lines (wall or collector lines) and is analysed as one beam. It is one or more rectangles (pieces) on the sheathing — never over an opening or outside the outline.'));
-    for (const d of list) {
-      const c = card('diaphragm', d.id);
-      const pd = plan.diaphragms.find(x => x.id === d.id);
-      c.appendChild(el('div', { style: { display: 'flex', gap: '6px', alignItems: 'center', flexWrap: 'wrap' } },
-        textInput(d, 'mark', refresh, '44px'),
-        el('span', { style: small }, (d.parts || []).length + ' piece(s)' + (pd ? ', ' + fmt(diaphragmArea(plan, pd)) + ' sf' : '')),
-        el('span', { style: { flex: 1 } }),
-        delBtn(() => { inputs.diaphragms.splice(inputs.diaphragms.indexOf(d), 1); refresh(true); }, 'Delete diaphragm')));
-      c.appendChild(supportsRow(d, sAxis, 'Spans between'));
-      c.appendChild(el('div', { style: { marginTop: '4px', display: 'flex', gap: '4px', flexWrap: 'wrap' } },
-        el('button', { type: 'button', className: 'btn btn-sm', title: 'The pieces become the sheathing between the two support lines that no other diaphragm of this direction holds (outline and openings left out).',
-          onClick() { const n = fillBetweenSupports(inputs, plan, d.id, state); state.sel = { kind: 'diaphragm', id: d.id }; refresh(n > 0); } }, 'Fill between supports'),
-        el('button', { type: 'button', className: 'btn btn-ghost btn-sm', title: 'Draw a rectangle: its free sheathing is added as pieces',
-          onClick() { state.sel = { kind: 'diaphragm', id: d.id }; state.tool = 'piece'; state.pending = []; state.message = ''; refresh(false); } }, '+ Piece (draw)')));
-      const pt = el('table', { className: 'dynamic-table', style: { marginTop: '4px' } });
-      pt.appendChild(el('tr', null, el('th', null, 'Piece'), ...['x1', 'x2', 'y1', 'y2'].map(k => el('th', null, k)), el('th', null, '')));
-      (d.parts || []).forEach((q, i) => {
-        const on = state.sel && state.sel.kind === 'diaphragm' && state.sel.id === d.id && state.sel.part === q.id;
-        pt.appendChild(el('tr', { style: on ? { background: '#fce7f3' } : null, onClick: e => { if (e && e.target && /^(INPUT|BUTTON)$/.test(e.target.tagName)) return; e.stopPropagation(); state.sel = { kind: 'diaphragm', id: d.id, part: q.id }; refresh(false); } },
-          el('td', { style: small }, partName(d, i)), ...['x1', 'x2', 'y1', 'y2'].map(k => el('td', null, numInput(q, k, refresh, '50px'))),
-          el('td', null, delBtn(() => { d.parts.splice(i, 1); refresh(true); }, 'Delete piece'))));
-      });
-      c.appendChild(el('div', { className: 'table-scroll' }, pt));
-      if ([d.x1, d.x2, d.y1, d.y2].some(v => v !== undefined && v !== ''))
-        c.appendChild(el('p', { style: { ...small, margin: '2px 0 0' } }, 'Pieces cut on upgrade (schema 2) from the earlier rectangle x ' + d.x1 + '–' + d.x2 + ', y ' + d.y1 + '–' + d.y2 + ' (kept for the record, not used).'));
-      c.appendChild(el('div', { style: { marginTop: '4px' } }, el('span', { style: small }, 'Sheathing '),
-        choose(SHEATHING, d.sheathing || '', v => { d.sheathing = v; refresh(true); }),
-        el('span', { style: { ...small, marginLeft: '6px' } }, 'Blocking '),
-        choose([['', 'default'], ['yes', 'blocked'], ['no', 'unblocked']], d.blocked === true ? 'yes' : d.blocked === false ? 'no' : '', v => { d.blocked = v === '' ? null : v === 'yes'; refresh(true); }),
-        el('span', { style: { ...small, marginLeft: '6px' }, title: 'Where an opening splits the depth, the bands share the section shear by width at one section of the opening; each band then carries its own load. Auto: at the end on a support line (free chord ends, Ex 4.3), else at the opening end with the smaller shear (Ex 5.1).' }, 'Opening bands share V at '),
-        choose([['', 'auto'], ['low', 'opening start (low ' + sAxis + ')'], ['high', 'opening end (high ' + sAxis + ')'], ['mid', 'mid-opening']], d.bandSplit || '', v => { d.bandSplit = v; refresh(true); }),
-        el('span', { style: { ...small, marginLeft: '6px' }, title: 'A chord that stops inside an opening stretch (e.g. a notch under the opening): its force at the cut, which the TD takes. Section (default): M/H at the cut, the opening-edge members taken as 0 there (book Ex 8.1, p8; within −6…+9 % of a stiffness reference). Vierendeel: zero in the opening-edge members at the inflection, then the sum of unit shears along the outer chord (about a quarter lower). docs/diaphragm-analysis-opening-study.md' }, 'Chord cut in an opening '),
-        choose([['', 'section M/H at the cut (default)'], ['vierendeel', 'Vierendeel']], d.chordCut === 'vierendeel' ? 'vierendeel' : '', v => { d.chordCut = v; refresh(true); })));
-      body.appendChild(c);
+  // Diaphragms & TDs page (user 2026-11-06): a tab for diaphragms and one for TDs, a sub-tab per item, one card shown
+  const sAxis = spanAxis(dir);
+  const diaphragmCard = d => {
+    const c = card('diaphragm', d.id);
+    const pd = plan.diaphragms.find(x => x.id === d.id);
+    c.appendChild(el('div', { style: { display: 'flex', gap: '6px', alignItems: 'center', flexWrap: 'wrap' } },
+      textInput(d, 'mark', refresh, '44px'),
+      el('span', { style: small }, (d.parts || []).length + ' piece(s)' + (pd ? ', ' + fmt(diaphragmArea(plan, pd)) + ' sf' : '')),
+      el('span', { style: { flex: 1 } }),
+      delBtn(() => { inputs.diaphragms.splice(inputs.diaphragms.indexOf(d), 1); refresh(true); }, 'Delete diaphragm')));
+    c.appendChild(supportsRow(d, sAxis, 'Spans between'));
+    c.appendChild(el('div', { style: { marginTop: '4px', display: 'flex', gap: '4px', flexWrap: 'wrap' } },
+      el('button', { type: 'button', className: 'btn btn-sm', title: 'The pieces become the sheathing between the two support lines that no other diaphragm of this direction holds (outline and openings left out).',
+        onClick() { const n = fillBetweenSupports(inputs, plan, d.id, state); state.sel = { kind: 'diaphragm', id: d.id }; refresh(n > 0); } }, 'Fill between supports'),
+      el('button', { type: 'button', className: 'btn btn-ghost btn-sm', title: 'Draw a rectangle: its free sheathing is added as pieces',
+        onClick() { state.sel = { kind: 'diaphragm', id: d.id }; state.tool = 'piece'; state.pending = []; state.message = ''; refresh(false); } }, '+ Piece (draw)')));
+    const pt = el('table', { className: 'dynamic-table', style: { marginTop: '4px' } });
+    pt.appendChild(el('tr', null, el('th', null, 'Piece'), ...['x1', 'x2', 'y1', 'y2'].map(k => el('th', null, k)), el('th', null, '')));
+    (d.parts || []).forEach((q, i) => {
+      const on = state.sel && state.sel.kind === 'diaphragm' && state.sel.id === d.id && state.sel.part === q.id;
+      pt.appendChild(el('tr', { style: on ? { background: 'var(--sel-bg-strong)' } : null, onClick: e => { if (e && e.target && /^(INPUT|BUTTON)$/.test(e.target.tagName)) return; e.stopPropagation(); state.sel = { kind: 'diaphragm', id: d.id, part: q.id }; refresh(false); } },
+        el('td', { style: small }, partName(d, i)), ...['x1', 'x2', 'y1', 'y2'].map(k => el('td', null, numInput(q, k, refresh, '50px'))),
+        el('td', null, delBtn(() => { d.parts.splice(i, 1); refresh(true); }, 'Delete piece'))));
+    });
+    c.appendChild(el('div', { className: 'table-scroll' }, pt));
+    if ([d.x1, d.x2, d.y1, d.y2].some(v => v !== undefined && v !== ''))
+      c.appendChild(el('p', { style: { ...small, margin: '2px 0 0' } }, 'Pieces cut on upgrade (schema 2) from the earlier rectangle x ' + d.x1 + '–' + d.x2 + ', y ' + d.y1 + '–' + d.y2 + ' (kept for the record, not used).'));
+    c.appendChild(el('div', { style: { marginTop: '4px' } }, el('span', { style: small }, 'Sheathing '),
+      choose(SHEATHING, d.sheathing || '', v => { d.sheathing = v; refresh(true); }),
+      el('span', { style: { ...small, marginLeft: '6px' } }, 'Blocking '),
+      choose([['', 'default'], ['yes', 'blocked'], ['no', 'unblocked']], d.blocked === true ? 'yes' : d.blocked === false ? 'no' : '', v => { d.blocked = v === '' ? null : v === 'yes'; refresh(true); }),
+      el('span', { style: { ...small, marginLeft: '6px' }, title: 'Where an opening splits the depth, the bands share the section shear by width at one section of the opening; each band then carries its own load. Auto: at the end on a support line (free chord ends, Ex 4.3), else at the opening end with the smaller shear (Ex 5.1).' }, 'Opening bands share V at '),
+      choose([['', 'auto'], ['low', 'opening start (low ' + sAxis + ')'], ['high', 'opening end (high ' + sAxis + ')'], ['mid', 'mid-opening']], d.bandSplit || '', v => { d.bandSplit = v; refresh(true); }),
+      el('span', { style: { ...small, marginLeft: '6px' }, title: 'A chord that stops inside an opening stretch (e.g. a notch under the opening): its force at the cut, which the TD takes. Section (default): M/H at the cut, the opening-edge members taken as 0 there (book Ex 8.1, p8; within −6…+9 % of a stiffness reference). Vierendeel: zero in the opening-edge members at the inflection, then the sum of unit shears along the outer chord (about a quarter lower). docs/diaphragm-analysis-opening-study.md' }, 'Chord cut in an opening '),
+      choose([['', 'section M/H at the cut (default)'], ['vierendeel', 'Vierendeel']], d.chordCut === 'vierendeel' ? 'vierendeel' : '', v => { d.chordCut = v; refresh(true); })));
+    return c;
+  };
+  const tdCard = t => {
+    const pt = plan.tds.find(x => x.id === t.id);
+    const axis = pt && pt.supports[0] ? pt.supports[0].axis : null;
+    const c = card('td', t.id);
+    c.appendChild(el('div', { style: { display: 'flex', gap: '6px', alignItems: 'center', flexWrap: 'wrap' } },
+      textInput(t, 'mark', refresh, '48px'),
+      ...['x1', 'x2', 'y1', 'y2'].flatMap(k => [el('span', { style: small }, k), numInput(t, k, refresh, '50px')]),
+      delBtn(() => { inputs.tds.splice(inputs.tds.indexOf(t), 1); refresh(true); })));
+    c.appendChild(supportsRow(t, null, 'Supports'));
+    // overhangs (user 2026-11-04): picked by grid — from a support of the TD to the grid at the tip, one per support
+    if (!Array.isArray(t.overhangs)) t.overhangs = [];
+    const ohRow = el('div', { style: { marginTop: '4px', display: 'flex', gap: '6px', alignItems: 'center', flexWrap: 'wrap' } },
+      el('span', { style: small, title: 'Cantilever: the TD runs past a support to the grid line at its tip. One overhang per support (a TD may overhang both).' }, 'Overhangs '));
+    const supOpts = (pt ? pt.supports : []).filter(Boolean).map(g => [g.id, g.name || '?']);
+    t.overhangs.forEach((o, i) => ohRow.appendChild(el('span', { 'data-overhang': String(i), style: { whiteSpace: 'nowrap' } },
+      el('span', { style: small }, 'from '), choose([['', '—'], ...supOpts], o.fromId || '', v => { o.fromId = v; refresh(true); }),
+      el('span', { style: small }, ' to '), gridSelect(inputs, axis, o.toId, id => { o.toId = id; if (id) o.at = ''; refresh(true); }),
+      !o.toId && o.at !== '' && o.at != null ? el('span', { style: { ...small, color: 'var(--stale)' } }, ' (typed tip ' + o.at + ' — pick its grid)') : null,
+      delBtn(() => { t.overhangs.splice(i, 1); refresh(true); }))));
+    if (t.overhangs.length < 2) ohRow.appendChild(el('button', { type: 'button', className: 'btn btn-ghost btn-sm', title: 'The TD runs past one of its supports',
+      onClick() { t.overhangs.push(guessOverhang(plan, pt, t.overhangs)); refresh(true); } }, '+ overhang'));
+    if (!t.overhangs.length) ohRow.appendChild(el('span', { style: small }, 'none (spans between its supports)'));
+    c.appendChild(ohRow);
+    // load lines: Auto = found from the plan (default), or set by hand (user 2026-11-03)
+    const sideName = s => (s === 'both' ? 'both sides' : s === '-' ? (axis === 'y' ? 'left' : 'below') : (axis === 'y' ? 'right' : 'above'));
+    const auto = t.loadsMode !== 'manual';
+    const loads = el('div', { style: { marginTop: '4px' } }, el('span', { style: small }, 'Load lines (cut chord / strut enters from) '),
+      choose([['auto', 'Auto — found on the plan'], ['manual', 'Set by hand']], auto ? 'auto' : 'manual', v => {
+        if (v === 'manual' && auto && pt && pt.found && pt.found.length) t.loads = pt.found.map(l => ({ gridId: l.grid.id, side: l.side }));
+        t.loadsMode = v; refresh(true);
+      }));
+    if (auto) {
+      const found = (pt && pt.found) || [];
+      loads.appendChild(found.length
+        ? el('div', { style: { marginTop: '2px' } }, ...found.map(l => el('div', { 'data-found': l.grid.name, style: { fontSize: '0.8rem' } },
+          el('strong', null, l.grid.name), ' — ' + sideName(l.side), el('span', { style: small }, ' (' + l.why + ')'))))
+        : el('div', { style: { ...small, color: 'var(--stale)' } }, 'None found: no notch, opening or outline edge meets its long edges between its supports. Check where it is drawn, or set its load lines by hand.'));
+    } else {
+      t.loads.forEach((l, i) => loads.appendChild(el('span', { style: { marginRight: '6px', whiteSpace: 'nowrap' } },
+        gridSelect(inputs, axis, l.gridId, id => { l.gridId = id; refresh(true); }),
+        choose([['-', sideName('-')], ['+', sideName('+')], ['both', 'both sides']], l.side === '-' ? '-' : l.side === 'both' ? 'both' : '+', v => { l.side = v; refresh(true); }),
+        delBtn(() => { t.loads.splice(i, 1); refresh(true); }))));
+      loads.appendChild(el('button', { type: 'button', className: 'btn btn-ghost btn-sm', onClick() { t.loads.push({ gridId: '', side: '+' }); refresh(true); } }, '+ load line'));
+      const found = (pt && pt.found) || [];
+      const same = found.map(l => l.grid.id + ' ' + l.side).sort().join(',') === t.loads.map(l => l.gridId + ' ' + l.side).sort().join(',');
+      if (!same) loads.appendChild(el('div', { style: { ...small, marginTop: '2px' } },
+        'The plan gives: ' + (found.length ? found.map(l => l.grid.name + ' ' + sideName(l.side)).join(', ') : 'none') + ' (Auto would use these).'));
     }
-    if (!list.length) body.appendChild(el('p', { style: { ...small, color: 'var(--stale)' } }, 'None for this direction — use the Diaphragm tool.'));
-    box.appendChild(section('Diaphragms — load along ' + dir, body));
-  }
-
-  // TDs of this direction
+    c.appendChild(loads);
+    return c;
+  };
   if (page === 'diaphragms') {
-    const body = el('div');
-    const list = inputs.tds.filter(t => (t.dir || 'y') === dir);
-    if (!list.length) body.appendChild(el('p', { style: small }, 'None for this direction — use the TD tool.'));
-    for (const t of list) {
-      const pt = plan.tds.find(x => x.id === t.id);
-      const axis = pt && pt.supports[0] ? pt.supports[0].axis : null;
-      const c = card('td', t.id);
-      c.appendChild(el('div', { style: { display: 'flex', gap: '6px', alignItems: 'center', flexWrap: 'wrap' } },
-        textInput(t, 'mark', refresh, '48px'),
-        ...['x1', 'x2', 'y1', 'y2'].flatMap(k => [el('span', { style: small }, k), numInput(t, k, refresh, '50px')]),
-        delBtn(() => { inputs.tds.splice(inputs.tds.indexOf(t), 1); refresh(true); })));
-      c.appendChild(supportsRow(t, null, 'Supports'));
-      // overhangs (user 2026-11-04): picked by grid — from a support of the TD to the grid at the tip, one per support
-      if (!Array.isArray(t.overhangs)) t.overhangs = [];
-      const ohRow = el('div', { style: { marginTop: '4px', display: 'flex', gap: '6px', alignItems: 'center', flexWrap: 'wrap' } },
-        el('span', { style: small, title: 'Cantilever: the TD runs past a support to the grid line at its tip. One overhang per support (a TD may overhang both).' }, 'Overhangs '));
-      const supOpts = (pt ? pt.supports : []).filter(Boolean).map(g => [g.id, g.name || '?']);
-      t.overhangs.forEach((o, i) => ohRow.appendChild(el('span', { 'data-overhang': String(i), style: { whiteSpace: 'nowrap' } },
-        el('span', { style: small }, 'from '), choose([['', '—'], ...supOpts], o.fromId || '', v => { o.fromId = v; refresh(true); }),
-        el('span', { style: small }, ' to '), gridSelect(inputs, axis, o.toId, id => { o.toId = id; if (id) o.at = ''; refresh(true); }),
-        !o.toId && o.at !== '' && o.at != null ? el('span', { style: { ...small, color: 'var(--stale)' } }, ' (typed tip ' + o.at + ' — pick its grid)') : null,
-        delBtn(() => { t.overhangs.splice(i, 1); refresh(true); }))));
-      if (t.overhangs.length < 2) ohRow.appendChild(el('button', { type: 'button', className: 'btn btn-ghost btn-sm', title: 'The TD runs past one of its supports',
-        onClick() { t.overhangs.push(guessOverhang(plan, pt, t.overhangs)); refresh(true); } }, '+ overhang'));
-      if (!t.overhangs.length) ohRow.appendChild(el('span', { style: small }, 'none (spans between its supports)'));
-      c.appendChild(ohRow);
-      // load lines: Auto = found from the plan (default), or set by hand (user 2026-11-03)
-      const sideName = s => (s === 'both' ? 'both sides' : s === '-' ? (axis === 'y' ? 'left' : 'below') : (axis === 'y' ? 'right' : 'above'));
-      const auto = t.loadsMode !== 'manual';
-      const loads = el('div', { style: { marginTop: '4px' } }, el('span', { style: small }, 'Load lines (cut chord / strut enters from) '),
-        choose([['auto', 'Auto — found on the plan'], ['manual', 'Set by hand']], auto ? 'auto' : 'manual', v => {
-          if (v === 'manual' && auto && pt && pt.found && pt.found.length) t.loads = pt.found.map(l => ({ gridId: l.grid.id, side: l.side }));
-          t.loadsMode = v; refresh(true);
-        }));
-      if (auto) {
-        const found = (pt && pt.found) || [];
-        loads.appendChild(found.length
-          ? el('div', { style: { marginTop: '2px' } }, ...found.map(l => el('div', { 'data-found': l.grid.name, style: { fontSize: '0.8rem' } },
-            el('strong', null, l.grid.name), ' — ' + sideName(l.side), el('span', { style: small }, ' (' + l.why + ')'))))
-          : el('div', { style: { ...small, color: 'var(--stale)' } }, 'None found: no notch, opening or outline edge meets its long edges between its supports. Check where it is drawn, or set its load lines by hand.'));
-      } else {
-        t.loads.forEach((l, i) => loads.appendChild(el('span', { style: { marginRight: '6px', whiteSpace: 'nowrap' } },
-          gridSelect(inputs, axis, l.gridId, id => { l.gridId = id; refresh(true); }),
-          choose([['-', sideName('-')], ['+', sideName('+')], ['both', 'both sides']], l.side === '-' ? '-' : l.side === 'both' ? 'both' : '+', v => { l.side = v; refresh(true); }),
-          delBtn(() => { t.loads.splice(i, 1); refresh(true); }))));
-        loads.appendChild(el('button', { type: 'button', className: 'btn btn-ghost btn-sm', onClick() { t.loads.push({ gridId: '', side: '+' }); refresh(true); } }, '+ load line'));
-        const found = (pt && pt.found) || [];
-        const same = found.map(l => l.grid.id + ' ' + l.side).sort().join(',') === t.loads.map(l => l.gridId + ' ' + l.side).sort().join(',');
-        if (!same) loads.appendChild(el('div', { style: { ...small, marginTop: '2px' } },
-          'The plan gives: ' + (found.length ? found.map(l => l.grid.name + ' ' + sideName(l.side)).join(', ') : 'none') + ' (Auto would use these).'));
-      }
-      c.appendChild(loads);
-      body.appendChild(c);
-    }
-    box.appendChild(section('Transfer diaphragms — load along ' + dir, body));
+    const lists = { diaphragm: inputs.diaphragms.filter(d => d.dir === dir), td: inputs.tds.filter(t => (t.dir || 'y') === dir) };
+    const errRefs = new Set((state.errors || []).filter(e => !e.warn && e.ref).map(e => e.ref));
+    const dot = on => (on ? el('span', { style: { color: 'var(--fail)', marginLeft: '0.25rem' } }, '●') : null);
+    if (state.sel && lists[state.sel.kind] && lists[state.sel.kind].some(o => o.id === state.sel.id)) state.dgTab = state.sel.kind;
+    const kind = state.dgTab === 'td' ? 'td' : 'diaphragm';
+    box.appendChild(el('div', { className: 'td-dgtabs', style: { display: 'flex', gap: '4px', marginBottom: '0.4rem', borderBottom: '2px solid var(--border)' } },
+      ...[['diaphragm', 'Diaphragms'], ['td', 'TDs']].map(([k, label]) => el('button', { type: 'button', 'data-dgtab': k, className: 'btn btn-sm' + (kind === k ? ' btn-primary' : ' btn-ghost'),
+        style: { borderRadius: '6px 6px 0 0', marginBottom: '-2px' },
+        onClick() { if (kind === k) return; state.dgTab = k; if (state.sel && (state.sel.kind === 'diaphragm' || state.sel.kind === 'td')) state.sel = null; refresh(false); } },
+        label + ' (' + lists[k].length + ')', dot(lists[k].some(o => errRefs.has(o.id)))))));
+    if (!state.subSel) state.subSel = {};
+    const list = lists[kind];
+    const cur = (state.sel && state.sel.kind === kind && list.find(o => o.id === state.sel.id)) || list.find(o => o.id === state.subSel[kind]) || list[0];
+    if (cur) state.subSel[kind] = cur.id;
+    if (kind === 'diaphragm') box.appendChild(el('p', { style: small }, 'For the load along ' + dir + ' each diaphragm spans between two ' + (sAxis === 'x' ? '↕' : '↔') + ' support lines (wall or collector lines) and is analysed as one beam. It is one or more rectangles (pieces) on the sheathing — never over an opening or outside the outline.'));
+    if (list.length) box.appendChild(el('div', { className: 'td-subtabs', style: { display: 'flex', gap: '3px', flexWrap: 'wrap', marginBottom: '0.4rem' } },
+      ...list.map(o => el('button', { type: 'button', 'data-subtab': o.mark || o.id, className: 'btn btn-sm' + (o === cur ? ' btn-primary' : ' btn-ghost'),
+        onClick() { if (o === cur && state.sel && state.sel.id === o.id) return; state.subSel[kind] = o.id; state.sel = { kind, id: o.id }; refresh(false); } },
+        o.mark || '?', dot(errRefs.has(o.id))))));
+    if (cur) box.appendChild(kind === 'diaphragm' ? diaphragmCard(cur) : tdCard(cur));
+    else box.appendChild(el('p', { style: { ...small, color: kind === 'diaphragm' ? 'var(--stale)' : undefined } }, 'None for this direction — use the ' + (kind === 'diaphragm' ? 'Diaphragm' : 'TD') + ' tool.'));
   }
 
   // loads: entered on Setup (Seismic loading / Wind loading); drawn on the plan

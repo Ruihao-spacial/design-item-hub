@@ -3,6 +3,26 @@
 Branch `diaphragm-analysis` (off `master` 71cdfb5; module renamed from Transfer Diaphragm 2026-10-29). Plan: `~/.claude/plans/read-the-md-files-composed-kite.md` (approved 2026-10-29).
 Guide: `docs/diaphragm-analysis.md`. Book cases: `docs/diaphragm-analysis-book-cases.md`.
 
+## Note 2026-11-06 (later) — user test 26998 and UI changes (uncommitted)
+- **Plan for all open items: `docs/diaphragm-analysis-plan-2026-11-06.md`** — re-assessed by need and risk (user
+  2026-11-06): kept = fixture 26998 2nd, investigation of the unsettled offset lines and the 2nd Floor x runs, item 6
+  reduced to an opt-in per-line switch (default unchanged); dropped = member ends at its grid end (grid extents already
+  set for drawing would cut members inside diaphragms); deferred = G11, SWD small items, warnings, agent.
+- **Investigation 2026-11-06** (plan doc, "Findings"; pinned by `tests/daCase26998.test.mjs`): 2nd Floor along y did
+  not close — cause SW-8 running 0.5 ft into TD1 on its load line B (not G11); **fixed td-v13** (`tdMembers.crossForce`:
+  a load-line wall's part inside the TD belongs to P); now closes with A/B. "Did not settle" = SWD auto nailing flipping
+  between two choices; line 2 −816 lb = offset split fixed by SWD capacities vs closure (engine question); line I
+  −38 lb = D12 corner. **Uncommitted.**
+- Project 26998 "Cotoros Main Test" Roof: closes in both directions after remodelling (no code change). Modelling rules
+  found: a strut TD on a line that runs the full diaphragm depth counts its force twice (the basic field already
+  closes it); an edge step needs a full-depth chord TD (Ex 3.5 / 4.1 form); an offset line closes only in the Ex 3.3
+  form (each group wall on the support line of its own diaphragm part, the strut TD where the strut leaves it).
+  Fixtures `tests/fixtures/da-user/t98-*.json`.
+- UI (guide, Plan model): messages grouped / numbered under the plan; Diaphragms & TDs tabs with a sub-tab per item;
+  Analysis diagrams above the walls, walls below / above switches. `tests/daUi.test.mjs`. Not committed (user's call).
+- Modelling guide written: guide `docs/diaphragm-analysis.md`, "How to draw diaphragms and TDs" (rules 1–7 with the
+  26998 cases).
+
 ## Next session — start here (set 2026-11-06, end of session)
 **State:** everything is committed and pushed.
 - Commit **87aceab** on `da-phase3-td-engine` (everything since 5e7f607).
@@ -38,6 +58,55 @@ All in `tests/daCase26996.test.mjs`.
    - B5 calc-sheet note on posts under a wall that ends at a floor;
    - wall drag snap to grids in the SWD elevation.
 4. Phase 8 (PDF, upgrade script) on hold.
+5. **Future (user 2026-11-06): an agent that places the diaphragms and TDs.** From the plan (grids, outline,
+   openings, walls linked from Shear Wall Design, offset lines) it proposes the diaphragms and TDs of each load
+   direction, following the guide's "How to draw diaphragms and TDs" (rules 1–7) and the worked examples: the 9
+   book cases (`docs/diaphragm-analysis-book-cases.md`) and the user tests 26999 / 26997 / 26996 / 26998
+   (`tests/fixtures/da-user/`). It runs the calc, reads the checks (closure, `line-no-wall`, `wall-in-span`, open
+   runs with residual = P) and revises until both directions close; the engineer reviews and accepts the proposal
+   (nothing is saved without that). Not started — scope, form (in-app assistant, Claude Code skill / subagent, or
+   rule-based auto-layout plus an agent for the hard cases) and acceptance tests to be agreed with the user first.
+   Possible first step: the rule checks of rule 5 / 7 as tool warnings (TD on a full-depth line, missing chord-step
+   TD), which the agent would also use.
+6. **Collector per wall above / per receiving diaphragm (user 2026-11-06, project 26998 2nd Floor, grid 6).** Three
+   Roof walls end at this floor on grid 6 and land on different diaphragms: SW-39 (x 11–20.5, 7.8 k) over the west
+   part, SW-55 (x 66–72, 4.9 k) and SW-56 (x 74.67–87, 10.1 k) over D10 (load along x). Today the collector is one
+   setting per line (`inputs.aboveCollectors[swdLineId]`, `tdBasicShear.basicCase`): blank = each wall's force goes
+   into **every** diaphragm the grid crosses along the whole line, shared by depth; a from–to applies to all walls of
+   the line. So SW-39 also loads the east diaphragms and SW-55 / 56 the west ones.
+   **Rule proposed by the user (2026-11-06), reviewed — correct:** load sharing between diaphragms needs a collector
+   that spans them. A wall above pushes its force only into the sheathing under it (through its sill); to reach another
+   diaphragm a member must drag it there.
+   - **No collector beyond the walls (new default):** each wall above loads only the diaphragm(s) under its own length;
+     a diaphragm with no wall above on that line gets nothing from that line. A wall straddling a diaphragm boundary
+     is its own collector across both: its force is split **by wall length** over each.
+   - **Collector drawn (one or several stretches per line, each from–to):** every wall above lying on a stretch shares
+     its force over all diaphragms that stretch spans, by depth (today's rule, G7 / Ex 8.4). Walls on separate stretches
+     do not share.
+   - **Note for the guide:** inside its receiving diaphragm the force is still dragged along the grid over that
+     diaphragm's width (the beam analysis spreads it over the full depth) — shown on the member diagram and to be
+     designed (Ω₀ for a Type 4 transfer). With no member at all, the unit shear under the wall is higher than the
+     visual method assumes — the engineer's call.
+   - **Impact:** the default changes (blank today = whole line) → CALC_VERSION bump; DA items whose walls above use the
+     blank collector get new results (26997 tests with full depth to be updated or set a full-line stretch); SWD items
+     linked to DA get new line loads on Update (26998 2nd Floor grid 6). DA is not on master yet (PRs #6 / #7), so no
+     production item is affected.
+   - Data: `aboveCollectors[swdLineId]` becomes a list of stretches (an old single object read as a list of one, no
+     migration); a wall on no stretch of a line that has stretches → error `above-collector-short` (as now); a stretch
+     end inside a diaphragm → `above-collector-inside` (TD case, G11). Drawn as one amber line per stretch.
+   - Test on 26998 2nd Floor grid 6: SW-39 into the west diaphragm(s) only, SW-55 / SW-56 into D10 only; with one
+     stretch over the whole line, today's result.
+7. **Other items from 26998 2nd Floor (2026-11-06):**
+   - a member ends where its grid ends (grid "to" / "from"): the user wants the y collector on J (x = 83) to stop at
+     y = 42.5 (end of D9); today every grid is a member over the whole sheathing (it carries only −15 lb above 42.5);
+   - offset lines A/B, C/D, 2/3: "Shear Wall Design shares did not settle in 6 rounds" — find why (auto nailing
+     changing between rounds?); negative line force on B / 3 is real (the walls above that continue down B / 3 are
+     shared with A / 2 by Shear Wall Design);
+   - load along x still open: line 2 −816 lb at the east end of the 2/3 strut (x ≈ 93–109, TD6, SW-66 / SW-67), line I
+     (x = 80) −38 lb at the D12 corner;
+   - user intends struts on grid 2 over OP1 (D–G) and grid 9 over OP2 (F–G), openings that reach the outline: along x
+     they are continuous struts already; along y they are chords cut at the opening (zero force there — supports D, F,
+     G); check with the user which view showed "no strut".
 
 **User test projects (local DB):** 26999 ADU, 26997 Horizontal Offset Walls, 26996 notch + SW-19 + offset line 1/2.
 
