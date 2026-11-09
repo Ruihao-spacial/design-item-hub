@@ -177,7 +177,7 @@
   "expectChecks": {
     "fail": []
   },
-  "notChecked": "Bolt length / HSR extension (Table 07) and edge shear anchorage (Table 08) — not in the tool.",
+  "notChecked": "",
   "pinned": {
     "SW-1": {
       "wswhAnchor": "E STD 16000"

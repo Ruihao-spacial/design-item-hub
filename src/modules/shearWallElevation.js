@@ -6,7 +6,7 @@ import { hdueTable, mstcTable, POST_SIZES, woodBasis, FTAO_STRAP_TABLE, jambPost
 import { openingProblems, wallPiers, expandWalls, sortedOpenings, hasOpenings, wallMethod } from './shearWallOpenings.js';
 import { findAnchorage, findPost } from './shearWallCalc.js';
 import { lcRef } from './shearWallCombos.js';
-import { WSWH_WIDTHS, WSWH_CONDITIONS, WSWH_JOISTS, anchorRows, anchorId, isWswh, wswhWidthFt } from './shearWallWswh.js';
+import { WSWH_WIDTHS, WSWH_CONDITIONS, WSWH_JOISTS, anchorRows, anchorId, isWswh, wswhWidthFt, TSS_KIT_NOTE } from './shearWallWswh.js';
 
 const GUTTER = 80;
 const RULER_H = 24;
@@ -290,7 +290,7 @@ function drawWswhPanel(svg, o) {
   if (info.role === 'stackedUpper' && info.kit) {
     const a = { x: x + wd + 3, y: fy + 2, 'text-anchor': 'start', 'dominant-baseline': 'middle', fill: C.inkSecondary, 'font-size': '7', 'font-weight': '600' };
     const kitTxt = info.kit + ' (two-story stacked kit)';
-    if (placer.place([[{ attrs: a, text: kitTxt }]])) svg.appendChild(haloText(a, kitTxt, C.surface, tips ? kitTxt + ' — shear transfer plate, (2) WSWH-MSKHD holdowns, (2) 1"×30" A193 B7 rods; rod T checked vs ' + (wr.anchorageLeft ? wr.anchorageLeft.cap : '—') + ' lb' : null));
+    if (placer.place([[{ attrs: a, text: kitTxt }]])) svg.appendChild(haloText(a, kitTxt, C.surface, tips ? kitTxt + ' — ' + TSS_KIT_NOTE + ' T L ' + (wr.governingTensionLeft || 0).toFixed(2) + 'k / R ' + (wr.governingTensionRight || 0).toFixed(2) + 'k (reported)' : null));
   }
   if (!showHW) return;
   // Anchor label (bottom story): Table 06 row with the minimum footing width W and embedment d_e
@@ -305,7 +305,7 @@ function drawWswhPanel(svg, o) {
   const got = placer.place(cands);
   if (!got) return;
   const tip = tips && an ? (w.mark || w.id) + ' anchors: ' + an.id + (an.cap ? ' — ' + an.cap + ' lb ASD' : '') + (an.W ? ', min footing width W ' + an.W + '", embedment d_e ' + an.de + '", footing length ' + an.Lftg + '"' : '')
-    + ' · T L ' + (wr.governingTensionLeft || 0).toFixed(2) + 'k / R ' + (wr.governingTensionRight || 0).toFixed(2) + 'k (bolt length l_e: Table 07, not checked)' : null;
+    + ' · T L ' + (wr.governingTensionLeft || 0).toFixed(2) + 'k / R ' + (wr.governingTensionRight || 0).toFixed(2) + 'k' : null;
   svg.appendChild(richHaloText(got[0].attrs, aParts(got[0].attrs.fill), C.surface, tip));
 }
 

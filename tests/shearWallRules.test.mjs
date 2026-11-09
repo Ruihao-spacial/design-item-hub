@@ -283,4 +283,25 @@ test('R9 distribution warnings: an engineer review clears a warning only while i
   assert.ok(undone.every(w => !w.reviewed && !w.reviewStale));
 });
 
+// === R10 F-DD1 milder form (user 2026-10-27): below its capacity share with shear D/C < 0.10 → warning, no design change ===
+test('R10 low share: a wall below its capacity share with shear D/C < 0.10 warns (V17 Line B SW-6); every warned wall meets the rule', () => {
+  let n = 0;
+  for (const r of pinnedRuns) for (const d of r.out.perDirection) for (const ln of d.perLine) {
+    for (const w of ((ln.distribution || {}).warnings || []).filter(x => x.type === 'dist_low_share')) {
+      const pl = ln.perLevel.find(p => p.levelId === w.levelId);
+      const wall = pl.walls.find(x => x.wallId === w.elementId);
+      const lt = w.loadType;
+      const tot = pl.walls.reduce((a, x) => a + (x.capWeight[lt] || 0), 0);
+      const capShare = (lt === 'E' ? pl.storyShear_1E : pl.storyShear_1W) * wall.capWeight[lt] / tot;
+      assert.ok((lt === 'E' ? wall.seismicDC : wall.windDC) < 0.1 && (lt === 'E' ? wall.shareExact_1E : wall.shareExact_1W) < capShare, r.name + ' ' + w.message);
+      n++;
+    }
+  }
+  const v17 = pinnedRuns.find(r => r.name.startsWith('V17'));
+  const lnB = v17.out.perDirection[0].perLine.find(l => l.lineName === 'Line B');
+  assert.deepEqual(lnB.distribution.warnings.map(w => w.type + ' ' + w.elementMark), ['dist_low_share SW-6']);
+  assert.ok(/takes 0\.37 k of 7\.00 k at equal deflection vs 2\.23 k by capacity; shear D\/C 0\.04/.test(lnB.distribution.warnings[0].message));
+  assert.equal(n, 1, 'only V17 Line B SW-6 among the pinned cases');
+});
+
 console.log(passed + ' passed' + (process.exitCode ? ', some FAILED' : ''));

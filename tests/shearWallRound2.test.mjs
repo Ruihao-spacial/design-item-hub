@@ -6,7 +6,7 @@ import { calcAll, computeWallTC, resolveGravityAtWall } from '../src/modules/she
 import { shearWallDesign, renderLineResults, migrateV6toV7, lcTableRows, loadCaseTableRows } from '../src/modules/shearWallDesign.js';
 import { renderElevation, renderElevationForPdf } from '../src/modules/shearWallElevation.js';
 import { HDUE_TABLE, MSTC_TABLE, hdueTable, hdueMinPost, meetsMinPost, autoSelectPost, getGradeById } from '../src/modules/shearWallHardware.js';
-import { lookupWswh, selectWswhAnchor, permittedCriteria, WSWH_ROD } from '../src/modules/shearWallWswh.js';
+import { lookupWswh, selectWswhAnchor, permittedCriteria } from '../src/modules/shearWallWswh.js';
 import { validateEngineeringInputs } from '../src/validation.js';
 
 const near = (a, b, tol, msg) => assert.ok(Math.abs(a - b) <= tol, (msg || '') + ' expected ' + b + ' ± ' + tol + ', got ' + a);
@@ -276,7 +276,7 @@ test('WSWH two-story stack: base moment check, upper panel absorbed into the bas
     { 'lvl-2': { seismic: 1, wind: 0 }, 'lvl-1': { seismic: 1, wind: 0 } });
   const out = calcAll(inp);
   const up = wallsOf(out).find(w => w.wallId === 'w-1'), lo = wallsOf(out).find(w => w.wallId === 'w-2');
-  assert.equal(up.wswh.table, 'T03'); assert.equal(up.anchorageLeft.id, WSWH_ROD.id);
+  assert.equal(up.wswh.table, 'T03'); assert.equal(up.anchorageLeft.id, 'WSWH-TSS18KT'); assert.ok(up.anchorageLeft.byKit && up.anchorageDCLeft == null, 'TSS kit: no tension capacity, no D/C');
   assert.equal(lo.wswh.role, 'stackedLower');
   // V₀ = WSWH18x9 at P = 4,000 lb, f'c 2,500 = 2575; V1 = 0.7·2 k, V2 = 0.7·1 k (ASD)
   const s = lo.wswh.stacked.E;

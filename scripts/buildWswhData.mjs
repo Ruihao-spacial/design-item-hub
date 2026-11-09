@@ -42,7 +42,7 @@ const t03 = byFirst(tables('03_wswh_stacked_upper.md'), 'model').flatMap(t => ob
 const t05 = tables('05_wswh_geometry.md');
 const stocked = objects(byFirst(t05, 'model')[0]);
 const evalOrder = objects(byFirst(t05, 'eval_model')[0]);
-const arm = objects(byFirst(t05, 'width_in')[0], ['width_in', 'B_concrete_in', 'B_raised_in']);
+const arm = objects(byFirst(t05, 'width_in')[0], ['width_in', 'B_concrete_in', 'B_raised_in', 'B_stacked_in']);
 const kits = objects(byFirst(t05, 'width_in')[1], ['width_in', 'raisedKit', 'stackedKit']);
 const t06 = tables('06_wswh_anchor_tension_cracked.md').filter(t => t.headers[0] === 'criteria').flatMap(t => {
   const fc = Number((t.heading.match(/f'c = ([\d,]+)/) || [])[1].replace(/,/g, ''));
@@ -77,7 +77,7 @@ export const WSWH_STOCKED = ${rowsOut(stocked)};
 // Table 05-B — evaluation model → order model (trim the next taller stocked panel)
 export const WSWH_EVAL_ORDER = ${rowsOut(evalOrder)};
 
-// Table 05-C — anchor moment arm B (in): concrete (p. 41 n.11), raised floor (p. 47 n.8)
+// Table 05-C — anchor moment arm B (in): concrete (p. 41 n.11), raised floor (p. 47 n.8), stacked 2nd story (C-L-SW26 p. 47 n.8, user)
 export const WSWH_ARM = ${rowsOut(arm)};
 
 // Table 05-D — connection kits

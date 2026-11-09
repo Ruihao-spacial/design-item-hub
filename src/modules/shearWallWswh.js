@@ -11,8 +11,14 @@ export const WSWH_CONDITIONS = [
 ];
 export const WSWH_JOISTS = [{ id: '12', label: 'Joist ≤ 12"' }, { id: '16', label: 'Joist 12"–16" (× 0.92)' }];
 export const WSWH_FC = ['2500', '3000', '4500'];
-// TSS kit rods at the stacked 2nd-story panel: 1" ASTM A193 B7 — ASD steel limit (Table 06 HS) and φN_sa
-export const WSWH_ROD = { id: 'TSS rod 1" A193 B7', cap: 36800, lrfdCap: 56810 };
+// Stacked 2nd-story panel hold-down = the two-story connection kit WSWH-TSS12/18/24KT (Table 05-D, Table 03 n.7).
+// No tension capacity is published: the kit works when the panel passes Table 03 (P₂ ≤ 2,000 lb, shear, drift) —
+// user 2026-10-27. T is reported; no anchor D/C.
+export const tssKitAnchor = (width) => {
+  const kit = (WSWH_KITS.find(r => r.width_in === width) || {}).stackedKit || 'WSWH-TSS kit';
+  return { id: kit, cap: 0, delta: 0, wswhAnchor: true, byKit: true };
+};
+export const TSS_KIT_NOTE = 'Two-story connection kit (Table 03 n.7): no tension capacity published — OK when the 2nd-story panel passes Table 03 (P₂ ≤ 2,000 lb, shear, drift).';
 export const RAISED_JOIST_FACTOR = 0.92;
 
 export const isWswh = (w) => !!w && w.systemType === 'wswh';
@@ -21,10 +27,11 @@ export const wswhWidthFt = (w) => wswhWidthIn(w) / 12;
 export const conditionLabel = (id) => (WSWH_CONDITIONS.find(c => c.id === id) || { label: id }).label;
 
 export const WSWH_NOTES = [
-  'Strong-Wall WSWH values: Simpson C-L-SW26 (2026) / ICC-ES ESR-2652, 2024 IBC basis — confirm ESR-2652 lists 2021 IBC for CBC 2022.',
-  'Seismic values are based on R = 6.5. LRFD-equivalent values are derived (seismic ASD/0.7, wind ASD/0.6), not Simpson-published.',
-  'Drift at the 1.0 level is linear in V from the LRFD cap with its drift: Δ = Δ_LRFD·V/V_LRFD (stacked base: Δ_0,LRFD·M_d/M_allow,LRFD); a warning sign when V > V_LRFD. Table 03 (stacked 2nd story) could not be self-checked.',
-  'Anchors: Table 06, cracked concrete. Bolt length l_e / HSR extension (Table 07) and edge shear anchorage (Table 08) are not checked.',
+  'Strong-Wall WSWH values: Simpson C-L-SW26 (2026) / ICC-ES ESR-2652; ESR-2652 covers the 2021 IBC / IRC (CBC / CRC 2022 basis).',
+  'Seismic values are based on R = 6.5. LRFD-equivalent values are derived (seismic ASD/0.7, wind ASD/0.6; concrete-governed anchor rows ASD × α, α = 1.4 assumed — not published), not Simpson-published.',
+  'Drift at the 1.0 level is linear in V from the LRFD cap with its drift: Δ = Δ_LRFD·V/V_LRFD (stacked base: Δ_0,LRFD·M_d/M_allow,LRFD); a warning sign when V > V_LRFD. Tables 03 and 06 checked against C-L-SW26 pp. 50 and 86–87.',
+  'Anchors: Table 06, cracked concrete. Anchor bolt length / HSR extension and edge shear anchorage: per Simpson details, by others (not checked by this tool).',
+  'Stacked 2nd story: WSWH-TSS12/18/24KT. ' + TSS_KIT_NOTE,
 ];
 
 const lerp = (a, b, t) => a + (b - a) * t;
@@ -45,17 +52,15 @@ function atP(rows, P) {
   return { row: mix(last, null, 0) };
 }
 
-// Panel values for one wall. condition: concrete | raised | stackedUpper | stackedLower (base of a stack)
-// ftfFt = level floor-to-floor = nominal height (interpolated between tabulated heights).
-// P_lb: ASD vertical load on the panel (T01 axis; limits for T02 / T03). joist: '12' | '16' (raised floor).
-export function lookupWswh({ width, condition, ftfFt, P_lb = 0, fc = 2500, joist = '12' }) {
-  const out = { width, condition, notes: [], error: null };
+// The table rows one panel reads: its table (by condition), width, f'c table (T01) and the tabulated nominal heights
+// n1 ≤ h ≤ n2 around the floor-to-floor height. error when the width or height is not tabulated.
+function wswhBracket({ width, condition, ftfFt, fc = 2500 }) {
   const lower = condition === 'stackedLower';
-  const table = condition === 'raised' ? WSWH_T02 : condition === 'stackedUpper' ? WSWH_T03 : WSWH_T01;
-  out.table = condition === 'raised' ? 'T02' : condition === 'stackedUpper' ? 'T03' : 'T01';
-  const fcTab = lower ? 2500 : (Number(fc) >= 3000 ? 3000 : 2500);
+  const out = { table: condition === 'raised' ? 'T02' : condition === 'stackedUpper' ? 'T03' : 'T01' };
+  const table = { T01: WSWH_T01, T02: WSWH_T02, T03: WSWH_T03 }[out.table];
+  out.fcTab = lower ? 2500 : (Number(fc) >= 3000 ? 3000 : 2500);
   let rows = ofWidth(table, width);
-  if (out.table === 'T01') rows = rows.filter(r => r.fc_psi === fcTab);
+  if (out.table === 'T01') rows = rows.filter(r => r.fc_psi === out.fcTab);
   if (!rows.length) { out.error = 'WSWH' + width + ' is not tabulated for ' + conditionLabel(condition); return out; }
   const noms = [...new Set(rows.map(r => r.nominal_ft))].sort((a, b) => a - b);
   const h = Number(ftfFt) || 0;
@@ -68,6 +73,26 @@ export function lookupWswh({ width, condition, ftfFt, P_lb = 0, fc = 2500, joist
     if (noms[i] <= h + 1e-6) n1 = noms[i];
     if (noms[i] >= h - 1e-6) { n2 = noms[i]; break; }
   }
+  Object.assign(out, { rows, h, n1, n2 });
+  return out;
+}
+
+// Rows of the reference table one panel uses (PDF Design data appendix): every P row at the bracketing heights.
+export function wswhRowsUsed({ width, condition, ftfFt, fc }) {
+  const b = wswhBracket({ width, condition, ftfFt, fc });
+  return b.error ? { table: b.table, rows: [] } : { table: b.table, rows: b.rows.filter(r => r.nominal_ft === b.n1 || r.nominal_ft === b.n2) };
+}
+
+// Panel values for one wall. condition: concrete | raised | stackedUpper | stackedLower (base of a stack)
+// ftfFt = level floor-to-floor = nominal height (interpolated between tabulated heights).
+// P_lb: ASD vertical load on the panel (T01 axis; limits for T02 / T03). joist: '12' | '16' (raised floor).
+export function lookupWswh({ width, condition, ftfFt, P_lb = 0, fc = 2500, joist = '12' }) {
+  const out = { width, condition, notes: [], error: null };
+  const lower = condition === 'stackedLower';
+  const br = wswhBracket({ width, condition, ftfFt, fc });
+  out.table = br.table;
+  if (br.error) { out.error = br.error; return out; }
+  const { rows, h, n1, n2, fcTab } = br;
   const t = n2 > n1 ? (h - n1) / (n2 - n1) : 0;
   const rowAt = (n) => {
     const rs = rows.filter(r => r.nominal_ft === n);
@@ -98,8 +123,8 @@ export function lookupWswh({ width, condition, ftfFt, P_lb = 0, fc = 2500, joist
   out.DL = { E: v.Delta_LRFDcap_S * factor, W: v.Delta_LRFDcap_W * factor };
   out.T0 = { E: v.T_ASDcap_S == null ? null : v.T_ASDcap_S * factor, W: v.T_ASDcap_W == null ? null : v.T_ASDcap_W * factor };
   const arm = WSWH_ARM.find(r => r.width_in === width);
-  out.B = condition === 'raised' ? arm.B_raised_in : arm.B_concrete_in;
-  if (condition === 'stackedUpper') out.notes.push('Rod arm B = concrete B (Table 05-C) — confirm for the TSS kit');
+  // stacked 2nd story: TSS rod arm (C-L-SW26 p. 47 n.8, user 2026-10-27); the stack base keeps the concrete B
+  out.B = condition === 'raised' ? arm.B_raised_in : condition === 'stackedUpper' ? arm.B_stacked_in : arm.B_concrete_in;
   const kit = WSWH_KITS.find(r => r.width_in === width);
   out.kit = condition === 'raised' ? kit.raisedKit : (condition === 'stackedUpper' || lower) ? kit.stackedKit : '';
   if (!exact) out.notes.push('Interpolated between ' + modelAt(n1) + ' and ' + modelAt(n2) + ' (H_e ' + v.He_in.toFixed(2) + '")');
