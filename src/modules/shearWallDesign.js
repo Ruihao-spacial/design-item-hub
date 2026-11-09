@@ -20,6 +20,30 @@ import { wallDefinitionRows, capacityRows, nailingTraceRows, cornerOverturningRo
 
 // Values copied from a linked Seismic Base Shear item
 const BASE_SHEAR_FIELDS = [['sds', 'Sds'], ['cd', 'Cd'], ['ie', 'Ie'], ['riskCategory', 'Risk Category'], ['omega0', 'Ω₀'], ['seismicDesignCategory', 'SDC']];
+// Line loads from linked Diaphragm Analysis items: [{ entry, key: 'seismic' | 'wind', value, label }] for every
+// level / line the items give a force for (matched by level name and by this item's direction / line ids).
+function diaphragmLoadValues(inputs, sources, create = false) {
+  const out = [];
+  for (const src of sources || []) {
+    const lvl = (inputs.levels || []).find(l => String(l.name || '').trim().toLowerCase() === String(src.level || '').trim().toLowerCase());
+    if (!lvl) continue;
+    for (const lf of src.lineForces || []) {
+      const dir = (inputs.directions || []).find(d => d.id === lf.swdDirId);
+      const line = dir && (dir.lines || []).find(l => l.id === lf.swdLineId);
+      if (!line) continue;
+      let entry = (line.levelLoads || {})[lvl.id];
+      if (!entry) {
+        entry = { seismic: '', wind: '' };
+        if (create) { if (!line.levelLoads) line.levelLoads = {}; line.levelLoads[lvl.id] = entry; } // only Update writes
+      }
+      const where = (dir.name || '?') + ' ' + (line.name || '?') + ' @ ' + (lvl.name || '?');
+      if (Number.isFinite(lf.E)) out.push({ entry, key: 'seismic', value: Math.round(lf.E * 1e4) / 1e4, label: where + ' 1.0E (kip)' });
+      if (Number.isFinite(lf.W)) out.push({ entry, key: 'wind', value: Math.round(lf.W * 1e4) / 1e4, label: where + ' 1.0W (kip)' });
+    }
+  }
+  return out;
+}
+
 const sameValue = (a, b) => (typeof b === 'number' ? sameNumber(a, b, 0.0005) : String(a || '') === String(b || ''));
 // Gravity rows linked to a Flat Load assembly: { where: 'Line · Level · load n', ld }
 function linkedGravityRows(inputs) {
@@ -49,6 +73,10 @@ export const shearWallDesign = {
       extract: (outputs) => ({ sds: outputs.sds, cd: outputs.cd, ie: outputs.ie, riskCategory: outputs.riskCategory, omega0: outputs.omega0, seismicDesignCategory: outputs.seismicDesignCategory }) },
     { key: 'flatLoadSource', label: 'Flat Load Calculator', sourceType: 'flat_load_calculator',
       extract: (outputs) => ({ perTab: outputs.perTab }) },
+    // Optional (2026-10-29): line loads per level from Diaphragm Analysis items, one per level. Only adds a load
+    // source — the copied values go into line.levelLoads like typed ones; the calc is unchanged.
+    { key: 'diaphragmSources', label: 'Diaphragm Analysis', sourceType: 'diaphragm_analysis', many: true,
+      extract: (outputs) => ({ level: outputs.level, lineForces: outputs.lineForces || [] }) },
   ],
   fields: [],
   outputFields: [],
@@ -77,10 +105,14 @@ export const shearWallDesign = {
         }
       }
     }
+    for (const c of diaphragmLoadValues(inputs, linked.diaphragmSources)) {
+      if (!sameNumber(parseFloat(c.entry[c.key]) || 0, c.value, 0.00005)) out.push({ refKey: 'diaphragmSources', label: c.label, from: c.entry[c.key] || 0, to: c.value });
+    }
     return out;
   },
 
   applyLinks(inputs, linked) {
+    for (const c of diaphragmLoadValues(inputs, linked.diaphragmSources, true)) c.entry[c.key] = String(c.value);
     const bs = linked.baseShearSource;
     if (bs) for (const [k] of BASE_SHEAR_FIELDS) if (bs[k] != null) inputs[k] = String(bs[k]);
     const tabs = linked.flatLoadSource && linked.flatLoadSource.perTab;
@@ -306,6 +338,7 @@ export const shearWallDesign = {
         onClick() { inputs.levels.push(newLevel('')); notifyChange(); renderAll(); } }, '+ Level'));
 
       sec.appendChild(el('div', { className: 'section-header' }, 'Lateral Loading — All Lines (Unfactored, kips)'));
+      sec.appendChild(renderDiaphragmLink());
       sec.appendChild(renderMasterLoadingTable());
       // load cases and combinations at the bottom, below the loading (user 2026-10-01)
       sec.appendChild(designBasisTables(inputs));
@@ -415,7 +448,42 @@ export const shearWallDesign = {
       return box;
     }
 
+    // Diaphragm Analysis items (one per level) that supply the line loads. Only written when one is ticked.
+    function diaphragmItems() {
+      return (projectItems || []).filter(it => (it.type === 'diaphragm_analysis' || it.type === 'transfer_diaphragm') && !it.archived);
+    }
+    function linkedLoadLevels() {
+      const ids = (inputs.refs || {}).diaphragmSources || [];
+      const names = diaphragmItems().filter(it => ids.includes(it.id)).map(it => String(((it.inputs || {}).level || {}).name || '').trim().toLowerCase());
+      return new Set((inputs.levels || []).filter(l => names.includes(String(l.name || '').trim().toLowerCase())).map(l => l.id));
+    }
+    function renderDiaphragmLink() {
+      const items = diaphragmItems();
+      const box = el('div', { style: { margin: '0 0 0.75rem' } });
+      if (!items.length) return box;
+      const ids = (inputs.refs || {}).diaphragmSources || [];
+      box.appendChild(el('div', { style: { fontSize: '0.85rem', fontWeight: 600, marginBottom: '0.25rem' } }, 'Line loads from Diaphragm Analysis (one item per level)'));
+      for (const it of items) {
+        const lvName = ((it.inputs || {}).level || {}).name || '';
+        const match = (inputs.levels || []).some(l => String(l.name || '').trim().toLowerCase() === String(lvName).trim().toLowerCase());
+        const cb = el('input', { type: 'checkbox', checked: ids.includes(it.id), onChange(e) {
+          if (!inputs.refs) inputs.refs = {};
+          const next = (inputs.refs.diaphragmSources || []).filter(x => x !== it.id);
+          if (e.target.checked) next.push(it.id);
+          if (next.length) inputs.refs.diaphragmSources = next; else delete inputs.refs.diaphragmSources;
+          notifyChange(); renderAll();
+        } });
+        box.appendChild(el('label', { style: { display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.82rem' } }, cb,
+          (it.custom_name || it.customName || it.label || 'Diaphragm Analysis') + ' — level "' + (lvName || '?') + '"',
+          match ? null : el('span', { style: { color: 'var(--fail)' } }, ' (no level of this name here)')));
+      }
+      box.appendChild(el('div', { style: { fontSize: '0.78rem', color: 'var(--ink-tertiary)', marginTop: '0.25rem' } },
+        'Ticked: the 1.0E / 1.0W line loads of that level come from the Diaphragm Analysis item (greyed out below); a change there shows an update notice here. Lines and levels are matched by name.'));
+      return box;
+    }
+
     function renderMasterLoadingTable() {
+      const linkedLv = linkedLoadLevels();
       const showE = inputs.loadType === 'seismic' || inputs.loadType === 'both';
       const showW = inputs.loadType === 'wind' || inputs.loadType === 'both';
       const tbl = el('table', { className: 'dynamic-table', style: { fontSize: '0.85rem' } });
@@ -441,8 +509,10 @@ export const shearWallDesign = {
               el('td', { style: { color: isFirstLvl ? 'var(--ink)' : 'var(--ink-tertiary)', fontWeight: isFirstLvl ? '500' : 'normal' } }, isFirstLvl ? (dir.name || '?') : ''),
               nameCell,
               el('td', null, lvl.name || '?'));
-            if (showE) row.appendChild(el('td', null, el('input', { type: 'number', step: 'any', value: numOrBlank(entry.seismic), style: { width: '80px' }, onChange(e) { entry.seismic = e.target.value; notifyChange(); } })));
-            if (showW) row.appendChild(el('td', null, el('input', { type: 'number', step: 'any', value: numOrBlank(entry.wind), style: { width: '80px' }, onChange(e) { entry.wind = e.target.value; notifyChange(); } })));
+            const fromDa = linkedLv.has(lvl.id);
+            const daTitle = fromDa ? 'From the linked Diaphragm Analysis item of this level' : '';
+            if (showE) row.appendChild(el('td', null, el('input', { type: 'number', step: 'any', value: numOrBlank(entry.seismic), disabled: fromDa, title: daTitle, style: { width: '80px' }, onChange(e) { entry.seismic = e.target.value; notifyChange(); } })));
+            if (showW) row.appendChild(el('td', null, el('input', { type: 'number', step: 'any', value: numOrBlank(entry.wind), disabled: fromDa, title: daTitle, style: { width: '80px' }, onChange(e) { entry.wind = e.target.value; notifyChange(); } })));
             row.appendChild(el('td', { className: 'row-actions' }));
             tbl.appendChild(row);
           }

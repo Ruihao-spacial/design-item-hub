@@ -8,7 +8,7 @@
     "build": "vite build",
     "preview": "vite preview",
     "start": "serve -s dist -l ${PORT:-3000}",
-    "test": "node --test \"test/**/*.test.js\" && node tests/shearWall.test.mjs && node tests/shearWallPhase4.test.mjs && node tests/shearWallRound2.test.mjs && node tests/shearWallLiveLoad.test.mjs && node tests/shearWallChecks.test.mjs && node tests/shearWallDrift.test.mjs && node tests/shearWallCalcSheet.test.mjs && node tests/links.test.mjs && node tests/clone.test.mjs && node tests/shearWallCases.test.mjs && node tests/shearWallRules.test.mjs && node tests/shearWallReport.test.mjs && node tests/shearWallWood.test.mjs && node tests/diaphragmToLrs.test.mjs && node tests/diaphragmToLrsBeamCheck.test.mjs && node tests/diaphragmToLrsMigrate.test.mjs && node tests/diaphragmToLrsCases.test.mjs",
+    "test": "node --test \"test/**/*.test.js\" && node tests/shearWall.test.mjs && node tests/shearWallPhase4.test.mjs && node tests/shearWallRound2.test.mjs && node tests/shearWallLiveLoad.test.mjs && node tests/shearWallChecks.test.mjs && node tests/shearWallDrift.test.mjs && node tests/shearWallCalcSheet.test.mjs && node tests/links.test.mjs && node tests/clone.test.mjs && node tests/shearWallCases.test.mjs && node tests/shearWallRules.test.mjs && node tests/shearWallReport.test.mjs && node tests/shearWallWood.test.mjs && node tests/diaphragmToLrs.test.mjs && node tests/diaphragmToLrsBeamCheck.test.mjs && node tests/diaphragmToLrsMigrate.test.mjs && node tests/diaphragmToLrsCases.test.mjs && node tests/diaphragmAnalysisPlan.test.mjs && node tests/diaphragmAnalysisLink.test.mjs",
     "upgrade:shearwall": "node scripts/upgradeShearWallItems.mjs",
     "hardware:build": "node scripts/buildHardwareData.mjs",
     "hardware:check": "node scripts/buildHardwareData.mjs --check",
@@ -24,11 +24,16 @@
     "dlrs:cases:diff": "node tests/diaphragmToLrsCases.test.mjs --diff",
     "dlrs:cases:doc": "node scripts/dlrsCasesDoc.mjs",
     "dlrs:seed": "node scripts/dlrsSeedCases.mjs",
-    "upgrade:dlrs": "node scripts/upgradeDlrsItems.mjs"
+    "upgrade:dlrs": "node scripts/upgradeDlrsItems.mjs",
+    "da:skill:build": "node scripts/buildTdSkillData.mjs",
+    "da:book:build": "node tests/td-book/src/build.mjs",
+    "da:book:doc": "node scripts/daBookDoc.mjs",
+    "da:seed": "node scripts/daSeedBook.mjs"
   },
   "devDependencies": {
     "linkedom": "^0.18.13",
-    "vite": "^8.2.2"
+    "vite": "^8.2.2",
+    "yaml": "^2.9.1"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.115.0",

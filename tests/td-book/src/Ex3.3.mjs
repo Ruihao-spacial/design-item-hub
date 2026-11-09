@@ -1,0 +1,156 @@
+// EX-IRREG-2E Example 3.3: single offset, longitudinal (x) load, offset shear walls on B and C. Format: FORMAT.md.
+// Unit shears use the "+" element drawn in Figs 3.16-3.21 (top face +x, right face +y). This is the mirror of the
+// Ex 4.1 element, so a tool that reports in the Ex 4.1 convention must negate every unit shear here (see assumptions).
+export default {
+  id: 'Ex3.3',
+  title: 'Single offset, longitudinal load, offset wall lines B/C with one TD',
+  pdf: 'The Analysis of Irregular Shaped Example 3.3.pdf',
+  pages: '1-14',
+  shearElement: 'mirrored',   // book '+' element is the mirror of Ex 4.1's; build converts unit shears
+  layout: {
+    grids: [
+      { name: '1', axis: 'x', at: 0 },
+      { name: '2', axis: 'x', at: 25 },
+      { name: '3', axis: 'x', at: 45 },
+      { name: '4', axis: 'x', at: 125 },
+      { name: 'C', axis: 'y', at: 0 },
+      { name: 'B', axis: 'y', at: 15 },
+      { name: 'A', axis: 'y', at: 50 },
+    ],
+    outline: [[0, 15], [25, 15], [25, 0], [125, 0], [125, 50], [0, 50]],
+    openings: [],
+    walls: [
+      { line: 'A', mark: 'SW2', axis: 'y', at: 50, from: 30, to: 40 },
+      { line: 'B/C', mark: 'SW1', axis: 'y', at: 15, from: 0, to: 8 },
+      { line: 'B/C', mark: 'SW3', axis: 'y', at: 0, from: 57, to: 65 },
+      { line: 'B/C', mark: 'SW4', axis: 'y', at: 0, from: 110, to: 125 },
+    ],
+    tds: [
+      { mark: 'TD1', x: [25, 45], y: [0, 50], supports: ['A', 'C'], loads: [{ grid: 'B', side: '-' }] },
+    ],
+    // 200 plf per ft of depth over the full 50 ft (applied on grid 1 from B to A and on grid 2 from C to B), p2 Fig 3.16
+    loads: [{ acts: '+x', mode: 'line', segments: [{ from: 0, to: 50, w: 200 }] }],
+  },
+
+  // Corrected run (reactions shifted to line B/C, p12-p13, Fig 3.21) plus values that do not depend on the split.
+  expected: [
+    // Phase 4: basic unit shears (p4-p6, Fig 3.17). Band 1-2 is a beam A-B (R = 700 lb each end); band 2-4 is a
+    // beam A-C (R_A = 4090 lb, R_C = 4510 lb, V_B = 1510 lb).
+    { k: 'vb:A-:1-2', v: -28, unit: 'plf', page: 5, fig: '3.17', phase: 4, note: '700 lb / 25 ft' },
+    { k: 'vb:B+:1-2', v: 28, unit: 'plf', page: 3, fig: '3.17', phase: 4 },
+    { k: 'vb:A-:2-4', v: -40.9, unit: 'plf', page: 6, fig: '3.17', phase: 4, note: '4090 lb / 100 ft' },
+    { k: 'vb:B:2-4', v: 15.1, unit: 'plf', page: 6, fig: '3.17', phase: 4, note: 'V_B = 4510 - 200(15) = 1510 lb / 100 ft' },
+    { k: 'vb:C+:2-4', v: 45.1, unit: 'plf', page: 6, fig: '3.17', phase: 4, note: '4510 lb / 100 ft' },
+
+    // Phase 7: line reactions after the shift to B/C
+    { k: 'R:A', v: 4600, unit: 'lb', page: 13, phase: 7, tol: 21,
+      note: 'book trial shift of 400 lb. Weighted-average rule (p14) gives 4612; exact closure of Fig 3.21 needs about 4580 (derived, not in book). tol spans 4579-4621' },
+    { k: 'R:B/C', v: 5400, unit: 'lb', page: 13, phase: 7, tol: 21, note: 'weighted-average rule (p14) gives 5388' },
+
+    // Phase 7: net shears outside TD1 (unchanged by TD; p7 table, Fig 3.18)
+    { k: 'vnet:A-:1-2', v: -28, unit: 'plf', page: 7, fig: '3.18', phase: 7 },
+    { k: 'vnet:B+:1-2', v: 28, unit: 'plf', page: 7, fig: '3.18', phase: 7 },
+    { k: 'vnet:A-:3-4', v: -40.9, unit: 'plf', page: 7, fig: '3.18', phase: 7 },
+    { k: 'vnet:C+:3-4', v: 45.1, unit: 'plf', page: 7, fig: '3.18', phase: 7 },
+
+    // Phase 7: strut B and TD input, corrected run (Fig 3.21, p13). tol covers R_A from 4580 to 4612.
+    { k: 'Nb:B:2', v: 693.6, unit: 'lb', sense: 'T', page: 13, fig: '3.21', phase: 7, tol: 6, note: 'disrupted strut force into TD1' },
+    { k: 'N:B:x=8', v: 1169.6, unit: 'lb', sense: 'T', page: 13, fig: '3.21', phase: 7, tol: 6, note: 'right end of SW1' },
+    { k: 'N:B:2', v: 693.6, unit: 'lb', sense: 'T', page: 13, fig: '3.21', phase: 7, tol: 6 },
+    { k: 'N:B:3', v: 0, unit: 'lb', sense: '?', page: 13, fig: '3.21', phase: 7, tol: 3, note: 'line B diagram closes at grid 3' },
+
+    // line A, corrected run (Fig 3.21; printed values carry errata, see below)
+    { k: 'N:A:2', v: -700, unit: 'lb', sense: 'C', page: 13, fig: '3.21', phase: 7 },
+    { k: 'N:A:x=30', v: -852.5, unit: 'lb', sense: 'C', page: 13, fig: '3.21', phase: 7, tol: 2, note: 'left end of SW2; book prints 802.5 (erratum)' },
+    { k: 'N:A:x=40', v: 3442.5, unit: 'lb', sense: 'T', page: 13, fig: '3.21', phase: 7, tol: 20, note: 'right end of SW2; book prints 3388.5 (erratum)' },
+    { k: 'N:A:3', v: 3290, unit: 'lb', sense: 'T', page: 13, fig: '3.21', phase: 7, tol: 20, note: 'book prints 3236 (erratum)' },
+    { k: 'N:A:4', v: 18, unit: 'lb', sense: 'T', page: 13, fig: '3.21', phase: 7, tol: 20,
+      note: 'closure residual; book prints 36 and calls it negligible. R_A = 4612 gives ~29, exact closure 0' },
+
+    // line C, corrected run (Fig 3.21)
+    { k: 'N:C:3', v: -416.6, unit: 'lb', sense: 'C', page: 13, fig: '3.21', phase: 7, tol: 4 },
+    { k: 'N:C:x=57', v: -957.8, unit: 'lb', sense: 'C', page: 13, fig: '3.21', phase: 7, tol: 4, note: 'left end of SW3' },
+    { k: 'N:C:x=65', v: 75, unit: 'lb', sense: 'T', page: 13, fig: '3.21', phase: 7, tol: 9,
+      note: 'right end of SW3; diagram crosses to the tension side (book prints 75 unsigned)' },
+    { k: 'N:C:x=110', v: -1954.5, unit: 'lb', sense: 'C', page: 13, fig: '3.21', phase: 7, tol: 9, note: 'left end of SW4' },
+    { k: 'N:C:4', v: -18, unit: 'lb', sense: 'C', page: 13, fig: '3.21', phase: 7, tol: 20,
+      note: 'closure residual; book prints 18 unsigned. R_A = 4612 gives ~29, exact closure 0' },
+
+    // transverse collectors, corrected run (Fig 3.21 gives magnitudes only; sign as in the first run, pp8-9)
+    { k: 'N:2:B-', v: -87.5, unit: 'lb', sense: '?', page: 13, fig: '3.21', phase: 7, tol: 4 },
+    { k: 'N:3:B+', v: -364, unit: 'lb', sense: '?', page: 13, fig: '3.21', phase: 7, tol: 4 },
+  ],
+
+  // First run: equal tributary split R_A = R_B/C = wL/2 (p3). The strut diagrams on A and C do not close (p11-p12).
+  nonClosingNote: 'Book first assumes R_A = R_B/C = 5000 lb. Lines A and C then leave about 387 lb at grid 4 ' +
+    '(pp11-12, Fig 3.20). The tool test should show this distribution fails closure.',
+  expectedNonClosing: [
+    { k: 'R:A', v: 5000, unit: 'lb', page: 3, phase: 7, note: 'equal tributary split, wL/2' },
+    { k: 'R:B/C', v: 5000, unit: 'lb', page: 3, phase: 7 },
+    { k: 'Rw:SW1', v: 1290.3, unit: 'lb', page: 4, phase: 7, note: '8/31 of line B/C' },
+    { k: 'Rw:SW2', v: 5000, unit: 'lb', page: 4, phase: 7 },
+    { k: 'Rw:SW3', v: 1290.3, unit: 'lb', page: 4, phase: 7 },
+    { k: 'Rw:SW4', v: 2419.4, unit: 'lb', page: 4, phase: 7 },
+    { k: 'vw:SW1', v: 161.3, unit: 'plf', page: 4, phase: 7, note: 'Figs 3.17/3.18 print it negative (erratum)' },
+    { k: 'vw:SW2', v: 500, unit: 'plf', page: 4, phase: 7 },
+    { k: 'vw:SW3', v: 161.3, unit: 'plf', page: 4, phase: 7 },
+    { k: 'vw:SW4', v: 161.3, unit: 'plf', page: 4, phase: 7 },
+
+    { k: 'N:B:x=8', v: 1066.3, unit: 'lb', sense: 'T', page: 5, fig: '3.17', phase: 7, note: '(161.29 - 28) x 8' },
+    { k: 'Nb:B:2', v: 590.3, unit: 'lb', sense: 'T', page: 5, fig: '3.17', phase: 7, note: 'disrupted strut force into TD1' },
+    { k: 'N:B:2', v: 590.3, unit: 'lb', sense: 'T', page: 5, fig: '3.20', phase: 7 },
+    { k: 'N:B:3', v: 0, unit: 'lb', sense: '?', page: 10, fig: '3.20', phase: 7, tol: 1, note: 'line B closes even in this run' },
+
+    { k: 'tdR:TD1:A', v: 177.1, unit: 'lb', page: 6, fig: '3.17', phase: 7, note: 'reaction on TD at A acts to the right (+x)' },
+    { k: 'tdR:TD1:C', v: 413.2, unit: 'lb', page: 5, fig: '3.17', phase: 7, note: 'reaction on TD at C acts to the right (+x)' },
+    { k: 'vtd:TD1:A-B', v: 8.85, unit: 'plf', page: 6, fig: '3.17', phase: 7 },
+    { k: 'vtd:TD1:B-C', v: -20.66, unit: 'plf', page: 5, fig: '3.17', phase: 7 },
+
+    { k: 'vnet:A-:2-3', v: -32.05, unit: 'plf', page: 7, fig: '3.18', phase: 7 },
+    { k: 'vnet:B+:2-3', v: 23.95, unit: 'plf', page: 7, fig: '3.18', phase: 7 },
+    { k: 'vnet:B-:2-3', v: -5.56, unit: 'plf', page: 7, fig: '3.18', phase: 7 },
+    { k: 'vnet:C+:2-3', v: 24.4, unit: 'plf', page: 7, fig: '3.18', phase: 7, tol: 0.05, note: 'exact 24.44' },
+
+    // transverse collectors (pp8-9, Fig 3.19); station side + = toward A
+    { k: 'N:2:B+', v: -141.7, unit: 'lb', sense: 'C', page: 8, fig: '3.19', phase: 7, note: '4.05 plf x 35 ft' },
+    { k: 'N:2:B-', v: -141.6, unit: 'lb', sense: 'C', page: 8, fig: '3.19', phase: 7, note: '149.33 - 7.73 (similar triangles)' },
+    { k: 'Nmax:2:B-C', v: -149.3, unit: 'lb', sense: 'C', page: 8, fig: '3.19', phase: 7, tol: 0.5,
+      note: 'interior extremum where the shear difference changes sign, 2.78 ft below B' },
+    { k: 'N:3:B+', v: -309.8, unit: 'lb', sense: 'C', page: 9, fig: '3.19', phase: 7, note: 'book labels this side tension (erratum)' },
+    { k: 'N:3:B-', v: -309.9, unit: 'lb', sense: 'C', page: 9, fig: '3.19', phase: 7 },
+
+    // line C (pp10-11, Fig 3.20)
+    { k: 'N:C:3', v: -488.8, unit: 'lb', sense: 'C', page: 10, fig: '3.20', phase: 7, tol: 1, note: '24.44 x 20' },
+    { k: 'N:C:x=57', v: -1030, unit: 'lb', sense: 'C', page: 11, fig: '3.20', phase: 7, note: 'left end of SW3' },
+    { k: 'N:C:x=65', v: -100.5, unit: 'lb', sense: 'C', page: 11, fig: '3.20', phase: 7, note: 'right end of SW3' },
+    { k: 'N:C:x=110', v: -2129.9, unit: 'lb', sense: 'C', page: 11, fig: '3.20', phase: 7, note: 'left end of SW4' },
+    { k: 'N:C:4', v: -386.95, unit: 'lb', sense: 'C', page: 11, fig: '3.20', phase: 7, note: 'closure residual: diagram does not close' },
+
+    // line A (pp11-12, Fig 3.20)
+    { k: 'N:A:2', v: -700, unit: 'lb', sense: 'C', page: 11, fig: '3.20', phase: 7 },
+    { k: 'N:A:x=30', v: -860, unit: 'lb', sense: 'C', page: 11, fig: '3.20', phase: 7, note: 'left end of SW2' },
+    { k: 'N:A:x=40', v: 3819.3, unit: 'lb', sense: 'T', page: 12, fig: '3.20', phase: 7, note: 'right end of SW2; net wall shear 467.95 plf' },
+    { k: 'N:A:3', v: 3659, unit: 'lb', sense: 'T', page: 12, fig: '3.20', phase: 7 },
+    { k: 'N:A:4', v: 387, unit: 'lb', sense: 'T', page: 12, fig: '3.20', phase: 7, note: 'closure residual: diagram does not close' },
+  ],
+
+  errata: [
+    { page: 3, what: 'Fig 3.17 labels the band 2-4 reaction at C "+4150 lb".', use: '4510 lb (p6)' },
+    { page: 3, what: 'Figs 3.17 and 3.18 print the SW1 wall shear and net shear negative (-161.3, -133.29, -133.3); p4-p5 text and Fig 3.20 give them positive.', use: '+161.3 plf, +133.29 plf' },
+    { page: 8, what: 'Fig 3.19 labels the TD band B-C net shear at C "+24.2".', use: '24.4 plf (p7 table)' },
+    { page: 9, what: 'Collector at grid 3: the force at B from the A side is called tension, from the C side compression. One point has one sense. TD1 is pulled toward -x by the tension strut, so its +x chord (grid 3) is in compression; Ex 3.2 (p1, strut pushing) gives tension there.', use: 'compression on both sides of B' },
+    { page: 11, what: 'Line A force signs: the text chain (pp11-12) counts compression positive ("-3819.3 lb tension"); Fig 3.20 mixes signs (-700, -860, +3819.3, -3659, +387).', use: 'T/C sense from the text, tension +' },
+    { page: 13, what: 'Fig 3.21 line A values 802.5, 3388.5, 3236 and 36 do not follow from R_A = 4600 lb and the corrected TD shear (net -30.5 plf in TD band A, SW2 460 plf). The chain gives 852.5 C, 3442.5 T, 3290 T, 18 T.', use: 'recomputed chain, with tolerance' },
+    { page: 13, what: 'Fig 3.21 line C labels are partly unsigned (416.6, 957.8, 75, 18) and partly signed (-1954.5).', use: 'sense from the side of the diagram and the chain' },
+  ],
+
+  assumptions: [
+    { what: 'Load by band: at each depth the 200 plf is shared by the sheathed bands in proportion to their length. A-B: band 1-2 gets 200(25/125) = 40 plf, band 2-4 gets 200(100/125) = 160 plf. B-C: band 2-4 only, 200 plf. Each band is a simple beam across the depth between its own edges (1-2 spans A-B, 2-4 spans A-C).', why: 'Book method p4-p5; the tool must reproduce the band split to match the basic shears.' },
+    { what: 'Distribution to offset wall lines (rule for the tool). Line B/C (SW1 on B, SW3 and SW4 on C) is one line of resistance. Effective span to A = wall-length-weighted average of the distance from A to each B/C wall: [8(35) + (8 + 15)(50)] / 31 = 46.1 ft. R_A = w(46.1)/2 = 4612 lb, R_B/C = wL - R_A = 5388 lb. Only the B/C walls are weighted; SW2 is not.', why: 'Book p14 recommends this over its 400 lb trial shift (p12-p13). The equal split wL/2 (first run) fails closure.' },
+    { what: 'Within a wall line, the line force is split to walls in proportion to wall length (SDPWS 4.3.5.5.1 exception), including across the offset (SW1 on B shares with SW3 and SW4 on C).', why: 'Book p4.' },
+    { what: 'The corrected run (Fig 3.21) uses R_A = 4600, R_B/C = 5400 (400 lb trial shift). Member forces in `expected` carry tolerances that cover R_A from about 4580 (exact closure, derived) to 4612 (weighted-average rule).', why: 'Book shows no corrected run for the 4612/5388 split; it calls it close enough.' },
+    { what: 'Wall line name "B/C" groups SW1, SW3 and SW4.', why: 'Book treats them as one line (p1-p3).' },
+    { what: 'Sign convention: the "+" element in this example (top face +x, bottom -x, left face -y, right face +y) is the mirror of the Ex 4.1 element. Printed signs already follow it, so no conversion is applied.', why: 'FORMAT.md: book sign per the figure element. A tool using the Ex 4.1 element must negate every unit shear in this file.' },
+    { what: 'Values in the corrected run that the book does not print (wall forces, TD reactions, TD and net shears inside TD1) are not recorded.', why: 'Book shows only reactions and the Fig 3.21 member forces for that run.' },
+  ],
+};

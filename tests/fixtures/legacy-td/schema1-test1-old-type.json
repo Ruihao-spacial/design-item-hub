@@ -1,0 +1,138 @@
+{
+  "note": "Frozen 2026-10-29: real local item (project Test1) saved as type transfer_diaphragm before the rename; it has plan issues (blank outline corner, D1 without supports). Never edit.",
+  "type": "transfer_diaphragm",
+  "schemaVersion": 1,
+  "sumA": 0,
+  "inputs": {
+    "tds": [],
+    "refs": {
+      "elfSource": "f664cc1f-ed56-40ff-94e0-ea6518fb53af"
+    },
+    "grids": [
+      {
+        "at": "0",
+        "id": "gr-mvtxipcj-1",
+        "ref": true,
+        "axis": "x",
+        "name": "1"
+      },
+      {
+        "at": "50",
+        "id": "gr-mvtxipcj-2",
+        "ref": true,
+        "axis": "x",
+        "name": "2"
+      },
+      {
+        "at": "50",
+        "id": "gr-mvtxipcj-3",
+        "ref": true,
+        "axis": "y",
+        "name": "A"
+      },
+      {
+        "at": "0",
+        "id": "gr-mvtxipcj-4",
+        "ref": true,
+        "axis": "y",
+        "name": "B"
+      },
+      {
+        "at": "27",
+        "id": "gr-mvtxje9h-a",
+        "ref": true,
+        "axis": "x",
+        "name": "3"
+      }
+    ],
+    "level": {
+      "fx": "14.69",
+      "name": "Roof"
+    },
+    "loads": [
+      {
+        "id": "ld-mvtxipcj-5",
+        "psf": "",
+        "acts": "-y",
+        "mode": "seismic",
+        "edgeId": "",
+        "segments": []
+      },
+      {
+        "id": "ld-mvtxipcj-6",
+        "psf": "",
+        "acts": "+x",
+        "mode": "seismic",
+        "edgeId": "",
+        "segments": []
+      }
+    ],
+    "notes": "",
+    "walls": [
+      {
+        "id": "wl-mvu1y2i3-3",
+        "to": "35",
+        "from": "10",
+        "line": "1",
+        "mark": "SW4",
+        "gridId": "gr-mvtxipcj-1"
+      },
+      {
+        "id": "wl-mvu1y49h-4",
+        "to": "35",
+        "from": "15.5",
+        "line": "2",
+        "mark": "SW5",
+        "gridId": "gr-mvtxipcj-2"
+      }
+    ],
+    "outline": [
+      {
+        "x": "0",
+        "y": "0"
+      },
+      {
+        "x": "50",
+        "y": "0"
+      },
+      {
+        "x": "50",
+        "y": "50"
+      },
+      {
+        "x": "0",
+        "y": "50"
+      },
+      {
+        "x": "",
+        "y": ""
+      }
+    ],
+    "openings": [],
+    "diaphragm": {
+      "blocked": true,
+      "sheathing": "wsp"
+    },
+    "pdfReport": "summary",
+    "diaphragms": [
+      {
+        "id": "dg-mvu212wu-b",
+        "x1": "0",
+        "x2": "50",
+        "y1": "0",
+        "y2": "50",
+        "dir": "y",
+        "mark": "D1",
+        "blocked": null,
+        "supports": [
+          "",
+          ""
+        ],
+        "sheathing": ""
+      }
+    ],
+    "codeEdition": "CBC-2025",
+    "designBasis": "ASD",
+    "schemaVersion": 1
+  }
+}

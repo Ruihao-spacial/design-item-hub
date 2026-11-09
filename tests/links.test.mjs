@@ -51,7 +51,12 @@ function chain() {
   const elfOut = getModule('elf_diaphragm_collector').calc(elfIn);
   dlIn.levels = elfOut.elfTable.map((r, i) => ({ id: 'dl-lv' + i, name: r.level, tag: '', fx: String(r.fx) }));
   const dl = itemOf('dl-1', 'diaphragm_to_lrs', dlIn);
-  return { flat, mass, bs, elf, dl, items: [flat, mass, bs, elf, dl], tab, psf };
+
+  const tdIn = defaultsOf('diaphragm_analysis');
+  tdIn.refs = { elfSource: 'elf-1' };
+  tdIn.level = { name: elfOut.elfTable[0].level, fx: String(elfOut.elfTable[0].fx) };
+  const td = itemOf('td-1', 'diaphragm_analysis', tdIn);
+  return { flat, mass, bs, elf, dl, td, items: [flat, mass, bs, elf, dl, td], tab, psf };
 }
 
 test('Every module regenerates results from its definition; results + PDF render', () => {
