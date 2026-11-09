@@ -116,9 +116,13 @@ export function lineChecks(line, res, ctx) {
   for (const pl of res.perLevel) {
     for (const lt of lats) {
       const V = Vx[pl.levelId][lt];
-      if (!(V > 0) && !pl.walls.length) continue;
+      // transfer to the diaphragm (step 4, linked items only): the story shear of the walls above that ended at this
+      // floor left the line here — it is carried by the diaphragm, not lost
+      const tIn = ((ctx.transfer || []).find(t => t.belowId === pl.levelId) || null);
+      const tTxt = tIn && tIn[lt] ? '; ' + (Math.round(tIn[lt] * 1000) / 1000) + ' k of ' + tIn.levelName + ' (' + tIn.walls.join(', ') + ') transferred to the diaphragm at this floor' : '';
+      if (!(V > 1e-9) && !pl.walls.length && !tTxt) continue;
       const sum = pl.walls.reduce((a, w) => a + ((lt === 'E' ? w.shareExact_1E : w.shareExact_1W) || 0), 0);
-      compare(g2, pl.levelName, V, sum, { case: CASE_KEY[lt], detail: pl.walls.length ? pl.walls.length + ' wall(s)' : 'no wall at this level carries the story shear' });
+      compare(g2, pl.levelName, V, sum, { case: CASE_KEY[lt], detail: (pl.walls.length ? pl.walls.length + ' wall(s)' : 'no wall at this level carries the story shear') + tTxt });
     }
   }
   out.push(g2);

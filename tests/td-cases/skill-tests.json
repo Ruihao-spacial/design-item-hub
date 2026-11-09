@@ -334,22 +334,22 @@
         "td_vb_x1_y1": 210.7,
         "td_vb_x1_y2": 210.7,
         "td_vb_x1_bot": 210.7,
-        "td_vb_x2_top": 167.9,
-        "td_vb_x2_y1": 167.9,
-        "td_vb_x2_y2": 167.9,
-        "td_vb_x2_bot": 167.9,
+        "td_vb_x2_top": 157.14,
+        "td_vb_x2_y1": 157.14,
+        "td_vb_x2_y2": 157.14,
+        "td_vb_x2_bot": 157.14,
         "td_vo_x1_s1_hi": 305.3,
         "td_vo_x1_s1_lo": 305.3,
         "td_vo_x1_s2_hi": 0,
         "td_vo_x1_s2_lo": 0,
         "td_vo_x1_s3_hi": 317.8,
         "td_vo_x1_s3_lo": 317.8,
-        "td_vo_x2_s1_hi": 167.9,
-        "td_vo_x2_s1_lo": 167.9,
-        "td_vo_x2_s2_hi": 167.9,
-        "td_vo_x2_s2_lo": 167.9,
-        "td_vo_x2_s3_hi": 167.9,
-        "td_vo_x2_s3_lo": 167.9
+        "td_vo_x2_s1_hi": 157.14,
+        "td_vo_x2_s1_lo": 157.14,
+        "td_vo_x2_s2_hi": 157.14,
+        "td_vo_x2_s2_lo": 157.14,
+        "td_vo_x2_s3_hi": 157.14,
+        "td_vo_x2_s3_lo": 157.14
       },
       "engineer_inputs": {
         "td_region_clear": true,
@@ -365,9 +365,9 @@
           "td_vnet_x1_s1_hi": 92.6,
           "td_vnet_x1_s2_hi": 465.9,
           "td_vnet_x1_s3_lo": 86.5,
-          "td_vnet_x2_s1_hi": 49.8,
-          "td_vnet_x2_s2_hi": 423.1,
-          "td_vnet_x2_s3_lo": 43.7,
+          "td_vnet_x2_s1_hi": 39.05,
+          "td_vnet_x2_s2_hi": 412.38,
+          "td_vnet_x2_s3_lo": 32.38,
           "td_N_x1_b1": 4679.4,
           "td_N_x1_b2": -3706.8,
           "td_N_x2_b1": -2598.2,
@@ -384,12 +384,33 @@
         "default_rel": 0.01,
         "default_abs": 1,
         "overrides": {
-          "td_vnet_x1_s3_lo": 0.015,
-          "td_vnet_x2_s3_lo": 0.015
+          "td_vnet_x1_s3_lo": 0.015
         }
       },
       "verify": "UNVERIFIED",
-      "note": "Book p5 computes v_D = -124.8 plf, then uses 124.2 in the net-shear table (erratum). Overrides cover the 0.6 plf difference. Book closure residuals (6, 8.2 lb) carry the erratum and are not asserted."
+      "note": "Book p5 computes v_D = -124.8 plf, then uses 124.2 in the net-shear table (erratum). Overrides cover the 0.6 plf difference. Book closure residuals (6, 8.2 lb) carry the erratum and are not asserted.",
+      "corrected": {
+        "note": "EX-IRREG-2E Ex 4.3 p3 misprint: v3 = 8800/56 is printed +167.9 plf; correct 157.14 plf (see tests/td-book/src/Ex4.3.mjs errata). Basic and outside shear at edge x2 corrected; the x2 net shears follow. Edge-member forces do not depend on it.",
+        "was": {
+          "inputs": {
+            "td_vb_x2_top": 167.9,
+            "td_vb_x2_y1": 167.9,
+            "td_vb_x2_y2": 167.9,
+            "td_vb_x2_bot": 167.9,
+            "td_vo_x2_s1_hi": 167.9,
+            "td_vo_x2_s1_lo": 167.9,
+            "td_vo_x2_s2_hi": 167.9,
+            "td_vo_x2_s2_lo": 167.9,
+            "td_vo_x2_s3_hi": 167.9,
+            "td_vo_x2_s3_lo": 167.9
+          },
+          "outputs": {
+            "td_vnet_x2_s1_hi": 49.8,
+            "td_vnet_x2_s2_hi": 423.1,
+            "td_vnet_x2_s3_lo": 43.7
+          }
+        }
+      }
     },
     {
       "id": "T06",

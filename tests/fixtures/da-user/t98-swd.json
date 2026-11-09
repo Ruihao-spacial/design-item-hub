@@ -1,0 +1,2712 @@
+{
+"note": "Project 26998 Cotoros Main Test (user test), item Shear Walls, saved 2026-11-09 22:05:06.434327+00",
+"type": "shear_wall_design",
+"schemaVersion": 13,
+"id": "4e4cdfac-440b-4cee-82c9-2706d687f833",
+"inputs": {
+"cd": "4",
+"ie": "1",
+"sds": "1.84",
+"refs": {
+"diaphragmSources": [
+"a0978f12-f7c0-40bb-983f-7d12e029e9cd",
+"e5a24ef2-8442-4c50-9b55-f7b1335d409b"
+]
+},
+"notes": "",
+"alphaS": "",
+"levels": [
+{
+"id": "lvl-1",
+"name": "Roof",
+"floorToFloor": "10.2",
+"anchorageType": "auto",
+"floorClearSpan": "16"
+},
+{
+"id": "lvl-2",
+"name": "2nd Floor",
+"floorToFloor": 10,
+"anchorageType": "auto",
+"floorClearSpan": "16"
+}
+],
+"omega0": "2.5",
+"wswhFc": "2500",
+"species": "SPF",
+"driftRow": "other",
+"loadType": "seismic",
+"planLink": {
+"grids": [
+{
+"at": 0,
+"to": null,
+"ref": false,
+"axis": "x",
+"from": 30,
+"name": "O"
+},
+{
+"at": 3,
+"to": null,
+"ref": false,
+"axis": "x",
+"from": 30,
+"name": "A"
+},
+{
+"at": 11,
+"to": null,
+"ref": false,
+"axis": "x",
+"from": 30,
+"name": "B"
+},
+{
+"at": 27,
+"to": null,
+"ref": false,
+"axis": "x",
+"from": 30,
+"name": "C"
+},
+{
+"at": 33,
+"to": null,
+"ref": false,
+"axis": "x",
+"from": 30,
+"name": "D"
+},
+{
+"at": 48,
+"to": null,
+"ref": false,
+"axis": "x",
+"from": 30,
+"name": "E"
+},
+{
+"at": 57,
+"to": null,
+"ref": false,
+"axis": "x",
+"from": 30,
+"name": "F"
+},
+{
+"at": 66,
+"to": null,
+"ref": false,
+"axis": "x",
+"from": 30,
+"name": "G"
+},
+{
+"at": 67.5,
+"to": null,
+"ref": false,
+"axis": "x",
+"from": 30,
+"name": "H"
+},
+{
+"at": 83,
+"to": null,
+"ref": false,
+"axis": "x",
+"from": null,
+"name": "J"
+},
+{
+"at": 109,
+"to": null,
+"ref": false,
+"axis": "x",
+"from": null,
+"name": "M"
+},
+{
+"at": 93,
+"to": null,
+"ref": false,
+"axis": "x",
+"from": null,
+"name": "K"
+},
+{
+"at": 100,
+"to": null,
+"ref": false,
+"axis": "x",
+"from": null,
+"name": "L"
+},
+{
+"at": 94,
+"to": null,
+"ref": false,
+"axis": "y",
+"from": null,
+"name": "1"
+},
+{
+"at": 82,
+"to": null,
+"ref": false,
+"axis": "y",
+"from": null,
+"name": "2"
+},
+{
+"at": 77,
+"to": null,
+"ref": false,
+"axis": "y",
+"from": null,
+"name": "3"
+},
+{
+"at": 72,
+"to": null,
+"ref": false,
+"axis": "y",
+"from": null,
+"name": "4"
+},
+{
+"at": 62,
+"to": null,
+"ref": false,
+"axis": "y",
+"from": null,
+"name": "5"
+},
+{
+"at": 57,
+"to": null,
+"ref": false,
+"axis": "y",
+"from": null,
+"name": "6"
+},
+{
+"at": 51,
+"to": null,
+"ref": false,
+"axis": "y",
+"from": null,
+"name": "7"
+},
+{
+"at": 47,
+"to": null,
+"ref": false,
+"axis": "y",
+"from": 50,
+"name": "8"
+},
+{
+"at": 42.5,
+"to": 40,
+"ref": false,
+"axis": "y",
+"from": null,
+"name": "9"
+},
+{
+"at": 39,
+"to": null,
+"ref": false,
+"axis": "y",
+"from": 80,
+"name": "10"
+},
+{
+"at": 0,
+"to": null,
+"ref": false,
+"axis": "y",
+"from": 80,
+"name": "11"
+},
+{
+"at": 39.5,
+"to": null,
+"ref": false,
+"axis": "y",
+"from": null,
+"name": "9.8"
+},
+{
+"at": 54,
+"to": null,
+"ref": false,
+"axis": "y",
+"from": null,
+"name": "6.5"
+},
+{
+"at": 85,
+"to": null,
+"ref": false,
+"axis": "y",
+"from": null,
+"name": "1.7"
+},
+{
+"at": 87,
+"to": null,
+"ref": false,
+"axis": "y",
+"from": null,
+"name": "1.5"
+},
+{
+"at": 112,
+"to": null,
+"ref": false,
+"axis": "x",
+"from": null,
+"name": "P"
+},
+{
+"at": 80,
+"to": null,
+"ref": false,
+"axis": "x",
+"from": null,
+"name": "I"
+},
+{
+"at": 80,
+"to": null,
+"ref": false,
+"axis": "y",
+"from": null,
+"name": "2.6"
+},
+{
+"at": 44,
+"to": null,
+"ref": false,
+"axis": "y",
+"from": 50,
+"name": "8.8"
+},
+{
+"at": 8,
+"to": null,
+"ref": false,
+"axis": "x",
+"from": 30,
+"name": "A.8"
+},
+{
+"at": 70,
+"to": null,
+"ref": false,
+"axis": "x",
+"from": 30,
+"name": "H.3"
+},
+{
+"at": 43.33,
+"to": null,
+"ref": false,
+"axis": "x",
+"from": 30,
+"name": "D.6"
+},
+{
+"at": 42.5,
+"to": null,
+"ref": false,
+"axis": "y",
+"from": 40,
+"name": "9E"
+}
+],
+"lines": {
+"ln-1": {
+"at": 3,
+"axis": "x",
+"grid": "A"
+},
+"ln-2": {
+"at": 94,
+"axis": "y",
+"grid": "1"
+},
+"ln-3": {
+"at": 11,
+"axis": "x",
+"grid": "B"
+},
+"ln-4": {
+"at": 27,
+"axis": "x",
+"grid": "C"
+},
+"ln-5": {
+"at": 33,
+"axis": "x",
+"grid": "D"
+},
+"ln-6": {
+"at": 48,
+"axis": "x",
+"grid": "E"
+},
+"ln-7": {
+"at": 66,
+"axis": "x",
+"grid": "G"
+},
+"ln-8": {
+"at": 70,
+"axis": "x",
+"grid": "H.3"
+},
+"ln-9": {
+"at": 83,
+"axis": "x",
+"grid": "J"
+},
+"ln-10": {
+"at": 109,
+"axis": "x",
+"grid": "M"
+},
+"ln-11": {
+"at": 82,
+"axis": "y",
+"grid": "2"
+},
+"ln-12": {
+"at": 77,
+"axis": "y",
+"grid": "3"
+},
+"ln-13": {
+"at": 62,
+"axis": "y",
+"grid": "5"
+},
+"ln-14": {
+"at": 57,
+"axis": "y",
+"grid": "6"
+},
+"ln-15": {
+"at": 47,
+"axis": "y",
+"grid": "8"
+},
+"ln-16": {
+"at": 42.5,
+"axis": "y",
+"grid": "9"
+},
+"ln-17": {
+"at": 39,
+"axis": "y",
+"grid": "10"
+},
+"ln-18": {
+"at": 0,
+"axis": "y",
+"grid": "11"
+}
+},
+"extents": {
+"ln-1": {
+"lvl-1": [
+[
+57,
+80
+]
+],
+"lvl-2": [
+[
+57,
+82
+]
+]
+},
+"ln-2": {
+"lvl-1": [],
+"lvl-2": [
+[
+66,
+109
+]
+]
+},
+"ln-3": {
+"lvl-1": [
+[
+39.5,
+80
+]
+],
+"lvl-2": [
+[
+39.5,
+82
+]
+]
+},
+"ln-4": {
+"lvl-1": [
+[
+39.5,
+80
+]
+],
+"lvl-2": [
+[
+39.5,
+82
+]
+]
+},
+"ln-5": {
+"lvl-1": [
+[
+51,
+85
+]
+],
+"lvl-2": [
+[
+57,
+82
+]
+]
+},
+"ln-6": {
+"lvl-1": [
+[
+51,
+85
+]
+],
+"lvl-2": [
+[
+42.5,
+62
+]
+]
+},
+"ln-7": {
+"lvl-1": [
+[
+42.5,
+85
+]
+],
+"lvl-2": [
+[
+42.5,
+94
+]
+]
+},
+"ln-8": {
+"lvl-1": [
+[
+44,
+85
+]
+],
+"lvl-2": [
+[
+42.5,
+94
+]
+]
+},
+"ln-9": {
+"lvl-1": [
+[
+44,
+85
+]
+],
+"lvl-2": [
+[
+0,
+94
+]
+]
+},
+"ln-10": {
+"lvl-1": [
+[
+44,
+72
+]
+],
+"lvl-2": [
+[
+0,
+94
+]
+]
+},
+"ln-11": {
+"lvl-1": [
+[
+33,
+100
+]
+],
+"lvl-2": [
+[
+0,
+109
+]
+]
+},
+"ln-12": {
+"lvl-1": [
+[
+0,
+100
+]
+],
+"lvl-2": [
+[
+0,
+33
+],
+[
+66,
+109
+]
+]
+},
+"ln-13": {
+"lvl-1": [
+[
+0,
+112
+]
+],
+"lvl-2": [
+[
+0,
+112
+]
+]
+},
+"ln-14": {
+"lvl-1": [
+[
+0,
+112
+]
+],
+"lvl-2": [
+[
+0,
+112
+]
+]
+},
+"ln-15": {
+"lvl-1": [
+[
+57,
+112
+]
+],
+"lvl-2": [
+[
+50,
+57
+],
+[
+66,
+112
+]
+]
+},
+"ln-16": {
+"lvl-1": [
+[
+8,
+27
+]
+],
+"lvl-2": [
+[
+8,
+27
+]
+]
+},
+"ln-17": {
+"lvl-1": [],
+"lvl-2": [
+[
+80,
+112
+]
+]
+},
+"ln-18": {
+"lvl-1": [],
+"lvl-2": [
+[
+80,
+112
+]
+]
+}
+},
+"sourceId": "a0978f12-f7c0-40bb-983f-7d12e029e9cd"
+},
+"lrfdHalfL": true,
+"pdfReport": "summary",
+"postGrade": "spf_pt_no1",
+"sheathing": "ply",
+"woodGrade": "spf_no1no2",
+"directions": [
+{
+"id": "dir-1",
+"rho": 1,
+"name": "N-S",
+"lines": [
+{
+"id": "ln-1",
+"name": "A",
+"beams": [],
+"walls": [
+{
+"id": "w-2",
+"mark": "SW-2",
+"length": "3.75",
+"method": "segmented",
+"levelId": "lvl-2",
+"openings": [],
+"position": "4.25",
+"wswhJoist": "12",
+"wswhWidth": "18",
+"narrowPier": false,
+"systemType": "sheathed",
+"wallDLTypeId": "wdt-1",
+"wswhCondition": "concrete",
+"nailingPattern": "",
+"wswhFloorDepth": "12",
+"jambPostOverride": "",
+"postLeftOverride": "",
+"ftaoStrapOverride": "",
+"postRightOverride": "",
+"wswhAnchorOverride": "",
+"anchorageLeftOverride": "",
+"anchorageRightOverride": ""
+},
+{
+"id": "w-12",
+"mark": "SW-12",
+"length": "9",
+"method": "segmented",
+"levelId": "lvl-2",
+"openings": [],
+"position": "13",
+"wswhJoist": "12",
+"wswhWidth": "18",
+"narrowPier": false,
+"systemType": "sheathed",
+"wallDLTypeId": "wdt-1",
+"wswhCondition": "concrete",
+"nailingPattern": "",
+"wswhFloorDepth": "12",
+"jambPostOverride": "",
+"postLeftOverride": "",
+"ftaoStrapOverride": "",
+"postRightOverride": "",
+"wswhAnchorOverride": "",
+"anchorageLeftOverride": "",
+"anchorageRightOverride": ""
+}
+],
+"levelLoads": {
+"lvl-1": {
+"wind": "0",
+"seismic": "0"
+},
+"lvl-2": {
+"wind": "0",
+"seismic": "3.6532"
+}
+},
+"planOrigin": "57",
+"driftBypass": "",
+"totalLength": "25",
+"distReviewed": [],
+"distribution": "",
+"gravityLoads": {
+"lvl-1": {
+"loads": []
+},
+"lvl-2": {
+"loads": []
+}
+},
+"supportPosts": [],
+"wallThickness": ""
+},
+{
+"id": "ln-3",
+"name": "B",
+"beams": [],
+"walls": [
+{
+"id": "w-3",
+"mark": "SW-3",
+"length": "3",
+"method": "segmented",
+"levelId": "lvl-1",
+"openings": [],
+"position": "3",
+"wswhJoist": "12",
+"wswhWidth": "18",
+"narrowPier": false,
+"systemType": "sheathed",
+"wallDLTypeId": "wdt-1",
+"wswhCondition": "concrete",
+"nailingPattern": "",
+"wswhFloorDepth": "12",
+"jambPostOverride": "",
+"postLeftOverride": "",
+"ftaoStrapOverride": "",
+"postRightOverride": "",
+"wswhAnchorOverride": "",
+"anchorageLeftOverride": "",
+"anchorageRightOverride": ""
+},
+{
+"id": "w-4",
+"mark": "SW-4",
+"length": "3.5",
+"method": "segmented",
+"levelId": "lvl-2",
+"openings": [],
+"position": "3",
+"wswhJoist": "12",
+"wswhWidth": "18",
+"narrowPier": false,
+"systemType": "sheathed",
+"wallDLTypeId": "wdt-1",
+"wswhCondition": "concrete",
+"nailingPattern": "",
+"wswhFloorDepth": "12",
+"jambPostOverride": "",
+"postLeftOverride": "",
+"ftaoStrapOverride": "",
+"postRightOverride": "",
+"wswhAnchorOverride": "",
+"anchorageLeftOverride": "",
+"anchorageRightOverride": ""
+},
+{
+"id": "w-7",
+"mark": "SW-7",
+"length": "3.5",
+"method": "segmented",
+"levelId": "lvl-1",
+"openings": [],
+"position": "14.5",
+"wswhJoist": "12",
+"wswhWidth": "18",
+"narrowPier": false,
+"systemType": "sheathed",
+"wallDLTypeId": "wdt-1",
+"wswhCondition": "concrete",
+"nailingPattern": "",
+"wswhFloorDepth": "12",
+"jambPostOverride": "",
+"postLeftOverride": "",
+"ftaoStrapOverride": "",
+"postRightOverride": "",
+"wswhAnchorOverride": "",
+"anchorageLeftOverride": "",
+"anchorageRightOverride": ""
+},
+{
+"id": "w-8",
+"mark": "SW-8",
+"length": "3.5",
+"method": "segmented",
+"levelId": "lvl-2",
+"openings": [],
+"position": "14.5",
+"wswhJoist": "12",
+"wswhWidth": "18",
+"narrowPier": false,
+"systemType": "sheathed",
+"wallDLTypeId": "wdt-1",
+"wswhCondition": "concrete",
+"nailingPattern": "",
+"wswhFloorDepth": "12",
+"jambPostOverride": "",
+"postLeftOverride": "",
+"ftaoStrapOverride": "",
+"postRightOverride": "",
+"wswhAnchorOverride": "",
+"anchorageLeftOverride": "",
+"anchorageRightOverride": ""
+},
+{
+"id": "w-9",
+"mark": "SW-9",
+"length": "3.75",
+"method": "segmented",
+"levelId": "lvl-1",
+"openings": [],
+"position": "21.75",
+"wswhJoist": "12",
+"wswhWidth": "18",
+"narrowPier": false,
+"systemType": "sheathed",
+"endsAtFloor": true,
+"wallDLTypeId": "wdt-1",
+"wswhCondition": "concrete",
+"nailingPattern": "",
+"wswhFloorDepth": "12",
+"jambPostOverride": "",
+"postLeftOverride": "",
+"ftaoStrapOverride": "",
+"postRightOverride": "",
+"wswhAnchorOverride": "",
+"anchorageLeftOverride": "",
+"anchorageRightOverride": ""
+},
+{
+"id": "w-11",
+"mark": "SW-11",
+"length": "7",
+"method": "segmented",
+"levelId": "lvl-1",
+"openings": [],
+"position": "30.5",
+"wswhJoist": "12",
+"wswhWidth": "18",
+"narrowPier": false,
+"systemType": "sheathed",
+"endsAtFloor": true,
+"wallDLTypeId": "wdt-1",
+"wswhCondition": "concrete",
+"nailingPattern": "",
+"wswhFloorDepth": "12",
+"jambPostOverride": "",
+"postLeftOverride": "",
+"ftaoStrapOverride": "",
+"postRightOverride": "",
+"wswhAnchorOverride": "",
+"anchorageLeftOverride": "",
+"anchorageRightOverride": ""
+}
+],
+"levelLoads": {
+"lvl-1": {
+"wind": "0",
+"seismic": "11.2455"
+},
+"lvl-2": {
+"wind": "0",
+"seismic": "5.4945"
+}
+},
+"planOrigin": "39.5",
+"driftBypass": "",
+"totalLength": "42.5",
+"distReviewed": [],
+"distribution": "",
+"gravityLoads": {
+"lvl-1": {
+"loads": []
+},
+"lvl-2": {
+"loads": []
+}
+},
+"supportPosts": [
+{
+"id": "sp-1",
+"mark": "P-1",
+"levelId": "lvl-2",
+"position": 6,
+"postOverride": "",
+"anchorageOverride": ""
+},
+{
+"id": "sp-2",
+"mark": "P-2",
+"levelId": "lvl-2",
+"position": 30.5,
+"postOverride": "",
+"anchorageOverride": ""
+},
+{
+"id": "sp-3",
+"mark": "P-3",
+"levelId": "lvl-2",
+"position": 37.5,
+"postOverride": "",
+"anchorageOverride": ""
+},
+{
+"id": "sp-4",
+"mark": "P-4",
+"levelId": "lvl-2",
+"position": 21.75,
+"postOverride": "",
+"anchorageOverride": ""
+},
+{
+"id": "sp-5",
+"mark": "P-5",
+"levelId": "lvl-2",
+"position": 25.5,
+"postOverride": "",
+"anchorageOverride": ""
+}
+],
+"wallThickness": ""
+},
+{
+"id": "ln-4",
+"name": "C ",
+"beams": [],
+"walls": [
+{
+"id": "w-13",
+"mark": "SW-13",
+"length": "8.33",
+"method": "segmented",
+"levelId": "lvl-1",
+"openings": [],
+"position": "3",
+"wswhJoist": "12",
+"wswhWidth": "18",
+"narrowPier": false,
+"systemType": "sheathed",
+"wallDLTypeId": "wdt-1",
+"wswhCondition": "concrete",
+"nailingPattern": "",
+"wswhFloorDepth": "12",
+"jambPostOverride": "",
+"postLeftOverride": "",
+"ftaoStrapOverride": "",
+"postRightOverride": "",
+"wswhAnchorOverride": "",
+"anchorageLeftOverride": "",
+"anchorageRightOverride": ""
+},
+{
+"id": "w-14",
+"mark": "SW-14",
+"length": "8.33",
+"method": "segmented",
+"levelId": "lvl-2",
+"openings": [],
+"position": "3",
+"wswhJoist": "12",
+"wswhWidth": "18",
+"narrowPier": false,
+"systemType": "sheathed",
+"wallDLTypeId": "wdt-1",
+"wswhCondition": "concrete",
+"nailingPattern": "",
+"wswhFloorDepth": "12",
+"jambPostOverride": "",
+"postLeftOverride": "",
+"ftaoStrapOverride": "",
+"postRightOverride": "",
+"wswhAnchorOverride": "",
+"anchorageLeftOverride": "",
+"anchorageRightOverride": ""
+}
+],
+"levelLoads": {
+"lvl-1": {
+"wind": "0",
+"seismic": "2.6157"
+},
+"lvl-2": {
+"wind": "0",
+"seismic": "0.5104"
+}
+},
+"planOrigin": "39.5",
+"driftBypass": "",
+"totalLength": "42.5",
+"distReviewed": [],
+"distribution": "",
+"gravityLoads": {
+"lvl-1": {
+"loads": []
+},
+"lvl-2": {
+"loads": []
+}
+},
+"supportPosts": [],
+"wallThickness": ""
+},
+{
+"id": "ln-5",
+"name": "D",
+"beams": [],
+"walls": [
+{
+"id": "w-15",
+"mark": "SW-15",
+"length": "14.75",
+"method": "segmented",
+"levelId": "lvl-1",
+"openings": [],
+"position": "11",
+"wswhJoist": "12",
+"wswhWidth": "18",
+"narrowPier": false,
+"systemType": "sheathed",
+"wallDLTypeId": "wdt-1",
+"wswhCondition": "concrete",
+"nailingPattern": "",
+"wswhFloorDepth": "12",
+"jambPostOverride": "",
+"postLeftOverride": "",
+"ftaoStrapOverride": "",
+"postRightOverride": "",
+"wswhAnchorOverride": "",
+"anchorageLeftOverride": "",
+"anchorageRightOverride": ""
+},
+{
+"id": "w-16",
+"mark": "SW-16",
+"length": "14.75",
+"method": "segmented",
+"levelId": "lvl-2",
+"openings": [],
+"position": "11",
+"wswhJoist": "12",
+"wswhWidth": "18",
+"narrowPier": false,
+"systemType": "sheathed",
+"wallDLTypeId": "wdt-1",
+"wswhCondition": "concrete",
+"nailingPattern": "",
+"wswhFloorDepth": "12",
+"jambPostOverride": "",
+"postLeftOverride": "",
+"ftaoStrapOverride": "",
+"postRightOverride": "",
+"wswhAnchorOverride": "",
+"anchorageLeftOverride": "",
+"anchorageRightOverride": ""
+}
+],
+"levelLoads": {
+"lvl-1": {
+"wind": "0",
+"seismic": "11.8778"
+},
+"lvl-2": {
+"wind": "0",
+"seismic": "2.3174"
+}
+},
+"planOrigin": "51",
+"driftBypass": "",
+"totalLength": "34",
+"distReviewed": [],
+"distribution": "",
+"gravityLoads": {
+"lvl-1": {
+"loads": []
+},
+"lvl-2": {
+"loads": []
+}
+},
+"supportPosts": [],
+"wallThickness": ""
+},
+{
+"id": "ln-6",
+"name": "E",
+"beams": [],
+"walls": [
+{
+"id": "w-18",
+"mark": "SW-18",
+"length": 1.5,
+"method": "segmented",
+"levelId": "lvl-2",
+"openings": [],
+"position": 3,
+"wswhJoist": "12",
+"wswhWidth": "18",
+"narrowPier": false,
+"systemType": "wswh",
+"wallDLTypeId": "wdt-1",
+"wswhCondition": "concrete",
+"nailingPattern": "",
+"wswhFloorDepth": "12",
+"jambPostOverride": "",
+"postLeftOverride": "",
+"ftaoStrapOverride": "",
+"postRightOverride": "",
+"wswhAnchorOverride": "",
+"anchorageLeftOverride": "",
+"anchorageRightOverride": ""
+}
+],
+"levelLoads": {
+"lvl-1": {
+"wind": "0",
+"seismic": "0"
+},
+"lvl-2": {
+"wind": "0",
+"seismic": "0.9165"
+}
+},
+"planOrigin": "47",
+"driftBypass": "",
+"totalLength": "38",
+"distReviewed": [],
+"distribution": "",
+"gravityLoads": {
+"lvl-1": {
+"loads": []
+},
+"lvl-2": {
+"loads": []
+}
+},
+"supportPosts": [],
+"wallThickness": ""
+},
+{
+"id": "ln-7",
+"name": "G",
+"beams": [],
+"walls": [
+{
+"id": "w-19",
+"mark": "SW-19",
+"length": "14.75",
+"method": "segmented",
+"levelId": "lvl-1",
+"openings": [],
+"position": "0",
+"wswhJoist": "12",
+"wswhWidth": "18",
+"narrowPier": false,
+"systemType": "sheathed",
+"wallDLTypeId": "wdt-1",
+"wswhCondition": "concrete",
+"nailingPattern": "",
+"wswhFloorDepth": "12",
+"jambPostOverride": "",
+"postLeftOverride": "",
+"ftaoStrapOverride": "",
+"postRightOverride": "",
+"wswhAnchorOverride": "",
+"anchorageLeftOverride": "",
+"anchorageRightOverride": ""
+},
+{
+"id": "w-20",
+"mark": "SW-20",
+"length": "18",
+"method": "segmented",
+"levelId": "lvl-2",
+"openings": [],
+"position": "0",
+"wswhJoist": "12",
+"wswhWidth": "18",
+"narrowPier": false,
+"systemType": "sheathed",
+"wallDLTypeId": "wdt-1",
+"wswhCondition": "concrete",
+"nailingPattern": "",
+"wswhFloorDepth": "12",
+"jambPostOverride": "",
+"postLeftOverride": "",
+"ftaoStrapOverride": "",
+"postRightOverride": "",
+"wswhAnchorOverride": "",
+"anchorageLeftOverride": "",
+"anchorageRightOverride": ""
+},
+{
+"id": "w-21",
+"mark": "SW-21",
+"length": "18",
+"method": "segmented",
+"levelId": "lvl-2",
+"openings": [],
+"position": "19.5",
+"wswhJoist": "12",
+"wswhWidth": "18",
+"narrowPier": false,
+"systemType": "sheathed",
+"wallDLTypeId": "wdt-1",
+"wswhCondition": "concrete",
+"nailingPattern": "",
+"wswhFloorDepth": "12",
+"jambPostOverride": "",
+"postLeftOverride": "",
+"ftaoStrapOverride": "",
+"postRightOverride": "",
+"wswhAnchorOverride": "",
+"anchorageLeftOverride": "",
+"anchorageRightOverride": ""
+}
+],
+"levelLoads": {
+"lvl-1": {
+"wind": "0",
+"seismic": "4.8751"
+},
+"lvl-2": {
+"wind": "0",
+"seismic": "20.2583"
+}
+},
+"planOrigin": "42.5",
+"driftBypass": "",
+"totalLength": "51.5",
+"distReviewed": [],
+"distribution": "",
+"gravityLoads": {
+"lvl-1": {
+"loads": []
+},
+"lvl-2": {
+"loads": []
+}
+},
+"supportPosts": [
+{
+"id": "sp-20",
+"mark": "P-20",
+"levelId": "lvl-2",
+"position": 14.75,
+"postOverride": "",
+"anchorageOverride": ""
+}
+],
+"wallThickness": ""
+},
+{
+"id": "ln-8",
+"name": "H.3",
+"beams": [],
+"walls": [
+{
+"id": "w-22",
+"mark": "SW-22",
+"length": "10.5",
+"method": "segmented",
+"levelId": "lvl-1",
+"openings": [],
+"position": "24.5",
+"wswhJoist": "12",
+"wswhWidth": "18",
+"narrowPier": false,
+"systemType": "sheathed",
+"wallDLTypeId": "wdt-1",
+"wswhCondition": "concrete",
+"nailingPattern": "",
+"wswhFloorDepth": "12",
+"jambPostOverride": "",
+"postLeftOverride": "",
+"ftaoStrapOverride": "",
+"postRightOverride": "",
+"wswhAnchorOverride": "",
+"anchorageLeftOverride": "",
+"anchorageRightOverride": ""
+}
+],
+"levelLoads": {
+"lvl-1": {
+"wind": "0",
+"seismic": "17.7996"
+},
+"lvl-2": {
+"wind": "0",
+"seismic": "0"
+}
+},
+"planOrigin": "47",
+"driftBypass": "",
+"totalLength": "47",
+"distReviewed": [],
+"distribution": "",
+"gravityLoads": {
+"lvl-1": {
+"loads": []
+},
+"lvl-2": {
+"loads": []
+}
+},
+"supportPosts": [
+{
+"id": "sp-6",
+"mark": "P-6",
+"levelId": "lvl-2",
+"position": "24.5",
+"postOverride": "",
+"anchorageOverride": ""
+},
+{
+"id": "sp-7",
+"mark": "P-7",
+"levelId": "lvl-2",
+"position": "35",
+"postOverride": "",
+"anchorageOverride": ""
+}
+],
+"wallThickness": ""
+},
+{
+"id": "ln-9",
+"name": "J",
+"beams": [],
+"walls": [
+{
+"id": "w-23",
+"mark": "SW-23",
+"length": 4,
+"method": "segmented",
+"levelId": "lvl-2",
+"openings": [],
+"position": 10,
+"wswhJoist": "12",
+"wswhWidth": "18",
+"narrowPier": false,
+"systemType": "sheathed",
+"wallDLTypeId": "wdt-1",
+"wswhCondition": "concrete",
+"nailingPattern": "",
+"wswhFloorDepth": "12",
+"jambPostOverride": "",
+"postLeftOverride": "",
+"ftaoStrapOverride": "",
+"postRightOverride": "",
+"wswhAnchorOverride": "",
+"anchorageLeftOverride": "",
+"anchorageRightOverride": ""
+},
+{
+"id": "w-24",
+"mark": "SW-24",
+"length": 4,
+"method": "segmented",
+"levelId": "lvl-2",
+"openings": [],
+"position": 27.5,
+"wswhJoist": "12",
+"wswhWidth": "18",
+"narrowPier": false,
+"systemType": "sheathed",
+"wallDLTypeId": "wdt-1",
+"wswhCondition": "concrete",
+"nailingPattern": "",
+"wswhFloorDepth": "12",
+"jambPostOverride": "",
+"postLeftOverride": "",
+"ftaoStrapOverride": "",
+"postRightOverride": "",
+"wswhAnchorOverride": "",
+"anchorageLeftOverride": "",
+"anchorageRightOverride": ""
+}
+],
+"levelLoads": {
+"lvl-1": {
+"wind": "0",
+"seismic": "0"
+},
+"lvl-2": {
+"wind": "0",
+"seismic": "3.3598"
+}
+},
+"planOrigin": "0",
+"driftBypass": "",
+"totalLength": "94",
+"distReviewed": [],
+"distribution": "",
+"gravityLoads": {
+"lvl-1": {
+"loads": []
+},
+"lvl-2": {
+"loads": []
+}
+},
+"supportPosts": [],
+"wallThickness": ""
+},
+{
+"id": "ln-10",
+"name": "M",
+"beams": [],
+"walls": [
+{
+"id": "w-26",
+"mark": "SW-26",
+"length": "5.33",
+"method": "segmented",
+"levelId": "lvl-2",
+"openings": [],
+"position": "47",
+"wswhJoist": "12",
+"wswhWidth": "18",
+"narrowPier": false,
+"systemType": "sheathed",
+"wallDLTypeId": "wdt-1",
+"wswhCondition": "concrete",
+"nailingPattern": "",
+"wswhFloorDepth": "12",
+"jambPostOverride": "",
+"postLeftOverride": "",
+"ftaoStrapOverride": "",
+"postRightOverride": "",
+"wswhAnchorOverride": "",
+"anchorageLeftOverride": "",
+"anchorageRightOverride": ""
+},
+{
+"id": "w-28",
+"mark": "SW-28",
+"length": "9",
+"method": "segmented",
+"levelId": "lvl-2",
+"openings": [],
+"position": "56",
+"wswhJoist": "12",
+"wswhWidth": "18",
+"narrowPier": false,
+"systemType": "sheathed",
+"wallDLTypeId": "wdt-1",
+"wswhCondition": "concrete",
+"nailingPattern": "",
+"wswhFloorDepth": "12",
+"jambPostOverride": "",
+"postLeftOverride": "",
+"ftaoStrapOverride": "",
+"postRightOverride": "",
+"wswhAnchorOverride": "",
+"anchorageLeftOverride": "",
+"anchorageRightOverride": ""
+},
+{
+"id": "w-29",
+"mark": "SW-29",
+"length": "5.33",
+"method": "segmented",
+"levelId": "lvl-1",
+"openings": [],
+"position": 47,
+"wswhJoist": "12",
+"wswhWidth": "18",
+"narrowPier": false,
+"systemType": "sheathed",
+"wallDLTypeId": "wdt-1",
+"wswhCondition": "concrete",
+"nailingPattern": "",
+"wswhFloorDepth": "12",
+"jambPostOverride": "",
+"postLeftOverride": "",
+"ftaoStrapOverride": "",
+"postRightOverride": "",
+"wswhAnchorOverride": "",
+"anchorageLeftOverride": "",
+"anchorageRightOverride": ""
+},
+{
+"id": "w-30",
+"mark": "SW-30",
+"length": "9",
+"method": "segmented",
+"levelId": "lvl-1",
+"openings": [],
+"position": "56",
+"wswhJoist": "12",
+"wswhWidth": "18",
+"narrowPier": false,
+"systemType": "sheathed",
+"wallDLTypeId": "wdt-1",
+"wswhCondition": "concrete",
+"nailingPattern": "",
+"wswhFloorDepth": "12",
+"jambPostOverride": "",
+"postLeftOverride": "",
+"ftaoStrapOverride": "",
+"postRightOverride": "",
+"wswhAnchorOverride": "",
+"anchorageLeftOverride": "",
+"anchorageRightOverride": ""
+},
+{
+"id": "w-31",
+"mark": "SW-31",
+"length": "13.33",
+"method": "segmented",
+"levelId": "lvl-2",
+"openings": [],
+"position": "0",
+"wswhJoist": "12",
+"wswhWidth": "18",
+"narrowPier": false,
+"systemType": "sheathed",
+"wallDLTypeId": "wdt-1",
+"wswhCondition": "concrete",
+"nailingPattern": "",
+"wswhFloorDepth": "12",
+"jambPostOverride": "",
+"postLeftOverride": "",
+"ftaoStrapOverride": "",
+"postRightOverride": "",
+"wswhAnchorOverride": "",
+"anchorageLeftOverride": "",
+"anchorageRightOverride": ""
+},
+{
+"id": "w-32",
+"mark": "SW-32",
+"length": "13.33",
+"method": "segmented",
+"levelId": "lvl-2",
+"openings": [],
+"position": 19,
+"wswhJoist": "12",
+"wswhWidth": "18",
+"narrowPier": false,
+"systemType": "sheathed",
+"wallDLTypeId": "wdt-1",
+"wswhCondition": "concrete",
+"nailingPattern": "",
+"wswhFloorDepth": "12",
+"jambPostOverride": "",
+"postLeftOverride": "",
+"ftaoStrapOverride": "",
+"postRightOverride": "",
+"wswhAnchorOverride": "",
+"anchorageLeftOverride": "",
+"anchorageRightOverride": ""
+}
+],
+"levelLoads": {
+"lvl-1": {
+"wind": "0",
+"seismic": "11.5863"
+},
+"lvl-2": {
+"wind": "0",
+"seismic": "8.6137"
+}
+},
+"planOrigin": "0",
+"driftBypass": "",
+"totalLength": "94",
+"distReviewed": [],
+"distribution": "",
+"gravityLoads": {
+"lvl-1": {
+"loads": []
+},
+"lvl-2": {
+"loads": []
+}
+},
+"supportPosts": [],
+"wallThickness": ""
+}
+]
+},
+{
+"id": "dir-2",
+"rho": 1,
+"name": "E-W",
+"lines": [
+{
+"id": "ln-2",
+"name": "1",
+"beams": [],
+"walls": [
+{
+"id": "w-6",
+"mark": "SW-6",
+"length": "6",
+"method": "segmented",
+"levelId": "lvl-2",
+"openings": [],
+"position": "9.75",
+"wswhJoist": "12",
+"wswhWidth": "18",
+"narrowPier": false,
+"systemType": "sheathed",
+"wallDLTypeId": "wdt-1",
+"wswhCondition": "concrete",
+"nailingPattern": "",
+"wswhFloorDepth": "12",
+"jambPostOverride": "",
+"postLeftOverride": "",
+"ftaoStrapOverride": "",
+"postRightOverride": "",
+"wswhAnchorOverride": "",
+"anchorageLeftOverride": "",
+"anchorageRightOverride": ""
+}
+],
+"levelLoads": {
+"lvl-1": {
+"wind": "0",
+"seismic": "0"
+},
+"lvl-2": {
+"wind": "0",
+"seismic": "0.999"
+}
+},
+"planOrigin": "67.5",
+"driftBypass": "",
+"totalLength": "41.5",
+"distReviewed": [],
+"distribution": "",
+"gravityLoads": {
+"lvl-1": {
+"loads": []
+},
+"lvl-2": {
+"loads": []
+}
+},
+"supportPosts": [],
+"wallThickness": ""
+},
+{
+"id": "ln-11",
+"name": "2",
+"beams": [
+{
+"id": "bm-1",
+"mark": "BM-1",
+"length": "5.5",
+"levelId": "lvl-1",
+"position": "98",
+"supports": [
+{
+"id": "bs-5",
+"type": "point",
+"position": 98,
+"anchorageOverride": ""
+},
+{
+"id": "bs-6",
+"type": "point",
+"position": 103.5,
+"anchorageOverride": ""
+}
+]
+}
+],
+"walls": [
+{
+"id": "w-60",
+"mark": "SW-60",
+"length": 1.5,
+"method": "segmented",
+"levelId": "lvl-1",
+"openings": [],
+"position": 33,
+"wswhJoist": "12",
+"wswhWidth": "18",
+"narrowPier": false,
+"systemType": "wswh",
+"wallDLTypeId": "wdt-1",
+"wswhCondition": "stackedUpper",
+"nailingPattern": "",
+"wswhFloorDepth": "12",
+"jambPostOverride": "",
+"postLeftOverride": "",
+"ftaoStrapOverride": "",
+"postRightOverride": "",
+"wswhAnchorOverride": "",
+"anchorageLeftOverride": "",
+"anchorageRightOverride": ""
+},
+{
+"id": "w-61",
+"mark": "SW-61",
+"length": 1.5,
+"method": "segmented",
+"levelId": "lvl-2",
+"openings": [],
+"position": 33,
+"wswhJoist": "12",
+"wswhWidth": "18",
+"narrowPier": false,
+"systemType": "wswh",
+"wallDLTypeId": "wdt-1",
+"wswhCondition": "concrete",
+"nailingPattern": "",
+"wswhFloorDepth": "12",
+"jambPostOverride": "",
+"postLeftOverride": "",
+"ftaoStrapOverride": "",
+"postRightOverride": "",
+"wswhAnchorOverride": "",
+"anchorageLeftOverride": "",
+"anchorageRightOverride": ""
+},
+{
+"id": "w-62",
+"mark": "SW-62",
+"length": 1.5,
+"method": "segmented",
+"levelId": "lvl-1",
+"openings": [],
+"position": "64.5",
+"wswhJoist": "12",
+"wswhWidth": "18",
+"narrowPier": false,
+"systemType": "wswh",
+"wallDLTypeId": "wdt-1",
+"wswhCondition": "stackedUpper",
+"nailingPattern": "",
+"wswhFloorDepth": "12",
+"jambPostOverride": "",
+"postLeftOverride": "",
+"ftaoStrapOverride": "",
+"postRightOverride": "",
+"wswhAnchorOverride": "",
+"anchorageLeftOverride": "",
+"anchorageRightOverride": ""
+},
+{
+"id": "w-63",
+"mark": "SW-63",
+"length": 1.5,
+"method": "segmented",
+"levelId": "lvl-2",
+"openings": [],
+"position": "64.5",
+"wswhJoist": "12",
+"wswhWidth": "18",
+"narrowPier": false,
+"systemType": "wswh",
+"wallDLTypeId": "wdt-1",
+"wswhCondition": "concrete",
+"nailingPattern": "",
+"wswhFloorDepth": "12",
+"jambPostOverride": "",
+"postLeftOverride": "",
+"ftaoStrapOverride": "",
+"postRightOverride": "",
+"wswhAnchorOverride": "",
+"anchorageLeftOverride": "",
+"anchorageRightOverride": ""
+},
+{
+"id": "w-65",
+"mark": "SW-65",
+"length": "3.33",
+"method": "segmented",
+"levelId": "lvl-1",
+"openings": [],
+"position": "96.67",
+"wswhJoist": "12",
+"wswhWidth": "18",
+"narrowPier": false,
+"systemType": "sheathed",
+"wallDLTypeId": "wdt-1",
+"wswhCondition": "concrete",
+"nailingPattern": "",
+"wswhFloorDepth": "12",
+"jambPostOverride": "",
+"postLeftOverride": "",
+"ftaoStrapOverride": "",
+"postRightOverride": "",
+"wswhAnchorOverride": "",
+"anchorageLeftOverride": "",
+"anchorageRightOverride": ""
+},
+{
+"id": "w-66",
+"mark": "SW-66",
+"length": "5",
+"method": "segmented",
+"levelId": "lvl-2",
+"openings": [],
+"position": 93,
+"wswhJoist": "12",
+"wswhWidth": "18",
+"narrowPier": false,
+"systemType": "sheathed",
+"wallDLTypeId": "wdt-1",
+"wswhCondition": "concrete",
+"nailingPattern": "",
+"wswhFloorDepth": "12",
+"jambPostOverride": "",
+"postLeftOverride": "",
+"ftaoStrapOverride": "",
+"postRightOverride": "",
+"wswhAnchorOverride": "",
+"anchorageLeftOverride": "",
+"anchorageRightOverride": ""
+},
+{
+"id": "w-67",
+"mark": "SW-67",
+"length": "5.5",
+"method": "segmented",
+"levelId": "lvl-2",
+"openings": [],
+"position": "103.5",
+"wswhJoist": "12",
+"wswhWidth": "18",
+"narrowPier": false,
+"systemType": "sheathed",
+"wallDLTypeId": "wdt-1",
+"wswhCondition": "concrete",
+"nailingPattern": "",
+"wswhFloorDepth": "12",
+"jambPostOverride": "",
+"postLeftOverride": "",
+"ftaoStrapOverride": "",
+"postRightOverride": "",
+"wswhAnchorOverride": "",
+"anchorageLeftOverride": "",
+"anchorageRightOverride": ""
+}
+],
+"levelLoads": {
+"lvl-1": {
+"wind": "0",
+"seismic": "8.5054"
+},
+"lvl-2": {
+"wind": "0",
+"seismic": "6.3932"
+}
+},
+"planOrigin": "0",
+"driftBypass": "",
+"totalLength": 109,
+"distReviewed": [],
+"distribution": "",
+"gravityLoads": {
+"lvl-1": {
+"loads": []
+},
+"lvl-2": {
+"loads": []
+}
+},
+"supportPosts": [
+{
+"id": "sp-19",
+"mark": "P-19",
+"levelId": "lvl-2",
+"position": 96.67,
+"postOverride": "",
+"anchorageOverride": ""
+}
+],
+"wallThickness": ""
+},
+{
+"id": "ln-12",
+"name": "3",
+"beams": [
+{
+"id": "bm-3",
+"mark": "BM-3",
+"length": "13.5",
+"levelId": "lvl-1",
+"position": 15,
+"supports": [
+{
+"id": "bs-9",
+"type": "point",
+"position": 15,
+"anchorageOverride": ""
+},
+{
+"id": "bs-10",
+"type": "point",
+"position": 28.5,
+"anchorageOverride": ""
+}
+]
+}
+],
+"walls": [
+{
+"id": "w-35",
+"mark": "SW-35",
+"length": "7.5",
+"method": "segmented",
+"levelId": "lvl-1",
+"openings": [],
+"position": "15.33",
+"wswhJoist": "12",
+"wswhWidth": "18",
+"narrowPier": false,
+"systemType": "sheathed",
+"wallDLTypeId": "wdt-1",
+"wswhCondition": "concrete",
+"nailingPattern": "",
+"wswhFloorDepth": "12",
+"jambPostOverride": "",
+"postLeftOverride": "",
+"ftaoStrapOverride": "",
+"postRightOverride": "",
+"wswhAnchorOverride": "",
+"anchorageLeftOverride": "",
+"anchorageRightOverride": ""
+},
+{
+"id": "w-70",
+"mark": "SW-70",
+"length": 4,
+"method": "segmented",
+"levelId": "lvl-2",
+"openings": [],
+"position": 11,
+"wswhJoist": "12",
+"wswhWidth": "18",
+"narrowPier": false,
+"systemType": "sheathed",
+"wallDLTypeId": "wdt-1",
+"wswhCondition": "concrete",
+"nailingPattern": "",
+"wswhFloorDepth": "12",
+"jambPostOverride": "",
+"postLeftOverride": "",
+"ftaoStrapOverride": "",
+"postRightOverride": "",
+"wswhAnchorOverride": "",
+"anchorageLeftOverride": "",
+"anchorageRightOverride": ""
+},
+{
+"id": "w-71",
+"mark": "SW-71",
+"length": "4.5",
+"method": "segmented",
+"levelId": "lvl-2",
+"openings": [],
+"position": "28.5",
+"wswhJoist": "12",
+"wswhWidth": "18",
+"narrowPier": false,
+"systemType": "sheathed",
+"wallDLTypeId": "wdt-1",
+"wswhCondition": "concrete",
+"nailingPattern": "",
+"wswhFloorDepth": "12",
+"jambPostOverride": "",
+"postLeftOverride": "",
+"ftaoStrapOverride": "",
+"postRightOverride": "",
+"wswhAnchorOverride": "",
+"anchorageLeftOverride": "",
+"anchorageRightOverride": ""
+}
+],
+"levelLoads": {
+"lvl-1": {
+"wind": "0",
+"seismic": "15.6543"
+},
+"lvl-2": {
+"wind": "0",
+"seismic": "-3.2838"
+}
+},
+"planOrigin": "0",
+"driftBypass": "",
+"totalLength": 109,
+"distReviewed": [],
+"distribution": "",
+"gravityLoads": {
+"lvl-1": {
+"loads": []
+},
+"lvl-2": {
+"loads": []
+}
+},
+"supportPosts": [],
+"wallThickness": ""
+},
+{
+"id": "ln-13",
+"name": "5",
+"beams": [],
+"walls": [
+{
+"id": "w-38",
+"mark": "SW-38",
+"length": "26.5",
+"method": "segmented",
+"levelId": "lvl-2",
+"openings": [],
+"position": "3",
+"wswhJoist": "12",
+"wswhWidth": "18",
+"narrowPier": false,
+"systemType": "sheathed",
+"wallDLTypeId": "wdt-1",
+"wswhCondition": "concrete",
+"nailingPattern": "",
+"wswhFloorDepth": "12",
+"jambPostOverride": "",
+"postLeftOverride": "",
+"ftaoStrapOverride": "",
+"postRightOverride": "",
+"wswhAnchorOverride": "",
+"anchorageLeftOverride": "",
+"anchorageRightOverride": ""
+},
+{
+"id": "w-53",
+"mark": "SW-53",
+"length": "35.5",
+"method": "segmented",
+"levelId": "lvl-2",
+"openings": [],
+"position": "73.5",
+"wswhJoist": "12",
+"wswhWidth": "18",
+"narrowPier": false,
+"systemType": "sheathed",
+"wallDLTypeId": "wdt-1",
+"wswhCondition": "concrete",
+"nailingPattern": "",
+"wswhFloorDepth": "12",
+"jambPostOverride": "",
+"postLeftOverride": "",
+"ftaoStrapOverride": "",
+"postRightOverride": "",
+"wswhAnchorOverride": "",
+"anchorageLeftOverride": "",
+"anchorageRightOverride": ""
+},
+{
+"id": "w-54",
+"mark": "SW-54",
+"length": "8.75",
+"method": "segmented",
+"levelId": "lvl-1",
+"openings": [],
+"position": "18.5",
+"wswhJoist": "12",
+"wswhWidth": "18",
+"narrowPier": false,
+"systemType": "sheathed",
+"wallDLTypeId": "wdt-1",
+"wswhCondition": "concrete",
+"nailingPattern": "",
+"wswhFloorDepth": "12",
+"jambPostOverride": "",
+"postLeftOverride": "",
+"ftaoStrapOverride": "",
+"postRightOverride": "",
+"wswhAnchorOverride": "",
+"anchorageLeftOverride": "",
+"anchorageRightOverride": ""
+}
+],
+"levelLoads": {
+"lvl-1": {
+"wind": "0",
+"seismic": "2.3778"
+},
+"lvl-2": {
+"wind": "0",
+"seismic": "22.8477"
+}
+},
+"planOrigin": "0",
+"driftBypass": "",
+"totalLength": 112,
+"distReviewed": [],
+"distribution": "",
+"gravityLoads": {
+"lvl-1": {
+"loads": []
+},
+"lvl-2": {
+"loads": []
+}
+},
+"supportPosts": [
+{
+"id": "sp-11",
+"mark": "P-11",
+"levelId": "lvl-2",
+"position": 18.5,
+"postOverride": "",
+"anchorageOverride": ""
+},
+{
+"id": "sp-12",
+"mark": "P-12",
+"levelId": "lvl-2",
+"position": 27.25,
+"postOverride": "",
+"anchorageOverride": ""
+}
+],
+"wallThickness": ""
+},
+{
+"id": "ln-14",
+"name": "6",
+"beams": [],
+"walls": [
+{
+"id": "w-39",
+"mark": "SW-39",
+"length": "9.5",
+"method": "segmented",
+"levelId": "lvl-1",
+"openings": [],
+"position": "11",
+"wswhJoist": "12",
+"wswhWidth": "18",
+"narrowPier": false,
+"systemType": "sheathed",
+"endsAtFloor": true,
+"wallDLTypeId": "wdt-1",
+"wswhCondition": "concrete",
+"nailingPattern": "",
+"wswhFloorDepth": "12",
+"jambPostOverride": "",
+"postLeftOverride": "",
+"ftaoStrapOverride": "",
+"postRightOverride": "",
+"wswhAnchorOverride": "",
+"anchorageLeftOverride": "",
+"anchorageRightOverride": ""
+},
+{
+"id": "w-55",
+"mark": "SW-55",
+"length": "6",
+"method": "segmented",
+"levelId": "lvl-1",
+"openings": [],
+"position": 66,
+"wswhJoist": "12",
+"wswhWidth": "18",
+"narrowPier": false,
+"systemType": "sheathed",
+"endsAtFloor": true,
+"wallDLTypeId": "wdt-1",
+"wswhCondition": "concrete",
+"nailingPattern": "",
+"wswhFloorDepth": "12",
+"jambPostOverride": "",
+"postLeftOverride": "",
+"ftaoStrapOverride": "",
+"postRightOverride": "",
+"wswhAnchorOverride": "",
+"anchorageLeftOverride": "",
+"anchorageRightOverride": ""
+},
+{
+"id": "w-56",
+"mark": "SW-56",
+"length": "12.33",
+"method": "segmented",
+"levelId": "lvl-1",
+"openings": [],
+"position": "74.67",
+"wswhJoist": "12",
+"wswhWidth": "18",
+"narrowPier": false,
+"systemType": "sheathed",
+"endsAtFloor": true,
+"wallDLTypeId": "wdt-1",
+"wswhCondition": "concrete",
+"nailingPattern": "",
+"wswhFloorDepth": "12",
+"jambPostOverride": "",
+"postLeftOverride": "",
+"ftaoStrapOverride": "",
+"postRightOverride": "",
+"wswhAnchorOverride": "",
+"anchorageLeftOverride": "",
+"anchorageRightOverride": ""
+}
+],
+"levelLoads": {
+"lvl-1": {
+"wind": "0",
+"seismic": "22.7938"
+},
+"lvl-2": {
+"wind": "0",
+"seismic": "0"
+}
+},
+"planOrigin": "0",
+"driftBypass": "",
+"totalLength": 112,
+"distReviewed": [],
+"distribution": "",
+"gravityLoads": {
+"lvl-1": {
+"loads": []
+},
+"lvl-2": {
+"loads": []
+}
+},
+"supportPosts": [
+{
+"id": "sp-9",
+"mark": "P-9",
+"levelId": "lvl-2",
+"position": 11,
+"postOverride": "",
+"anchorageOverride": ""
+},
+{
+"id": "sp-10",
+"mark": "P-10",
+"levelId": "lvl-2",
+"position": 20.5,
+"postOverride": "",
+"anchorageOverride": ""
+},
+{
+"id": "sp-13",
+"mark": "P-13",
+"levelId": "lvl-2",
+"position": 66,
+"postOverride": "",
+"anchorageOverride": ""
+},
+{
+"id": "sp-14",
+"mark": "P-14",
+"levelId": "lvl-2",
+"position": 72,
+"postOverride": "",
+"anchorageOverride": ""
+},
+{
+"id": "sp-15",
+"mark": "P-15",
+"levelId": "lvl-2",
+"position": 74.67,
+"postOverride": "",
+"anchorageOverride": ""
+},
+{
+"id": "sp-16",
+"mark": "P-16",
+"levelId": "lvl-2",
+"position": 87,
+"postOverride": "",
+"anchorageOverride": ""
+}
+],
+"wallThickness": ""
+},
+{
+"id": "ln-15",
+"name": "8",
+"beams": [],
+"walls": [
+{
+"id": "w-41",
+"mark": "SW-41",
+"length": "23",
+"method": "segmented",
+"levelId": "lvl-1",
+"openings": [],
+"position": "12.25",
+"wswhJoist": "12",
+"wswhWidth": "18",
+"narrowPier": false,
+"systemType": "sheathed",
+"wallDLTypeId": "wdt-1",
+"wswhCondition": "concrete",
+"nailingPattern": "",
+"wswhFloorDepth": "12",
+"jambPostOverride": "",
+"postLeftOverride": "",
+"ftaoStrapOverride": "",
+"postRightOverride": "",
+"wswhAnchorOverride": "",
+"anchorageLeftOverride": "",
+"anchorageRightOverride": ""
+},
+{
+"id": "w-42",
+"mark": "SW-42",
+"length": "6",
+"method": "segmented",
+"levelId": "lvl-2",
+"openings": [],
+"position": "12.25",
+"wswhJoist": "12",
+"wswhWidth": "18",
+"narrowPier": false,
+"systemType": "sheathed",
+"wallDLTypeId": "wdt-1",
+"wswhCondition": "concrete",
+"nailingPattern": "",
+"wswhFloorDepth": "12",
+"jambPostOverride": "",
+"postLeftOverride": "",
+"ftaoStrapOverride": "",
+"postRightOverride": "",
+"wswhAnchorOverride": "",
+"anchorageLeftOverride": "",
+"anchorageRightOverride": ""
+},
+{
+"id": "w-49",
+"mark": "SW-49",
+"length": "21.5",
+"method": "segmented",
+"levelId": "lvl-2",
+"openings": [],
+"position": "21.25",
+"wswhJoist": "12",
+"wswhWidth": "18",
+"narrowPier": false,
+"systemType": "sheathed",
+"wallDLTypeId": "wdt-1",
+"wswhCondition": "concrete",
+"nailingPattern": "",
+"wswhFloorDepth": "12",
+"jambPostOverride": "",
+"postLeftOverride": "",
+"ftaoStrapOverride": "",
+"postRightOverride": "",
+"wswhAnchorOverride": "",
+"anchorageLeftOverride": "",
+"anchorageRightOverride": ""
+}
+],
+"levelLoads": {
+"lvl-1": {
+"wind": "0",
+"seismic": "7.1496"
+},
+"lvl-2": {
+"wind": "0",
+"seismic": "6.7314"
+}
+},
+"planOrigin": "67.5",
+"driftBypass": "",
+"totalLength": 44.5,
+"distReviewed": [],
+"distribution": "",
+"gravityLoads": {
+"lvl-1": {
+"loads": []
+},
+"lvl-2": {
+"loads": []
+}
+},
+"supportPosts": [
+{
+"id": "sp-8",
+"mark": "P-8",
+"levelId": "lvl-2",
+"position": 35.25,
+"postOverride": "",
+"anchorageOverride": ""
+}
+],
+"wallThickness": ""
+},
+{
+"id": "ln-16",
+"name": "9",
+"beams": [],
+"walls": [
+{
+"id": "w-43",
+"mark": "SW-43",
+"length": "3.25",
+"method": "segmented",
+"levelId": "lvl-1",
+"openings": [],
+"position": "0",
+"wswhJoist": "12",
+"wswhWidth": "18",
+"narrowPier": false,
+"systemType": "sheathed",
+"wallDLTypeId": "wdt-1",
+"wswhCondition": "concrete",
+"nailingPattern": "",
+"wswhFloorDepth": "12",
+"jambPostOverride": "",
+"postLeftOverride": "",
+"ftaoStrapOverride": "",
+"postRightOverride": "",
+"wswhAnchorOverride": "",
+"anchorageLeftOverride": "",
+"anchorageRightOverride": ""
+},
+{
+"id": "w-44",
+"mark": "SW-44",
+"length": "3.25",
+"method": "segmented",
+"levelId": "lvl-2",
+"openings": [],
+"position": "0",
+"wswhJoist": "12",
+"wswhWidth": "18",
+"narrowPier": false,
+"systemType": "sheathed",
+"wallDLTypeId": "wdt-1",
+"wswhCondition": "concrete",
+"nailingPattern": "",
+"wswhFloorDepth": "12",
+"jambPostOverride": "",
+"postLeftOverride": "",
+"ftaoStrapOverride": "",
+"postRightOverride": "",
+"wswhAnchorOverride": "",
+"anchorageLeftOverride": "",
+"anchorageRightOverride": ""
+},
+{
+"id": "w-50",
+"mark": "SW-50",
+"length": "5.67",
+"method": "segmented",
+"levelId": "lvl-1",
+"openings": [],
+"position": "10.33",
+"wswhJoist": "12",
+"wswhWidth": "18",
+"narrowPier": false,
+"systemType": "sheathed",
+"wallDLTypeId": "wdt-1",
+"wswhCondition": "concrete",
+"nailingPattern": "",
+"wswhFloorDepth": "12",
+"jambPostOverride": "",
+"postLeftOverride": "",
+"ftaoStrapOverride": "",
+"postRightOverride": "",
+"wswhAnchorOverride": "",
+"anchorageLeftOverride": "",
+"anchorageRightOverride": ""
+},
+{
+"id": "w-51",
+"mark": "SW-51",
+"length": "5.67",
+"method": "segmented",
+"levelId": "lvl-2",
+"openings": [],
+"position": 10.33,
+"wswhJoist": "12",
+"wswhWidth": "18",
+"narrowPier": false,
+"systemType": "sheathed",
+"wallDLTypeId": "wdt-1",
+"wswhCondition": "concrete",
+"nailingPattern": "",
+"wswhFloorDepth": "12",
+"jambPostOverride": "",
+"postLeftOverride": "",
+"ftaoStrapOverride": "",
+"postRightOverride": "",
+"wswhAnchorOverride": "",
+"anchorageLeftOverride": "",
+"anchorageRightOverride": ""
+}
+],
+"levelLoads": {
+"lvl-1": {
+"wind": "0",
+"seismic": "3.5191"
+},
+"lvl-2": {
+"wind": "0",
+"seismic": "3.5067"
+}
+},
+"planOrigin": "11",
+"driftBypass": "",
+"totalLength": 16,
+"distReviewed": [],
+"distribution": "",
+"gravityLoads": {
+"lvl-1": {
+"loads": []
+},
+"lvl-2": {
+"loads": []
+}
+},
+"supportPosts": [],
+"wallThickness": ""
+},
+{
+"id": "ln-17",
+"name": "10",
+"beams": [],
+"walls": [
+{
+"id": "w-58",
+"mark": "SW-58",
+"length": "21.5",
+"method": "segmented",
+"levelId": "lvl-2",
+"openings": [],
+"position": "4.5",
+"wswhJoist": "12",
+"wswhWidth": "18",
+"narrowPier": false,
+"systemType": "sheathed",
+"wallDLTypeId": "wdt-1",
+"wswhCondition": "concrete",
+"nailingPattern": "",
+"wswhFloorDepth": "12",
+"jambPostOverride": "",
+"postLeftOverride": "",
+"ftaoStrapOverride": "",
+"postRightOverride": "",
+"wswhAnchorOverride": "",
+"anchorageLeftOverride": "",
+"anchorageRightOverride": ""
+}
+],
+"levelLoads": {
+"lvl-1": {
+"wind": "0",
+"seismic": "0"
+},
+"lvl-2": {
+"wind": "0",
+"seismic": "3.1885"
+}
+},
+"planOrigin": "83",
+"driftBypass": "",
+"totalLength": 29,
+"distReviewed": [],
+"distribution": "",
+"gravityLoads": {
+"lvl-1": {
+"loads": []
+},
+"lvl-2": {
+"loads": []
+}
+},
+"supportPosts": [],
+"wallThickness": ""
+},
+{
+"id": "ln-18",
+"name": "11",
+"beams": [],
+"walls": [
+{
+"id": "w-59",
+"mark": "SW-59",
+"length": "26",
+"method": "segmented",
+"levelId": "lvl-2",
+"openings": [],
+"position": 0,
+"wswhJoist": "12",
+"wswhWidth": "18",
+"narrowPier": false,
+"systemType": "sheathed",
+"wallDLTypeId": "wdt-1",
+"wswhCondition": "concrete",
+"nailingPattern": "",
+"wswhFloorDepth": "12",
+"jambPostOverride": "",
+"postLeftOverride": "",
+"ftaoStrapOverride": "",
+"postRightOverride": "",
+"wswhAnchorOverride": "",
+"anchorageLeftOverride": "",
+"anchorageRightOverride": ""
+}
+],
+"levelLoads": {
+"lvl-1": {
+"wind": "0",
+"seismic": "0"
+},
+"lvl-2": {
+"wind": "0",
+"seismic": "2.4112"
+}
+},
+"planOrigin": "83",
+"driftBypass": "",
+"totalLength": 29,
+"distReviewed": [],
+"distribution": "",
+"gravityLoads": {
+"lvl-1": {
+"loads": []
+},
+"lvl-2": {
+"loads": []
+}
+},
+"supportPosts": [],
+"wallThickness": ""
+}
+]
+}
+],
+"driftBypass": false,
+"wallDLTypes": [
+{
+"id": "wdt-1",
+"psf": "12.8",
+"name": "Exterior"
+},
+{
+"id": "wdt-2",
+"psf": "8.4",
+"name": "Interior"
+}
+],
+"distribution": "capacity",
+"riskCategory": "II",
+"wallThickness": "6",
+"windDriftLimit": "400",
+"detachedOneTwoFamily": true,
+"seismicDesignCategory": "E"
+}
+}

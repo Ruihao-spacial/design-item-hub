@@ -106,8 +106,8 @@ test('plan checks fire: diagonal edge, self-crossing, opening outside, TD over a
 });
 
 // ── book layouts ──
-test('all 7 book layouts: convert, valid, ΣA = book area, panels sum to ΣA, TD lines resolve', () => {
-  assert.equal(books.length, 7);
+test('all 9 book layouts: convert, valid, ΣA = book area, panels sum to ΣA, TD lines resolve', () => {
+  assert.equal(books.length, 9);
   for (const b of books) {
     const inputs = bookToInputs(b);
     const plan = parsePlan(inputs);
@@ -175,7 +175,10 @@ test('tools: grid, opening, wall on a grid only, TD with guessed supports and lo
   assert.equal(td.mark, 'TD1');
   const names = ids => ids.map(id => inputs.grids.find(g => g.id === id).name);
   assert.deepEqual(names(td.supports), ['A', 'B'], 'supports at the ends of the long side');
-  assert.deepEqual(names(td.loads.map(l => l.gridId)), ['C'], 'inner grid y = 20 is the load line');
+  // load lines on Auto (2026-11-03): found from the plan — a plain rectangle has no notch / opening edge, so none
+  assert.equal(td.loadsMode, 'auto');
+  assert.deepEqual(parsePlan(inputs).tds[0].loads, [], 'plain plan: no load line found');
+  assert.ok(/no load line found/.test(st.message), st.message);
   st.sel = { kind: 'opening', id: inputs.openings[0].id };
   assert.ok(deleteSelected(inputs, st));
   assert.equal(inputs.openings.length, 0);
@@ -191,7 +194,8 @@ test('outline tool: corners line up, closes on the first corner, replaces the ou
   assert.ok(applyClick(inputs, plan(), st, { x: 0, y: 0 }));
   assert.equal(inputs.outline.length, 6);
   assert.equal(sheathedArea(plan()), 60 * 20 + 30 * 30);
-  assert.equal(planErrors(plan()).length, 0);
+  // the default diaphragms (0–100 × 0–50) now run past the outline: hard check, nothing else
+  assert.deepEqual(planErrors(plan()).filter(e => !e.warn).map(e => e.code), ['dg-part-outside', 'dg-part-outside']);
   st.tool = 'outline';
   st.pending = [{ x: 0, y: 0 }, { x: 10, y: 0 }, { x: 10, y: 10 }, { x: 5, y: 10 }];
   assert.ok(!finishOutline(inputs, st), 'last corner does not line up with the first');
@@ -214,12 +218,13 @@ test('review 2026-10-29: diaphragm tool guesses its supports; an off-grid TD sti
   const { inputs, plan, st } = editorCase();
   inputs.grids.push(newGrid('C', 'y', 20));
   const gname = id => inputs.grids.find(g => g.id === id).name;
+  inputs.diaphragms = inputs.diaphragms.filter(d => d.dir !== 'x'); // free sheathing for the new x diaphragm
   st.tool = 'diaphragm'; st.dir = 'x';
   applyClick(inputs, plan(), st, { x: 0, y: 0 });
   assert.ok(applyClick(inputs, plan(), st, { x: 100, y: 50 }, 10));
   const d = inputs.diaphragms[inputs.diaphragms.length - 1];
   assert.equal(d.dir, 'x');
-  assert.equal(d.mark, 'D2', 'next mark in the x direction');
+  assert.equal(d.mark, 'D1', 'next free mark in the x direction');
   assert.deepEqual(d.supports.map(gname), ['B', 'A'], 'load along x spans between ↔ lines at its ends');
   st.tool = 'td'; st.dir = 'y';
   applyClick(inputs, plan(), st, { x: 0, y: 0.3 });          // a little off grid B (y = 0) and A (y = 50)
@@ -227,11 +232,13 @@ test('review 2026-10-29: diaphragm tool guesses its supports; an off-grid TD sti
   const t = inputs.tds[0];
   assert.equal(t.dir, 'y');
   assert.deepEqual(t.supports.map(gname), ['A', 'B']);
-  assert.deepEqual(t.loads.map(l => gname(l.gridId)), ['C']);
+  assert.equal(t.loadsMode, 'auto'); // load lines found from the plan (none on this plain plan)
   // the panel's support selects show A and B
   const box = document.createElement('div');
   diaphragmAnalysis.renderForm(box, inputs, () => {}, [], () => {}, {});
   [...box.querySelectorAll('button')].find(b => b.textContent.startsWith('Plan')).dispatchEvent(new window.Event('click'));
+  [...box.querySelectorAll('button')].find(b => b.textContent === 'Diaphragms & TDs').dispatchEvent(new window.Event('click'));
+  box.querySelector('[data-dgtab="td"]').dispatchEvent(new window.Event('click')); // TDs tab (2026-11-06)
   const shown = [...box.querySelectorAll('select')].map(s => [...s.querySelectorAll('option')].find(o => o.selected)).filter(o => o && o.value === t.supports[0]);
   assert.ok(shown.length >= 1, 'TD support A is the selected option of a support select');
 });
@@ -244,10 +251,10 @@ test('diaphragm checks: wrong support axis, overlap, coverage warning; warnings 
   swapped.diaphragms.find(x => x.dir === 'y').supports = clone(inputs.diaphragms.find(x => x.dir === 'x').supports);
   assert.ok(calcAll(swapped).errors.some(e => e.code === 'dg-supports-axis'));
   const two = clone(inputs);
-  two.diaphragms.push({ ...clone(d), id: 'd2', mark: 'D2', x1: '50', x2: '100' });
+  two.diaphragms.push({ ...clone(d), id: 'd2', mark: 'D2', parts: [{ id: 'd2-p1', x1: '50', x2: '100', y1: '0', y2: '50' }] });
   assert.ok(calcAll(two).errors.some(e => e.code === 'dg-overlap'));
   const half = clone(inputs);
-  half.diaphragms.find(x => x.dir === 'y').x2 = '60';
+  half.diaphragms.find(x => x.dir === 'y').parts[0].x2 = '60';
   half.diaphragms.find(x => x.dir === 'y').supports[1] = '';
   const r = calcAll(half);
   assert.ok(r.warnings.some(e => e.code === 'dg-cover'));
@@ -276,11 +283,12 @@ test('review 2 (comment 1): a diaphragm drawn off the grids snaps onto them and 
   const { inputs, plan, st } = editorCase();
   inputs.grids.push(newGrid('3', 'x', 60));
   const gname = id => inputs.grids.find(g => g.id === id).name;
+  inputs.diaphragms = inputs.diaphragms.filter(d => d.dir !== 'y'); // free sheathing for the drawn diaphragms
   st.tool = 'diaphragm'; st.dir = 'y';
   applyClick(inputs, plan(), st, { x: 0.4, y: 0.3 });
   assert.ok(applyClick(inputs, plan(), st, { x: 59.6, y: 49.7 }, 10));
   const d = inputs.diaphragms[inputs.diaphragms.length - 1];
-  assert.deepEqual([d.x1, d.x2, d.y1, d.y2], ['0', '60', '0', '50'], 'edges snapped onto 1 / 3 / B / A');
+  assert.deepEqual(d.parts.map(q => [q.x1, q.x2, q.y1, q.y2]), [['0', '60', '0', '50']], 'one piece, edges snapped onto 1 / 3 / B / A');
   assert.deepEqual(d.supports.map(gname), ['1', '3']);
   assert.ok(/spans between 1 \/ 3/.test(st.message));
   // a rectangle 60 → 85 has only grid 3 inside: one support (overhang), message says so
@@ -308,12 +316,13 @@ test('review 2 (comment 3): dragging an edge moves it (snapped value), keeps a r
   const g3 = inputs.grids[inputs.grids.length - 1];
   const d = inputs.diaphragms.find(x => x.dir === 'y'); // 0..100, supports 1 (x=0) / 2 (x=100)
   const plan = parsePlan(inputs);
-  assert.ok(setEdge(inputs, plan, 'diaphragm', d.id, 'x2', 60));
-  assert.equal(d.x2, '60');
+  const q = d.parts[0];
+  assert.ok(setEdge(inputs, plan, 'diaphragm', d.id, 'x2', 60, q.id));
+  assert.equal(q.x2, '60');
   assert.equal(d.supports[1], g3.id, 'support 2 (old edge) → grid 3 (new edge)');
-  assert.ok(!setEdge(inputs, parsePlan(inputs), 'diaphragm', d.id, 'x2', 0.2), 'no zero-width rectangle');
-  assert.ok(setEdge(inputs, parsePlan(inputs), 'diaphragm', d.id, 'x1', 70), 'dragging past the other edge flips');
-  assert.deepEqual([d.x1, d.x2], ['60', '70']);
+  assert.ok(!setEdge(inputs, parsePlan(inputs), 'diaphragm', d.id, 'x2', 0.2, q.id), 'no zero-width rectangle');
+  assert.ok(setEdge(inputs, parsePlan(inputs), 'diaphragm', d.id, 'x1', 70, q.id), 'dragging past the other edge flips');
+  assert.deepEqual([q.x1, q.x2], ['60', '70']);
   const st = { ...newEditorState(), sel: { kind: 'diaphragm', id: d.id } };
   const html = drawPlan(parsePlan(inputs), st, [], { onPick() {}, onEdgeDown() {} }).svg.outerHTML;
   assert.equal((html.match(/data-edge="/g) || []).length, 8, '4 edges × (line + square)');
@@ -328,7 +337,12 @@ function openAndSave(inputs) {
   for (const t of ['Setup', 'Plan', 'Analysis', 'TDs', 'Checks']) assert.ok(click(b => b.textContent.startsWith(t)), 'tab ' + t);
   assert.ok(click(b => b.textContent === 'Plan' || b.textContent.startsWith('Plan')));
   assert.ok(box.querySelector('svg'), 'plan drawing');
-  for (const tool of ['Grid ↕', 'Outline', 'TD', 'Select']) assert.ok(click(b => b.textContent === tool), 'tool ' + tool);
+  // input pages of the Plan tab (2026-11-03), each with its own tools
+  for (const [pg, tools] of [['Grids & outline', ['Grid ↕', 'Outline', 'Opening']], ['Diaphragms & TDs', ['Diaphragm', 'TD']], ['Shear walls', ['Wall']]]) {
+    assert.ok(click(b => b.textContent === pg), 'page ' + pg);
+    for (const tool of [...tools, 'Select']) assert.ok(click(b => b.textContent === tool && !b.disabled) || tool === 'Wall', 'tool ' + tool + ' on ' + pg);
+  }
+  assert.ok(click(b => b.textContent === 'Grids & outline'));
   if (inputs && inputs.verification) assert.ok(click(b => b.textContent.startsWith('Verification')), 'verification tab');
   assert.ok(click(b => b.textContent === 'Calculate & Save'), 'save');
   assert.ok(saved, 'onSave called');
@@ -393,6 +407,113 @@ test('frozen fixtures (tests/fixtures/legacy-td/): open, no value lost, same ΣA
     assert.ok(near(calcAll(m.inputs).sumA, fx.sumA), f + ' ΣA');
     openAndSave(clone(m.inputs));
   }
+});
+
+// ── diaphragm pieces (schema 2, user 2026-11-02) ──
+const pieces = d => d.parts.map(q => [q.x1, q.x2, q.y1, q.y2].map(Number));
+// every number of the analysis (cases: basic shear, line forces, TD runs, net field, members), rounded
+const resultDigest = r => JSON.stringify(r.analysis, (k, v) => (typeof v === 'number' ? Math.round(v * 1e6) / 1e6 : v));
+
+test('pieces: a schema-1 rectangle opens as pieces cut at the depth changes / around the opening; rectangle kept; same results', () => {
+  const ex = { 'schema1-ex35-rect-diaphragm.json': ['Ex3.5', [[0, 40, 14, 50], [40, 90, 0, 50], [90, 120, 0, 20]]],
+    'schema1-ex51-rect-diaphragm-opening.json': ['Ex5.1', [[0, 15, 0, 50], [15, 39, 0, 16], [15, 39, 40, 50], [39, 160, 0, 50]]] };
+  for (const [f, [id, want]] of Object.entries(ex)) {
+    const fx = JSON.parse(fs.readFileSync(path.join(fixDir, f), 'utf8'));
+    const m = migrateItem({ schemaVersion: 1, inputs: clone(fx.inputs) });
+    assert.equal(m.inputs.schemaVersion, TD_SCHEMA);
+    const d = m.inputs.diaphragms[0];
+    assert.deepEqual(pieces(d), want, id + ' pieces');
+    assert.deepEqual([d.x1, d.x2, d.y1, d.y2], [fx.inputs.diaphragms[0].x1, fx.inputs.diaphragms[0].x2, fx.inputs.diaphragms[0].y1, fx.inputs.diaphragms[0].y2], 'rectangle kept for the record');
+    const r = calcAll(m.inputs), rb = calcAll(bookToInputs(books.find(b => b.id === id)));
+    assert.equal(r.status, 'ok', id + ' no hard-check error after the upgrade');
+    assert.ok(r.analysis.cases.length >= 1);
+    assert.equal(resultDigest(r), resultDigest(rb), id + ' every analysis value the same as the book layout');
+    assert.deepEqual(migrateItem(clone(m)).inputs, m.inputs, 'idempotent');
+  }
+});
+
+test('pieces: book layouts — Ex 3.5 is one diaphragm of 3 pieces (1–2 C–A, 2–5 D–A, 5–6 D–B), drawn as one 8-corner outline', () => {
+  const inputs = bookToInputs(books.find(b => b.id === 'Ex3.5'));
+  const d = inputs.diaphragms[0];
+  assert.equal(inputs.diaphragms.length, 1);
+  assert.deepEqual(pieces(d), [[0, 40, 14, 50], [40, 90, 0, 50], [90, 120, 0, 20]]);
+  const { pieceEdges } = editorMod;
+  const pl = parsePlan(inputs);
+  const { outer, inner } = pieceEdges(pl.diaphragms[0].parts);
+  const len = e => Math.abs(e[2] - e[0]) + Math.abs(e[3] - e[1]);
+  assert.equal(outer.reduce((t, e) => t + len(e), 0), 2 * (120 + 50), 'outer edges = the outline perimeter (notched corners keep 2(L + B))');
+  assert.equal(inner.length, 2, 'two edges between pieces (at 2 and at 5)');
+  const html = drawPlan(pl, { ...newEditorState(), dir: 'y', sel: { kind: 'diaphragm', id: d.id } }, [], {}).svg.outerHTML;
+  for (const n of ['D1.1', 'D1.2', 'D1.3']) assert.ok(html.includes('>' + n + '<'), 'selected diaphragm shows ' + n);
+  for (const b of books) {
+    const i = bookToInputs(b);
+    for (const dg of i.diaphragms) assert.ok(dg.parts.length >= 1, b.id + ' ' + dg.mark);
+  }
+});
+
+test('pieces: hard checks — over an opening, outside the outline, overlapping, apart; TD across a notch', () => {
+  const base = bookToInputs(books.find(b => b.id === 'Ex5.1'));
+  const codesOf = i => planErrors(parsePlan(i)).filter(e => !e.warn).map(e => e.code);
+  assert.deepEqual(codesOf(base), []);
+  const over = clone(base); over.diaphragms[0].parts = [{ id: 'q', x1: '0', x2: '160', y1: '0', y2: '50' }];
+  assert.deepEqual(codesOf(over), ['dg-part-opening'], 'a piece over the opening');
+  const out = bookToInputs(books.find(b => b.id === 'Ex3.5')); out.diaphragms[0].parts[0].y1 = '0';
+  assert.deepEqual(codesOf(out), ['dg-part-outside'], 'a piece past the notch');
+  const lap = clone(base); lap.diaphragms[0].parts[3].x1 = '30'; lap.diaphragms[0].parts[3].y1 = '0';
+  assert.ok(codesOf(lap).includes('dg-part-overlap'));
+  const apart = clone(base); apart.diaphragms[0].parts.splice(0, 1, { id: 'z', x1: '0', x2: '10', y1: '0', y2: '50' });
+  assert.ok(codesOf(apart).includes('dg-split'), 'a piece that touches no other');
+  const ex41 = bookToInputs(books.find(b => b.id === 'Ex4.1'));
+  ex41.tds[0].x2 = '40'; // TD1 0–40: its corners and centre are on sheathing, but it crosses the notch 15–35 below y 10
+  assert.ok(codesOf(ex41).includes('td-outside'), 'TD check is exact (not corners only)');
+  assert.equal(calcAll(over).status !== 'ok', true, 'a hard check stops the analysis');
+});
+
+test('pieces: Fill between supports, + Piece tool, Delete removes the selected piece first', () => {
+  const { fillBetweenSupports } = editorMod;
+  const inputs = bookToInputs(books.find(b => b.id === 'Ex3.5'));
+  const d = inputs.diaphragms[0];
+  const want = pieces(d);
+  d.parts = [];
+  assert.ok(codesOfAll(inputs).includes('dg-parts'));
+  const st = newEditorState();
+  assert.equal(fillBetweenSupports(inputs, parsePlan(inputs), d.id, st), 3);
+  assert.deepEqual(pieces(d), want, 'fill gives the same pieces as the book layout');
+  // Ex 3.3: D2 (25–125, supports C / A, load along x) filled with D1 present takes only the free sheathing
+  const e33 = bookToInputs(books.find(b => b.id === 'Ex3.3'));
+  const d2 = e33.diaphragms[1], w2 = pieces(d2);
+  d2.parts = [];
+  fillBetweenSupports(e33, parsePlan(e33), d2.id, st);
+  assert.deepEqual(pieces(d2), w2, 'same as the book layout (D2 = 25–125 × C–A)');
+  assert.ok(!planErrors(parsePlan(e33)).some(e => e.code === 'dg-overlap'), 'never overlaps D1');
+  // + Piece: select D1, draw over the whole plan → nothing free; delete a piece, draw it again → added back
+  st.sel = { kind: 'diaphragm', id: d.id, part: d.parts[2].id };
+  assert.ok(deleteSelected(inputs, st));
+  assert.equal(d.parts.length, 2, 'only the selected piece is deleted');
+  st.tool = 'piece'; st.dir = 'y';
+  applyClick(inputs, parsePlan(inputs), st, { x: 0, y: 0 });
+  assert.ok(applyClick(inputs, parsePlan(inputs), st, { x: 120, y: 50 }, 10));
+  assert.deepEqual(pieces(d), want.slice(0, 2).concat([[90, 120, 0, 20]]));
+  st.tool = 'piece'; st.sel = null;
+  applyClick(inputs, parsePlan(inputs), st, { x: 0, y: 0 });
+  assert.ok(/Select the diaphragm/.test(st.message), 'the piece tool needs a selected diaphragm');
+});
+function codesOfAll(i) { return planErrors(parsePlan(i)).map(e => e.code); }
+
+test('Plan tab filter: diaphragms, TDs and openings can be hidden (view only)', () => {
+  const inputs = bookToInputs(books.find(b => b.id === 'Ex5.1'));
+  const pl = parsePlan(inputs);
+  const on = newEditorState();
+  const all = drawPlan(pl, on, []).svg.outerHTML;
+  assert.ok(all.includes('>TD1<') && all.includes('>OP1<') && all.includes('>D1<'));
+  const off = { ...newEditorState(), layers: { diaphragms: false, tds: false, openings: false } };
+  const none = drawPlan(pl, off, []).svg.outerHTML;
+  assert.ok(!none.includes('>TD1<') && !none.includes('>OP1<') && !none.includes('>D1<'));
+  const box = document.createElement('div');
+  const st = newEditorState();
+  box.appendChild(editorMod.renderPlanEditor({ inputs, plan: pl, errors: [], state: st, refresh() {} }));
+  assert.equal(box.querySelectorAll('input[data-layer]').length, 3, 'three show / hide boxes on the Plan tab');
+  assert.deepEqual(inputs, bookToInputs(books.find(b => b.id === 'Ex5.1')), 'nothing stored');
 });
 
 console.log(passed + ' passed');

@@ -1,0 +1,1127 @@
+{
+"note": "Project 26998 Cotoros Main Test (user test), item Diaphragm - Roof Level, saved 2026-11-09 22:05:23.830953+00",
+"type": "diaphragm_analysis",
+"schemaVersion": 2,
+"id": "a0978f12-f7c0-40bb-983f-7d12e029e9cd",
+"inputs": {
+"tds": [
+{
+"id": "td-mw59nw8v-3",
+"x1": "8",
+"x2": "33",
+"y1": "51",
+"y2": "57",
+"dir": "y",
+"mark": "TD1",
+"loads": [
+{
+"side": "-",
+"gridId": "gr-mw2oxv8a-a"
+}
+],
+"engineer": {
+"closureTol": "",
+"regionClear": null,
+"cantileverOk": true
+},
+"overhang": null,
+"supports": [
+"gr-mw2oxvxk-b",
+"gr-mw2oxupb-9"
+],
+"loadsMode": "manual",
+"overhangs": [
+{
+"at": "",
+"toId": "gr-mw3vff1v-2",
+"fromId": "gr-mw2oxupb-9"
+}
+]
+},
+{
+"id": "td-mw5a00jy-b",
+"x1": "33",
+"x2": "70",
+"y1": "57",
+"y2": "72",
+"dir": "y",
+"mark": "TD4",
+"loads": [
+{
+"side": "-",
+"gridId": "gr-mw2oz46o-e"
+}
+],
+"engineer": {
+"closureTol": "",
+"regionClear": null,
+"cantileverOk": null
+},
+"overhang": null,
+"supports": [
+"gr-mw3wfmwk-3",
+"gr-mw2oxvxk-b"
+],
+"loadsMode": "manual",
+"overhangs": []
+},
+{
+"id": "td-mw5a2xkb-j",
+"x1": "87",
+"x2": "100",
+"y1": "57",
+"y2": "85",
+"dir": "x",
+"mark": "TD5",
+"loads": [
+{
+"side": "+",
+"gridId": "gr-mw2pkz5c-o"
+}
+],
+"engineer": {
+"closureTol": "",
+"regionClear": null,
+"cantileverOk": null
+},
+"overhang": null,
+"supports": [
+"gr-mw2pkvk9-m",
+"gr-mw2pl2i2-q"
+],
+"loadsMode": "manual",
+"overhangs": [
+{
+"at": "",
+"toId": "gr-mw2r22o9-y",
+"fromId": "gr-mw2pkvk9-m"
+}
+]
+},
+{
+"id": "td-mw5a4ib5-l",
+"x1": "20.5",
+"x2": "27",
+"y1": "39.5",
+"y2": "57",
+"dir": "x",
+"mark": "TD6",
+"loads": [
+{
+"side": "+",
+"gridId": "gr-mw2pl4cy-r"
+}
+],
+"engineer": {
+"closureTol": "",
+"regionClear": null,
+"cantileverOk": null
+},
+"overhang": null,
+"supports": [
+"gr-mw2pl2i2-q",
+"gr-mw2pl8rl-t"
+],
+"loadsMode": "manual",
+"overhangs": [
+{
+"at": "",
+"toId": "gr-mw2pu3kv-w",
+"fromId": "gr-mw2pl8rl-t"
+}
+]
+},
+{
+"id": "td-mw5a6ocl-n",
+"x1": "33",
+"x2": "70",
+"y1": "57",
+"y2": "85",
+"dir": "x",
+"mark": "TD8",
+"loads": [
+{
+"side": "-",
+"gridId": "gr-mw2pkw1b-n"
+},
+{
+"side": "-",
+"gridId": "gr-mw2pl0lf-p"
+}
+],
+"engineer": {
+"closureTol": "",
+"regionClear": null,
+"cantileverOk": null
+},
+"overhang": null,
+"supports": [
+"gr-mw2pkvk9-m",
+"gr-mw2pl2i2-q"
+],
+"loadsMode": "manual",
+"overhangs": [
+{
+"at": "",
+"toId": "gr-mw2r22o9-y",
+"fromId": "gr-mw2pkvk9-m"
+}
+]
+},
+{
+"id": "td-mw5b2k4m-q",
+"x1": "33",
+"x2": "70",
+"y1": "51",
+"y2": "62",
+"dir": "y",
+"mark": "TD2",
+"loads": [
+{
+"side": "-",
+"gridId": "gr-mw2oz3qa-d"
+}
+],
+"engineer": {
+"closureTol": "",
+"regionClear": null,
+"cantileverOk": null
+},
+"overhang": null,
+"supports": [
+"gr-mw3wfmwk-3",
+"gr-mw2oxvxk-b"
+],
+"loadsMode": "manual",
+"overhangs": []
+},
+{
+"id": "td-mw5bfh17-r",
+"x1": "87",
+"x2": "100",
+"y1": "44",
+"y2": "85",
+"dir": "y",
+"mark": "TD9",
+"loads": [],
+"engineer": {
+"closureTol": "",
+"regionClear": null,
+"cantileverOk": null
+},
+"overhang": null,
+"supports": [
+"gr-mw2r22o9-y",
+"gr-mw3vc0dp-1"
+],
+"loadsMode": "auto",
+"overhangs": []
+},
+{
+"id": "td-mw5cwpqv-t",
+"x1": "8",
+"x2": "33",
+"y1": "51",
+"y2": "80",
+"dir": "y",
+"mark": "TD3",
+"loads": [
+{
+"side": "-",
+"gridId": "gr-mw2pl2i2-q"
+}
+],
+"engineer": {
+"closureTol": "",
+"regionClear": null,
+"cantileverOk": null
+},
+"overhang": null,
+"supports": [
+"gr-mw2pl4cy-r",
+"gr-mw2rbxc6-12"
+],
+"loadsMode": "manual",
+"overhangs": []
+}
+],
+"refs": {
+"wallSource": "4e4cdfac-440b-4cee-82c9-2706d687f833"
+},
+"grids": [
+{
+"at": "0",
+"id": "gr-mw2oxkn8-1",
+"to": "",
+"ref": false,
+"axis": "x",
+"from": "30",
+"name": "O"
+},
+{
+"at": "3",
+"id": "gr-mw2oxkn8-2",
+"to": "",
+"ref": false,
+"axis": "x",
+"from": "30",
+"name": "A"
+},
+{
+"at": "11",
+"id": "gr-mw2oxupb-9",
+"to": "",
+"ref": false,
+"axis": "x",
+"from": "30",
+"name": "B"
+},
+{
+"at": "27",
+"id": "gr-mw2oxv8a-a",
+"to": "",
+"ref": false,
+"axis": "x",
+"from": "30",
+"name": "C"
+},
+{
+"at": "33",
+"id": "gr-mw2oxvxk-b",
+"to": "",
+"ref": false,
+"axis": "x",
+"from": "30",
+"name": "D"
+},
+{
+"at": "48",
+"id": "gr-mw2oz34d-c",
+"to": "",
+"ref": false,
+"axis": "x",
+"from": "30",
+"name": "E"
+},
+{
+"at": "57",
+"id": "gr-mw2oz3qa-d",
+"to": "",
+"ref": false,
+"axis": "x",
+"from": "30",
+"name": "F"
+},
+{
+"at": "66",
+"id": "gr-mw2oz46o-e",
+"to": "",
+"ref": false,
+"axis": "x",
+"from": "30",
+"name": "G"
+},
+{
+"at": "67.5",
+"id": "gr-mw2oz4mx-f",
+"to": "",
+"ref": false,
+"axis": "x",
+"from": "30",
+"name": "H"
+},
+{
+"at": "83",
+"id": "gr-mw2pcj3i-g",
+"to": "",
+"ref": false,
+"axis": "x",
+"from": "",
+"name": "J"
+},
+{
+"at": "109",
+"id": "gr-mw2pjgh4-h",
+"to": "",
+"ref": false,
+"axis": "x",
+"from": "",
+"name": "M"
+},
+{
+"at": "93",
+"id": "gr-mw2pjz9d-i",
+"to": "",
+"ref": false,
+"axis": "x",
+"from": "",
+"name": "K"
+},
+{
+"at": "100",
+"id": "gr-mw2pk2w4-j",
+"to": "",
+"ref": false,
+"axis": "x",
+"from": "",
+"name": "L"
+},
+{
+"at": "94",
+"id": "gr-mw2pku3q-l",
+"to": "",
+"ref": false,
+"axis": "y",
+"from": "",
+"name": "1"
+},
+{
+"at": "82",
+"id": "gr-mw2pkvk9-m",
+"to": "",
+"ref": false,
+"axis": "y",
+"from": "",
+"name": "2"
+},
+{
+"at": "77",
+"id": "gr-mw2pkw1b-n",
+"to": "",
+"ref": false,
+"axis": "y",
+"from": "",
+"name": "3"
+},
+{
+"at": "72",
+"id": "gr-mw2pkz5c-o",
+"to": "",
+"ref": false,
+"axis": "y",
+"from": "",
+"name": "4"
+},
+{
+"at": "62",
+"id": "gr-mw2pl0lf-p",
+"to": "",
+"ref": false,
+"axis": "y",
+"from": "",
+"name": "5"
+},
+{
+"at": "57",
+"id": "gr-mw2pl2i2-q",
+"to": "",
+"ref": false,
+"axis": "y",
+"from": "",
+"name": "6"
+},
+{
+"at": "51",
+"id": "gr-mw2pl4cy-r",
+"to": "",
+"ref": false,
+"axis": "y",
+"from": "",
+"name": "7"
+},
+{
+"at": "47",
+"id": "gr-mw2pl6ij-s",
+"to": "",
+"ref": false,
+"axis": "y",
+"from": "50",
+"name": "8"
+},
+{
+"at": "42.5",
+"id": "gr-mw2pl8rl-t",
+"to": "40",
+"ref": false,
+"axis": "y",
+"from": "",
+"name": "9"
+},
+{
+"at": "39",
+"id": "gr-mw2plasv-u",
+"to": "",
+"ref": false,
+"axis": "y",
+"from": "80",
+"name": "10"
+},
+{
+"at": "0",
+"id": "gr-mw2plfif-v",
+"to": "",
+"ref": false,
+"axis": "y",
+"from": "80",
+"name": "11"
+},
+{
+"at": "39.5",
+"id": "gr-mw2pu3kv-w",
+"to": "",
+"ref": false,
+"axis": "y",
+"from": "",
+"name": "9.8"
+},
+{
+"at": "54",
+"id": "gr-mw2r1pr5-x",
+"to": "",
+"ref": false,
+"axis": "y",
+"from": "",
+"name": "6.5"
+},
+{
+"at": "85",
+"id": "gr-mw2r22o9-y",
+"to": "",
+"ref": false,
+"axis": "y",
+"from": "",
+"name": "1.7"
+},
+{
+"at": "87",
+"id": "gr-mw2r2t1u-z",
+"to": "",
+"ref": false,
+"axis": "y",
+"from": "",
+"name": "1.5"
+},
+{
+"at": "112",
+"id": "gr-mw2r74wr-10",
+"to": "",
+"ref": false,
+"axis": "x",
+"from": "",
+"name": "P"
+},
+{
+"at": "80",
+"id": "gr-mw2r7o01-11",
+"to": "",
+"ref": false,
+"axis": "x",
+"from": "",
+"name": "I"
+},
+{
+"at": "80",
+"id": "gr-mw2rbxc6-12",
+"to": "",
+"ref": false,
+"axis": "y",
+"from": "",
+"name": "2.6"
+},
+{
+"at": "44",
+"id": "gr-mw3vc0dp-1",
+"to": "",
+"ref": false,
+"axis": "y",
+"from": "50",
+"name": "8.8"
+},
+{
+"at": "8",
+"id": "gr-mw3vff1v-2",
+"to": "",
+"ref": false,
+"axis": "x",
+"from": "30",
+"name": "A.8"
+},
+{
+"at": "70",
+"id": "gr-mw3wfmwk-3",
+"to": "",
+"ref": false,
+"axis": "x",
+"from": "30",
+"name": "H.3"
+},
+{
+"at": "43.33",
+"id": "gr-mw4b4q7v-1",
+"to": "",
+"ref": false,
+"axis": "x",
+"from": "30",
+"name": "D.6"
+},
+{
+"at": "42.5",
+"id": "gr-mw9qsob9-3",
+"to": "",
+"ref": false,
+"axis": "y",
+"from": "40",
+"name": "9E"
+}
+],
+"level": {
+"fx": "60",
+"name": "Roof",
+"collectorFactor": "",
+"diaphragmFactor": ""
+},
+"loads": [
+{
+"id": "ld-mw2oxkn8-7",
+"psf": "",
+"acts": "-y",
+"kind": "",
+"mode": "seismic",
+"edgeId": "",
+"segments": []
+},
+{
+"id": "ld-mw2oxkn8-8",
+"psf": "",
+"acts": "+x",
+"kind": "",
+"mode": "seismic",
+"edgeId": "",
+"segments": []
+}
+],
+"notes": "",
+"walls": [],
+"noLoad": {
+"E": false,
+"W": false
+},
+"outline": [
+{
+"x": "0",
+"y": "57"
+},
+{
+"x": "0",
+"y": "80"
+},
+{
+"x": "33",
+"y": "80"
+},
+{
+"x": "33",
+"y": "85"
+},
+{
+"x": "100",
+"y": "85"
+},
+{
+"x": "100",
+"y": "72"
+},
+{
+"x": "112",
+"y": "72"
+},
+{
+"x": "112",
+"y": "44"
+},
+{
+"x": "66",
+"y": "44"
+},
+{
+"x": "66",
+"y": "42.5"
+},
+{
+"x": "57",
+"y": "42.5"
+},
+{
+"x": "57",
+"y": "51"
+},
+{
+"x": "27",
+"y": "51"
+},
+{
+"x": "27",
+"y": "39.5"
+},
+{
+"x": "8",
+"y": "39.5"
+},
+{
+"x": "8",
+"y": "57"
+}
+],
+"openings": [],
+"wallLink": {
+"dirMap": {},
+"groups": [
+{
+"id": "grp-mw59jy4r-0",
+"name": "2/3",
+"exclude": [],
+"lineIds": [
+"ln-11",
+"ln-12"
+]
+},
+{
+"id": "grp-mw59k9o0-1",
+"name": "5/6",
+"exclude": [],
+"lineIds": [
+"ln-13",
+"ln-14"
+]
+},
+{
+"id": "grp-mw59kkkv-2",
+"name": "C/D",
+"exclude": [],
+"lineIds": [
+"ln-5",
+"ln-4"
+]
+},
+{
+"id": "grp-mw59ks4f-3",
+"name": "G/H.3",
+"exclude": [],
+"lineIds": [
+"ln-7",
+"ln-8"
+]
+}
+],
+"origins": {},
+"lineGrid": {
+"ln-1": {
+"toId": "gr-mw2rbxc6-12",
+"fromId": "gr-mw2pl2i2-q"
+},
+"ln-2": {
+"toId": "gr-mw2pjgh4-h",
+"fromId": "gr-mw2oz4mx-f"
+},
+"ln-3": {
+"toId": "gr-mw2rbxc6-12",
+"fromId": "gr-mw2pu3kv-w"
+},
+"ln-4": {
+"toId": "gr-mw2pl2i2-q",
+"fromId": "gr-mw2pu3kv-w"
+},
+"ln-5": {
+"toId": "gr-mw2r22o9-y",
+"fromId": "gr-mw2pl4cy-r"
+},
+"ln-6": {
+"toId": "gr-mw2pl0lf-p",
+"fromId": "gr-mw2pl6ij-s"
+},
+"ln-7": {
+"toId": "gr-mw2r22o9-y",
+"fromId": "gr-mw2pl8rl-t"
+},
+"ln-8": {
+"toId": "gr-mw2r22o9-y",
+"fromId": "gr-mw2pl6ij-s"
+},
+"ln-9": {
+"toId": "gr-mw2plasv-u",
+"fromId": "gr-mw2plfif-v"
+},
+"ln-10": {
+"toId": "gr-mw2pkz5c-o",
+"fromId": "gr-mw2plfif-v"
+},
+"ln-11": {
+"fromId": "gr-mw2oxkn8-1"
+}
+}
+},
+"diaphragm": {
+"blocked": true,
+"sheathing": "wsp"
+},
+"pdfReport": "summary",
+"diaphragms": [
+{
+"id": "dg-mw59mpnx-2",
+"dir": "y",
+"mark": "D1",
+"parts": [
+{
+"id": "dg-mw59mpnx-2-p1",
+"x1": "0",
+"x2": "33",
+"y1": "57",
+"y2": "80"
+},
+{
+"id": "dg-mw59mpnx-2-p2",
+"x1": "8",
+"x2": "33",
+"y1": "51",
+"y2": "57"
+}
+],
+"blocked": null,
+"chordCut": "",
+"supports": [
+"gr-mw2oxupb-9",
+"gr-mw2oxvxk-b"
+],
+"bandSplit": "",
+"sheathing": ""
+},
+{
+"id": "dg-mw59sk86-7",
+"dir": "y",
+"mark": "D3",
+"parts": [
+{
+"id": "dg-mw59sk86-7-p1",
+"x1": "70",
+"x2": "100",
+"y1": "72",
+"y2": "85"
+},
+{
+"id": "dg-mw59sk86-7-p2",
+"x1": "70",
+"x2": "112",
+"y1": "44",
+"y2": "72"
+}
+],
+"blocked": null,
+"chordCut": "",
+"supports": [
+"gr-mw3wfmwk-3",
+"gr-mw2pjgh4-h"
+],
+"bandSplit": "",
+"sheathing": ""
+},
+{
+"id": "dg-mw59zkcd-a",
+"dir": "y",
+"mark": "D2",
+"parts": [
+{
+"id": "dg-mw59zkcd-a-p1",
+"x1": "33",
+"x2": "70",
+"y1": "57",
+"y2": "85"
+}
+],
+"blocked": null,
+"chordCut": "",
+"supports": [
+"gr-mw2oxvxk-b",
+"gr-mw3wfmwk-3"
+],
+"bandSplit": "",
+"sheathing": ""
+},
+{
+"id": "dg-mw5a15x7-c",
+"dir": "x",
+"mark": "D1",
+"parts": [
+{
+"id": "dg-mw5a15x7-c-p1",
+"x1": "0",
+"x2": "33",
+"y1": "57",
+"y2": "80"
+}
+],
+"blocked": null,
+"chordCut": "",
+"supports": [
+"gr-mw2pl2i2-q",
+"gr-mw2pkw1b-n"
+],
+"bandSplit": "",
+"sheathing": ""
+},
+{
+"id": "dg-mw5a17cn-d",
+"dir": "x",
+"mark": "D2",
+"parts": [
+{
+"id": "dg-mw5a17cn-d-p1",
+"x1": "8",
+"x2": "27",
+"y1": "39.5",
+"y2": "57"
+}
+],
+"blocked": null,
+"chordCut": "",
+"supports": [
+"gr-mw2pl8rl-t",
+"gr-mw2pl2i2-q"
+],
+"bandSplit": "",
+"sheathing": ""
+},
+{
+"id": "dg-mw5a1wik-e",
+"dir": "x",
+"mark": "D3",
+"parts": [
+{
+"id": "dg-mw5a1wik-e-p1",
+"x1": "33",
+"x2": "100",
+"y1": "57",
+"y2": "85"
+}
+],
+"blocked": null,
+"chordCut": "",
+"supports": [
+"gr-mw2pl2i2-q",
+"gr-mw2pkvk9-m"
+],
+"bandSplit": "",
+"sheathing": ""
+},
+{
+"id": "dg-mw5a252e-f",
+"dir": "x",
+"mark": "D4",
+"parts": [
+{
+"id": "dg-mw5a252e-f-p1",
+"x1": "27",
+"x2": "48",
+"y1": "51",
+"y2": "57"
+}
+],
+"blocked": null,
+"chordCut": "",
+"supports": [
+"gr-mw2pl4cy-r",
+"gr-mw2pl2i2-q"
+],
+"bandSplit": "",
+"sheathing": ""
+},
+{
+"id": "dg-mw5a28of-g",
+"dir": "x",
+"mark": "D5",
+"parts": [
+{
+"id": "dg-mw5a28of-g-p1",
+"x1": "48",
+"x2": "57",
+"y1": "51",
+"y2": "57"
+}
+],
+"blocked": null,
+"chordCut": "",
+"supports": [
+"gr-mw2pl4cy-r",
+"gr-mw2pl2i2-q"
+],
+"bandSplit": "",
+"sheathing": ""
+},
+{
+"id": "dg-mw5a2e39-h",
+"dir": "x",
+"mark": "D6",
+"parts": [
+{
+"id": "dg-mw5a2e39-h-p1",
+"x1": "57",
+"x2": "66",
+"y1": "42.5",
+"y2": "44"
+},
+{
+"id": "dg-mw5a2e39-h-p2",
+"x1": "57",
+"x2": "100",
+"y1": "44",
+"y2": "57"
+}
+],
+"blocked": null,
+"chordCut": "",
+"supports": [
+"gr-mw2pl6ij-s",
+"gr-mw2pl2i2-q"
+],
+"bandSplit": "",
+"sheathing": ""
+},
+{
+"id": "dg-mw5a2g1c-i",
+"dir": "x",
+"mark": "D7",
+"parts": [
+{
+"id": "dg-mw5a2g1c-i-p1",
+"x1": "100",
+"x2": "112",
+"y1": "44",
+"y2": "57"
+}
+],
+"blocked": null,
+"chordCut": "",
+"supports": [
+"gr-mw2pl6ij-s",
+"gr-mw2pl2i2-q"
+],
+"bandSplit": "",
+"sheathing": ""
+},
+{
+"id": "dg-mw5a42a3-k",
+"dir": "x",
+"mark": "D8",
+"parts": [
+{
+"id": "dg-mw5a42a3-k-p1",
+"x1": "100",
+"x2": "112",
+"y1": "57",
+"y2": "72"
+}
+],
+"blocked": null,
+"chordCut": "",
+"supports": [
+"gr-mw2pl2i2-q",
+"gr-mw2pkz5c-o"
+],
+"bandSplit": "",
+"sheathing": ""
+},
+{
+"id": "dg-mw5b1q44-o",
+"dir": "y",
+"mark": "D4",
+"parts": [
+{
+"id": "dg-mw5b1q44-o-p1",
+"x1": "57",
+"x2": "66",
+"y1": "42.5",
+"y2": "51"
+}
+],
+"blocked": null,
+"chordCut": "",
+"supports": [
+"gr-mw2oz3qa-d",
+"gr-mw2oz46o-e"
+],
+"bandSplit": "",
+"sheathing": ""
+},
+{
+"id": "dg-mw5b1riw-p",
+"dir": "y",
+"mark": "D5",
+"parts": [
+{
+"id": "dg-mw5b1riw-p-p1",
+"x1": "66",
+"x2": "70",
+"y1": "44",
+"y2": "57"
+}
+],
+"blocked": null,
+"chordCut": "",
+"supports": [
+"gr-mw2oz46o-e",
+"gr-mw3wfmwk-3"
+],
+"bandSplit": "",
+"sheathing": ""
+},
+{
+"id": "dg-mw5cu280-s",
+"dir": "y",
+"mark": "D6",
+"parts": [
+{
+"id": "dg-mw5cu280-s-p1",
+"x1": "8",
+"x2": "27",
+"y1": "39.5",
+"y2": "51"
+}
+],
+"blocked": null,
+"chordCut": "",
+"supports": [
+"gr-mw2oxupb-9",
+"gr-mw2oxv8a-a"
+],
+"bandSplit": "",
+"sheathing": ""
+},
+{
+"id": "dg-mw5dz263-u",
+"dir": "y",
+"mark": "D7",
+"parts": [
+{
+"id": "dg-mw5dz263-u-p1",
+"x1": "33",
+"x2": "66",
+"y1": "51",
+"y2": "57"
+}
+],
+"blocked": null,
+"chordCut": "",
+"supports": [
+"gr-mw2oxvxk-b",
+"gr-mw2oz46o-e"
+],
+"bandSplit": "",
+"sheathing": ""
+}
+],
+"codeEdition": "CBC-2025",
+"designBasis": "ASD",
+"gridsLocked": false,
+"schemaVersion": 2,
+"aboveCollectors": {}
+}
+}

@@ -1,0 +1,1279 @@
+{
+"note": "Project 26998 Cotoros Main Test (user test), item Diaphragm - 2nd Floor, saved 2026-11-09 22:03:38.243316+00",
+"type": "diaphragm_analysis",
+"schemaVersion": 2,
+"id": "e5a24ef2-8442-4c50-9b55-f7b1335d409b",
+"inputs": {
+"tds": [
+{
+"id": "td-mw5i0xkp-4",
+"x1": "0",
+"x2": "33",
+"y1": "57",
+"y2": "82",
+"dir": "y",
+"mark": "TD1",
+"loads": [
+{
+"side": "-",
+"gridId": "gr-mw2oxupb-9"
+},
+{
+"side": "-",
+"gridId": "gr-mw2oxv8a-a"
+}
+],
+"engineer": {
+"closureTol": "",
+"regionClear": null,
+"cantileverOk": null
+},
+"overhang": null,
+"supports": [
+"gr-mw2oxvxk-b",
+"gr-mw2oxkn8-2"
+],
+"loadsMode": "manual",
+"overhangs": [
+{
+"at": "",
+"toId": "gr-mw2oxkn8-1",
+"fromId": "gr-mw2oxkn8-2"
+}
+]
+},
+{
+"id": "td-mw5i2dc5-9",
+"x1": "33",
+"x2": "48",
+"y1": "57",
+"y2": "62",
+"dir": "y",
+"mark": "TD2",
+"loads": [
+{
+"side": "-",
+"gridId": "gr-mw4bbgzb-2"
+}
+],
+"engineer": {
+"closureTol": "",
+"regionClear": null,
+"cantileverOk": null
+},
+"overhang": null,
+"supports": [
+"gr-mw2oz34d-c",
+"gr-mw2oxvxk-b"
+],
+"loadsMode": "manual",
+"overhangs": []
+},
+{
+"id": "td-mw5i2emj-a",
+"x1": "48",
+"x2": "66",
+"y1": "57",
+"y2": "62",
+"dir": "y",
+"mark": "TD3",
+"loads": [],
+"engineer": {
+"closureTol": "",
+"regionClear": null,
+"cantileverOk": null
+},
+"overhang": null,
+"supports": [
+"gr-mw2oz46o-e",
+"gr-mw2oz34d-c"
+],
+"loadsMode": "auto",
+"overhangs": []
+},
+{
+"id": "td-mw5i6ph9-e",
+"x1": "100",
+"x2": "109",
+"y1": "62",
+"y2": "94",
+"dir": "y",
+"mark": "TD4",
+"loads": [],
+"engineer": {
+"closureTol": "",
+"regionClear": null,
+"cantileverOk": null
+},
+"overhang": null,
+"supports": [
+"gr-mw2pku3q-l",
+"gr-mw2pl0lf-p"
+],
+"loadsMode": "auto",
+"overhangs": []
+},
+{
+"id": "td-mw5icdfq-n",
+"x1": "0",
+"x2": "33",
+"y1": "57",
+"y2": "82",
+"dir": "x",
+"mark": "TD5",
+"loads": [
+{
+"side": "+",
+"gridId": "gr-mw2pkvk9-m"
+}
+],
+"engineer": {
+"closureTol": "",
+"regionClear": null,
+"cantileverOk": true
+},
+"overhang": null,
+"supports": [
+"gr-mw2pkw1b-n",
+"gr-mw2pl0lf-p"
+],
+"loadsMode": "manual",
+"overhangs": [
+{
+"at": "",
+"toId": "gr-mw2pkvk9-m",
+"fromId": "gr-mw2pkw1b-n"
+},
+{
+"at": "",
+"toId": "gr-mw2pl2i2-q",
+"fromId": "gr-mw2pl0lf-p"
+}
+]
+},
+{
+"id": "td-mw5idyec-r",
+"x1": "100",
+"x2": "109",
+"y1": "62",
+"y2": "82",
+"dir": "x",
+"mark": "TD6",
+"loads": [],
+"engineer": {
+"closureTol": "",
+"regionClear": null,
+"cantileverOk": null
+},
+"overhang": null,
+"supports": [
+"gr-mw2pkvk9-m",
+"gr-mw2pl0lf-p"
+],
+"loadsMode": "auto",
+"overhangs": []
+},
+{
+"id": "td-mw9o1dwc-4",
+"x1": "0",
+"x2": "33",
+"y1": "57",
+"y2": "67",
+"dir": "x",
+"mark": "TD7",
+"loads": [],
+"engineer": {
+"closureTol": "",
+"regionClear": null,
+"cantileverOk": null
+},
+"overhang": null,
+"supports": [
+"gr-mw2oxkn8-1",
+"gr-mw2oxvxk-b"
+],
+"loadsMode": "auto",
+"overhangs": []
+},
+{
+"id": "td-mw9od0dg-7",
+"x1": "80",
+"x2": "87.5",
+"y1": "39",
+"y2": "47",
+"dir": "x",
+"mark": "TD8",
+"loads": [],
+"engineer": {
+"closureTol": "",
+"regionClear": null,
+"cantileverOk": null
+},
+"overhang": null,
+"supports": [
+"gr-mw2pl6ij-s",
+"gr-mw2plasv-u"
+],
+"loadsMode": "auto",
+"overhangs": []
+}
+],
+"refs": {
+"gridSource": "a0978f12-f7c0-40bb-983f-7d12e029e9cd",
+"wallSource": "4e4cdfac-440b-4cee-82c9-2706d687f833"
+},
+"grids": [
+{
+"at": "0",
+"id": "gr-mw2oxkn8-1",
+"to": "",
+"ref": false,
+"axis": "x",
+"from": "30",
+"name": "O"
+},
+{
+"at": "3",
+"id": "gr-mw2oxkn8-2",
+"to": "",
+"ref": false,
+"axis": "x",
+"from": "30",
+"name": "A"
+},
+{
+"at": "11",
+"id": "gr-mw2oxupb-9",
+"to": "",
+"ref": false,
+"axis": "x",
+"from": "30",
+"name": "B"
+},
+{
+"at": "27",
+"id": "gr-mw2oxv8a-a",
+"to": "",
+"ref": false,
+"axis": "x",
+"from": "30",
+"name": "C"
+},
+{
+"at": "33",
+"id": "gr-mw2oxvxk-b",
+"to": "",
+"ref": false,
+"axis": "x",
+"from": "30",
+"name": "D"
+},
+{
+"at": "48",
+"id": "gr-mw2oz34d-c",
+"to": "",
+"ref": false,
+"axis": "x",
+"from": "30",
+"name": "E"
+},
+{
+"at": "57",
+"id": "gr-mw2oz3qa-d",
+"to": "",
+"ref": false,
+"axis": "x",
+"from": "30",
+"name": "F"
+},
+{
+"at": "66",
+"id": "gr-mw2oz46o-e",
+"to": "",
+"ref": false,
+"axis": "x",
+"from": "30",
+"name": "G"
+},
+{
+"at": "67.5",
+"id": "gr-mw2oz4mx-f",
+"to": "",
+"ref": false,
+"axis": "x",
+"from": "30",
+"name": "H"
+},
+{
+"at": "83",
+"id": "gr-mw2pcj3i-g",
+"to": "",
+"ref": false,
+"axis": "x",
+"from": "",
+"name": "J"
+},
+{
+"at": "109",
+"id": "gr-mw2pjgh4-h",
+"to": "",
+"ref": false,
+"axis": "x",
+"from": "",
+"name": "M"
+},
+{
+"at": "93",
+"id": "gr-mw2pjz9d-i",
+"to": "",
+"ref": false,
+"axis": "x",
+"from": "",
+"name": "K"
+},
+{
+"at": "100",
+"id": "gr-mw2pk2w4-j",
+"to": "",
+"ref": false,
+"axis": "x",
+"from": "",
+"name": "L"
+},
+{
+"at": "94",
+"id": "gr-mw2pku3q-l",
+"to": "",
+"ref": false,
+"axis": "y",
+"from": "",
+"name": "1"
+},
+{
+"at": "82",
+"id": "gr-mw2pkvk9-m",
+"to": "",
+"ref": false,
+"axis": "y",
+"from": "",
+"name": "2"
+},
+{
+"at": "77",
+"id": "gr-mw2pkw1b-n",
+"to": "",
+"ref": false,
+"axis": "y",
+"from": "",
+"name": "3"
+},
+{
+"at": "72",
+"id": "gr-mw2pkz5c-o",
+"to": "",
+"ref": false,
+"axis": "y",
+"from": "",
+"name": "4"
+},
+{
+"at": "62",
+"id": "gr-mw2pl0lf-p",
+"to": "",
+"ref": false,
+"axis": "y",
+"from": "",
+"name": "5"
+},
+{
+"at": "57",
+"id": "gr-mw2pl2i2-q",
+"to": "",
+"ref": false,
+"axis": "y",
+"from": "",
+"name": "6"
+},
+{
+"at": "51",
+"id": "gr-mw2pl4cy-r",
+"to": "",
+"ref": false,
+"axis": "y",
+"from": "",
+"name": "7"
+},
+{
+"at": "47",
+"id": "gr-mw2pl6ij-s",
+"to": "",
+"ref": false,
+"axis": "y",
+"from": "50",
+"name": "8"
+},
+{
+"at": "42.5",
+"id": "gr-mw2pl8rl-t",
+"to": "40",
+"ref": false,
+"axis": "y",
+"from": "",
+"name": "9"
+},
+{
+"at": "39",
+"id": "gr-mw2plasv-u",
+"to": "",
+"ref": false,
+"axis": "y",
+"from": "80",
+"name": "10"
+},
+{
+"at": "0",
+"id": "gr-mw2plfif-v",
+"to": "",
+"ref": false,
+"axis": "y",
+"from": "80",
+"name": "11"
+},
+{
+"at": "39.5",
+"id": "gr-mw2pu3kv-w",
+"to": "",
+"ref": false,
+"axis": "y",
+"from": "",
+"name": "9.8"
+},
+{
+"at": "54",
+"id": "gr-mw2r1pr5-x",
+"to": "",
+"ref": false,
+"axis": "y",
+"from": "",
+"name": "6.5"
+},
+{
+"at": "85",
+"id": "gr-mw2r22o9-y",
+"to": "",
+"ref": false,
+"axis": "y",
+"from": "",
+"name": "1.7"
+},
+{
+"at": "87",
+"id": "gr-mw2r2t1u-z",
+"to": "",
+"ref": false,
+"axis": "y",
+"from": "",
+"name": "1.5"
+},
+{
+"at": "112",
+"id": "gr-mw2r74wr-10",
+"to": "",
+"ref": false,
+"axis": "x",
+"from": "",
+"name": "P"
+},
+{
+"at": "80",
+"id": "gr-mw2r7o01-11",
+"to": "",
+"ref": false,
+"axis": "x",
+"from": "",
+"name": "I"
+},
+{
+"at": "80",
+"id": "gr-mw2rbxc6-12",
+"to": "",
+"ref": false,
+"axis": "y",
+"from": "",
+"name": "2.6"
+},
+{
+"at": "44",
+"id": "gr-mw3vc0dp-1",
+"to": "",
+"ref": false,
+"axis": "y",
+"from": "50",
+"name": "8.8"
+},
+{
+"at": "8",
+"id": "gr-mw3vff1v-2",
+"to": "",
+"ref": false,
+"axis": "x",
+"from": "30",
+"name": "A.8"
+},
+{
+"at": "70",
+"id": "gr-mw3wfmwk-3",
+"to": "",
+"ref": false,
+"axis": "x",
+"from": "30",
+"name": "H.3"
+},
+{
+"at": "43.33",
+"id": "gr-mw4bbgzb-2",
+"to": "",
+"ref": false,
+"axis": "x",
+"from": "30",
+"name": "D.6"
+},
+{
+"at": "42.5",
+"id": "gr-mw9qy81x-5",
+"to": "",
+"ref": false,
+"axis": "y",
+"from": "40",
+"name": "9E"
+}
+],
+"level": {
+"fx": "20",
+"name": "2nd Floor",
+"collectorFactor": "",
+"diaphragmFactor": ""
+},
+"loads": [
+{
+"id": "ld-mw2oxkn8-7",
+"psf": "",
+"acts": "-y",
+"kind": "",
+"mode": "seismic",
+"edgeId": "",
+"segments": []
+},
+{
+"id": "ld-mw2oxkn8-8",
+"psf": "",
+"acts": "+x",
+"kind": "",
+"mode": "seismic",
+"edgeId": "",
+"segments": []
+}
+],
+"notes": "",
+"walls": [],
+"noLoad": {
+"E": false,
+"W": true
+},
+"outline": [
+{
+"x": "0",
+"y": "57"
+},
+{
+"x": "0",
+"y": "82"
+},
+{
+"x": "33",
+"y": "82"
+},
+{
+"x": "66",
+"y": "82"
+},
+{
+"x": "66",
+"y": "94"
+},
+{
+"x": "109",
+"y": "94"
+},
+{
+"x": "109",
+"y": "72"
+},
+{
+"x": "112",
+"y": "72"
+},
+{
+"x": "112",
+"y": "43"
+},
+{
+"x": "112",
+"y": "0"
+},
+{
+"x": "80",
+"y": "0"
+},
+{
+"x": "80",
+"y": "42.5"
+},
+{
+"x": "43.33",
+"y": "42.5"
+},
+{
+"x": "43.33",
+"y": "57"
+},
+{
+"x": "27",
+"y": "57"
+},
+{
+"x": "27",
+"y": "39.5"
+},
+{
+"x": "8",
+"y": "39.5"
+},
+{
+"x": "8",
+"y": "57"
+}
+],
+"openings": [
+{
+"id": "op-mw4bczn8-3",
+"x1": "33",
+"x2": "66",
+"y1": "62",
+"y2": "82",
+"name": "OP1"
+},
+{
+"id": "op-mw4bdejo-4",
+"x1": "57",
+"x2": "66",
+"y1": "42.5",
+"y2": "57",
+"name": "OP2"
+}
+],
+"wallLink": {
+"dirMap": {},
+"groups": [
+{
+"id": "grp-mw5htp9z-1",
+"name": "C/D",
+"exclude": [],
+"lineIds": [
+"ln-4",
+"ln-5"
+]
+},
+{
+"id": "grp-mw5htt9f-2",
+"name": "2/3",
+"exclude": [],
+"lineIds": [
+"ln-11",
+"ln-12"
+]
+},
+{
+"id": "grp-mw5jcvez-3",
+"name": "A/B",
+"exclude": [],
+"lineIds": [
+"ln-1",
+"ln-3"
+]
+}
+],
+"origins": {},
+"lineGrid": {
+"ln-1": {
+"toId": "gr-mw2rbxc6-12",
+"fromId": "gr-mw2pl2i2-q"
+},
+"ln-2": {
+"toId": "gr-mw2pjgh4-h",
+"fromId": "gr-mw2oz4mx-f"
+},
+"ln-3": {
+"toId": "gr-mw2rbxc6-12",
+"fromId": "gr-mw2pu3kv-w"
+},
+"ln-4": {
+"toId": "gr-mw2pl2i2-q",
+"fromId": "gr-mw2pu3kv-w"
+},
+"ln-5": {
+"toId": "gr-mw2r22o9-y",
+"fromId": "gr-mw2pl4cy-r"
+},
+"ln-6": {
+"toId": "gr-mw2pl0lf-p",
+"fromId": "gr-mw2pl6ij-s"
+},
+"ln-7": {
+"toId": "gr-mw2r22o9-y",
+"fromId": "gr-mw2pl8rl-t"
+},
+"ln-8": {
+"toId": "gr-mw2r22o9-y",
+"fromId": "gr-mw2pl6ij-s"
+},
+"ln-9": {
+"toId": "gr-mw2plasv-u",
+"fromId": "gr-mw2plfif-v"
+},
+"ln-10": {
+"toId": "gr-mw2pkz5c-o",
+"fromId": "gr-mw2plfif-v"
+},
+"ln-11": {
+"fromId": "gr-mw2oxkn8-1"
+}
+}
+},
+"diaphragm": {
+"blocked": true,
+"sheathing": "wsp"
+},
+"pdfReport": "summary",
+"diaphragms": [
+{
+"id": "dg-mw5hyg7a-1",
+"dir": "y",
+"mark": "D1",
+"parts": [
+{
+"id": "dg-mw5hyg7a-1-p1",
+"x1": "0",
+"x2": "33",
+"y1": "57",
+"y2": "82"
+}
+],
+"blocked": null,
+"chordCut": "",
+"supports": [
+"gr-mw2oxkn8-2",
+"gr-mw2oxvxk-b"
+],
+"bandSplit": "",
+"sheathing": ""
+},
+{
+"id": "dg-mw5hyjl1-2",
+"dir": "y",
+"mark": "D2",
+"parts": [
+{
+"id": "dg-mw5hyjl1-2-p1",
+"x1": "8",
+"x2": "27",
+"y1": "39.5",
+"y2": "57"
+}
+],
+"blocked": null,
+"chordCut": "",
+"supports": [
+"gr-mw2oxupb-9",
+"gr-mw2oxv8a-a"
+],
+"bandSplit": "",
+"sheathing": ""
+},
+{
+"id": "dg-mw5i1hld-5",
+"dir": "y",
+"mark": "D3",
+"parts": [
+{
+"id": "dg-mw5i1hld-5-p1",
+"x1": "33",
+"x2": "48",
+"y1": "57",
+"y2": "62"
+}
+],
+"blocked": null,
+"chordCut": "",
+"supports": [
+"gr-mw2oxvxk-b",
+"gr-mw2oz34d-c"
+],
+"bandSplit": "",
+"sheathing": ""
+},
+{
+"id": "dg-mw5i1ir6-6",
+"dir": "y",
+"mark": "D4",
+"parts": [
+{
+"id": "dg-mw5i1ir6-6-p1",
+"x1": "48",
+"x2": "66",
+"y1": "57",
+"y2": "62"
+}
+],
+"blocked": null,
+"chordCut": "",
+"supports": [
+"gr-mw2oz34d-c",
+"gr-mw2oz46o-e"
+],
+"bandSplit": "",
+"sheathing": ""
+},
+{
+"id": "dg-mw5i27wc-7",
+"dir": "y",
+"mark": "D5",
+"parts": [
+{
+"id": "dg-mw5i27wc-7-p1",
+"x1": "43.33",
+"x2": "48",
+"y1": "42.5",
+"y2": "57"
+}
+],
+"blocked": null,
+"chordCut": "",
+"supports": [
+"gr-mw4bbgzb-2",
+"gr-mw2oz34d-c"
+],
+"bandSplit": "",
+"sheathing": ""
+},
+{
+"id": "dg-mw5i29i1-8",
+"dir": "y",
+"mark": "D6",
+"parts": [
+{
+"id": "dg-mw5i29i1-8-p1",
+"x1": "48",
+"x2": "57",
+"y1": "42.5",
+"y2": "57"
+}
+],
+"blocked": null,
+"chordCut": "",
+"supports": [
+"gr-mw2oz34d-c",
+"gr-mw2oz3qa-d"
+],
+"bandSplit": "",
+"sheathing": ""
+},
+{
+"id": "dg-mw5i2li8-b",
+"dir": "y",
+"mark": "D7",
+"parts": [
+{
+"id": "dg-mw5i2li8-b-p1",
+"x1": "66",
+"x2": "109",
+"y1": "72",
+"y2": "94"
+}
+],
+"blocked": null,
+"chordCut": "",
+"supports": [
+"gr-mw2oz46o-e",
+"gr-mw2pjgh4-h"
+],
+"bandSplit": "",
+"sheathing": ""
+},
+{
+"id": "dg-mw5i2ttq-c",
+"dir": "y",
+"mark": "D8",
+"parts": [
+{
+"id": "dg-mw5i2ttq-c-p1",
+"x1": "66",
+"x2": "112",
+"y1": "47",
+"y2": "72"
+}
+],
+"blocked": null,
+"chordCut": "",
+"supports": [
+"gr-mw2oz46o-e",
+"gr-mw2pjgh4-h"
+],
+"bandSplit": "",
+"sheathing": ""
+},
+{
+"id": "dg-mw5i2wrw-d",
+"dir": "y",
+"mark": "D9",
+"parts": [
+{
+"id": "dg-mw5i2wrw-d-p1",
+"x1": "80",
+"x2": "112",
+"y1": "0",
+"y2": "42.5"
+}
+],
+"blocked": null,
+"chordCut": "",
+"supports": [
+"gr-mw2pcj3i-g",
+"gr-mw2pjgh4-h"
+],
+"bandSplit": "",
+"sheathing": ""
+},
+{
+"id": "dg-mw5iaauh-g",
+"dir": "x",
+"mark": "D1",
+"parts": [
+{
+"id": "dg-mw5iaauh-g-p1",
+"x1": "0",
+"x2": "33",
+"y1": "62",
+"y2": "82"
+}
+],
+"blocked": null,
+"chordCut": "",
+"supports": [
+"gr-mw2pl0lf-p",
+"gr-mw2pkw1b-n"
+],
+"bandSplit": "",
+"sheathing": ""
+},
+{
+"id": "dg-mw5iam44-j",
+"dir": "x",
+"mark": "D4",
+"parts": [
+{
+"id": "dg-mw5iam44-j-p1",
+"x1": "33",
+"x2": "48",
+"y1": "57",
+"y2": "62"
+}
+],
+"blocked": null,
+"chordCut": "",
+"supports": [
+"gr-mw2pl2i2-q",
+"gr-mw2pl0lf-p"
+],
+"bandSplit": "",
+"sheathing": ""
+},
+{
+"id": "dg-mw5iap6r-k",
+"dir": "x",
+"mark": "D5",
+"parts": [
+{
+"id": "dg-mw5iap6r-k-p1",
+"x1": "48",
+"x2": "66",
+"y1": "57",
+"y2": "62"
+}
+],
+"blocked": null,
+"chordCut": "",
+"supports": [
+"gr-mw2pl2i2-q",
+"gr-mw2pl0lf-p"
+],
+"bandSplit": "",
+"sheathing": ""
+},
+{
+"id": "dg-mw5iaqos-l",
+"dir": "x",
+"mark": "D6",
+"parts": [
+{
+"id": "dg-mw5iaqos-l-p1",
+"x1": "43.33",
+"x2": "57",
+"y1": "42.5",
+"y2": "57"
+}
+],
+"blocked": null,
+"chordCut": "",
+"supports": [
+"gr-mw9qy81x-5",
+"gr-mw2pl2i2-q"
+],
+"bandSplit": "",
+"sheathing": ""
+},
+{
+"id": "dg-mw5idrqd-o",
+"dir": "x",
+"mark": "D7",
+"parts": [
+{
+"id": "dg-mw5idrqd-o-p1",
+"x1": "66",
+"x2": "109",
+"y1": "82",
+"y2": "94"
+}
+],
+"blocked": null,
+"chordCut": "",
+"supports": [
+"gr-mw2pkvk9-m",
+"gr-mw2pku3q-l"
+],
+"bandSplit": "",
+"sheathing": ""
+},
+{
+"id": "dg-mw5iduk4-p",
+"dir": "x",
+"mark": "D8",
+"parts": [
+{
+"id": "dg-mw5iduk4-p-p1",
+"x1": "66",
+"x2": "109",
+"y1": "62",
+"y2": "82"
+}
+],
+"blocked": null,
+"chordCut": "",
+"supports": [
+"gr-mw2pl0lf-p",
+"gr-mw2pkvk9-m"
+],
+"bandSplit": "",
+"sheathing": ""
+},
+{
+"id": "dg-mw5idvsp-q",
+"dir": "x",
+"mark": "D9",
+"parts": [
+{
+"id": "dg-mw5idvsp-q-p1",
+"x1": "109",
+"x2": "112",
+"y1": "62",
+"y2": "72"
+}
+],
+"blocked": null,
+"chordCut": "",
+"supports": [
+"gr-mw2pl0lf-p",
+"gr-mw2pkz5c-o"
+],
+"bandSplit": "",
+"sheathing": ""
+},
+{
+"id": "dg-mw5ie6fd-s",
+"dir": "x",
+"mark": "D10",
+"parts": [
+{
+"id": "dg-mw5ie6fd-s-p1",
+"x1": "66",
+"x2": "112",
+"y1": "47",
+"y2": "62"
+}
+],
+"blocked": null,
+"chordCut": "",
+"supports": [
+"gr-mw2pl6ij-s",
+"gr-mw2pl0lf-p"
+],
+"bandSplit": "",
+"sheathing": ""
+},
+{
+"id": "dg-mw5ieeqs-v",
+"dir": "x",
+"mark": "D13",
+"parts": [
+{
+"id": "dg-mw5ieeqs-v-p1",
+"x1": "80",
+"x2": "112",
+"y1": "0",
+"y2": "39"
+}
+],
+"blocked": null,
+"chordCut": "",
+"supports": [
+"gr-mw2plfif-v",
+"gr-mw2plasv-u"
+],
+"bandSplit": "",
+"sheathing": ""
+},
+{
+"id": "dg-mw9laadq-1",
+"dir": "y",
+"mark": "D10",
+"parts": [
+{
+"id": "dg-mw9laadq-1-p1",
+"x1": "66",
+"x2": "83",
+"y1": "42.5",
+"y2": "47"
+}
+],
+"blocked": null,
+"chordCut": "",
+"supports": [
+"gr-mw2oz46o-e",
+"gr-mw2pcj3i-g"
+],
+"bandSplit": "",
+"sheathing": ""
+},
+{
+"id": "dg-mw9ladgr-2",
+"dir": "y",
+"mark": "D11",
+"parts": [
+{
+"id": "dg-mw9ladgr-2-p1",
+"x1": "83",
+"x2": "112",
+"y1": "42.5",
+"y2": "47"
+}
+],
+"blocked": null,
+"chordCut": "",
+"supports": [
+"gr-mw2pcj3i-g",
+"gr-mw2pjgh4-h"
+],
+"bandSplit": "",
+"sheathing": ""
+},
+{
+"id": "dg-mw9o0hbx-3",
+"dir": "x",
+"mark": "D2",
+"parts": [
+{
+"id": "dg-mw9o0hbx-3-p1",
+"x1": "8",
+"x2": "27",
+"y1": "39.5",
+"y2": "57"
+},
+{
+"id": "dg-mw9o0hbx-3-p2",
+"x1": "0",
+"x2": "33",
+"y1": "57",
+"y2": "62"
+}
+],
+"blocked": null,
+"chordCut": "",
+"supports": [
+"gr-mw2pl8rl-t",
+"gr-mw2pl0lf-p"
+],
+"bandSplit": "",
+"sheathing": ""
+},
+{
+"id": "dg-mw9o413j-5",
+"dir": "x",
+"mark": "D3",
+"parts": [
+{
+"id": "dg-mw9o413j-5-p1",
+"x1": "80",
+"x2": "112",
+"y1": "39",
+"y2": "47"
+}
+],
+"blocked": null,
+"chordCut": "",
+"supports": [
+"gr-mw2plasv-u",
+"gr-mw2pl6ij-s"
+],
+"bandSplit": "",
+"sheathing": ""
+},
+{
+"id": "dg-mw9qyzoc-6",
+"dir": "x",
+"mark": "D11",
+"parts": [
+{
+"id": "dg-mw9qyzoc-6-p1",
+"x1": "66",
+"x2": "80",
+"y1": "42.5",
+"y2": "47"
+}
+],
+"blocked": null,
+"chordCut": "",
+"supports": [
+"gr-mw9qy81x-5",
+"gr-mw2pl6ij-s"
+],
+"bandSplit": "",
+"sheathing": ""
+}
+],
+"codeEdition": "CBC-2025",
+"designBasis": "ASD",
+"gridsLocked": true,
+"schemaVersion": 2,
+"aboveCollectors": {}
+}
+}

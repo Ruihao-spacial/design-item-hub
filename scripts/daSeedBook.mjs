@@ -54,6 +54,8 @@ let written = 0, failed = 0;
 for (const b of books) {
   const name = b.id + ' — ' + b.title;
   const inputs = diaphragmAnalysis.migrate({ schemaVersion: diaphragmAnalysis.schemaVersion, inputs: bookToInputs(b) }).inputs;
+  // a book example has one load kind: declare the other "none" (Setup), so the item shows no missing-load warning
+  for (const k of ['E', 'W']) inputs.noLoad[k] = !inputs.loads.some(l => (l.kind || (l.mode === 'seismic' ? 'E' : 'W')) === k);
   inputs.notes = 'Book example ' + b.id + ' (' + b.pdf + ', pp ' + b.pages + '). See the Verification tab.';
   let outputs;
   try { outputs = diaphragmAnalysis.calc(inputs); } catch (e) { failed++; console.log('FAIL  ' + name + ' — ' + e.message); continue; }

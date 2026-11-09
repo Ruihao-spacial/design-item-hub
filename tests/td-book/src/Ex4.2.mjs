@@ -27,6 +27,12 @@ export default {
       { line: 'C', mark: 'SW3', axis: 'y', at: 0, from: 0, to: 8 },
       { line: 'C', mark: 'SW4', axis: 'y', at: 0, from: 50, to: 100 },
     ],
+    // Book sub-diaphragms (p3-p5): bands 1-2 and 3-5 span C to A; the notch band 2-3 spans B to A
+    diaphragms: [
+      { mark: 'D1', x: [0, 15], y: [0, 50], supports: ['C', 'A'] },
+      { mark: 'D2', x: [15, 35], y: [10, 50], supports: ['B', 'A'] },
+      { mark: 'D3', x: [35, 150], y: [0, 50], supports: ['C', 'A'] },
+    ],
     tds: [
       { mark: 'TD1', x: [0, 15], y: [0, 50], supports: ['A', 'C'], loads: [{ grid: 'B', side: '+' }] },
       { mark: 'TD2', x: [35, 50], y: [0, 50], supports: ['A', 'C'], loads: [{ grid: 'B', side: '-' }] },

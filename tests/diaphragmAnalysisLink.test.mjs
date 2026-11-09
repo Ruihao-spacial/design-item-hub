@@ -93,23 +93,21 @@ test('matching checks: level name, grid name, direction mapping', () => {
   assert.ok(linkedWalls(inputs, parsePlan(inputs), odd).walls.some(w => w.mark === 'SW-1'), 'mapped by hand');
 });
 
-test('line length check: SWD line length must equal the plan length of its grid; flagged when not', () => {
+test('no line-length check (user 2026-11-05): any SWD length runs; a wall off the sheathing of its grid warns (not an error)', () => {
   const def = swdCase();
-  def.directions[0].lines[0].totalLength = 50;                       // grid 1 crosses the 100 × 50 plan: 50 ft
   const inputs = daCase();
-  const ok = linkedWalls(inputs, parsePlan(inputs), swdExtract(def));
-  const l1 = ok.lines.find(l => l.name === '1');
-  assert.equal(l1.planLength, 50);
-  assert.ok(!ok.issues.some(i => i.code === 'link-length'));
-  def.directions[0].lines[0].totalLength = 60;
-  const bad = linkedWalls(inputs, parsePlan(inputs), swdExtract(def));
-  const msg = bad.issues.find(i => i.code === 'link-length');
-  assert.ok(msg && /60 ft ≠ grid 1 in this plan 50 ft/.test(msg.msg), 'flagged with both lengths');
-  assert.equal(calcAll(inputs, { wallSource: swdExtract(def) }).status, 'fail', 'shown as a plan error');
-  // a notched outline: the grid line length runs from where it enters to where it leaves the sheathing
-  inputs.outline = [[0, 0], [100, 0], [100, 50], [10, 50], [10, 40], [0, 40]].map(([x, y]) => ({ x: String(x), y: String(y) }));
-  def.directions[0].lines[0].totalLength = 40;
-  assert.ok(!linkedWalls(inputs, parsePlan(inputs), swdExtract(def)).issues.some(i => i.code === 'link-length'), 'grid 1 (x = 0) is 40 ft long here');
+  for (const L of [50, 60, 120]) {
+    def.directions[0].lines[0].totalLength = L;
+    const lw = linkedWalls(inputs, parsePlan(inputs), swdExtract(def));
+    assert.ok(!lw.issues.some(i => i.code === 'link-length'), 'length ' + L);
+    assert.equal(lw.lines.find(l => l.name === '1').planLength, 50);
+    assert.deepEqual(lw.lines.find(l => l.name === '1').bands, [[0, 50]], 'sheathed stretch of grid 1');
+  }
+  assert.ok(!calcAll(inputs, { wallSource: swdExtract(def) }).errors.some(e => /^link-/.test(e.code)), 'nothing blocks the analysis');
+  // SW-1 (position 5, 20 ft) from origin 0 sits on 5–25; a typed origin of 40 puts it at 45–65, past the plan (0–50)
+  inputs.wallLink = { ...(inputs.wallLink || {}), origins: { [def.directions[0].lines[0].id]: '40' } };
+  const off = linkedWalls(inputs, parsePlan(inputs), swdExtract(def)).issues.find(i => i.code === 'link-wall-sheathing');
+  assert.ok(off && off.warn && /SW-1/.test(off.msg) && /0–50/.test(off.msg), off && off.msg);
 });
 
 test('link infra: DA reads the SWD definition (from inputs), SWD reads DA outputs (many) — no cycle, both resolve', () => {
@@ -120,7 +118,7 @@ test('link infra: DA reads the SWD definition (from inputs), SWD reads DA output
   assert.ok(daRefs.wallSource && daRefs.wallSource.directions.length >= 1, 'DA got the SWD definition');
   const daOut = currentOutputs(da, items[1], items);
   assert.equal(daOut.counts.walls, 2, 'DA results use the linked walls');
-  assert.deepEqual(daOut.lineForces, [], 'no line forces before Phase 4');
+  assert.ok(daOut.lineForces.length && daOut.lineForces.every(l => l.E === 0 && l.W === 0), 'line forces 0 while F_x is blank (Phase 4)');
   const swdRefs = refsFromItems(swdMod, swdDef, items, new Set(['swd-1']));
   assert.ok(Array.isArray(swdRefs.diaphragmSources) && swdRefs.diaphragmSources[0].id === 'da-1' && swdRefs.diaphragmSources[0].level === 'Roof');
   assert.ok(currentOutputs(swdMod, items[0], items), 'SWD still calculates');
@@ -171,15 +169,191 @@ test('DA form with the SWD item: link section, walls drawn read-only, Wall tool 
   diaphragmAnalysis.renderForm(box, daCase('swd-1'), () => {}, items, () => {}, {});
   const click = t => { const b = [...box.querySelectorAll('button')].find(x => x.textContent.startsWith(t)); b.dispatchEvent(new window.Event('click')); };
   click('Setup');
+  click('Shear wall link'); // Setup page of its own (2026-10-30)
   assert.ok(box.textContent.includes('Shear walls (from Shear Wall Design)'));
   assert.ok(box.textContent.includes('auto 0') || [...box.querySelectorAll('input')].some(i => i.getAttribute('placeholder') === 'auto 0'), 'origin auto shown');
   click('Plan');
   assert.ok(box.querySelector('svg').outerHTML.includes('SW-1'));
+  [...box.querySelectorAll('button')].find(b => b.textContent === 'Shear walls').dispatchEvent(new window.Event('click'));
   const wallBtn = [...box.querySelectorAll('button')].find(b => b.textContent === 'Wall');
   assert.ok(wallBtn.disabled, 'Wall tool disabled while linked');
   assert.ok(box.textContent.includes('from Shear Wall Design, read-only'));
   const out = calcAll(daCase('swd-1'), { wallSource: swdExtract(swdDef) });
   assert.equal(out.counts.walls, 2);
+});
+
+// ---- offset lines of linked walls, split like Shear Wall Design (option B, user 2026-11-03) ----
+const fs = await import('node:fs');
+const { bookToInputs } = await import('./td-book/src/toInputs.mjs');
+const { toolValue } = await import('../src/modules/tdBookKeys.js');
+const { planWithLinks } = await import('../src/modules/diaphragmAnalysis.js');
+const { calcAll: swdCalc } = await import('../src/modules/shearWallCalc.js');
+const book84 = () => JSON.parse(fs.readFileSync(new URL('./td-book/Ex8.4.json', import.meta.url), 'utf8'));
+// Ex 8.4 with its E-W walls in an SWD item: lines A, D, "E 4-7" (SW6) and "E 8-9" (SW7) — two SWD lines on grid E, each
+// on its own stretch (user 2026-11-03); offset line D/E = SWD lines D + E 4-7
+function linked84({ sw5 = {}, distribution = '', names = ['E 4-7', 'E 8-9'], lengths = null } = {}) {
+  const def = swdDefaults();
+  const roof = def.levels[0]; roof.name = 'Roof'; def.levels = [roof];
+  const proto = clone(def.directions[0].lines[0].walls[0] || {});
+  const W = (id, mark, pos, len, extra = {}) => ({ ...clone(proto), id, mark, levelId: roof.id, position: pos, length: len, ...extra });
+  def.directions = [{ ...clone(def.directions[0]), id: 'dir-ew', name: 'E-W', lines: [
+    { id: 'ln-A', name: 'A', totalLength: 0, levelLoads: {}, walls: [W('w4', 'SW4', 25, 25), W('w8', 'SW8', 88, 20)] },
+    { id: 'ln-D', name: 'D', totalLength: 0, levelLoads: {}, walls: [W('w5', 'SW5', 0, 10, sw5)] },
+    { id: 'ln-E1', name: names[0], totalLength: 0, levelLoads: {}, walls: [W('w6', 'SW6', 15, 50)] },
+    { id: 'ln-E2', name: names[1], totalLength: 0, levelLoads: {}, walls: [W('w7', 'SW7', 0, 25)] },
+  ] }];
+  if (distribution) def.directions[0].lines.forEach(l => { l.distribution = distribution; });
+  const inputs = bookToInputs(book84());
+  inputs.walls = []; inputs.level = { name: 'Roof', fx: '' }; inputs.refs = { wallSource: 'swd-1' };
+  inputs.wallLink = { dirMap: { 'dir-ew': 'x' }, origins: {}, groups: [{ id: 'g1', name: 'D/E', lineIds: ['ln-D', 'ln-E1'], exclude: [] }] };
+  const lw = linkedWalls(inputs, parsePlan(inputs), swdExtract(def));
+  for (const l of lw.lines) def.directions[0].lines.find(x => x.id === l.lineId).totalLength = lengths && lengths[l.lineId] !== undefined ? lengths[l.lineId] : l.planLength;
+  const swd = swdExtract(def);
+  const r = calcAll(inputs, { wallSource: swd });
+  const d2 = clone(def);
+  for (const lf of r.lineForces) d2.directions[0].lines.find(x => x.id === lf.swdLineId).levelLoads = { [roof.id]: { seismic: String(lf.E || 0), wind: '0' } };
+  const swdWalls = swdCalc(d2).perDirection[0].perLine.flatMap(l => l.perLevel[0].walls);
+  return { inputs, swd, r, lw, plan: planWithLinks(inputs, { wallSource: swd }).plan, swdWalls, daWall: m => r.analysis.cases[0].lines.flatMap(l => l.walls || []).find(w => w.mark === m) };
+}
+
+test('several SWD lines on one grid: "E 4-7" / "E 8-9" sit on grid E over their spans — origin at the span start, length checked against the span (65 / 25 ft), no length error', () => {
+  const { lw, r } = linked84();
+  const e1 = lw.lines.find(l => l.lineId === 'ln-E1'), e2 = lw.lines.find(l => l.lineId === 'ln-E2');
+  assert.equal(e1.grid.name, 'E'); assert.deepEqual(e1.span, [60, 125]); assert.equal(e1.origin, 60); assert.equal(e1.planLength, 65);
+  assert.equal(e2.grid.name, 'E'); assert.deepEqual(e2.span, [145, 170]); assert.equal(e2.origin, 145); assert.equal(e2.planLength, 25);
+  const sw7 = lw.walls.find(w => w.mark === 'SW7');
+  assert.deepEqual([Number(sw7.from), Number(sw7.to)], [145, 170]);
+  assert.deepEqual(r.errors.map(e => e.msg), []);
+  assert.ok(!r.warnings.some(w => /^link-/.test(w.code)), r.warnings.filter(w => /^link-/.test(w.code)).map(w => w.msg).join('; '));
+});
+
+test('several SWD lines on one grid: any SWD length runs (no length check); two lines over the same stretch are reported', () => {
+  const a = linked84({ lengths: { 'ln-E2': 30 } });
+  assert.ok(!a.r.errors.some(e => /^link-/.test(e.code)), a.r.errors.map(e => e.msg).join(' | '));
+  const b = linked84({ names: ['E', 'E 8-9'] }); // "E" = the whole grid, overlapping "E 8-9"
+  assert.ok(b.r.errors.some(e => e.code === 'link-overlap' && /"E" and "E 8-9"/.test(e.msg)), b.r.errors.map(e => e.msg).join(' | '));
+});
+
+test('Ex 8.4 with linked walls (SWD lines D + E 4-7 as offset line D/E, SW7 alone on E 8-9): every book value; each SWD line gets its own walls\' force; SWD designs the same wall forces', () => {
+  const { r, plan, swdWalls, daWall } = linked84();
+  assert.deepEqual(r.errors.map(e => e.msg), []);
+  assert.ok(!r.warnings.some(w => w.code === 'swd-group-partial'));
+  const fails = book84().expected.filter(e => e.k !== 'R:E7').filter(e => {
+    const want = e.vTool ?? e.v, got = toolValue(e.k, plan, r.analysis), tol = e.tol ?? Math.max(0.005 * Math.abs(want), 1);
+    return got === null || Math.abs(got - want) > tol;
+  }).map(e => e.k);
+  assert.deepEqual(fails, []);
+  assert.ok(Math.abs(toolValue('R:E 8-9', plan, r.analysis) - 9327) < 10, 'SW7 alone: section B 9327 lb');
+  const lf = id => r.lineForces.find(l => l.swdLineId === id).E * 1000;
+  assert.ok(Math.abs(lf('ln-E1') - daWall('SW6').share) < 1e-6 && Math.abs(lf('ln-E2') - daWall('SW7').share) < 1e-6, 'per SWD line, not the whole grid');
+  for (const m of ['SW5', 'SW6', 'SW7']) assert.ok(Math.abs(swdWalls.find(x => x.mark === m).shareExact_1E * 1000 - daWall(m).share) < 2, m + ' same force in SWD and DA');
+  assert.ok(r.analysis.cases[0].offset.converged && r.checks.every(c => c.ok), r.checks.filter(c => !c.ok).map(c => c.msg).join('; '));
+});
+
+test('Ex 8.4 linked, SW5 with heavier nailing: equal demand / capacity on SW5 and SW6 in SWD; SW7 keeps section B force; closes', () => {
+  const { r, swdWalls, daWall } = linked84({ sw5: { nailingPattern: '3' } });
+  const dc = m => { const w = swdWalls.find(x => x.mark === m); return w.unitShear_seismic / w.effectiveSeismicCap; };
+  assert.ok(Math.abs(dc('SW5') - dc('SW6')) < 1e-3, dc('SW5') + ' / ' + dc('SW6'));
+  // SW7 alone takes section B's half of Diaphragm 5's reaction, which moves a little with TD1's strut force
+  assert.ok(Math.abs(daWall('SW7').share - 9327) < 150, String(daWall('SW7').share));
+  assert.ok(Math.abs(r.lineForces.find(l => l.swdLineId === 'ln-E2').E * 1000 - daWall('SW7').share) < 1e-6);
+  assert.ok(r.analysis.cases[0].offset.converged && r.checks.every(c => c.ok), r.checks.filter(c => !c.ok).map(c => c.msg).join('; '));
+});
+
+test('several SWD lines on one continuous part of a grid ("E 4-6", "E 6-7"): warned (one diaphragm force split by SWD shares); a wall outside its span is warned', () => {
+  const { inputs, swd } = linked84({ names: ['E 4-6', 'E 6-7'], lengths: { 'ln-E1': 40, 'ln-E2': 25 } });
+  inputs.wallLink.groups = [];
+  const r = calcAll(inputs, { wallSource: swd });
+  assert.ok(r.warnings.some(w => w.code === 'link-wall-span' && /SW6/.test(w.msg)), 'SW6 (75-125) runs past E 4-6 (60-100)');
+  assert.ok(r.warnings.some(w => w.code === 'swd-lines-one-part' && /E 4-6, E 6-7/.test(w.msg)), r.warnings.map(w => w.code).join(', '));
+});
+
+test('Setup → Shear wall link: grid / span set by hand puts a line on its stretch (a line named "E2" → grid E, 8 to 9)', () => {
+  const { inputs, swd } = linked84({ names: ['E 4-7', 'E2'], lengths: { 'ln-E2': 25 } });
+  let r = calcAll(inputs, { wallSource: swd });
+  assert.ok(r.errors.some(e => e.code === 'link-grid' && /"E2"/.test(e.msg)), r.errors.map(e => e.msg).join(' | '));
+  const id = n => inputs.grids.find(g => g.name === n).id;
+  inputs.wallLink.lineGrid = { 'ln-E2': { gridId: id('E'), fromId: id('8'), toId: id('9') } };
+  r = calcAll(inputs, { wallSource: swd });
+  const l = r.wallLink.lines.find(x => x.lineId === 'ln-E2');
+  assert.equal(l.grid, 'E'); assert.deepEqual(l.span, [145, 170]); assert.equal(l.gridHow, 'set');
+  assert.ok(!r.errors.some(e => /^link-/.test(e.code)), r.errors.map(e => e.msg).join(' | '));
+});
+
+// Ex 3.3 with its walls in an SWD item: offset line B/C = whole SWD lines B and C (SW1; SW3 + SW4), the case option B
+// is for; the load as seismic (1.0E) so both distribution methods apply
+function linked33({ sw1 = {}, distribution = '' } = {}) {
+  const def = swdDefaults();
+  const roof = def.levels[0]; roof.name = 'Roof'; def.levels = [roof];
+  const proto = clone(def.directions[0].lines[0].walls[0] || {});
+  const W = (id, mark, pos, len, extra = {}) => ({ ...clone(proto), id, mark, levelId: roof.id, position: pos, length: len, ...extra });
+  def.directions = [{ ...clone(def.directions[0]), id: 'dir-ew', name: 'E-W', lines: [
+    { id: 'ln-A', name: 'A', totalLength: 0, levelLoads: {}, walls: [W('w2', 'SW2', 30, 10)] },
+    { id: 'ln-B', name: 'B', totalLength: 0, levelLoads: {}, walls: [W('w1', 'SW1', 0, 8, sw1)] },
+    { id: 'ln-C', name: 'C', totalLength: 0, levelLoads: {}, walls: [W('w3', 'SW3', 32, 8), W('w4', 'SW4', 85, 15)] },
+  ] }];
+  if (distribution) def.directions[0].lines.forEach(l => { l.distribution = distribution; });
+  const inputs = bookToInputs(JSON.parse(fs.readFileSync(new URL('./td-book/Ex3.3.json', import.meta.url), 'utf8')));
+  inputs.loads[0].kind = 'E';
+  inputs.walls = []; inputs.level = { name: 'Roof', fx: '' }; inputs.refs = { wallSource: 'swd-1' };
+  inputs.wallLink = { dirMap: { 'dir-ew': 'x' }, origins: {}, groups: [{ id: 'g1', name: 'B/C', lineIds: ['ln-B', 'ln-C'], exclude: [] }] };
+  const lw = linkedWalls(inputs, parsePlan(inputs), swdExtract(def));
+  for (const l of lw.lines) def.directions[0].lines.find(x => x.id === l.lineId).totalLength = l.planLength;
+  const swd = swdExtract(def);
+  const r = calcAll(inputs, { wallSource: swd });
+  const d2 = clone(def);
+  for (const lf of r.lineForces) d2.directions[0].lines.find(x => x.id === lf.swdLineId).levelLoads = { [roof.id]: { seismic: String(lf.E || 0), wind: '0' } };
+  const swdWalls = swdCalc(d2).perDirection[0].perLine.flatMap(l => l.perLevel[0].walls);
+  return { r, swdWalls, plan: planWithLinks(inputs, { wallSource: swd }).plan, daWall: m => r.analysis.cases[0].lines.flatMap(l => l.walls || []).find(w => w.mark === m) };
+}
+
+test('linked offset line (Ex 3.3 B/C), same walls: split = the book\'s by wall length; every phase-7 value holds; closes', () => {
+  const { r, plan } = linked33();
+  assert.deepEqual(r.errors.map(e => e.msg), []);
+  const o = r.analysis.cases[0].offset;
+  assert.equal(o.groups[0].basis, 'capacity');
+  assert.ok(o.converged && r.checks.every(c => c.ok), r.checks.filter(c => !c.ok).map(c => c.msg).join('; '));
+  const b = JSON.parse(fs.readFileSync(new URL('./td-book/Ex3.3.json', import.meta.url), 'utf8'));
+  const fails = b.expected.filter(e => e.phase === 7).filter(e => {
+    const want = e.vTool ?? e.v, got = toolValue(e.k, plan, r.analysis), tol = e.tol ?? Math.max(0.005 * Math.abs(want), 1);
+    return got === null || Math.abs(got - want) > tol;
+  }).map(e => e.k);
+  assert.deepEqual(fails, []);
+});
+
+test('linked offset line, capacity method: SW1 with heavier nailing takes more; Shear Wall Design given DA\'s line forces designs the same wall forces (equal demand / capacity on B and C)', () => {
+  const { r, swdWalls, daWall } = linked33({ sw1: { nailingPattern: '3' } });
+  const dc = m => { const w = swdWalls.find(x => x.mark === m); return w.unitShear_seismic / w.effectiveSeismicCap; };
+  assert.ok(Math.abs(dc('SW1') - dc('SW3')) < 1e-3 && Math.abs(dc('SW3') - dc('SW4')) < 1e-3, [dc('SW1'), dc('SW3'), dc('SW4')].join(' / '));
+  for (const m of ['SW1', 'SW3', 'SW4']) assert.ok(Math.abs(swdWalls.find(x => x.mark === m).shareExact_1E * 1000 - daWall(m).share) < 2, m + ' same force in SWD and DA');
+  assert.ok(daWall('SW1').v > 1.8 * daWall('SW3').v, 'capacity 611 vs 312 plf');
+  assert.ok(r.analysis.cases[0].offset.converged && r.checks.every(c => c.ok), r.checks.filter(c => !c.ok).map(c => c.msg).join('; '));
+});
+
+test('linked offset line, deflection method: equal δ on B and C in Shear Wall Design with DA\'s line forces; closes', () => {
+  const { r, swdWalls, daWall } = linked33({ distribution: 'deflection' });
+  assert.equal(r.analysis.cases[0].offset.groups[0].basis, 'deflection');
+  const d = m => swdWalls.find(x => x.mark === m).deflection.E.delta;
+  assert.ok(Math.abs(d('SW1') - d('SW3')) < 2e-3 && Math.abs(d('SW3') - d('SW4')) < 2e-3, [d('SW1'), d('SW3'), d('SW4')].join(' / '));
+  for (const m of ['SW1', 'SW3', 'SW4']) assert.ok(Math.abs(swdWalls.find(x => x.mark === m).shareExact_1E * 1000 - daWall(m).share) < 5, m);
+  const o = r.analysis.cases[0].offset;
+  assert.ok(o.swdRounds.settled && o.converged && r.checks.every(c => c.ok), r.checks.filter(c => !c.ok).map(c => c.msg).join('; '));
+});
+
+test('Setup → Shear wall link: offset line card (name, lines, walls to leave out); TD warning points to it', () => {
+  const { inputs, swd } = linked84();
+  inputs.wallLink.groups = [];
+  const box = document.createElement('div');
+  const refs = { wallSource: swd };
+  diaphragmAnalysis.renderForm(box, inputs, () => {}, [item('swd-1', 'shear_wall_design', swd.definition)], () => {}, {});
+  const btn = t => [...box.querySelectorAll('button')].find(b => b.textContent.startsWith(t));
+  btn('Setup').dispatchEvent(new window.Event('click'));
+  btn('Shear wall link').dispatchEvent(new window.Event('click'));
+  assert.ok(box.textContent.includes('Offset lines of resistance'));
+  btn('+ Offset line').dispatchEvent(new window.Event('click'));
+  assert.equal(inputs.wallLink.groups.length, 1);
+  const r = calcAll(inputs, refs);
+  assert.ok(r.tdRuns.some(t => (t.issues || []).some(i => i.code === 'td-load-wall-line' && /Offset lines of resistance/.test(i.msg))), 'TD1 on line D points to the setting');
 });
 
 console.log(passed + ' passed');

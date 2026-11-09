@@ -21,6 +21,7 @@
   --focus-ring: #4A3AF0;
   --overlay: rgba(0,0,0,0.3);
   --shadow: 0 1px 3px rgba(0,0,0,0.08);
+  --sel-bg: #FDF2F8; --sel-bg-strong: #FCE7F3; /* selected row / piece (Diaphragm Analysis plan panel) */
 }
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme="light"]) {
@@ -32,6 +33,7 @@
     --fail: #F87171; --fail-bg: rgba(127,29,29,0.25);
     --stale: #FBBF24; --stale-bg: rgba(120,53,15,0.25);
     --focus-ring: #60A5FA; --overlay: rgba(0,0,0,0.5); --shadow: 0 1px 3px rgba(0,0,0,0.3);
+    --sel-bg: rgba(236,72,153,0.16); --sel-bg-strong: rgba(236,72,153,0.30);
   }
 }
 :root[data-theme="dark"] {
@@ -43,6 +45,7 @@
   --fail: #F87171; --fail-bg: rgba(127,29,29,0.25);
   --stale: #FBBF24; --stale-bg: rgba(120,53,15,0.25);
   --focus-ring: #60A5FA; --overlay: rgba(0,0,0,0.5); --shadow: 0 1px 3px rgba(0,0,0,0.3);
+  --sel-bg: rgba(236,72,153,0.16); --sel-bg-strong: rgba(236,72,153,0.30);
 }
 
 *, *::before, *::after { box-sizing: border-box; }

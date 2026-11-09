@@ -4,8 +4,9 @@ import {
   newLevel, newWallDLType, newLine, newWallId, nextWallMark,
   wallOpeningDefaults, wallSystemDefaults, deflectionDefaults, projectV7Defaults, projectV8Defaults, projectV9Defaults, projectV12Defaults, newOpeningId,
 } from './shearWallTypes.js';
-import { calcAll, CALC_VERSION, DISTRIBUTION_METHODS, lineDistribution, lineDriftMode, DEFAULT_OMEGA0, omega0Of, windLimitDen } from './shearWallCalc.js';
-import { renderElevation, renderElevationForPdf, pdfElevationAspect, planPdfElevation, pdfElevationPartSize } from './shearWallElevation.js';
+import { calcAll, CALC_VERSION, DISTRIBUTION_METHODS, lineDistribution, lineDriftMode, DEFAULT_OMEGA0, omega0Of, windLimitDen, transferOn, endsAtFloorIds } from './shearWallCalc.js';
+import { renderElevation, renderElevationForPdf, pdfElevationAspect, planPdfElevation, pdfElevationPartSize, setElevationPlan, setElevationTransfer } from './shearWallElevation.js';
+import { planLinkOn, sourcesWithPlan, defaultSourceId, adoptPlanLink, dropPlanLink, planLinkStale, refreshPlanLink, planViewOf, moveLineStart, originsBySource, planLineLength, syncLineLength } from './shearWallPlanLink.js';
 import { NAILING_TABLE, SHEATHING_TYPES, FOOTNOTE_10_NOTE, sheathingLabel } from './shearWallNailing.js';
 import { renderHardwareTab as renderHardwareTabView, hardwareAppendixSections } from './shearWallHardwareTab.js';
 import { lrfdCap, getGradeById, woodBasis, sillProps, SPECIES, speciesOf, dimGrades, ptGrades, groupLabel } from './shearWallHardware.js';
@@ -76,7 +77,9 @@ export const shearWallDesign = {
     // Optional (2026-10-29): line loads per level from Diaphragm Analysis items, one per level. Only adds a load
     // source — the copied values go into line.levelLoads like typed ones; the calc is unchanged.
     { key: 'diaphragmSources', label: 'Diaphragm Analysis', sourceType: 'diaphragm_analysis', many: true,
-      extract: (outputs) => ({ level: outputs.level, lineForces: outputs.lineForces || [] }) },
+      // planGrids / planLines (user 2026-11-05): read only by the grid link (shearWallPlanLink.js), after "Adopt plan grids"
+      extract: (outputs) => ({ level: outputs.level, lineForces: outputs.lineForces || [], planGrids: outputs.planGrids || null, gridsFrom: outputs.gridsFrom || null,
+        planLines: (outputs.wallLink && outputs.wallLink.lines) || [] }) },
   ],
   fields: [],
   outputFields: [],
@@ -108,11 +111,14 @@ export const shearWallDesign = {
     for (const c of diaphragmLoadValues(inputs, linked.diaphragmSources)) {
       if (!sameNumber(parseFloat(c.entry[c.key]) || 0, c.value, 0.00005)) out.push({ refKey: 'diaphragmSources', label: c.label, from: c.entry[c.key] || 0, to: c.value });
     }
+    // grid link (only after "Adopt plan grids"): the copy of the plan grids / diaphragm stretches is out of date
+    if (planLinkStale(inputs, linked.diaphragmSources)) out.push({ refKey: 'diaphragmSources', label: 'Plan grids and diaphragm stretches (grid link)', from: 'copy', to: 'changed in Diaphragm Analysis' });
     return out;
   },
 
   applyLinks(inputs, linked) {
     for (const c of diaphragmLoadValues(inputs, linked.diaphragmSources, true)) c.entry[c.key] = String(c.value);
+    refreshPlanLink(inputs, linked.diaphragmSources); // grid link only (no-op otherwise)
     const bs = linked.baseShearSource;
     if (bs) for (const [k] of BASE_SHEAR_FIELDS) if (bs[k] != null) inputs[k] = String(bs[k]);
     const tabs = linked.flatLoadSource && linked.flatLoadSource.perTab;
@@ -479,6 +485,76 @@ export const shearWallDesign = {
       }
       box.appendChild(el('div', { style: { fontSize: '0.78rem', color: 'var(--ink-tertiary)', marginTop: '0.25rem' } },
         'Ticked: the 1.0E / 1.0W line loads of that level come from the Diaphragm Analysis item (greyed out below); a change there shows an update notice here. Lines and levels are matched by name.'));
+      if (ids.length || planLinkOn(inputs)) box.appendChild(renderPlanGridLink(items.filter(it => ids.includes(it.id))));
+      if (ids.length && transferOn(inputs)) { const tb = renderTransferBalance(items.filter(it => ids.includes(it.id))); if (tb) box.appendChild(tb); }
+      return box;
+    }
+
+    // B4 (user 2026-11-05, step 7): per floor, the story shear this item hands to the diaphragm (walls that end at the
+    // floor) against what that level's Diaphragm Analysis item took (its transferIn). Shown only when something is handed.
+    function renderTransferBalance(ticked) {
+      let out;
+      try { out = calcAll(JSON.parse(JSON.stringify(inputs))); } catch (e) { return null; }
+      const handed = (out.perDirection || []).flatMap(d => (d.perLine || []).flatMap(l => (l.transfer || []).map(t => ({ ...t, line: l.lineName }))));
+      if (!handed.length) return null;
+      const box = el('div', { 'data-transferbalance': '1', style: { marginTop: '0.5rem', fontSize: '0.8rem' } });
+      box.appendChild(el('div', { style: { fontWeight: 600, marginBottom: '0.2rem' } }, 'Walls that end at a floor → diaphragm (transfer balance, 1.0E)'));
+      const floors = [...new Set(handed.map(t => t.belowName))];
+      for (const fl of floors) {
+        const h = handed.filter(t => t.belowName === fl);
+        const sumH = h.reduce((a, t) => a + (t.E || 0), 0);
+        const da = ticked.find(it => String(((it.inputs || {}).level || {}).name || '').trim().toLowerCase() === String(fl).trim().toLowerCase());
+        const took = da && da.outputs && Array.isArray(da.outputs.transferIn) ? da.outputs.transferIn.filter(t => t.kind === 'E').reduce((a, t) => a + (t.V || 0), 0) : null;
+        const ok = took !== null && Math.abs(took - sumH) <= Math.max(0.005, 0.001 * Math.abs(sumH));
+        box.appendChild(el('div', { style: { color: took === null ? 'var(--warn, #b45309)' : ok ? 'var(--ink-secondary)' : 'var(--fail)' } },
+          fl + ': handed over ' + sumH.toFixed(2) + ' k (lines ' + [...new Set(h.map(t => t.line))].join(', ') + ') · '
+          + (took === null ? 'no ticked Diaphragm Analysis item of level "' + fl + '" took it yet (open and save it)' : (da.custom_name || da.customName || da.label || 'Diaphragm Analysis') + ' took ' + took.toFixed(2) + ' k ' + (ok ? '✓' : '✗ — open and save it so it uses the current story shears'))));
+      }
+      return box;
+    }
+
+    // Grid link (user 2026-11-05): copy the plan grids of a linked DA item, fix each line's start on the plan, draw the
+    // crossing grids and each level's diaphragm stretch on the elevations. Written only when the engineer adopts it.
+    function renderPlanGridLink(ticked) {
+      const ref = shearWallDesign.refs.find(r => r.key === 'diaphragmSources');
+      // gridsFrom: the DA item whose grids this one uses (shared grids), from its definition (also for items saved before)
+      const sources = sourcesWithPlan(ticked.map(it => ({ id: it.id, name: it.custom_name || it.customName || it.label || 'Diaphragm Analysis', ...ref.extract(it.outputs || {}),
+        gridsFrom: (((it.inputs || {}).refs || {}).gridSource) || (it.outputs || {}).gridsFrom || null })));
+      // levels that share one grid are one choice: the owner, named with the levels that use its grids
+      const choices = sources.filter(s => !sources.some(o => o.id === s.gridsFrom))
+        .map(s => ({ ...s, users: sources.filter(o => o.gridsFrom === s.id) }));
+      const choiceName = c => c.name + ' — level "' + (c.level || '?') + '"' + (c.users.length ? ', shared with ' + c.users.map(u => u.name).join(', ') : '');
+      const box = el('div', { 'data-gridlink': '1', style: { marginTop: '0.5rem', padding: '0.5rem', border: '1px dashed var(--border)', borderRadius: '6px' } });
+      box.appendChild(el('div', { style: { fontSize: '0.85rem', fontWeight: 600, marginBottom: '0.25rem' } }, 'Plan grids (grid link with Diaphragm Analysis)'));
+      const note = t => el('div', { style: { fontSize: '0.78rem', color: 'var(--ink-tertiary)', marginTop: '0.25rem' } }, t);
+      if (!planLinkOn(inputs)) {
+        if (!sources.length) { box.appendChild(note('The ticked Diaphragm Analysis items have no grids yet (open and save them once).')); return box; }
+        let pick = defaultSourceId(inputs, sources);
+        if (!choices.some(c => c.id === pick)) pick = choices.length ? choices[0].id : pick;
+        const sel = choices.length > 1
+          ? el('select', { className: 'form-select', 'data-gridsource': '1', style: { width: 'auto' }, onChange(e) { pick = e.target.value; } },
+            ...choices.map(c => el('option', { value: c.id, selected: c.id === pick }, choiceName(c))))
+          : el('span', { 'data-gridsource': '1', style: { fontSize: '0.82rem', fontWeight: 600 } }, choices.length ? choiceName(choices[0]) : '—');
+        box.appendChild(el('div', { style: { display: 'flex', gap: '6px', alignItems: 'center', flexWrap: 'wrap' } }, el('span', { style: { fontSize: '0.82rem' } }, 'Grids from'), sel,
+          el('button', { type: 'button', className: 'btn btn-sm btn-primary', 'data-adoptgrids': '1', onClick() { if (adoptPlanLink(inputs, sources, pick)) { notifyChange(); renderAll(); } } }, 'Adopt plan grids')));
+        if (choices.length > 1) box.appendChild(note('These levels have grids of their own. To use one grid for all levels, open a Diaphragm Analysis item → Grids & outline → "shared from" another item.'));
+        box.appendChild(note("Adopt: each line gets a fixed start on the plan (the start that Diaphragm Analysis uses today, so no wall moves), the elevations show the grids that cross the line and each level's diaphragm stretch, and the line length becomes only how far the line is drawn. Nothing changes until you adopt."));
+        return box;
+      }
+      const src = choices.find(c => c.id === inputs.planLink.sourceId) || sources.find(s => s.id === inputs.planLink.sourceId);
+      box.appendChild(el('div', { style: { fontSize: '0.82rem' } }, 'Grids from ' + (src ? (src.users ? choiceName(src) : src.name + ' (level "' + (src.level || '?') + '")') : 'a Diaphragm Analysis item that is not ticked now — the copy is kept')
+        + ' · ' + inputs.planLink.grids.length + " grids. Each line's start is set in its line header (\"Starts at\")."));
+      const differ = [];
+      for (const d of inputs.directions || []) for (const line of d.lines || []) {
+        const start = parseFloat(line.planOrigin);
+        const off = originsBySource(sources).filter(o => o.lineId === line.id && Number.isFinite(start) && Math.abs(o.origin - start) > 1e-4);
+        if (off.length) differ.push((line.name || '?') + ': ' + off.map(o => o.level + ' ' + o.origin).join(', ') + ' (start here ' + start + ')');
+      }
+      if (differ.length) box.appendChild(el('div', { style: { fontSize: '0.78rem', color: 'var(--warn, #b45309)', marginTop: '0.25rem' } },
+        'Diaphragm Analysis still shows another start for: ' + differ.join('; ') + ' — open and save those items to take the start from here.'));
+      box.appendChild(el('button', { type: 'button', className: 'btn btn-ghost btn-sm', style: { marginTop: '0.35rem' }, 'data-dropgrids': '1',
+        onClick() { dropPlanLink(inputs); notifyChange(); renderAll(); } }, 'Remove grid link'));
+      box.appendChild(note('Remove: the copy and the line starts are deleted; positions stay as they are (Diaphragm Analysis goes back to its own line origins).'));
       return box;
     }
 
@@ -598,8 +674,25 @@ export const shearWallDesign = {
       hdr.appendChild(el('input', { className: 'form-input', type: 'text', value: line.name || '', placeholder: 'Line name', style: { width: '120px', fontWeight: '600' },
         onInput(e) { line.name = e.target.value; notifyChange(); } }));
       hdr.appendChild(el('label', { className: 'form-label', style: { marginBottom: 0 } }, 'Length (ft):'));
-      hdr.appendChild(el('input', { className: 'form-input mono', type: 'number', step: 'any', value: numOrBlank(line.totalLength), style: { width: '80px' },
+      // grid link (adopted): the length comes from the plan — start to the end of the longest diaphragm stretch on the line
+      const planLen = planLinkOn(inputs) ? planLineLength(inputs, line) : null;
+      if (planLen !== null) hdr.appendChild(el('span', { className: 'mono', 'data-planlength': line.id, title: 'From the plan: line start to the end of the longest diaphragm stretch on this line over all levels (Diaphragm Analysis), never shorter than the farthest element' }, String(planLen) + ' (plan)'));
+      else hdr.appendChild(el('input', { className: 'form-input mono', type: 'number', step: 'any', value: numOrBlank(line.totalLength), style: { width: '80px' },
         onChange(e) { line.totalLength = e.target.value; notifyChange(); if (elevationHandle) elevationHandle.drawSVG(); } }));
+      // grid link (only after "Adopt plan grids"): the line start on the plan; moving it keeps every element in place
+      if (planLinkOn(inputs)) {
+        const L = inputs.planLink.lines[line.id];
+        const axisTxt = L ? (L.axis === 'x' ? 'y' : 'x') : 'plan';
+        const setStart = v => { if (!Number.isFinite(parseFloat(v))) return; moveLineStart(line, v); syncLineLength(inputs, line); notifyChange(); renderAll(); };
+        hdr.appendChild(el('label', { className: 'form-label', style: { marginBottom: 0 }, title: 'Plan coordinate of position 0 of this line (' + axisTxt + '). Walls, posts, beams and loads keep their place on the plan when it changes.' }, 'Starts at ' + axisTxt + ':'));
+        hdr.appendChild(el('input', { className: 'form-input mono', type: 'number', step: 'any', 'data-linestart': line.id, value: line.planOrigin ?? '', style: { width: '70px' },
+          onChange(e) { setStart(e.target.value); } }));
+        const crossAll = L ? inputs.planLink.grids.filter(g => g.axis === (L.axis === 'x' ? 'y' : 'x') && !g.ref) : [];
+        if (crossAll.length) hdr.appendChild(el('select', { className: 'form-select', style: { width: 'auto', fontSize: '0.8rem' }, title: 'Start the line at a grid',
+          onChange(e) { if (e.target.value !== '') setStart(e.target.value); } },
+          el('option', { value: '' }, 'at grid…'), ...crossAll.map(g => el('option', { value: String(g.at) }, g.name + ' (' + g.at + ')'))));
+        if (!L) hdr.appendChild(el('span', { style: { fontSize: '0.75rem', color: 'var(--fail)' } }, 'no grid for this line in the copied plan'));
+      }
       const ltSel = el('select', { className: 'form-select', style: { width: '80px', fontSize: '0.8rem' },
         onChange(e) { line.wallThickness = e.target.value; notifyChange(); } });
       ltSel.appendChild(el('option', { value: '' }, 'Default'));
@@ -685,7 +778,18 @@ export const shearWallDesign = {
       const elevContainer = el('div');
       panel.appendChild(elevContainer);
       if (elevationHandle) { elevationHandle.destroy(); elevationHandle = null; }
+      setElevationPlan(line, planViewOf(inputs, line)); // grid link layer (null = none)
+      setElevationTransfer(line, transferOn(inputs) ? () => endsAtFloorIds(inputs, line, inputs.levels) : null); // walls that end at the floor (linked items)
       elevationHandle = renderElevation(elevContainer, line, inputs.levels, inputs.wallDLTypes, {
+        // transfer to the diaphragm below (step 4): null for unlinked items, bottom-story walls
+        transferInfo(w) {
+          if (!transferOn(inputs)) return null;
+          const i = inputs.levels.findIndex(l => l.id === w.levelId), below = inputs.levels[i + 1];
+          if (i < 0 || !below) return null;
+          const continues = (line.walls || []).some(x => x.levelId === below.id);
+          return { mode: continues ? 'tick' : 'auto', belowName: below.name || 'level below' };
+        },
+
         onWallChange() {}, onGravityChange() {},
         flatLoadAssemblies: () => flatLoadAssemblies(),
         designContext: () => ({ wallThickness: inputs.wallThickness, wood: woodBasis(inputs), loadType: inputs.loadType,
@@ -955,6 +1059,8 @@ function subMarkup(c) {
 const PDF_LANDSCAPE_W = 792 - 2 * 54;            // letter landscape content width (pt), as in pdf.js
 const PDF_LANDSCAPE_IMG_H = 612 - 2 * 54 - 80;    // tallest image pdf.js places without reducing it
 function elevationSections(inputs, line, ln, mode, title) {
+  setElevationPlan(line, planViewOf(inputs, line)); // grid link layer (null = none)
+  setElevationTransfer(line, transferOn(inputs) ? () => endsAtFloorIds(inputs, line, inputs.levels || []) : null);
   const plan = planPdfElevation(line, PDF_LANDSCAPE_W);
   const n = plan.parts.length;
   return plan.parts.map((part, i) => {
@@ -2631,6 +2737,9 @@ const DEFINITION_MIGRATIONS = [
 const CURRENT_SCHEMA = DEFINITION_MIGRATIONS[DEFINITION_MIGRATIONS.length - 1].to;
 
 export function migrateDefinition(item) {
+  return withPlanLengths(migrateSchema(item));
+}
+function migrateSchema(item) {
   const from = parseInt(item.schemaVersion, 10) || 1;
   if (from >= CURRENT_SCHEMA && item.inputs && item.inputs.directions) return item;
   let inp = item.inputs && item.inputs.directions ? JSON.parse(JSON.stringify(item.inputs)) : defaultInputs();
@@ -2638,6 +2747,17 @@ export function migrateDefinition(item) {
     if (step.to > from) inp = step.up(inp);
   }
   return { ...item, inputs: inp, schemaVersion: CURRENT_SCHEMA };
+}
+// Grid link (user 2026-11-05): an item that adopted the plan grids opens with every line length taken from the plan
+// (start → end of the longest diaphragm stretch), so the elevation, the PDF and the calc use the length the header
+// shows. Any other item is returned as it is.
+function withPlanLengths(item) {
+  if (!item || !planLinkOn(item.inputs)) return item;
+  const lines = (item.inputs.directions || []).flatMap(d => d.lines || []);
+  if (!lines.some(l => { const L = planLineLength(item.inputs, l); return L !== null && Math.abs((parseFloat(l.totalLength) || 0) - L) > 1e-6; })) return item;
+  const inputs = JSON.parse(JSON.stringify(item.inputs));
+  for (const d of inputs.directions || []) for (const l of d.lines || []) syncLineLength(inputs, l);
+  return { ...item, inputs };
 }
 
 // Schema v5: unique beam/post ids (v4 generated duplicate 'bm-NaN'/'sp-NaN'), marks,
