@@ -90,10 +90,13 @@ function memberLine(plan, cs, fields, family, at, pts, gridId) {
     const hi = vNetAt(cs, fields, at, p, 1, side), lo = vNetAt(cs, fields, at, p, -1, side);
     return hi === null && lo === null ? null : (hi || 0) - (lo || 0) - wallR(cs, gridId, p + side * NUDGE);
   };
-  // a wall line bridges a gap inside the outline (strut): q = 0 there and the run continues
+  // a wall line bridges a gap inside the outline (strut): no sheathing shear there and the run continues — but a wall
+  // standing on the bridged stretch (and a wall above on it) still acts on the member (td-v14, user test 26998:
+  // SW-61 / SW-63 at the ends of OP1 on line 2 were skipped here while the TD's P counted them → −816 lb open)
   const g = family === 'cross' && gridId ? plan.gridById.get(gridId) : null;
   const bridged = g && plan.walls.some(w => w.gridId === gridId) ? lineParts(plan, cs, g) : [];
   const inBridge = m => bridged.some(([a, b]) => m > a && m < b);
+  const qw = p => -wallR(cs, gridId, p);
   const runs = [];
   let cur = null;
   for (let i = 0; i < pts.length - 1; i++) {
@@ -101,7 +104,12 @@ function memberLine(plan, cs, fields, family, at, pts, gridId) {
     if (h < EPS) continue;
     const m = (a + b) / 2;
     if (q(m, 0) === null) {
-      if (cur && inBridge(m)) { cur.pieces.push({ a, b, Na: cur.N, qa: 0, qm: 0, qb: 0, strut: true }); cur.to = b; continue; }
+      if (cur && inBridge(m)) {
+        const qa = qw(a + NUDGE), qm = qw(m), qb = qw(b - NUDGE);
+        cur.pieces.push({ a, b, Na: cur.N, qa, qm, qb, strut: true });
+        cur.N += h / 6 * (qa + 4 * qm + qb);
+        cur.to = b; continue;
+      }
       if (cur) { runs.push(cur); cur = null; }
       continue;
     }

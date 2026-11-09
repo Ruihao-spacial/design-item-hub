@@ -306,9 +306,9 @@ member runs are still open → the other direction.
     - now: one message per line naming the fix, no source for a wall whose force is not placed, the case FAILED
       ("cannot be placed") and held from SWD.
 - **Plan:** the collector is drawn as an amber line with end bars (full depth: nothing drawn).
-- **Limit (user 2026-11-06, 26998 2nd Floor grid 6):** one collector per line — all walls above on that line share it,
-  and blank = the whole line. Walls above landing on different diaphragms cannot yet each have their own collector
-  (backlog, open item 6).
+- **Each wall into the diaphragm under it (td-v16, 2026-11-09):** a tick per line in the collector table — no collector
+  along the grid; each wall that ends here loads only the diaphragm(s) it stands over (split by its length over each);
+  none under it → error. Off (default) = full depth as above. A from–to still applies to all walls of a line.
 - **26997** (collector B–C on line 2), `tests/daTransfer.test.mjs`:
   - D2 takes all 10 k; D2 at line 1 = 3 + 8.571 k, 192.9 plf (full depth: 136 plf); D3 / D1 take 1 k each;
   - line 1 = 13.571 k (unchanged);
@@ -428,6 +428,14 @@ member runs are still open → the other direction.
   sum of both edges for a load line with side 'both' (G1), or the wall-less line force handed into it (strut TD);
   edge / outside shears from the basic field, + a wall on an edge (averaged per segment where a wall or sheathing
   edge ends inside the segment — G5).
+- **Offset lines with SWD shares (td-v15 / td-v17, 2026-11-09):** deflection split only when every wall of the line has a
+  deflection (else that round by capacity, warning); the force from above on a group line uses this level's line force
+  as given (negative too); a wall whose automatic nailing alternates between rounds is held at the heavier (warning names
+  it) — the rounds settle.
+- **Walls on a bridged stretch (td-v14, user test 26998):** a wall line is one member across a gap inside the outline
+  (strut); a wall (or a wall above) standing on that stretch — e.g. at the ends of an opening reaching the outline —
+  now acts on the member there. Before, the member skipped it while the TD's strut load counted it (26998 2nd Floor:
+  SW-61 / SW-63 at the ends of OP1 on line 2, −816 lb open).
 - **Wall of the load line inside the TD (td-v13, user test 26998):** a wall on a strut TD's load line that runs past
   the TD edge into the TD takes its share straight out of the member there; that part is added to P (as if the
   member were integrated on to the wall end). Before, P stopped at the TD edge and the member did not close

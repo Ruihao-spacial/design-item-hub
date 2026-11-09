@@ -159,4 +159,21 @@ test('Analysis tab: "walls below (this level)" always, "walls above (story above
   assert.ok(!box.querySelector('.td-canvas [data-wall]') && box.querySelector('.td-canvas g.td-view-top polygon'), 'walls gone, diagrams stay');
 });
 
+test('open item 6-A: Plan → Shear walls, collector table — the tick "each wall into the diaphragm under it" stores own and disables from / to', () => {
+  const flr = load('t98-2nd.json');
+  const projectItems = [...items, { id: flr.id, type: 'diaphragm_analysis', inputs: flr.inputs }];
+  const inp = normalizeInputs(clone(flr.inputs));
+  const box = document.createElement('div');
+  da.renderForm(box, inp, () => {}, projectItems, () => {}, { itemId: flr.id });
+  click(box, 'Plan'); click(box, 'Shear walls');
+  const cb = box.querySelector('[data-collector-own="6"]');
+  assert.ok(cb && !cb.checked, 'tick for line 6, off by default');
+  assert.ok(!box.querySelector('[data-collector="6:from"]').disabled);
+  cb.checked = true; cb.dispatchEvent(new window.Event('change'));
+  assert.equal(inp.aboveCollectors['ln-14'].own, true);
+  assert.ok(box.querySelector('[data-collector-own="6"]').checked && box.querySelector('[data-collector="6:from"]').disabled, 'from / to disabled');
+  const off = box.querySelector('[data-collector-own="6"]'); off.checked = false; off.dispatchEvent(new window.Event('change'));
+  assert.ok(!('ln-14' in inp.aboveCollectors), 'unticked: nothing stored (as before)');
+});
+
 console.log(passed + ' passed');

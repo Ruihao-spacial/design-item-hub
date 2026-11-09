@@ -96,3 +96,15 @@ new wall-less grid 9E (D6 on 9E / 6, D11 on 9E / 8), TD8 (x 80–87.5, on 8 / 10
 | 5 | "Did not settle" (SWD auto-nailing two-state cycle) — after 4 | Claude | medium |
 | 6 | Collector switch (opt-in, grid 6: SW-39 → D2 only, SW-55 / 56 → D10 only) | Claude, on go | low |
 | — | Deferred: wall-less part of a wall line as automatic collector (9E made it unnecessary), G11, SWD small items, warnings, agent, Phase 8 | — | — |
+
+### Done 2026-11-09
+- Step 2: committed 384f66c (UI, colours, td-v13, docs, tests).
+- Step 3: fixtures `t98-*` refreshed (2nd Floor 21:04, Roof 21:01, SWD 18:27 — the DB still holds TD9 and the old
+  grid 9 in SWD: the test removes TD9); `tests/daCase26998.test.mjs` rewritten to this layout (6 tests).
+- Step 4: **line 2 fixed (td-v14).** The cause was not the 2/3 split: line 2 is bridged over OP1, and SW-61 / SW-63
+  stand on the bridged stretch (ends of the opening). `tdNet.memberLine` set the load on a bridged stretch to 0, so the
+  member skipped those walls while the TD5 strut load (`tdMembers.crossForce`) counted them → −816 lb. Now the walls
+  and walls above on a bridged stretch act on the member. 2nd Floor: both directions close (y Σ 45.16 k, x Σ 42.79 k),
+  today's SWD sharing rule kept (DA = SWD). Line 2 residual −29 lb (inside the tolerance; not exact while the 2/3 shares
+  do not settle — step 5). `npm test` 684 ok, books unchanged, SWD freeze identical. Uncommitted.
+- Next: step 5 (offset shares not settling), step 6 (collector switch) on the user's go.

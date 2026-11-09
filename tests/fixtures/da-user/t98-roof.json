@@ -1,5 +1,5 @@
 {
-"note": "Project 26998 Cotoros Main Test (user test 2026-11-06), item Diaphragm - Roof Level, saved 2026-11-06 20:07:54.28565+00",
+"note": "Project 26998 Cotoros Main Test (user test), item Diaphragm - Roof Level, saved 2026-11-09 22:05:23.830953+00",
 "type": "diaphragm_analysis",
 "schemaVersion": 2,
 "id": "a0978f12-f7c0-40bb-983f-7d12e029e9cd",
@@ -441,7 +441,7 @@
 {
 "at": "42.5",
 "id": "gr-mw2pl8rl-t",
-"to": "",
+"to": "40",
 "ref": false,
 "axis": "y",
 "from": "",
@@ -563,6 +563,15 @@
 "axis": "x",
 "from": "30",
 "name": "D.6"
+},
+{
+"at": "42.5",
+"id": "gr-mw9qsob9-3",
+"to": "",
+"ref": false,
+"axis": "y",
+"from": "40",
+"name": "9E"
 }
 ],
 "level": {
@@ -1111,7 +1120,7 @@
 ],
 "codeEdition": "CBC-2025",
 "designBasis": "ASD",
-"gridsLocked": true,
+"gridsLocked": false,
 "schemaVersion": 2,
 "aboveCollectors": {}
 }

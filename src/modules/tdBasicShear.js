@@ -467,7 +467,7 @@ export function shareGroup(plan, cs, grp, F, basis = null) {
 
 // The concentrated loads of the walls above that end at this floor, from a case's cs.above (basicCase ctx.above)
 export function aboveLoads(cs) {
-  return (cs.above || []).filter(a => a.kind === 'transfer' && a.V).map(a => ({ mark: a.mark, line: a.line, gridId: a.gridId, at: a.at, F: (cs.sigma || 1) * a.V, collector: a.collector || null }));
+  return (cs.above || []).filter(a => a.kind === 'transfer' && a.V).map(a => ({ mark: a.mark, line: a.line, gridId: a.gridId, at: a.at, F: (cs.sigma || 1) * a.V, collector: a.collector || null, own: !!a.own, from: a.from, to: a.to }));
 }
 
 // Basic field and line forces of a load case, with the concentrated loads of wall-less collectors into the
@@ -494,6 +494,14 @@ export function basicCase(plan, lc, ctx = {}, delta = null) {
         const cut = recv.filter(x => x.d.across[1] > lo + EPS && x.d.across[0] < hi - EPS && !inside.includes(x));
         if (cut.length) { missed.push({ ...a, reason: 'inside', diaphragms: cut.map(x => x.d.mark) }); continue; }
         recv = inside;
+      }
+      // own (open item 6-A): only the diaphragm(s) whose sheathing at the grid lies under the wall, split by the length of
+      // wall over each — no collector carries it to the others
+      if (a.own) {
+        const lo = Math.min(a.from, a.to), hi = Math.max(a.from, a.to);
+        const bandsOf = d => (sectionAt({ diaphragms: [d] }, a.at, '+').parts[0] || { bands: [] }).bands;
+        recv = recv.map(x => ({ ...x, depth: bandsOf(x.d).reduce((t, b) => t + Math.max(0, Math.min(b.hi, hi) - Math.max(b.lo, lo)), 0) })).filter(x => x.depth > EPS);
+        if (!recv.length) { missed.push({ ...a, reason: 'own' }); continue; }
       }
       if (!recv.length) { missed.push(a); continue; }
       const total = recv.reduce((t, x) => t + x.depth, 0);

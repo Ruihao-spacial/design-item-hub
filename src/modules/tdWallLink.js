@@ -171,22 +171,25 @@ export function wallsAbove(plan, swd, link, inputs = {}) {
     }
     const continues = ln.walls.some(w => w.levelId === link.levelId);
     const cset = ((inputs.aboveCollectors || {})[ln.id]) || null;
+    // own (open item 6-A, user 2026-11-09): no collector along the grid — each wall that ends here goes only into the
+    // diaphragm(s) under it (a wall over two diaphragms split by length); from – to does not apply
+    const own = !!(cset && cset.own);
     // an end is a grid (fromId / toId) or a diaphragm edge picked on the Shear walls page (fromAt / toAt, plan coordinate
     // along the grid; user 2026-11-05)
     const crossAx = L.grid.axis === 'x' ? 'y' : 'x';
     const endOf = (id, at) => { const g = id ? plan.gridById.get(id) : null; if (g && Number.isFinite(g.at)) return { at: g.at, name: g.name };
       const v = num(at); return Number.isFinite(v) ? { at: v, name: crossAx + ' ' + r2(v) } : null; };
     const ea = cset ? endOf(cset.fromId, cset.fromAt) : null, eb = cset ? endOf(cset.toId, cset.toAt) : null;
-    const collector = ea && eb && Math.abs(ea.at - eb.at) > LENGTH_TOL
+    const collector = !own && ea && eb && Math.abs(ea.at - eb.at) > LENGTH_TOL
       ? { lo: Math.min(ea.at, eb.at), hi: Math.max(ea.at, eb.at), from: ea.at <= eb.at ? ea.name : eb.name, to: ea.at <= eb.at ? eb.name : ea.name } : null;
-    if (cset && (cset.fromId || cset.toId || cset.fromAt || cset.toAt) && !collector) out.issues.push({ code: 'above-collector', warn: true, msg: `Collector of line ${ln.name}: pick two different ends (grids or diaphragm edges), or leave both blank for the full depth.` });
+    if (!own && cset && (cset.fromId || cset.toId || cset.fromAt || cset.toAt) && !collector) out.issues.push({ code: 'above-collector', warn: true, msg: `Collector of line ${ln.name}: pick two different ends (grids or diaphragm edges), or leave both blank for the full depth.` });
     for (const w of up) {
       if (!Number.isFinite(w.position) || !(w.length > 0)) continue;
       const a = L.origin + w.position, b = a + w.length;
       const kind = !continues || w.endsAtFloor ? 'transfer' : 'through';
       const onSheathing = (L.bands || []).some(([lo, hi]) => a >= lo - LENGTH_TOL && b <= hi + LENGTH_TOL);
       out.walls.push({ id: 'above:' + w.id, swdWallId: w.id, mark: w.mark, line: ln.name, swdLineId: ln.id, swdDirId: d.id, dir: L.dir,
-        gridId: L.grid.id, axis: L.grid.axis, at: L.grid.at, from: a, to: b, kind, onSheathing, upperLevel: upper.name, collector: kind === 'transfer' ? collector : null });
+        gridId: L.grid.id, axis: L.grid.axis, at: L.grid.at, from: a, to: b, kind, onSheathing, upperLevel: upper.name, collector: kind === 'transfer' ? collector : null, own: kind === 'transfer' && own });
       if (kind === 'transfer' && collector && (a < collector.lo - LENGTH_TOL || b > collector.hi + LENGTH_TOL)) out.issues.push({ code: 'above-collector-short',
         msg: `Wall ${w.mark} (line ${ln.name}, ${r2(a)}–${r2(b)}) is not on its collector ${collector.from}–${collector.to} (${r2(collector.lo)}–${r2(collector.hi)}): its force cannot get onto the collector. Extend the collector over the wall, or leave it blank for the full depth.` });
       if (kind === 'transfer' && !onSheathing) out.issues.push({ code: 'above-off-plan', warn: true,
@@ -237,10 +240,16 @@ export function lineGridOf(plan, axis, ln, set = {}) {
 // wall's δ(V)). weights: { 'swd:<id>': number }; above: { lineId: kip } = the story shear from the stories above that
 // reaches the group walls of that line (kept on its line). The forces are the ones given, so the caller repeats with
 // the new line forces until the weights settle (the deflection method and auto-sized nailing are not linear).
-export function swdWallShares(swd, levelId, lineForces, groups = []) {
-  const out = { weights: { E: {}, W: {} }, groups: {}, error: null };
+// opts.fixNailing (open item 5-A, 2026-11-09): { wallId: nailingId } — hold these auto-nailed walls at that nailing in
+// this copy (the stored item is not touched). out.nailing: { wallId: { id, label, cap } } of the group walls at the level
+// (cap = plf, seismic), so the caller can see the automatic pick of each round.
+export function swdWallShares(swd, levelId, lineForces, groups = [], opts = {}) {
+  const out = { weights: { E: {}, W: {} }, groups: {}, nailing: {}, error: null };
   if (!swd || !swd.definition || !levelId) return out;
   const def = JSON.parse(JSON.stringify(swd.definition));
+  if (opts.fixNailing) for (const d of def.directions || []) for (const l of d.lines || []) for (const w of l.walls || []) {
+    if (w.levelId === levelId && !w.nailingPattern && opts.fixNailing[w.id]) w.nailingPattern = opts.fixNailing[w.id];
+  }
   for (const lf of lineForces) {
     const dir = (def.directions || []).find(d => d.id === lf.swdDirId);
     const line = dir && (dir.lines || []).find(l => l.id === lf.swdLineId);
@@ -254,6 +263,7 @@ export function swdWallShares(swd, levelId, lineForces, groups = []) {
   for (const d of res.perDirection || []) for (const l of d.perLine || []) {
     const pl = (l.perLevel || []).find(p => p.levelId === levelId);
     for (const w of (pl && pl.walls) || []) {
+      if (w.nailing && w.nailing.id) out.nailing[w.wallId] = { id: w.nailing.id, label: w.nailing.label, cap: w.effectiveSeismicCap ?? w.seismicCap ?? 0 };
       out.weights.E['swd:' + w.wallId] = w.shareExact_1E || 0;
       out.weights.W['swd:' + w.wallId] = w.shareExact_1W || 0;
     }
@@ -277,7 +287,10 @@ export function swdWallShares(swd, levelId, lineForces, groups = []) {
       for (const x of lines) {
         const own = x.walls.filter(w => ids.has('swd:' + w.wallId));
         const lf = lineForces.find(f => f.swdLineId === x.line.id);
-        const atLevel = Math.max(0, Number(lf && lf[lt]) || 0);
+        // this level's line force as given, negative too (open item 5, 2026-11-09): an offset line can take force off a line
+        // (26998 line 3 −3.2 k); clamping it to 0 made the force from above depend on it (12.45 instead of 15.65 k) and
+        // the rounds never settled
+        const atLevel = Number(lf && lf[lt]) || 0;
         const share = (ws) => ws.reduce((t, w) => t + (w[key] || 0), 0);
         const lineShare = share(x.walls), ownShare = share(own);
         // the line's story shear at this level = what SWD's walls there carry (Σ shares). Not the running sum of the levels
@@ -296,12 +309,17 @@ export function swdWallShares(swd, levelId, lineForces, groups = []) {
           weights['swd:' + w.wallId] = V > 0 && lineShare > 0 ? (w[key] || 0) / V * lineCap : capLen(w) || w.length || 0;
         }
       }
-      if (method === 'deflection' && carried > 0 && gw.length && gw.every(w => typeof w._deltaAt === 'function')) {
+      // equal δ only when every group wall has a deflection over 0 … the carried force (as SWD's own split checks). A wall
+      // SWD cannot design at its trial share returns null, which the solver would read as an infinitely stiff wall taking
+      // the whole group (bug 0, user test 26998 2026-11-09: Roof 2/3, SW-65 took 22.8 k, SW-35 0). Otherwise this round is
+      // split by capacity (warning swd-group-defl); the next round tries equal δ again with the new forces.
+      const hasDelta = w => typeof w._deltaAt === 'function' && [0, carried / 2, carried].every(v => Number.isFinite(w._deltaAt(lt, v)));
+      if (method === 'deflection' && carried > 0 && gw.length && gw.every(hasDelta)) {
         try {
           const s = equalDeflectionSplit(carried, gw.map(w => (Vk) => w._deltaAt(lt, Vk)));
           gw.forEach((w, i) => { weights['swd:' + w.wallId] = s.shares[i]; });
         } catch { entry.deflectionFailed = true; }
-      } else if (method === 'deflection') entry.deflectionFailed = carried > 0;
+      } else if (method === 'deflection' && carried > 0) entry.deflectionFailed = true; // kept across E / W (the W pass with no load cleared it)
       entry[lt] = { weights, above };
     }
     out.groups[g.name] = entry;

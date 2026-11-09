@@ -1366,7 +1366,8 @@ function wallsPanel(box, inputs, plan, state, refresh, select, wallsLinked) {
       const lines = [...new Map(ab.filter(w => w.kind === 'transfer').map(w => [w.swdLineId, w])).values()];
       const ct = lines.length ? el('table', { className: 'dynamic-table', 'data-collectortable': '1', style: { marginTop: '6px' } }) : null;
       if (ct) {
-        ct.appendChild(el('tr', null, el('th', null, 'Line'), el('th', { title: 'The collector on this grid runs only from – to; its force goes only into the diaphragms between them. Blank = full depth (into every diaphragm across the grid, by depth).' }, 'Collector from'), el('th', null, 'to')));
+        ct.appendChild(el('tr', null, el('th', null, 'Line'), el('th', { title: 'The collector on this grid runs only from – to; its force goes only into the diaphragms between them. Blank = full depth (into every diaphragm across the grid, by depth).' }, 'Collector from'), el('th', null, 'to'),
+          el('th', { title: 'No collector along the grid: each wall that ends here goes only into the diaphragm(s) under it (a wall over two diaphragms split by its length over each). From – to does not apply.' }, 'Each wall into the diaphragm under it')));
         if (!inputs.aboveCollectors) inputs.aboveCollectors = {};
         for (const w of lines) {
           const cur = inputs.aboveCollectors[w.swdLineId] || {};
@@ -1392,16 +1393,24 @@ function wallsPanel(box, inputs, plan, state, refresh, select, wallsLinked) {
             const c = { ...(inputs.aboveCollectors[w.swdLineId] || {}) };
             delete c[side + 'Id']; delete c[side + 'At'];
             if (val.startsWith('g:')) c[side + 'Id'] = val.slice(2); else if (val.startsWith('e:')) c[side + 'At'] = val.slice(2);
-            if (!c.fromId && !c.toId && !c.fromAt && !c.toAt) delete inputs.aboveCollectors[w.swdLineId]; else inputs.aboveCollectors[w.swdLineId] = c;
+            if (!c.fromId && !c.toId && !c.fromAt && !c.toAt && !c.own) delete inputs.aboveCollectors[w.swdLineId]; else inputs.aboveCollectors[w.swdLineId] = c;
             refresh(true);
           };
-          const pick = (side, blank) => { const sel = curVal(side); return el('select', { className: 'form-select', 'data-collector': w.line + ':' + side, style: { width: 'auto', fontSize: '0.78rem' }, onChange(e) { put(side, e.target.value); } },
+          // open item 6-A (user 2026-11-09): opt-in "each wall into the diaphragm under it"; ticking clears from – to
+          const setOwn = on => {
+            const c = { ...(inputs.aboveCollectors[w.swdLineId] || {}) };
+            if (on) { c.own = true; delete c.fromId; delete c.toId; delete c.fromAt; delete c.toAt; } else delete c.own;
+            if (!c.fromId && !c.toId && !c.fromAt && !c.toAt && !c.own) delete inputs.aboveCollectors[w.swdLineId]; else inputs.aboveCollectors[w.swdLineId] = c;
+            refresh(true);
+          };
+          const pick = (side, blank) => { const sel = curVal(side); return el('select', { className: 'form-select', 'data-collector': w.line + ':' + side, disabled: !!cur.own, style: { width: 'auto', fontSize: '0.78rem' }, onChange(e) { put(side, e.target.value); } },
             el('option', { value: '' }, blank), ...opts.map(o => el('option', { value: o.v, selected: o.v === sel }, o.t))); };
-          ct.appendChild(el('tr', null, el('td', null, w.line), el('td', null, pick('from', 'full depth')), el('td', null, pick('to', '—'))));
+          ct.appendChild(el('tr', null, el('td', null, w.line), el('td', null, pick('from', 'full depth')), el('td', null, pick('to', '—')),
+            el('td', { style: { textAlign: 'center' } }, el('input', { type: 'checkbox', 'data-collector-own': w.line, checked: !!cur.own, onChange(e) { setOwn(e.target.checked); } }))));
         }
       }
       box.appendChild(section('Walls of the ' + (ab[0].upperLevel || 'story above') + ' story (read-only)', el('div', { className: 'table-scroll' }, at), ct,
-        ct ? el('p', { style: { ...small, marginTop: '4px' } }, 'Collector: blank = full depth (the force goes into every diaphragm across the grid, by depth). From – to: only into the diaphragms lying between them — their edges there are chords (split the floor at the collector ends).') : null,
+        ct ? el('p', { style: { ...small, marginTop: '4px' } }, 'Collector: blank = full depth (the force goes into every diaphragm across the grid, by depth). From – to: only into the diaphragms lying between them — their edges there are chords (split the floor at the collector ends). "Each wall into the diaphragm under it": no collector along the grid — each wall only loads the diaphragm(s) it stands over.') : null,
         el('p', { style: { ...small, marginTop: '4px' } }, '↓ ends at this floor (no wall below on its line, or ticked in Shear Wall Design): this diaphragm takes its force. ↕ continues down its line. Drawn dashed beside the grid; the forces come with the next build step.')));
     }
     return;

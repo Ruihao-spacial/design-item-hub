@@ -1,5 +1,5 @@
 {
-"note": "Project 26998 Cotoros Main Test (user test 2026-11-06), item Diaphragm - 2nd Floor, saved 2026-11-06 22:54:46.17425+00",
+"note": "Project 26998 Cotoros Main Test (user test), item Diaphragm - 2nd Floor, saved 2026-11-09 22:03:38.243316+00",
 "type": "diaphragm_analysis",
 "schemaVersion": 2,
 "id": "e5a24ef2-8442-4c50-9b55-f7b1335d409b",
@@ -130,7 +130,7 @@
 "engineer": {
 "closureTol": "",
 "regionClear": null,
-"cantileverOk": null
+"cantileverOk": true
 },
 "overhang": null,
 "supports": [
@@ -169,6 +169,50 @@
 "supports": [
 "gr-mw2pkvk9-m",
 "gr-mw2pl0lf-p"
+],
+"loadsMode": "auto",
+"overhangs": []
+},
+{
+"id": "td-mw9o1dwc-4",
+"x1": "0",
+"x2": "33",
+"y1": "57",
+"y2": "67",
+"dir": "x",
+"mark": "TD7",
+"loads": [],
+"engineer": {
+"closureTol": "",
+"regionClear": null,
+"cantileverOk": null
+},
+"overhang": null,
+"supports": [
+"gr-mw2oxkn8-1",
+"gr-mw2oxvxk-b"
+],
+"loadsMode": "auto",
+"overhangs": []
+},
+{
+"id": "td-mw9od0dg-7",
+"x1": "80",
+"x2": "87.5",
+"y1": "39",
+"y2": "47",
+"dir": "x",
+"mark": "TD8",
+"loads": [],
+"engineer": {
+"closureTol": "",
+"regionClear": null,
+"cantileverOk": null
+},
+"overhang": null,
+"supports": [
+"gr-mw2pl6ij-s",
+"gr-mw2plasv-u"
 ],
 "loadsMode": "auto",
 "overhangs": []
@@ -371,7 +415,7 @@
 {
 "at": "42.5",
 "id": "gr-mw2pl8rl-t",
-"to": "",
+"to": "40",
 "ref": false,
 "axis": "y",
 "from": "",
@@ -493,6 +537,15 @@
 "axis": "x",
 "from": "30",
 "name": "D.6"
+},
+{
+"at": "42.5",
+"id": "gr-mw9qy81x-5",
+"to": "",
+"ref": false,
+"axis": "y",
+"from": "40",
+"name": "9E"
 }
 ],
 "level": {
@@ -866,7 +919,7 @@
 "id": "dg-mw5i2ttq-c-p1",
 "x1": "66",
 "x2": "112",
-"y1": "42.5",
+"y1": "47",
 "y2": "72"
 }
 ],
@@ -924,57 +977,13 @@
 "sheathing": ""
 },
 {
-"id": "dg-mw5iah7f-h",
-"dir": "x",
-"mark": "D2",
-"parts": [
-{
-"id": "dg-mw5iah7f-h-p1",
-"x1": "0",
-"x2": "27",
-"y1": "57",
-"y2": "62"
-}
-],
-"blocked": null,
-"chordCut": "",
-"supports": [
-"gr-mw2pl2i2-q",
-"gr-mw2pl0lf-p"
-],
-"bandSplit": "",
-"sheathing": ""
-},
-{
-"id": "dg-mw5iaiav-i",
-"dir": "x",
-"mark": "D3",
-"parts": [
-{
-"id": "dg-mw5iaiav-i-p1",
-"x1": "8",
-"x2": "27",
-"y1": "39.5",
-"y2": "57"
-}
-],
-"blocked": null,
-"chordCut": "",
-"supports": [
-"gr-mw2pl8rl-t",
-"gr-mw2pl2i2-q"
-],
-"bandSplit": "",
-"sheathing": ""
-},
-{
 "id": "dg-mw5iam44-j",
 "dir": "x",
 "mark": "D4",
 "parts": [
 {
 "id": "dg-mw5iam44-j-p1",
-"x1": "27",
+"x1": "33",
 "x2": "48",
 "y1": "57",
 "y2": "62"
@@ -1027,7 +1036,7 @@
 "blocked": null,
 "chordCut": "",
 "supports": [
-"gr-mw2pl8rl-t",
+"gr-mw9qy81x-5",
 "gr-mw2pl2i2-q"
 ],
 "bandSplit": "",
@@ -1122,50 +1131,6 @@
 "sheathing": ""
 },
 {
-"id": "dg-mw5ie8k4-t",
-"dir": "x",
-"mark": "D11",
-"parts": [
-{
-"id": "dg-mw5ie8k4-t-p1",
-"x1": "66",
-"x2": "80",
-"y1": "42.5",
-"y2": "47"
-}
-],
-"blocked": null,
-"chordCut": "",
-"supports": [
-"gr-mw2pl8rl-t",
-"gr-mw2pl6ij-s"
-],
-"bandSplit": "",
-"sheathing": ""
-},
-{
-"id": "dg-mw5ieb7f-u",
-"dir": "x",
-"mark": "D12",
-"parts": [
-{
-"id": "dg-mw5ieb7f-u-p1",
-"x1": "80",
-"x2": "112",
-"y1": "39",
-"y2": "47"
-}
-],
-"blocked": null,
-"chordCut": "",
-"supports": [
-"gr-mw2plasv-u",
-"gr-mw2pl6ij-s"
-],
-"bandSplit": "",
-"sheathing": ""
-},
-{
 "id": "dg-mw5ieeqs-v",
 "dir": "x",
 "mark": "D13",
@@ -1183,6 +1148,123 @@
 "supports": [
 "gr-mw2plfif-v",
 "gr-mw2plasv-u"
+],
+"bandSplit": "",
+"sheathing": ""
+},
+{
+"id": "dg-mw9laadq-1",
+"dir": "y",
+"mark": "D10",
+"parts": [
+{
+"id": "dg-mw9laadq-1-p1",
+"x1": "66",
+"x2": "83",
+"y1": "42.5",
+"y2": "47"
+}
+],
+"blocked": null,
+"chordCut": "",
+"supports": [
+"gr-mw2oz46o-e",
+"gr-mw2pcj3i-g"
+],
+"bandSplit": "",
+"sheathing": ""
+},
+{
+"id": "dg-mw9ladgr-2",
+"dir": "y",
+"mark": "D11",
+"parts": [
+{
+"id": "dg-mw9ladgr-2-p1",
+"x1": "83",
+"x2": "112",
+"y1": "42.5",
+"y2": "47"
+}
+],
+"blocked": null,
+"chordCut": "",
+"supports": [
+"gr-mw2pcj3i-g",
+"gr-mw2pjgh4-h"
+],
+"bandSplit": "",
+"sheathing": ""
+},
+{
+"id": "dg-mw9o0hbx-3",
+"dir": "x",
+"mark": "D2",
+"parts": [
+{
+"id": "dg-mw9o0hbx-3-p1",
+"x1": "8",
+"x2": "27",
+"y1": "39.5",
+"y2": "57"
+},
+{
+"id": "dg-mw9o0hbx-3-p2",
+"x1": "0",
+"x2": "33",
+"y1": "57",
+"y2": "62"
+}
+],
+"blocked": null,
+"chordCut": "",
+"supports": [
+"gr-mw2pl8rl-t",
+"gr-mw2pl0lf-p"
+],
+"bandSplit": "",
+"sheathing": ""
+},
+{
+"id": "dg-mw9o413j-5",
+"dir": "x",
+"mark": "D3",
+"parts": [
+{
+"id": "dg-mw9o413j-5-p1",
+"x1": "80",
+"x2": "112",
+"y1": "39",
+"y2": "47"
+}
+],
+"blocked": null,
+"chordCut": "",
+"supports": [
+"gr-mw2plasv-u",
+"gr-mw2pl6ij-s"
+],
+"bandSplit": "",
+"sheathing": ""
+},
+{
+"id": "dg-mw9qyzoc-6",
+"dir": "x",
+"mark": "D11",
+"parts": [
+{
+"id": "dg-mw9qyzoc-6-p1",
+"x1": "66",
+"x2": "80",
+"y1": "42.5",
+"y2": "47"
+}
+],
+"blocked": null,
+"chordCut": "",
+"supports": [
+"gr-mw9qy81x-5",
+"gr-mw2pl6ij-s"
 ],
 "bandSplit": "",
 "sheathing": ""

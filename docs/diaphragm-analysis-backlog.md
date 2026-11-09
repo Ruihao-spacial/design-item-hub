@@ -12,7 +12,10 @@ Guide: `docs/diaphragm-analysis.md`. Book cases: `docs/diaphragm-analysis-book-c
   not close — cause SW-8 running 0.5 ft into TD1 on its load line B (not G11); **fixed td-v13** (`tdMembers.crossForce`:
   a load-line wall's part inside the TD belongs to P); now closes with A/B. "Did not settle" = SWD auto nailing flipping
   between two choices; line 2 −816 lb = offset split fixed by SWD capacities vs closure (engine question); line I
-  −38 lb = D12 corner. **Uncommitted.**
+  −38 lb = D12 corner.
+- **2026-11-09:** committed 384f66c; td-v14 (walls on a bridged stretch act on the member) fixes line 2 — the 26998
+  2nd Floor closes in both directions (plan doc, "Done 2026-11-09"). td-v14 uncommitted. Next: offset shares not
+  settling (step 5), collector switch (step 6).
 - Project 26998 "Cotoros Main Test" Roof: closes in both directions after remodelling (no code change). Modelling rules
   found: a strut TD on a line that runs the full diaphragm depth counts its force twice (the basic field already
   closes it); an edge step needs a full-depth chord TD (Ex 3.5 / 4.1 form); an offset line closes only in the Ex 3.3
@@ -47,6 +50,23 @@ Guide: `docs/diaphragm-analysis.md`. Book cases: `docs/diaphragm-analysis-book-c
 All in `tests/daCase26996.test.mjs`.
 
 **Open, next session:**
+- **2026-11-09 built (uncommitted): 0-A (td-v15), 6-A (td-v16), 5 (td-v17)** — see
+  `docs/diaphragm-analysis-plan-2026-11-09-open-items.md` "Built". Small item: TD5's strut load leaves out TD6's
+  reaction on line 2 (~29 lb, 26998; rule G2 with one loaded TD).
+0. **BUG (found 2026-11-09) — FIXED td-v15 (option 0-A, plan 2026-11-09-open-items): offset line + deflection method — a wall with no deflection grabs the whole
+   line.** `tdWallLink.swdWallShares` (deflection branch) calls `shearWallCalc.equalDeflectionSplit` with each group
+   wall's `_deltaAt`. When SWD cannot compute a wall's deflection at its trial share (no nailing / hardware carries it),
+   `_deltaAt` returns **null**; the solver reads null as 0 deflection — an infinitely stiff wall — so that wall takes the
+   whole group force. 26998 Roof, offset line 2/3, SWD distribution = deflection: round 0 puts 11.6 k on SW-65 (3.33 ft)
+   → δ null → SW-65 takes all 22.8 k, **SW-35 (7.5 ft, the stiffest wall, 0.03 in / k) gets 0**; locked in over the rounds
+   (line 3 = 0 at the Roof); on the 2nd Floor line 3 walls SW-70 / 71 go negative (−1.1 / −1.3 k). Statics and closure
+   still pass, so nothing flags it. Direct equal δ with valid curves: SW-35 17.16, SW-65 5.08, SW-60 / 62 0.96 k each.
+   - Fix tested in a scratch copy (Diaphragm Analysis side only): the deflection branch requires a finite δ for every
+     group wall (checked at ¼, ½, 1 × the carried force); otherwise the existing fallback — split by capacity, warning
+     `swd-group-defl`. 26998 then closes both levels; SW-35 17.84 k.
+   - To check before any change: SWD's own per-line equal-δ (`shearWallCalc`, ~line 1008, same solver) may have the same
+     null case — production code: check only, freeze test, plan first.
+   - Capacity method (default): not affected.
 1. **User test, mixed case** (noted 2026-11-05, see below): walls above partly into the diaphragm, partly straight
    down; build a fixture from it.
 2. **G11:** TDs at the collector ends — the TD engine does not take a concentrated load of a wall above on its load

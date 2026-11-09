@@ -20,7 +20,7 @@ import { closeCase } from './tdClosure.js';
 import { cantileverLimits, CANTILEVER_LIMITS_VERIFY } from './tdLimits.js';
 import { sharedGrids, gridShareDiff, applyGridShare, localOnlyGrids } from './tdGridShare.js';
 
-export const CALC_VERSION = 'td-v13'; // v13 (2026-11-06, user test 26998): a TD's strut load P includes the share of a wall of its load line that runs past the TD edge into the TD (it was left out: the member did not close). // v12 (2026-11-05, user, project 26997): walls of the story above (SWD level above): those that end at this floor are concentrated loads into the diaphragms spanning across their grid (shared by depth) and a source on their grid's member (distributor); walls that continue add a drag on their own line; bounded grids, shared grids, grid link with SWD; no line-length check. // v11 (2026-11-04, user): TD overhangs picked by grid, one per support (both ends allowed); any number of TD load lines anywhere from tip to tip — between the supports, on a support (straight into it), on an overhang (superposed engine runs: span / cantilever / mirrored cantilever); Auto load lines on the overhangs; a TD past a support without an overhang there is an error; a case with open member runs FAILS and is held from SWD. // v10 (2026-11-03, user test 26999): TD load lines Auto count only walls of the load direction whose line reaches the TD edge; strut TD loaded from both edges; any number of load lines on a simple-span TD (superposed single-load engine runs); closure solver keeps equilibrium, a case out of balance FAILS and is held from SWD; checks: opposite / double seismic loads, grid off the plan, wall inside a span taking nothing, offset line without a strut, TD past its supports. // v9 (2026-11-03): general closure solver (offset lines, wall lines, collectors into a diaphragm G7 with its basic field recomputed G9, TD reaction split G2), Gauss–Newton to exact closure; a group takes only its parts of a grid (G8); no opening warning at a notch. // v8 (2026-11-02): chord cut in an opening = section M/H by default; opening-edge member zero at the band's zero-shear point when its shear changes sign; opening-collector warning (opening study). // v7 (2026-11-02): diaphragm pieces; outside TD shear averaged where a wall ends inside a segment (G5); an edge carrying on past the TD is closed on its line (G6); chord cut inside an opening: consistent Vierendeel / section setting (G4). // v6: offset wall lines, line forces iterated to closure (Phase 7). // v5: TD and net fields, net-field members (Phase 6). // v2: TD geometry in the skill frame (results.tds); v3: basic shear, line forces, wall shares (Phase 4); v4: derived TD inputs + TD engine runs (Phase 5)
+export const CALC_VERSION = 'td-v17'; // v17 (2026-11-09, open item 5): offset lines with SWD shares settle — the force from above on a group line uses this level's line force as given (it was clamped to ≥ 0, so a negative one fed back and the rounds swung); a wall whose auto nailing alternates (A → B → A) is held at the heavier in the SWD copy (warning swd-group-nailing); up to 8 rounds. // v16 (2026-11-09, open item 6-A): opt-in per line of walls above "each wall into the diaphragm under it" (aboveCollectors[line].own) — no collector along the grid, a wall split by length over the diaphragms under it; absent = full depth as before. // v15 (2026-11-09, open item 0-A): offset line with SWD deflection distribution — equal δ only when every wall has a deflection (else that round split by capacity, warning swd-group-defl, kept across E / W); a wall without a deflection took the whole line. // v14 (2026-11-09, user test 26998): a wall line bridged across a gap inside the outline counts the walls (and walls above) standing on the bridged stretch in its member — the TD strut load counted them, the member did not (line 2 over OP1: −816 lb open). // v13 (2026-11-06, user test 26998): a TD's strut load P includes the share of a wall of its load line that runs past the TD edge into the TD (it was left out: the member did not close). // v12 (2026-11-05, user, project 26997): walls of the story above (SWD level above): those that end at this floor are concentrated loads into the diaphragms spanning across their grid (shared by depth) and a source on their grid's member (distributor); walls that continue add a drag on their own line; bounded grids, shared grids, grid link with SWD; no line-length check. // v11 (2026-11-04, user): TD overhangs picked by grid, one per support (both ends allowed); any number of TD load lines anywhere from tip to tip — between the supports, on a support (straight into it), on an overhang (superposed engine runs: span / cantilever / mirrored cantilever); Auto load lines on the overhangs; a TD past a support without an overhang there is an error; a case with open member runs FAILS and is held from SWD. // v10 (2026-11-03, user test 26999): TD load lines Auto count only walls of the load direction whose line reaches the TD edge; strut TD loaded from both edges; any number of load lines on a simple-span TD (superposed single-load engine runs); closure solver keeps equilibrium, a case out of balance FAILS and is held from SWD; checks: opposite / double seismic loads, grid off the plan, wall inside a span taking nothing, offset line without a strut, TD past its supports. // v9 (2026-11-03): general closure solver (offset lines, wall lines, collectors into a diaphragm G7 with its basic field recomputed G9, TD reaction split G2), Gauss–Newton to exact closure; a group takes only its parts of a grid (G8); no opening warning at a notch. // v8 (2026-11-02): chord cut in an opening = section M/H by default; opening-edge member zero at the band's zero-shear point when its shear changes sign; opening-collector warning (opening study). // v7 (2026-11-02): diaphragm pieces; outside TD shear averaged where a wall ends inside a segment (G5); an edge carrying on past the TD is closed on its line (G6); chord cut inside an opening: consistent Vierendeel / section setting (G4). // v6: offset wall lines, line forces iterated to closure (Phase 7). // v5: TD and net fields, net-field members (Phase 6). // v2: TD geometry in the skill frame (results.tds); v3: basic shear, line forces, wall shares (Phase 4); v4: derived TD inputs + TD engine runs (Phase 5)
 const f2 = v => (Number.isFinite(v) ? v.toFixed(2) : '—');
 const sameName = (a, b) => String(a || '').trim().toLowerCase() === String(b || '').trim().toLowerCase();
 const SHEATHING = [['wsp', 'Wood structural panels'], ['lumber_straight_single', 'Lumber, straight (single)'],
@@ -106,7 +106,7 @@ export function calcAll(inputs, refs = {}, opts = {}) {
     // walls of the story above (step 5): where they stand on this plan and whether they end at this floor
     wallsAbove: link && link.above ? { level: link.above.upperLevel, walls: link.above.walls.map(w => ({ mark: w.mark, line: w.line, swdWallId: w.swdWallId,
       swdLineId: w.swdLineId, swdDirId: w.swdDirId, dir: w.dir, axis: w.axis, at: w.at, from: w.from, to: w.to, kind: w.kind, onSheathing: w.onSheathing,
-      E: w.VE ?? null, W: w.VW ?? null, collector: w.collector || null })) } : null,
+      E: w.VE ?? null, W: w.VW ?? null, collector: w.collector || null, own: !!w.own })) } : null,
     // B4 (step 6): the force of each wall above that this diaphragm took (kip, 1.0E / 1.0W) — Shear Wall Design compares it
     // with what it handed over at this floor
     transferIn: link && link.above ? (an.cases || []).flatMap(cs => (cs.above || []).filter(a => a.kind === 'transfer' && a.V && !(cs.aboveMissed || []).some(m => m.mark === a.mark))
@@ -219,7 +219,7 @@ function wallsInSpan(plan, cases) {
 // each SWD line (tdWallLink.swdWallShares groups). SWD's shares depend on the forces (deflection, auto nailing), so:
 // solve closure with the shares of the last SWD run, send the new line forces to an SWD copy, repeat until no weight
 // moves more than 1e-5 of the group (max 6 rounds). Returns closeCase's result (null when nothing to solve).
-export const GROUP_ROUNDS = 6;
+export const GROUP_ROUNDS = 8; // 6 → 8 (open item 5-A): a wall found alternating is held from round 3, then the rounds settle
 function solveLinkedGroups(plan, cs, cases, link, swd, runCase, frames, warnings) {
   const groups = lineGroups(plan, cs).filter(g => g.walls.every(w => w.linked));
   if (!groups.length) return closeCase(plan, cs, runCase, { frames });
@@ -229,9 +229,24 @@ function solveLinkedGroups(plan, cs, cases, link, swd, runCase, frames, warnings
   const gridOfLine = id => { const l = link.lines.find(x => x.lineId === id); return l && l.grid ? l.grid.id : null; };
   const norm = b => Object.fromEntries(Object.entries(b).map(([n, x]) => { const s = Object.values(x.weights).reduce((t, v) => t + v, 0) || 1; return [n, Object.fromEntries(Object.entries(x.weights).map(([k, v]) => [k, v / s]))]; }));
   let it = null, prev = null, rounds = 0, settled = false, method = {};
+  // open item 5-A (2026-11-09): SWD re-picks the auto nailing of a wall from its share in every round, so the capacity
+  // weights can flip between two states and never settle (26998 2/3: SW-70 / 71). Only a wall that really alternates —
+  // its pick comes back after a different one (A → B → A) — is held, in this SWD copy only, at the heavier of the two;
+  // a wall whose nailing changes once and stays is left free, so a case that settles is unchanged (26996: DA = SWD).
+  const picks = [], held = [], fixed = {};
+  const groupWallIds = [...new Set(spec.flatMap(g => g.wallIds))].map(id => String(id).replace(/^swd:/, ''));
   for (; rounds < GROUP_ROUNDS; rounds++) {
     const lf = linkLineForces(cases, link).map(f => ({ ...f, E: f.E || 0, W: f.W || 0 }));
-    const sw = swdWallShares(swd, link.levelId, lf, spec);
+    if (rounds >= 3) for (const id of groupWallIds) {
+      if (fixed[id]) continue;
+      const a = picks[rounds - 3][id], b = picks[rounds - 2][id], c = picks[rounds - 1][id];
+      if (!a || !b || !c || [a, b, c].some(x => x.id === 'wswh') || a.id !== c.id || a.id === b.id) continue;
+      const h = (b.cap || 0) > (a.cap || 0) ? b : a;
+      fixed[id] = h.id;
+      held.push({ mark: (plan.walls.find(w => w.id === 'swd:' + id) || {}).mark || id, picks: [a.label, b.label], held: h.label });
+    }
+    const sw = swdWallShares(swd, link.levelId, lf, spec, Object.keys(fixed).length ? { fixNailing: fixed } : {});
+    picks.push(sw.nailing || {});
     if (sw.error) { warnings.push({ code: 'swd-calc', warn: true, msg: sw.error + ' — offset line split by wall length.' }); return closeCase(plan, cs, runCase, { frames }); }
     const basis = {};
     for (const g of groups) {
@@ -250,7 +265,8 @@ function solveLinkedGroups(plan, cs, cases, link, swd, runCase, frames, warnings
     it = closeCase(plan, cs, runCase, { frames, groupBasis: basis });
     prev = basis;
   }
-  if (it) it.offset.swdRounds = { rounds, settled };
+  if (it) it.offset.swdRounds = { rounds, settled, held };
+  if (held.length) warnings.push({ code: 'swd-group-nailing', warn: true, msg: `Offset line ${groups.map(g => g.name).join(', ')}: the automatic nailing of ${held.map(h => h.mark + ' (' + h.picks.join(' ↔ ') + ')').join(', ')} alternated between rounds; for the split it is held at the heavier (${held.map(h => h.mark + ': ' + h.held).join(', ')}). Shear Wall Design picks the lightest nailing for the final loads — if it picks a lighter one, its wall shares on these lines differ slightly from this analysis: check them there, or set that nailing in Shear Wall Design.` });
   for (const [name, e] of Object.entries(method)) {
     if (e.mixed) warnings.push({ code: 'swd-group-mixed', warn: true, msg: `Offset line ${name}: its Shear Wall Design lines use different distribution methods — the group is split by capacity.` });
     if (e.deflectionFailed) warnings.push({ code: 'swd-group-defl', warn: true, msg: `Offset line ${name}: no deflection from Shear Wall Design for every wall — the group is split by capacity.` });
@@ -283,7 +299,7 @@ export function analyse(plan, q, link, swd, opts = {}) {
   const cases = loadCases(plan).map(lc => {
     const sg = lc.loads.length && String(lc.loads[0].acts).startsWith('-') ? -1 : 1;
     const above = ab.filter(w => w.dir === lc.dir).map(w => ({ mark: w.mark, line: w.line, kind: w.kind, gridId: w.gridId, axis: w.axis, at: w.at,
-      from: w.from, to: w.to, V: vOf(w, lc.kind), swdWallId: w.swdWallId, swdLineId: w.swdLineId, collector: w.collector || null }));
+      from: w.from, to: w.to, V: vOf(w, lc.kind), swdWallId: w.swdWallId, swdLineId: w.swdLineId, collector: w.collector || null, own: !!w.own }));
     // with collector loads into the diaphragms spanning across them (G7) and the walls above that end here (step 6)
     const { c, lf } = basicCase(plan, lc, { q, above: aboveLoads({ above, sigma: sg }) });
     issues.push(...c.issues, ...lf.issues);
@@ -297,7 +313,8 @@ export function analyse(plan, q, link, swd, opts = {}) {
       const ms = inside.filter(m => m.line === line), a = ms[0];
       issues.push({ code: 'above-collector-inside', msg: `Collector of line ${line} (${a.collector.from}–${a.collector.to}) ends inside diaphragm ${[...new Set(ms.flatMap(m => m.diaphragms))].join(', ')} (load along ${lc.dir}): the force of ${ms.map(m => m.mark).join(', ')} would go into only part of its depth. Split that diaphragm at the collector ends — a separate diaphragm on each side, so the ends become chords — or set the collector to the diaphragm edges, or leave it blank for the full depth.` });
     }
-    for (const a of (c.aboveMissed || []).filter(m => m.reason !== 'inside')) issues.push({ code: 'above-no-diaphragm', msg: `Wall ${a.mark} of the story above (line ${a.line}) ends at this floor, but no diaphragm of the ${lc.kind === 'E' ? 'seismic' : 'wind'} case along ${lc.dir} spans across its grid (it is outside every diaphragm or on a support line) — its force cannot be carried. Draw the diaphragm across it, or check the line start.` });
+    for (const a of (c.aboveMissed || []).filter(m => m.reason === 'own')) issues.push({ code: 'above-no-diaphragm', msg: `Wall ${a.mark} of the story above (line ${a.line}) ends at this floor; its line is set to "into the diaphragm under each wall", but no diaphragm of the ${lc.kind === 'E' ? 'seismic' : 'wind'} case along ${lc.dir} spanning across its grid lies under the wall (${f2(Math.min(a.from, a.to))}–${f2(Math.max(a.from, a.to))}) — its force cannot be carried. Draw the diaphragm under it, or untick the switch (force shared along the grid).` });
+    for (const a of (c.aboveMissed || []).filter(m => m.reason !== 'inside' && m.reason !== 'own')) issues.push({ code: 'above-no-diaphragm', msg: `Wall ${a.mark} of the story above (line ${a.line}) ends at this floor, but no diaphragm of the ${lc.kind === 'E' ? 'seismic' : 'wind'} case along ${lc.dir} spans across its grid (it is outside every diaphragm or on a support line) — its force cannot be carried. Draw the diaphragm across it, or check the line start.` });
     if (lc.loads.some(l => l.mode === 'seismic') && q === null) issues.push({ code: 'no-fx', msg: 'Seismic load: F_x is missing (Setup) — seismic loads are 0.' });
     return { ...c, q, lines: lf.lines, above, issues: undefined };
   });
