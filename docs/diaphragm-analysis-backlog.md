@@ -3,7 +3,56 @@
 Branch `diaphragm-analysis` (off `master` 71cdfb5; module renamed from Transfer Diaphragm 2026-10-29). Plan: `~/.claude/plans/read-the-md-files-composed-kite.md` (approved 2026-10-29).
 Guide: `docs/diaphragm-analysis.md`. Book cases: `docs/diaphragm-analysis-book-cases.md`.
 
-## Note 2026-11-06 (later) — user test 26998 and UI changes (uncommitted)
+## Next session — start here (set 2026-11-09, end of session)
+**State:** everything committed and pushed.
+- Branch `da-phase3-td-engine`: 384f66c (UI + td-v13), 4fa1262 (td-v14 … td-v17). **PR #8 → master** (merged 2026-11-09 23:01):
+  https://github.com/Ruihao-spacial/design-item-hub/pull/8 — it also carried Phases 3–7 (td-v12): PR #7 had been merged
+  into `diaphragm-analysis` *after* PR #6 merged that branch into master, so master never got it.
+- CALC_VERSION **td-v17**; SWD untouched this round (CALC v24, schema 13; freeze identical). `npm test` 692 ok, build OK,
+  books 649 / 649, 26996 DA = SWD unchanged.
+- User test **26998 "Cotoros Main Test"** (local DB): Roof and 2nd Floor close in both directions, capacity and deflection
+  method. Fixtures `tests/fixtures/da-user/t98-*` (saves 2026-11-09 22:03–22:05), test `tests/daCase26998.test.mjs`.
+
+**Built 2026-11-06 … 11-09** (guide: "Plan model", "TD inputs", "Collector extent"; plans
+`docs/diaphragm-analysis-plan-2026-11-06.md`, `docs/diaphragm-analysis-plan-2026-11-09-open-items.md`):
+- UI: plan messages grouped / numbered under the plan; Diaphragms / TDs tabs with sub-tabs; analysis diagrams above the
+  walls, walls below / above switches; dark-theme colours.
+- td-v13 load-line wall inside a TD counts in P; td-v14 walls on a bridged strut act on the member; td-v15 deflection
+  split only with a deflection for every wall (else capacity); td-v16 opt-in "each wall into the diaphragm under it";
+  td-v17 offset rounds settle (force from above not clamped; alternating auto nailing held, warning swd-group-nailing).
+- Modelling guide "How to draw diaphragms and TDs" (rules 1–7).
+
+**Built 2026-11-10 (user, uncommitted — user reviews / commits):** td-v18 — (1) every load case analysed in both senses
+by a full second run (option 1-B; a sign flip is not accurate for wind at an opening); (2) Analysis tab: Acts entered /
+reversed, Load combination dropdown LRFD 1.0E / ASD 0.7E, LRFD 1.0W / ASD 0.6W on top of the force level (default =
+Setup design basis); (3) ρ note under the seismic force levels; (4) View 4 draws nothing where N = 0. SWD line forces
+unchanged (entered sense). Guide: "Both senses and load combinations". `npm test` 701 ok, books unchanged, build OK.
+Cost: 2nd Floor of 26998 ≈ 6 s per recalculation (was 3 s). Then: (5) Analysis tab Acts "Envelope ±y" — View 4 overlays
+the two runs: max T / max C, signed (display only, no calc change); (6) the envelope on Views 1–3 too: max |v| of the
+two senses per cell, governing sense named (for diaphragm selection). DA → SWD checked: line forces 1.0E / 1.0W, no
+factor / ρ (k_D, k_C, Ω₀, +25 %, basis do not reach them); SWD applies 0.7ρ itself (26998, ρ 1 and 1.3).
+**Phase 8 PDF built 2026-11-10** (guide "PDF report"; `tdReport.js`, `tests/daReport.test.mjs`; checked in Chrome).
+Was planned as (user 2026-11-10): ASD, 3 force levels (1.0E / diaphragm / collector), loads along x and y, member
+diagrams as the ± envelope (max T / max C), unit shears as the ± envelope (max |v|); Summary / Detailed as planned, slightly simplified (contents to show the user
+first). Upgrade script dropped (results regenerate on open; SWD reads DA's recalculated results, not the stored copy).
+
+**Open, next session** (reviewed by the user 2026-11-10):
+1. ~~Merge PR #8~~ — merged 2026-11-09 23:01. Stored items recalculate on open.
+2. ~~TD5's strut load leaves out TD6's support reaction on line 2 (~29 lb on 26998, rule G2)~~ — accepted as is (user
+   2026-11-10: within tolerance, no fix).
+3. ~~26998 design notes~~ — dropped (user 2026-11-10). They were notes on the test project's design, not tool work; Ω₀ on
+   the Type 4 transfers is already covered by the force levels (diaphragm k_D·own + Ω₀·above, collector option).
+4. Deferred (reviewed by the user 2026-11-10):
+   - 6-B collector stretches per line — only for separate collectors with a gap on one line (e.g. B–C and E–F). Touching
+     collectors are one from–to, already built. Until a project needs it: one from–to over both, or the "each wall into
+     the diaphragm under it" switch. Build only on a real project.
+   - G11 (collector end inside a diaphragm) — plan error `above-collector-inside`; split the diaphragm at the collector
+     end. A drawing limit, not a wrong result.
+   - SWD small items (B5 note, elevation snap), modelling-rule warnings, placement agent, Phase 8 (PDF / upgrade script).
+   - Dropped: wall-less part of a wall line as automatic collector — modelled with a wall-less grid + TD (26998 grid 9E,
+     guide rule 4 kind 2); flagged by `line-part-no-wall`. Convenience only, no change to results.
+
+## Earlier note (2026-11-06 … 11-09, during the work — history)
 - **Plan for all open items: `docs/diaphragm-analysis-plan-2026-11-06.md`** — re-assessed by need and risk (user
   2026-11-06): kept = fixture 26998 2nd, investigation of the unsettled offset lines and the 2nd Floor x runs, item 6
   reduced to an opt-in per-line switch (default unchanged); dropped = member ends at its grid end (grid extents already
@@ -26,7 +75,7 @@ Guide: `docs/diaphragm-analysis.md`. Book cases: `docs/diaphragm-analysis-book-c
 - Modelling guide written: guide `docs/diaphragm-analysis.md`, "How to draw diaphragms and TDs" (rules 1–7 with the
   26998 cases).
 
-## Next session — start here (set 2026-11-06, end of session)
+## Earlier start-here (set 2026-11-06, end of session — history)
 **State:** everything is committed and pushed.
 - Commit **87aceab** on `da-phase3-td-engine` (everything since 5e7f607).
 - **PR #7** is stacked on #6 (`diaphragm-analysis`); merge order **#5 → #6 → #7** (GitHub retargets #7 to master).

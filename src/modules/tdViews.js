@@ -124,9 +124,23 @@ function attachZoomPan(root, group, v, plan, zs, redraw) {
 }
 
 const fmtK = v => (Math.round(v * 1000) / 1000).toString();
-// What the Analysis views are showing (seismic: the force level and its factor; wind: as entered)
-export function forcesShown(cs, lvl, k, fl, q) {
-  if (cs.kind !== 'E') return 'Forces shown: wind, 1.0W as entered on the Plan tab (no factor).';
+// Load combination factor on the force level shown (user 2026-11-10): LRFD 1.0E / 1.0W, ASD 0.7E / 0.6W (ASCE 7-22
+// §2.3.6 / §2.4.5 for E; §2.3.1 / §2.4.1 for W — W is strength level). Default = Setup → General "Design basis".
+export const comboFactor = (kind, basis) => (basis === 'LRFD' ? 1 : kind === 'E' ? 0.7 : 0.6);
+export const comboLabel = (kind, basis) => basis + ' — ' + fmtK(comboFactor(kind, basis)) + (kind === 'E' ? 'E' : 'W');
+
+// What the Analysis views are showing: the sense, the load combination and (seismic) the force level and its factor.
+// combo = { basis, kc, acts, reversed } (absent: the 1.0 level as analysed, entered sense)
+export function forcesShown(cs, lvl, k, fl, q, combo = null) {
+  const base = forcesLevel(cs, lvl, k, fl, q);
+  if (!combo) return base;
+  const tot = fmtK(combo.kc * k);
+  return `${combo.basis} ${fmtK(combo.kc)}${cs.kind === 'E' ? 'E' : 'W'}` + (k !== 1 ? ` × level ${fmtK(k)} = × ${tot}` : '')
+    + `, acting ${combo.acts}${combo.envelope ? ' (envelope of both senses: max tension / max compression of the two runs)' : combo.reversed ? ' (reversed sense — its own full run)' : ' (entered sense)'}. ` + base
+    + (combo.kc !== 1 ? ` All values below are × ${fmtK(combo.kc)} (${combo.basis}).` : '');
+}
+function forcesLevel(cs, lvl, k, fl, q) {
+  if (cs.kind !== 'E') return 'Forces shown: wind, 1.0W as entered on Setup → Wind loading (no factor).';
   // walls of the story above (step 7): the levels name both parts
   const ab = (cs.above || []).filter(a => a.V);
   if (ab.length) {
@@ -161,12 +175,90 @@ export function scaleCase(cs, k) {
   };
 }
 
+// ── Envelope of the two senses (user 2026-11-10): an overlay of the two runs already calculated (entered and reversed),
+// member by member — no new calculation. At every position either run has a point (plus where the two diagrams cross),
+// max T = the larger N of the two, max C = the smaller (signed, not absolute). Members only (View 4).
+// Linear value of a run's points at p (null outside the run)
+function nOn(points, p) {
+  if (!points.length || p < points[0][0] - 1e-6 || p > points[points.length - 1][0] + 1e-6) return null;
+  for (let i = 0; i < points.length - 1; i++) {
+    const [a, na] = points[i], [b, nb] = points[i + 1];
+    if (p >= a - 1e-9 && p <= b + 1e-9) return b - a < 1e-12 ? nb : na + (nb - na) * (p - a) / (b - a);
+  }
+  return points[points.length - 1][1];
+}
+// Points of f(p) = max / min of two piecewise-linear diagrams, with their crossing points added
+export function envelopePoints(pa, pb) {
+  const A = [...pa].sort((x, y) => x[0] - y[0]), B = [...pb].sort((x, y) => x[0] - y[0]);
+  const st = [...new Set([...A, ...B].map(([p]) => Math.round(p * 1e6) / 1e6))].sort((x, y) => x - y);
+  const val = (P, p) => { const n = nOn(P, p); return n === null ? 0 : n; }; // a sense without the run there: N = 0
+  const hi = [], lo = [];
+  for (let i = 0; i < st.length; i++) {
+    const p = st[i], a = val(A, p), b = val(B, p);
+    if (i) {
+      const q = st[i - 1], a0 = val(A, q), b0 = val(B, q);
+      if ((a0 - b0) * (a - b) < 0) { // the two diagrams cross inside (q, p)
+        const t = (a0 - b0) / ((a0 - b0) - (a - b)), x = q + t * (p - q), n = a0 + t * (a - a0);
+        hi.push([x, n]); lo.push([x, n]);
+      }
+    }
+    hi.push([p, Math.max(a, b)]); lo.push([p, Math.min(a, b)]);
+  }
+  return { hi, lo };
+}
+// The part of a diagram on one side of 0 (sign +1: tension, −1: compression), with the zero crossings added
+export function clipSide(points, sign) {
+  const out = [];
+  for (let i = 0; i < points.length; i++) {
+    const [p, n] = points[i];
+    if (i) {
+      const [q, m] = points[i - 1];
+      if (m * n < 0) { const x = q + (p - q) * m / (m - n); out.push([x, 0]); }
+    }
+    out.push([p, sign > 0 ? Math.max(n, 0) : Math.min(n, 0)]);
+  }
+  return out;
+}
+// A case whose members are the envelope of cases a (entered) and b (reversed), both at the same level / factor.
+// Each run: env.T / env.C (the max T / max C diagrams), points = both (for runExtremes), max = the larger |N|,
+// residual = the larger closure residual of the two; env.ok = both close.
+export function envelopeCase(a, b) {
+  const key = m => m.family + '|' + m.at.toFixed(4);
+  const bm = new Map((b.members || []).map(m => [key(m), m]));
+  const runKey = r => r.from.toFixed(4) + '|' + r.to.toFixed(4);
+  const envRun = (ra, rb) => {
+    const { hi, lo } = envelopePoints(ra ? ra.points : [], rb ? rb.points : []);
+    const res = [ra, rb].filter(Boolean).sort((x, y) => Math.abs(y.residual) - Math.abs(x.residual))[0];
+    const T = clipSide(hi, 1), C = clipSide(lo, -1);
+    const max = Math.max(0, ...T.map(([, n]) => n), ...C.map(([, n]) => -n));
+    const base = ra || rb;
+    return { from: base.from, to: base.to, pieces: [], N: res.N, residual: res.residual, max, points: [...T, ...C],
+      env: { T, C, ok: [ra, rb].filter(Boolean).every(r => closes(r)) } };
+  };
+  const members = (a.members || []).map(m => {
+    const o = bm.get(key(m)); bm.delete(key(m));
+    const orun = new Map(((o && o.runs) || []).map(r => [runKey(r), r]));
+    const runs = m.runs.map(r => { const rb = orun.get(runKey(r)); orun.delete(runKey(r)); return envRun(r, rb); });
+    for (const rb of orun.values()) runs.push(envRun(null, rb)); // a run only the reversed sense has
+    return { ...m, runs };
+  });
+  for (const o of bm.values()) members.push({ ...o, runs: o.runs.map(r => envRun(null, r)) });
+  return { ...a, members, envelope: true };
+}
+const runCloses = r => (r.env ? r.env.ok : closes(r));
+
 // Value under the mouse at drawing point (px, py) of view v. kind 1–3: unit shear at that point (basic / TD / net);
 // kind 4: N on the nearest member line within 10 px (show = member filter). Returns { text, at: [px, py] } or null.
 export function readoutAt(plan, cs, v, kind, px, py, show = { chord: true, cross: true }) {
   const x = v.wx(px), y = v.wy(py);
   const [s, c] = cs.axis === 'x' ? [x, y] : [y, x];
   const pos = `x ${f1(x)}, y ${f1(y)}`;
+  if (cs.envShear && kind <= 3) { // envelope of the two senses: both values and max |v|
+    const e = envShearAt(cs, cs.envShear.b, kind, s, c);
+    if (!e) return null;
+    const nm = kind === 1 ? 'v_b' : kind === 2 ? 'v_TD' : 'v_net', A = cs.envShear.acts;
+    return { text: `${nm} ${A.a}: ${f1(e.va || 0)} · ${A.b}: ${f1(e.vb || 0)} → max |v| ${f1(e.v)} plf (${e.from === 'a' ? A.a : A.b}) · ${pos}`, at: [px, py] };
+  }
   if (kind === 1 || kind === 3) {
     const val = kind === 1 ? vAt(cs, s, c) : vNetAt(cs, cs.fields || [], s, c);
     return val === null ? null : { text: `${kind === 1 ? 'v_b' : 'v_net'} ${f1(val)} plf · ${pos}`, at: [px, py] };
@@ -182,9 +274,17 @@ export function readoutAt(plan, cs, v, kind, px, py, show = { chord: true, cross
     const d = alongX ? Math.abs(py - v.sy(m.at)) : Math.abs(px - v.sx(m.at));
     const p = alongX ? x : y;
     if (d > 10 || (best && d >= best.d)) continue;
+    const at = alongX ? [px, v.sy(m.at)] : [v.sx(m.at), py];
+    if (cs.envelope) { // envelope: max T and max C at p
+      const r = m.runs.find(q => p >= q.from - 1e-4 && p <= q.to + 1e-4);
+      if (!r || !r.env) continue;
+      const t = nOn(r.env.T, p), c = nOn(r.env.C, p);
+      best = { d, text: `${m.name} at ${alongX ? 'x' : 'y'} ${f1(p)}: max T ${f0(t || 0)} · max C ${f0(-(c || 0))} lb (both senses)`, at };
+      continue;
+    }
     const n = memberN(m, p);
     if (n === null) continue;
-    best = { d, text: `${m.name} at ${alongX ? 'x' : 'y'} ${f1(p)}: N = ${tc(n)} lb`, at: alongX ? [px, v.sy(m.at)] : [v.sx(m.at), py] };
+    best = { d, text: `${m.name} at ${alongX ? 'x' : 'y'} ${f1(p)}: N = ${tc(n)} lb`, at };
   }
   return best && { text: best.text, at: best.at };
 }
@@ -228,6 +328,10 @@ function scaleLegend(sc, members) {
     box.appendChild(el('span', null, 'diagram height ∝ |N| — largest |N| ' + f0(sc.max) + ' lb; hover a diagram for N; zoom ≥ 200 % labels N at grids and wall ends'));
     return box;
   }
+  if (sc.envelope) {
+    box.appendChild(el('span', null, swatch(ENV, 0.5), ' ' + sc.name + ' of both senses: colour depth ∝ max |v| / largest of this view (' + f1(sc.max) + ' ' + sc.unit + '); hover a cell for both senses'));
+    return box;
+  }
   const bar = el('span', { style: { display: 'inline-block', width: '180px', height: '10px', border: '1px solid var(--border)', verticalAlign: 'middle',
     background: `linear-gradient(to right, rgba(220,38,38,0.53), rgba(220,38,38,0.08) 49%, #fff 50%, rgba(37,99,235,0.08) 51%, rgba(37,99,235,0.53))` } });
   box.appendChild(el('span', { className: 'mono' }, '−' + f1(sc.max)));
@@ -259,36 +363,68 @@ export function renderAnalysis(plan, results, pick) {
     return box;
   }
   if (!cases.length) { box.appendChild(el('p', { style: small }, 'No load — add one on the Plan tab.')); return box; }
-  const cs0 = cases.find(c => c.id === pick.id) || cases[0];
+  const csE = cases.find(c => c.id === pick.id) || cases[0];
   box.appendChild(el('div', { style: { display: 'flex', gap: '4px', flexWrap: 'wrap', marginBottom: '0.5rem' } },
-    ...cases.map(c => el('button', { type: 'button', className: 'btn btn-sm' + (c.id === cs0.id ? ' btn-primary' : ''), onClick() { pick.set(c.id); } }, caseLabel(c)))));
+    ...cases.map(c => el('button', { type: 'button', className: 'btn btn-sm' + (c.id === csE.id ? ' btn-primary' : ''), onClick() { pick.set(c.id); } }, caseLabel(c)))));
+  // sense (user 2026-11-10, 1-B): the entered sense or the reversed one — a full second run (calcAll results.reverse)
+  const rev = results.reverse || null;
+  const acts = (results.senses || []).find(x => x.caseId === csE.id) || { entered: (csE.loads && csE.loads[0] && csE.loads[0].acts) || '', reversed: '' };
+  const view = pick.view || 1;
+  // sense: 'entered' | 'reversed' | 'envelope' (both senses overlaid: View 4 max T / max C, Views 1–3 max |v|)
+  const sense = !(rev && acts.reversed) ? 'entered' : pick.sense || (pick.reversed ? 'reversed' : 'entered');
+  const csR = rev && acts.reversed ? rev.cases.find(c => c.id === csE.id) || null : null;
+  const reversed = sense === 'reversed' && !!csR;
+  // the reversed sense must be complete for the envelope: a PAUSED / FAILED run has no valid TD / net / member values
+  // (a PAUSED run still has a valid basic shear: View 1 keeps the envelope)
+  const revBad0 = csR && ((csR.paused && csR.paused.length) ? 'PAUSED' : csR.failed ? 'FAILED' : null);
+  const revBad = revBad0 && !(view === 1 && revBad0 === 'PAUSED') ? revBad0 : null;
+  const envelope = sense === 'envelope' && !!csR && !revBad;
+  const cs0 = reversed ? csR : csE;
   // force level (seismic): every view and table below shows the case scaled by k (results stay at 1.0E)
   const fl = results.forceLevels || { fx: null, diaphragm: 1, collector: 1 };
   const lvl = cs0.kind === 'E' ? (pick.level || 'E') : 'E';
-  const k = lvl === 'D' ? fl.diaphragm : lvl === 'C' ? fl.collector : 1;
+  const kL = lvl === 'D' ? fl.diaphragm : lvl === 'C' ? fl.collector : 1;
+  // load combination (user 2026-11-10): a factor on the force level shown — LRFD 1.0E / 1.0W, ASD 0.7E / 0.6W
+  const basis = pick.basis === 'ASD' ? 'ASD' : 'LRFD'; // the module passes Setup's design basis; none given = 1.0 as analysed
+  const kc = comboFactor(cs0.kind, basis);
+  const k = kc * kL;
   // diaphragm level with walls above (step 7): the run with the walls above × Ω₀ / k_D, × k_D (calcAll levelD)
-  const dCase = lvl === 'D' && results.levelD ? results.levelD.find(c => c.id === cs0.id) || null : null;
-  const cs = scaleCase(dCase || cs0, k);
-  const lvBar = el('div', { style: { display: 'flex', gap: '6px', flexWrap: 'wrap', alignItems: 'center', marginBottom: '0.4rem' } });
-  if (cs0.kind === 'E') {
-    lvBar.appendChild(el('span', { style: { fontSize: '0.78rem', color: 'var(--ink-secondary)' } }, 'Force level:'));
-    for (const [key, txt] of [['E', '1.0E (F_x)'], ['D', 'Diaphragm × ' + fmtK(fl.diaphragm)], ['C', 'Collector × ' + fmtK(fl.collector)]])
-      lvBar.appendChild(el('button', { type: 'button', className: 'btn btn-sm' + (key === lvl ? ' btn-primary' : ' btn-ghost'), onClick() { pick.setLevel && pick.setLevel(key); } }, txt));
-  }
+  const levelD = reversed ? rev.levelD : results.levelD;
+  const dCase = lvl === 'D' && levelD ? levelD.find(c => c.id === cs0.id) || null : null;
+  const dRev = envelope && lvl === 'D' && rev.levelD ? rev.levelD.find(c => c.id === cs0.id) || null : null;
+  const envB = envelope ? scaleCase(dRev || csR, k) : null; // the reversed sense at the same level / factor
+  const cs = envelope && view === 4 ? envelopeCase(scaleCase(dCase || csE, k), envB) : scaleCase(dCase || cs0, k);
+  const lvBar = el('div', { style: { display: 'flex', gap: '6px 14px', flexWrap: 'wrap', alignItems: 'center', marginBottom: '0.4rem' } });
+  const lab = t => el('span', { style: { fontSize: '0.78rem', color: 'var(--ink-secondary)' } }, t);
+  const grpBox = (...c) => el('span', { style: { display: 'inline-flex', gap: '4px', alignItems: 'center' } }, ...c);
+  if (acts.reversed) lvBar.appendChild(grpBox(lab('Acts:'), ...[['entered', acts.entered + ' (entered)'], ['reversed', acts.reversed], ['envelope', 'Envelope ±' + csE.dir]].map(([key, txt]) =>
+    el('button', { type: 'button', 'data-sense': key, className: 'btn btn-sm' + (key === sense ? ' btn-primary' : ' btn-ghost'), disabled: key !== 'entered' && !csR,
+      title: key === 'envelope' ? 'Both senses overlaid — unit shear: max |v| per cell; members: max tension and max compression' : '',
+      onClick() { if (pick.setSense) pick.setSense(key); else if (pick.setReversed) pick.setReversed(key === 'reversed'); } }, txt))));
+  if (cs0.kind === 'E') lvBar.appendChild(grpBox(lab('Force level:'), ...[['E', '1.0E (F_x)'], ['D', 'Diaphragm × ' + fmtK(fl.diaphragm)], ['C', 'Collector × ' + fmtK(fl.collector)]].map(([key, txt]) =>
+    el('button', { type: 'button', className: 'btn btn-sm' + (key === lvl ? ' btn-primary' : ' btn-ghost'), onClick() { pick.setLevel && pick.setLevel(key); } }, txt))));
+  lvBar.appendChild(grpBox(lab('Load combination:'), el('select', { className: 'form-input', 'data-combo': '1', style: { width: 'auto', padding: '2px 6px', fontSize: '0.8rem' },
+    onChange(e) { pick.setBasis && pick.setBasis(e.target.value); } },
+  ...['LRFD', 'ASD'].map(b => el('option', { value: b, selected: b === basis }, comboLabel(cs0.kind, b))))));
   box.appendChild(lvBar);
   box.appendChild(el('div', { className: 'td-forces-shown', style: { fontSize: '0.82rem', fontWeight: 600, margin: '0 0 0.5rem', padding: '4px 8px', borderLeft: '3px solid var(--accent)', background: 'var(--surface-2, #f8fafc)' } },
-    forcesShown(cs0, lvl, k, fl, results.q)));
+    forcesShown(cs0, lvl, kL, fl, results.q, { basis, kc, acts: reversed ? acts.reversed : envelope ? '±' + csE.dir : acts.entered, reversed, envelope })));
+  if (envelope && view !== 4) box.appendChild(el('p', { 'data-envelope-note': 'shear', style: { ...small, margin: '0 0 0.4rem' } },
+    'Envelope: each cell shows max |v| of the two senses (' + acts.entered + ', ' + acts.reversed + ') — sheathing capacity is the same either way, so this is the value for diaphragm selection. Hover a cell for both senses and the one that governs.'));
+  if (sense === 'envelope' && revBad) box.appendChild(el('p', { 'data-envelope-note': 'bad', style: { ...small, color: 'var(--fail)', margin: '0 0 0.4rem' } },
+    'Envelope not available: the reversed sense (' + acts.reversed + ') is ' + revBad + ' (Checks tab). This view shows the entered sense (' + acts.entered + ').'));
+  if (envelope && csR.notClosed) box.appendChild(el('p', { style: { ...small, color: 'var(--fail)', margin: '0 0 0.4rem' } },
+    'The reversed sense (' + acts.reversed + ') has member runs that do not close (' + csR.notClosed + ') — marked "open" below.'));
   // the walls of the story above at the level shown (step 7)
   const abv = (cs0.above || []).filter(a => a.V);
   if (abv.length) {
-    const f = lvl === 'D' ? (fl.transfer ?? 2.5) : lvl === 'C' ? k : 1;
+    const f = kc * (lvl === 'D' ? (fl.transfer ?? 2.5) : lvl === 'C' ? kL : 1);
     const t = el('table', { className: 'dynamic-table', 'data-abovevalues': lvl, style: { fontSize: '0.78rem', marginBottom: '0.5rem' } });
     t.appendChild(el('tr', null, el('th', null, 'Wall above'), el('th', null, 'Line'), el('th', null, 'Goes'), el('th', null, 'V 1.0 (lb)'), el('th', null, 'V shown (lb)'), el('th', null, 'Into the floor (plf)')));
     for (const a of abv) t.appendChild(el('tr', null, el('td', null, a.mark), el('td', null, a.line), el('td', null, a.kind === 'transfer' ? '↓ into this diaphragm' : '↕ down its line'),
       el('td', { className: 'mono' }, f0(a.V)), el('td', { className: 'mono' }, f0(a.V * f)), el('td', { className: 'mono', title: 'Wall-to-floor transfer connection: V / wall length' }, f0(a.V * f / Math.max(1e-9, a.to - a.from)))));
     box.appendChild(el('div', { className: 'table-scroll' }, t));
   }
-  const view = pick.view || 1;
   const zs = pick.zoom || { zoom: 1, panX: 0, panY: 0 }; // shared by every view and case (held by the module)
   const ov = pick.overlays || { lines: true, outlines: true };
   const show = pick.show || { chord: true, cross: true };
@@ -328,9 +464,11 @@ export function renderAnalysis(plan, results, pick) {
   box.appendChild(canvas);
   box.appendChild(legendBox);
   function drawCanvas() {
-    const d = view === 1 ? drawBasicShear(plan, cs, zs, ov) : view === 2 ? drawTdShear(plan, cs, zs, ov) : view === 3 ? drawNetShear(plan, cs, zs, ov) : drawMembers(plan, cs, show, zs, ov);
+    const envShear = envelope && view < 4;
+    const d = envShear ? drawShearEnvelope(plan, cs, envB, view, zs, ov, { a: acts.entered, b: acts.reversed })
+      : view === 1 ? drawBasicShear(plan, cs, zs, ov) : view === 2 ? drawTdShear(plan, cs, zs, ov) : view === 3 ? drawNetShear(plan, cs, zs, ov) : drawMembers(plan, cs, show, zs, ov);
     attachZoomPan(d.svg, d.group, d.view, plan, zs, redraw);
-    attachReadout(d.svg, d.view, plan, cs, view, show);
+    attachReadout(d.svg, d.view, plan, envShear ? { ...cs, envShear: { b: envB, acts: { a: acts.entered, b: acts.reversed } } } : cs, view, show);
     canvas.replaceChildren(d.svg);
     legendBox.replaceChildren(scaleLegend(d.scale, view === 4), planLegend({ result: true }));
     zoomTxt.textContent = 'zoom ' + Math.round(zs.zoom * 100) + ' % · text ' + Math.round((zs.text || TEXT_DEFAULT) * 100) + ' %';
@@ -377,7 +515,23 @@ export function renderAnalysis(plan, results, pick) {
     const t = el('table', { className: 'dynamic-table' });
     t.appendChild(el('tr', null, ...['Station', 'V − (lb)', 'V + (lb)', 'v − per band (plf)', 'v + per band (plf)'].map(h => el('th', null, h))));
     const bandTxt = sec => sec.parts.filter(p => p.id === d.id).flatMap(p => p.bands.map(b => f1(b.v) + (p.bands.length > 1 ? ' [' + f1(b.lo) + '–' + f1(b.hi) + ']' : ''))).join(', ') || '—';
+    // envelope: max |v| of the two senses per band (the governing sense named), max |V|
+    const dB = envelope && envB ? envB.diaphragms.find(x => x.id === d.id) : null;
+    const secOf = (dd, cse, at, side) => sectionAt({ ...cse, diaphragms: [dd] }, at, side);
+    const envTxt = (sa, sb) => sa.parts.filter(p => p.id === d.id).flatMap((p, pi) => p.bands.map((b, bi) => {
+      const ob = ((sb.parts.filter(q => q.id === d.id)[pi] || {}).bands || [])[bi];
+      const vb = ob ? ob.v : 0, gov = Math.abs(vb) > Math.abs(b.v) + 1e-9 ? acts.reversed : acts.entered;
+      return f1(Math.max(Math.abs(b.v), Math.abs(vb))) + ' (' + gov + ')' + (p.bands.length > 1 ? ' [' + f1(b.lo) + '–' + f1(b.hi) + ']' : '');
+    })).join(', ') || '—';
     for (const g of st) {
+      if (dB) {
+        const ma = secOf(d, cs, g.at, '-'), pa = secOf(d, cs, g.at, '+'), mb = secOf(dB, envB, g.at, '-'), pb = secOf(dB, envB, g.at, '+');
+        const lo = g.at <= d.lo + 1e-6, hi = g.at >= d.hi - 1e-6;
+        t.appendChild(el('tr', { 'data-env-row': '1' }, el('td', null, g.name + ' (' + f1(g.at) + ')'),
+          el('td', { className: 'mono' }, lo ? '' : f0(Math.max(Math.abs(ma.V), Math.abs(mb.V)))), el('td', { className: 'mono' }, hi ? '' : f0(Math.max(Math.abs(pa.V), Math.abs(pb.V)))),
+          el('td', { className: 'mono' }, lo ? '' : envTxt(ma, mb)), el('td', { className: 'mono' }, hi ? '' : envTxt(pa, pb))));
+        continue;
+      }
       const m = sectionAt({ ...cs, diaphragms: [d] }, g.at, '-'), p = sectionAt({ ...cs, diaphragms: [d] }, g.at, '+');
       const lo = g.at <= d.lo + 1e-6, hi = g.at >= d.hi - 1e-6;
       t.appendChild(el('tr', null, el('td', null, g.name + ' (' + f1(g.at) + ')'),
@@ -442,6 +596,59 @@ export function drawNetShear(plan, cs, zs = {}, ov = {}) {
   return { svg: root, group, view: v, scale: { max: vmax, unit: 'plf', name: 'v_net' } };
 }
 
+// ── Unit shear envelope of the two senses (user 2026-11-10, Views 1–3): an overlay of the two runs already calculated —
+// per cell, at each end, max |v| of the two senses and the sense that governs (sheathing capacity is the same either
+// way, so the selection value is |v|). kind 1 basic, 2 TD, 3 net. a / b = the entered / reversed case (same level).
+const ENV = '#7c3aed'; // max |v| has no sign: one neutral colour
+// v of one sense at (s, c) approached from sSide (kind 1 basic, 2 TD = net − basic, 3 net); null = no sheathing
+function shearOf(cs, kind, s, c, sSide = 0) {
+  const vb = vNetAt(cs, [], s, c, sSide, 0);
+  if (vb === null) return null;
+  if (kind === 1) return vb;
+  const vn = vNetAt(cs, cs.fields || [], s, c, sSide, 0);
+  return kind === 2 ? vn - vb : vn;
+}
+// max |v| of the two senses at a point: { v: max |v|, from: 'a' | 'b', va, vb } (null = no sheathing in either)
+export function envShearAt(a, b, kind, s, c, sSide = 0) {
+  const va = shearOf(a, kind, s, c, sSide), vb = shearOf(b, kind, s, c, sSide);
+  if (va === null && vb === null) return null;
+  const A = Math.abs(va || 0), B = Math.abs(vb || 0);
+  return { v: Math.max(A, B), from: B > A + 1e-9 ? 'b' : 'a', va, vb };
+}
+export function drawShearEnvelope(plan, a, b, kind, zs = {}, ov = {}, acts = { a: 'entered', b: 'reversed' }) {
+  const { root, v, layer, top, group } = paintPlan(plan, a, zs, ov, kind === 1 ? 'td-view1' : 'td-view');
+  const ba = breaks(plan, a, a.fields || []), bb = breaks(plan, b, b.fields || []);
+  const uniq = xs => [...new Set(xs.map(x => Math.round(x * 1e6) / 1e6))].sort((p, q) => p - q);
+  const S = uniq([...ba.S, ...bb.S]), C = uniq([...ba.C, ...bb.C]);
+  const cells = [];
+  for (let i = 0; i < S.length - 1; i++) for (let j = 0; j < C.length - 1; j++) {
+    const s0 = S[i], s1 = S[i + 1], p = C[j], q = C[j + 1], cm = (p + q) / 2;
+    if (s1 - s0 < 1e-6 || q - p < 1e-6 || envShearAt(a, b, kind, (s0 + s1) / 2, cm) === null) continue;
+    const e0 = envShearAt(a, b, kind, s0, cm, 1), e1 = envShearAt(a, b, kind, s1, cm, -1);
+    if (!e0 || !e1) continue;
+    if (kind === 2 && e0.v < 0.05 && e1.v < 0.05) continue; // outside the TDs v_TD = 0
+    cells.push({ s0, s1, p, q, e0, e1 });
+  }
+  const vmax = Math.max(1e-9, ...cells.flatMap(c => [c.e0.v, c.e1.v]));
+  const name = kind === 1 ? 'v_b' : kind === 2 ? 'v_TD' : 'v_net';
+  const sense = e => (e.from === 'a' ? acts.a : acts.b);
+  for (const c of cells) {
+    const [x1, y1] = toXY(a, c.s0, c.p), [x2, y2] = toXY(a, c.s1, c.q);
+    const vm = (c.e0.v + c.e1.v) / 2;
+    layer.appendChild(tip(svg('rect', { x: v.sx(x1), y: v.sy(y2), width: (x2 - x1) * v.k, height: (y2 - y1) * v.k,
+      fill: ENV, 'fill-opacity': (0.06 + 0.45 * vm / vmax).toFixed(3), stroke: '#fff', 'stroke-width': 0.5 }),
+      `max |${name}| ${f1(c.e0.v)}${Math.abs(c.e0.v - c.e1.v) >= 0.05 ? ' → ' + f1(c.e1.v) : ''} plf (${sense(c.e0)}) · ${acts.a}: ${f1(c.e0.va)} · ${acts.b}: ${f1(c.e0.vb)} · ${where(a, c.s0, c.s1, c.p, c.q)}`));
+    const len = (c.s1 - c.s0) * v.k, dep = (c.q - c.p) * v.k;
+    if (dep < 14 * TS || len < 30 * TS) continue;
+    const at = (s, val, anchor) => { const [x, y] = toXY(a, s, (c.p + c.q) / 2);
+      return label(a.axis === 'x' ? v.sx(x) + (anchor === 'start' ? 3 : -3) : v.sx(x), a.axis === 'x' ? v.sy(y) + 3 : v.sy(y) + (anchor === 'start' ? -4 : 11), f1(val), { 'text-anchor': a.axis === 'x' ? anchor : 'middle', 'font-size': 9 }); };
+    layer.appendChild(at(c.s0, c.e0.v, 'start'));
+    if (Math.abs(c.e0.v - c.e1.v) >= 0.05 && len >= 60 * TS) layer.appendChild(at(c.s1, c.e1.v, 'end'));
+  }
+  if (ov.lines !== false) drawLineForces(plan, a, v, top);
+  return { svg: root, group, view: v, scale: { max: vmax, unit: 'plf', name: 'max |' + name + '|', envelope: true } };
+}
+
 // View 4: member force diagrams on their lines (tension blue, compression red); max of each run labelled; at a
 // zoom ≥ 200 % also N at the grid crossings and wall ends; a run that does not close is marked "open" at its end.
 export function drawMembers(plan, cs, show = { chord: true, cross: true }, zs = {}, ov = {}) {
@@ -451,7 +658,7 @@ export function drawMembers(plan, cs, show = { chord: true, cross: true }, zs = 
   const H = 34 / nmax; // px per lb
   const detail = (zs.zoom || 1) >= 2;
   for (const m of ms) for (const r of m.runs) {
-    if (Math.abs(r.max) < 0.5 && closes(r)) continue;
+    if (Math.abs(r.max) < 0.5 && runCloses(r)) continue;
     const along = m.family === 'chord' ? cs.axis : crossAxis(cs); // coordinate along the member
     const pts = [...r.points].sort((p, q) => p[0] - q[0]);
     // the diagram is offset across the line: chords (along s) in c, cross members (along c) in s
@@ -461,12 +668,15 @@ export function drawMembers(plan, cs, show = { chord: true, cross: true }, zs = 
       const alongX = (m.family === 'chord') === (cs.axis === 'x');
       return alongX ? [v.sx(x), v.sy(y) - off] : [v.sx(x) + off, v.sy(y)];
     };
-    for (let i = 0; i < pts.length - 1; i++) {
-      const [p0, n0] = pts[i], [p1, n1] = pts[i + 1];
+    // envelope (both senses): the max T diagram and the max C diagram, each on its own side of the line
+    const diagrams = r.env ? [[r.env.T, 'max '], [r.env.C, 'max ']] : [[pts, '']];
+    for (const [dpts, pre] of diagrams) for (let i = 0; i < dpts.length - 1; i++) {
+      const [p0, n0] = dpts[i], [p1, n1] = dpts[i + 1];
       if (p1 - p0 < 1e-9) continue;
+      if (Math.abs(n0) < 0.5 && Math.abs(n1) < 0.5) continue; // no force on this stretch: nothing drawn (user 2026-11-10)
       const poly = [xy(p0, 0), xy(p0, n0), xy(p1, n1), xy(p1, 0)].map(q => q.join(',')).join(' ');
       top.appendChild(tip(svg('polygon', { points: poly, fill: n0 + n1 >= 0 ? POS : NEG, 'fill-opacity': 0.35, stroke: n0 + n1 >= 0 ? POS : NEG, 'stroke-width': 0.6 }),
-        `${m.name}: N ${tc(n0)} → ${tc(n1)} at ${along} ${f1(p0)}–${f1(p1)}`));
+        `${m.name}: ${pre}N ${tc(n0)} → ${tc(n1)} at ${along} ${f1(p0)}–${f1(p1)}`));
     }
     const sideLabel = (p, n, txt, attrs = {}) => { const [lx, ly] = xy(p, n); return label(lx, ly + (n >= 0 ? -3 : 10 * TS), txt, { 'font-size': 9, ...attrs }); };
     // largest tension and largest compression of the run (a run can have both)
@@ -478,11 +688,15 @@ export function drawMembers(plan, cs, show = { chord: true, cross: true }, zs = 
         ...plan.walls.filter(w => m.gridId && w.gridId === m.gridId).flatMap(w => [w.from, w.to])];
       for (const p of [...new Set(stations)]) {
         if (p < r.from - 1e-6 || p > r.to + 1e-6 || [ext.T, ext.C].some(x => x && Math.abs(p - x.at) < 1e-3)) continue;
+        if (r.env) { // envelope: max T and max C at the station
+          for (const n of [nOn(r.env.T, p), nOn(r.env.C, p)]) if (n !== null && Math.abs(n) >= 0.5) top.appendChild(sideLabel(p, n, tc(n), { fill: '#374151' }));
+          continue;
+        }
         const n = memberN(m, p);
         if (n !== null && Math.abs(n) >= 0.5) top.appendChild(sideLabel(p, n, tc(n), { fill: '#374151' }));
       }
     }
-    if (!closes(r)) top.appendChild(sideLabel(r.to, r.residual, 'open ' + tc(r.residual), { fill: '#b91c1c', 'font-weight': 700 }));
+    if (!runCloses(r)) top.appendChild(sideLabel(r.to, r.residual, 'open ' + tc(r.residual), { fill: '#b91c1c', 'font-weight': 700 }));
   }
   if (ov.lines !== false) drawLineForces(plan, cs, v, top);
   return { svg: root, group, view: v, scale: { max: nmax, unit: 'lb', name: 'N' } };
@@ -531,7 +745,7 @@ export function memberTable(cs) {
   t.appendChild(el('tr', null, ...['Line', 'Member', 'Run', 'Max tension (lb)', 'at', 'Max compression (lb)', 'at', 'Closure residual (lb)'].map(h => el('th', null, h))));
   for (const m of cs.members || []) for (const r of m.runs) {
     if (Math.abs(r.max) < 0.5 && Math.abs(r.residual) < 0.5) continue;
-    const ok = closes(r), { T, C } = runExtremes(r);
+    const ok = runCloses(r), { T, C } = runExtremes(r);
     const mono = s => el('td', { className: 'mono' }, s);
     t.appendChild(el('tr', null, el('td', null, m.name), el('td', null, m.family === 'chord' ? 'chord / strut along the span' : 'collector / strut across the span'),
       mono(f1(r.from) + ' – ' + f1(r.to)), mono(T ? 'T ' + f0(T.N) : '—'), mono(T ? f1(T.at) : ''), mono(C ? 'C ' + f0(-C.N) : '—'), mono(C ? f1(C.at) : ''),

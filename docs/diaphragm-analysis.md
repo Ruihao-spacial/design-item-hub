@@ -1,6 +1,6 @@
 # Diaphragm Analysis: calculator guide
 
-Module **Diaphragm Analysis**, id `diaphragm_analysis` (former id `transfer_diaphragm`). Built 2026-10-29: Phases 0–6 (book cases, plan editor and checks, Shear Wall Design link, TD engine, basic shear / line forces, derived TD inputs and TD runs, net field / member diagrams / Views 1–4 / checks); 2026-10-30: Phase 7 (offset wall lines, line forces iterated to closure). 2026-11-02: diaphragm pieces (schema 2), hard checks, opening / cut-chord rules G1, G3–G6 (see "Openings, cut chords and closure"). 2026-11-03: book case Ex 8.4 and the general closure solver (G2, G7, G8, G9); fixes from the user's own test (project 26999, td-v10 — section "User test 2026-11-03"). 2026-11-04: TD overhangs picked by grid (both ends), TD loads anywhere from tip to tip, a case with open member runs fails (td-v11 — section "TD overhangs and loads anywhere"). 2026-11-05/06: walls of the story above / transfer, SWD grid link, collectors, force levels (td-v12 — sections "Grid link", "Walls that end at a floor", "Walls of the story above", "Collector extent"; committed 87aceab, PR #7). Phase 8 (PDF, upgrade script) on hold (user).
+Module **Diaphragm Analysis**, id `diaphragm_analysis` (former id `transfer_diaphragm`). Built 2026-10-29: Phases 0–6 (book cases, plan editor and checks, Shear Wall Design link, TD engine, basic shear / line forces, derived TD inputs and TD runs, net field / member diagrams / Views 1–4 / checks); 2026-10-30: Phase 7 (offset wall lines, line forces iterated to closure). 2026-11-02: diaphragm pieces (schema 2), hard checks, opening / cut-chord rules G1, G3–G6 (see "Openings, cut chords and closure"). 2026-11-03: book case Ex 8.4 and the general closure solver (G2, G7, G8, G9); fixes from the user's own test (project 26999, td-v10 — section "User test 2026-11-03"). 2026-11-04: TD overhangs picked by grid (both ends), TD loads anywhere from tip to tip, a case with open member runs fails (td-v11 — section "TD overhangs and loads anywhere"). 2026-11-05/06: walls of the story above / transfer, SWD grid link, collectors, force levels (td-v12 — sections "Grid link", "Walls that end at a floor", "Walls of the story above", "Collector extent"; committed 87aceab, PR #7). 2026-11-06 … 11-09 (user test 26998): UI (messages under the plan, Diaphragms / TDs tabs, analysis wall layers), modelling guide, td-v13 … td-v17 (load-line wall inside a TD, walls on a bridged strut, deflection split guard, "each wall into the diaphragm under it", offset rounds settle) — 384f66c, 4fa1262, PR #8 → master. Phase 8 (PDF report) built 2026-11-10 (section "PDF report"); upgrade script dropped (results regenerate on open).
 Branch `diaphragm-analysis` (off `master` 71cdfb5, 2026-10-29). Plan: `~/.claude/plans/read-the-md-files-composed-kite.md`.
 Decisions and open items: `docs/diaphragm-analysis-backlog.md`. Book cases: `docs/diaphragm-analysis-book-cases.md`.
 
@@ -342,6 +342,78 @@ member runs are still open → the other direction.
 - Seismic display factors k_D / k_C (`level.diaphragmFactor` / `collectorFactor`, blank = 1): the analysis stays at
   1.0E (linear), the Analysis tab scales every force / unit shear for display (`scaleCase`) and states the level in
   the "Forces shown" line. Setup suggests both from the linked ELF item (F_px design / F_x, collector design / F_x).
+- **ρ note (user 2026-11-10):** under the force levels on Setup — k_D and k_C are the full factors; the effect of ρ is
+  already incorporated in the factor entered, the tool applies no separate ρ. The ELF suggestion has no ρ in it (the ELF
+  item does not apply its ρ input to F_px or the collector force).
+
+## Both senses and load combinations (user 2026-11-10, td-v18)
+- **Both senses, option 1-B (user: a sign flip is not accurate):** every load case is analysed acting both ways
+  (−y and +y, +x and −x) by a **full second run** of `calcAll` on the loads with `acts` flipped (`reverseLoads`) — every
+  rule (TD runs, closure solver, Shear Wall Design rounds, walls above, diaphragm-level run) applies to the reversed
+  loads. Wind moves its windward strip to the other face, so at an opening the reversed sense is **not** the entered one
+  × −1 (book Ex 5.1 with 123 / 77 plf: reversed = the entered sense with the strips swapped, × −1). Seismic without
+  wind: reversed = entered × −1 (26998, tested), as expected of a linear analysis.
+- Stored: `results.senses` ([{ caseId, entered, reversed }]) and any check the reversed run fails that the entered
+  sense does not fail the same way (caseId `<id>:rev`, message "Reversed (acts +y): …"). The reversed run itself is in
+  memory only (`results.reverse`, not enumerable — results are regenerated on open). **The line forces sent to Shear
+  Wall Design and `transferIn` are those of the entered sense, unchanged** (the line forces are equal in both senses).
+- Setup: the "Acts" picker is gone ("Acts ±y (both senses)"); the stored `acts` stays as the entered sense. A wind
+  *line* load on a picked edge stays on that edge in the reversed sense (the engineer enters the other edge's load
+  separately if the reversed wind acts elsewhere).
+- Cost: two runs per item (four with walls above: + the diaphragm-level run of each sense). 26998 2nd Floor ≈ 3 s → 6 s
+  per recalculation; `npm test` 1 min 20 s → 2 min 50 s.
+- **Analysis tab:** case buttons (↕ / ↔ × E / W) · **Acts:** entered / reversed sense · **Force level** (seismic): 1.0E /
+  Diaphragm × k_D / Collector × k_C · **Load combination** dropdown — a factor on the force level shown: seismic LRFD
+  1.0E / ASD 0.7E (ASCE 7-22 §2.3.6 / §2.4.5), wind LRFD 1.0W / ASD 0.6W (§2.3.1 / §2.4.1). Default = Setup → General
+  "Design basis" (ASD for book and new items); kept while switching cases. Shown = combination × level (e.g. ASD at the
+  diaphragm level = 0.7 × (k_D·own + Ω₀·walls above)); the walls-above table uses the same factor. The "Forces shown"
+  line starts with it: "ASD 0.7E × level 1.2 = × 0.84, acting −y (entered sense). …". Display only — nothing saved.
+- **Envelope ±y / ±x (user 2026-11-10):** a third Acts button. View 4 overlays the two runs already calculated (entered
+  and reversed — no new calculation): per member run, at every position either run has a point (plus where the two
+  diagrams cross), **max T** = the larger N of the two, **max C** = the smaller — signed, not absolute; drawn as two
+  diagrams (tension blue on one side, compression red on the other), labelled "max T … / max C …", the member table and
+  the mouse read-out give both. Force level and load combination apply to both senses first. Closure: the larger residual
+  of the two; the run closes only if both close. Not available (entered sense shown, note in red) when the reversed sense
+  is PAUSED / FAILED; Views 1–3 show the entered sense with a note. Seismic: max T = |N|, max C = −|N| (mirror); wind at
+  an opening: max T and max C can come from different senses (Ex 5.1). Runs pair up between the senses on 26998 and all 9
+  book examples. Helpers `envelopePoints`, `clipSide`, `envelopeCase` (tdViews).
+- **Unit shear envelope (user 2026-11-10, Views 1–3):** with Envelope picked, Views 1 (basic), 2 (TD) and 3 (net) show
+  per cell, at each end, **max |v|** of the two senses — absolute here (unlike the members), because the sheathing
+  capacity is the same either way, so it is the value for diaphragm selection. One neutral colour (violet), depth ∝
+  max |v|; the hover gives both senses and the one that governs ("v_net −y: … · +y: … → max |v| … plf (−y)"); the section
+  table under View 1 gives max |V| and, per band, max |v| with the governing sense. Same overlay of the two runs (no new
+  calculation), same level / combination. Off when the reversed sense is FAILED, and on Views 2–3 when it is PAUSED (its
+  basic shear stays valid, so View 1 keeps the envelope). Seismic: max |v| = |v| (both senses equal); wind at an opening:
+  each band takes its max from the sense whose windward strip it carries (Ex 5.1: top band −y, bottom band +y).
+  Helpers `envShearAt`, `drawShearEnvelope` (tdViews).
+- **View 4:** a stretch of a member where N = 0 (|N| < 0.5 lb at both ends) is not drawn (user: no blank line on a
+  collector with no force); runs with N = 0 throughout were already left out.
+- Tests `tests/daSenses.test.mjs`; book UI tests pick LRFD (the book values are at 1.0).
+
+## PDF report (Phase 8, user 2026-11-10) — `tdReport.js`
+- **Same result as the screen:** `pdfSections(inputs, outputs)` uses the result `pdf.js` hands it (results.js
+  `currentOutputs` → `calc` with the links resolved); the plan with the linked walls rides on it (`results.plan`, not
+  enumerable). The old placeholder recalculated without the links (wrong for a linked item) — removed.
+- **Values:** every value at **ASD** (0.7E / 0.6W). Seismic at three force levels: 1.0E, diaphragm (× k_D; walls above
+  × Ω₀ from the diaphragm-level run), collector (× k_C); wind at 0.6W. Each load direction on its own. Unit shears = the
+  ± envelope (max |v|), member forces = the ± envelope (max T / max C, signed). Line forces / wall shares at 1.0 (what
+  Shear Wall Design receives) and ASD.
+- **Drawings:** the Analysis tab's own functions (`drawPlan`, `drawShearEnvelope`, `drawMembers` on `envelopeCase`) at
+  Fit, no hover — the screen and the PDF draw the same thing. The SVGs use fixed colours, so no print palette is needed.
+  Checked in Chrome (26998 2nd Floor, Detailed): all 18 drawings convert to images the way `pdf.js` does.
+- **Summary:** header (level, F_x, ΣA / q, code, ASD, k_D / k_C with the ρ note, Ω₀ for walls above, both senses, SWD
+  link, checks verdict) · plan per direction · per case: status, line forces and wall shares (1.0 / ASD), net shear
+  envelope at the diaphragm level, member envelope at the collector level, member table (one row per run with force:
+  max T / max C at each level, closes in both senses) · checks (failures and warnings).
+- **Detailed adds:** net shear and member drawings at all three levels, basic and TD shear envelopes, section shears per
+  diaphragm (max |V|, max |v| per band with the governing sense), TD table (supports, run, P, v_TD per segment, support
+  forces — entered | reversed, at the 1.0E level where the 1.0 runs scale exactly), closure solver passes, walls above
+  (V at 1.0 and each level, plf into the floor).
+- A PAUSED / FAILED case prints its status, the line forces and the basic shear only (envelope when the reversed sense
+  is not FAILED); a reversed sense that is PAUSED / FAILED is named and the other envelopes use the entered sense. A
+  plan with errors prints the issues only.
+- Limits: on a full page the small cells of a shear drawing show colour only (values on cells with room, as on screen) —
+  the tables carry the numbers. Tests `tests/daReport.test.mjs`.
 
 ## Basic shear, line forces, walls (Phase 4)
 - Load case = direction × kind (E / W; load field `kind`). Each diaphragm is a beam between its two support lines
@@ -526,7 +598,7 @@ determinate examples (within ~1–2 %).
 | A TD edge line carrying on past the TD | That edge closes on its whole line (line closure check), not as a TD stop (G6) | Book Ex 8.1 line 5 closes only at A |
 | Hand-over forces not fixed by statics (offset wall-line splits, opening-collector splits between two TDs, collector loads into another diaphragm) | **Iterate to closure** — the general closure solver (built 2026-11-03, section above) (G2, G7, G8, G9) | The book iterates "until closure of all force diagrams" (Ch 8.4); in Ex 8.1 the collector-B split that closes is unique and equals the book's 550 / 1783.3 |
 
-Calculation versions: td-v7 (pieces, G5, G6), td-v8 (G3, G4 default, warning), td-v9 (closure solver, G2 / G7 / G8 / G9; no opening warning at a notch), td-v10 (user test 2026-11-03: load-line rules, superposed TDs, strut 'both', solver equilibrium + FAILED gate, new checks), td-v11 (2026-11-04: grid overhangs at either / both ends, superposed loads on supports and overhangs, open member runs fail the case).
+Calculation versions: td-v7 (pieces, G5, G6), td-v8 (G3, G4 default, warning), td-v9 (closure solver, G2 / G7 / G8 / G9; no opening warning at a notch), td-v10 (user test 2026-11-03: load-line rules, superposed TDs, strut 'both', solver equilibrium + FAILED gate, new checks), td-v11 (2026-11-04: grid overhangs at either / both ends, superposed loads on supports and overhangs, open member runs fail the case), td-v12 (2026-11-05/06: walls of the story above, force levels, collectors), td-v13 (a load-line wall inside a TD counts in P), td-v14 (walls on a bridged strut act on the member), td-v15 (offset-line deflection split only with a deflection for every wall), td-v16 (each wall into the diaphragm under it, opt-in), td-v17 (offset-line rounds settle), td-v18 (2026-11-10: both senses analysed, each by its own run).
 
 ## TD engine (Phase 3)
 - One call per transfer diaphragm. It is not the analysis of a regular diaphragm: that is the basic shear (Phase 4);
