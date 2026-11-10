@@ -156,7 +156,7 @@ export function daPdfSections(inputs, out, plan) {
     ['Code / sheathing', (inputs.codeEdition || '') + ' · ' + ((inputs.diaphragm && inputs.diaphragm.sheathing) || 'wsp') + ', ' + (inputs.diaphragm && inputs.diaphragm.blocked === false ? 'unblocked' : 'blocked')],
     ['Values printed', 'ASD — 0.7E (seismic) / 0.6W (wind); the analysis runs at 1.0E / 1.0W. Seismic at three force levels: 1.0E, diaphragm (k_D) and collector (k_C).'],
     ['k_D / k_C', fk(fl.diaphragm || 1) + ' / ' + fk(fl.collector || 1) + ' — the full factors: the effect of ρ is already incorporated in the factor entered (no separate ρ)'],
-    ...(above ? [['Walls above (transfer)', 'Ω₀ ' + fk(fl.omega0 ?? 2.5) + (fl.increase ? ' × 1.25' : '') + ' at the diaphragm level (ASCE 7-22 §12.10.1.1)']] : []),
+    ...(above ? [['Walls above (transfer)', '× ' + (fl.increase ? 'max(Ω₀ ' + fk(fl.omega0 ?? 2.5) + ', 1.25) = ' + fk(fl.transfer ?? 2.5) : 'Ω₀ ' + fk(fl.omega0 ?? 2.5)) + ' at the diaphragm level (ASCE 7-22 §12.10.1.1; the 25 % is not combined with Ω₀, §12.3.3.5)']] : []),
     ['Both senses', 'Every load case is analysed acting both ways (each by its own run). Unit shears: max |v| of the two; members: max T / max C of the two (signed).'],
     ['Shear Wall Design', out.wallLink ? 'Linked — it receives the 1.0E / 1.0W line forces of the entered sense and applies its own ρ and load combinations' : 'Not linked'],
     ['Checks', fails.length ? { t: fails.length + ' failed, ' + warns.length + ' warning(s) — see Checks', color: RED } : 'all passed' + (warns.length ? ', ' + warns.length + ' warning(s)' : '')],

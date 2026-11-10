@@ -145,7 +145,7 @@ function forcesLevel(cs, lvl, k, fl, q) {
   const ab = (cs.above || []).filter(a => a.V);
   if (ab.length) {
     const marks = ab.map(a => a.mark).join(', ');
-    const om = fmtK(fl.omega0 ?? 2.5) + (fl.increase ? ' × 1.25' : '');
+    const om = fl.increase ? 'max(Ω₀ ' + fmtK(fl.omega0 ?? 2.5) + ', 1.25) = ' + fmtK(fl.transfer ?? 2.5) : fmtK(fl.omega0 ?? 2.5);
     if (lvl === 'D') return `Forces shown: seismic, DIAPHRAGM level = own level × k_D ${fmtK(k)} + walls above (${marks}) × Ω₀ ${om} (ASCE 7-22 §12.10.1.1, Type 4) — for unit shears, chords and struts. Shear Wall Design receives the 1.0E line forces, not these.`;
     if (lvl === 'C') return `Forces shown: seismic, COLLECTOR level = (own level + walls above ${marks}) × k_C ${fmtK(k)} — read collectors, drag struts and distributors here. Shear Wall Design receives the 1.0E line forces, not these.`;
     return `Forces shown: seismic 1.0E: own level (F_x${fl.fx !== null ? ' = ' + fl.fx + ' k' : ''}) + walls of the story above (${marks}, 1.0E from Shear Wall Design) — as analysed; the line forces sent to Shear Wall Design are these.`;

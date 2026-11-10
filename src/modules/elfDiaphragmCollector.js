@@ -1,16 +1,30 @@
 import { el, clearEl, numOrBlank, sameNumber } from '../utils.js';
+import { rich } from '../richText.js';
 
 const round2 = v => Math.round(v * 100) / 100;
 const round4 = v => Math.round(v * 10000) / 10000;
 
 const BASE_SHEAR_FIELDS = [['sds', 'Sds'], ['cs', 'Cs'], ['ie', 'Ie'], ['omega0', 'Ω0'], ['k', 'k']];
 const sameName = (a, b) => String(a || '').trim().toLowerCase() === String(b || '').trim().toLowerCase();
+const round3 = v => Math.round(v * 1000) / 1000;
+// v2 (2026-11-10, user review of the ELF calculator):
+// - collector force per ASCE 7-22 §12.10.2.1: F_c = max(Ω₀·F_x [item 1], Ω₀·F_px,des [item 2], 1.25·ρ·F_px,min [item 3]);
+//   the 25 % (§12.3.3.5) only on item 3 — "forces calculated using the seismic load effects including overstrength
+//   need not be increased"; the old 0.4·S_DS·I_e·w_px term (F_px,max) is not part of the collector force;
+// - "Light-frame diaphragm": Ω₀ reduced by 0.5, not less than 2.0 (flexible diaphragms), in items 1 and 2;
+// - new exception (structures braced entirely by wood light-frame shear walls): F_c = 1.25·ρ·F_px,des (§12.10.1.1
+//   forces, 2.3.6 combinations, no Ω₀);
+// - diaphragm design force × 1.25 when the 25 % box is ticked; ratios F_px,des / F_x (DA k_D), F_c / F_px,des, F_c / F_x
+//   (DA k_C).
+export const ELF_CALC_VERSION = 'v2';
+// Ω₀ for the collector items: reduced by 0.5 (not below 2.0) for a light-frame (flexible) diaphragm
+export const omegaCollector = (om, lightFrame) => (lightFrame ? Math.min(om, Math.max(2.0, om - 0.5)) : om);
 
 export const elfDiaphragmCollector = {
   id: 'elf_diaphragm_collector',
   label: 'ELF Diaphragm & Collector',
   schemaVersion: 1,
-  calcVersion: 'v1',
+  calcVersion: ELF_CALC_VERSION,
   regenerateResults: true,
   refs: [
     { key: 'massSource', label: 'Seismic Mass Takeoff', sourceType: 'seismic_mass_takeoff',
@@ -113,13 +127,28 @@ export const elfDiaphragmCollector = {
       lv.fpxDesign = round2(Math.min(Math.max(lv.fpxCalc, lv.fpxMin), lv.fpxMax));
     });
 
-    const mult = inputs.increase25 ? 1.25 : 1.0;
+    // §12.3.3.5 25 % increase: on forces without Ω₀ only (diaphragm design force, item 3, the wood-shear-wall exception)
+    const inc = inputs.increase25 ? 1.25 : 1.0;
+    const om = omegaCollector(omega0, !!inputs.lightFrame);
+    const exc = !!inputs.woodWallException;
     sorted.forEach(lv => {
-      lv.omega0Fx = round2(omega0 * lv.fx);
-      lv.omega0Fpx = round2(omega0 * lv.fpxDesign);
-      lv.lightFrameForce = inputs.lightFrame ? round2(0.4 * sds * ie * lv.wpx) : 0;
-      const maxForce = Math.max(lv.omega0Fx, lv.omega0Fpx, lv.lightFrameForce);
-      lv.collectorDesign = round2(maxForce * mult);
+      lv.fpxDesignInc = round2(inc * lv.fpxDesign);
+      lv.kD = lv.fx > 0 ? round3(lv.fpxDesignInc / lv.fx) : null;
+      if (exc) {
+        lv.omega0Fx = null; lv.omega0Fpx = null; lv.minForce = null;
+        lv.exceptionForce = round2(inc * rho * lv.fpxDesign);
+        lv.collectorDesign = lv.exceptionForce;
+        lv.governs = 'exception';
+      } else {
+        lv.omega0Fx = round2(om * lv.fx);
+        lv.omega0Fpx = round2(om * lv.fpxDesign);
+        lv.minForce = round2(inc * rho * lv.fpxMin);
+        lv.exceptionForce = null;
+        lv.collectorDesign = Math.max(lv.omega0Fx, lv.omega0Fpx, lv.minForce);
+        lv.governs = lv.collectorDesign === lv.omega0Fx ? '1' : lv.collectorDesign === lv.omega0Fpx ? '2' : '3';
+      }
+      lv.fcOverFpx = lv.fpxDesign > 0 ? round3(lv.collectorDesign / lv.fpxDesign) : null;
+      lv.kC = lv.fx > 0 ? round3(lv.collectorDesign / lv.fx) : null;
     });
 
     return {
@@ -131,19 +160,22 @@ export const elfDiaphragmCollector = {
       diaphragmTable: sorted.map(lv => ({
         level: lv.name, wpx: round2(lv.wpx),
         fpxCalc: lv.fpxCalc, fpxMin: lv.fpxMin, fpxMax: lv.fpxMax, fpxDesign: lv.fpxDesign,
+        fpxDesignInc: lv.fpxDesignInc, kD: lv.kD,
       })),
       collectorTable: sorted.map(lv => ({
-        level: lv.name, omega0Fx: lv.omega0Fx, omega0Fpx: lv.omega0Fpx,
-        lightFrame: lv.lightFrameForce, designForce: lv.collectorDesign,
+        level: lv.name, omega0Fx: lv.omega0Fx, omega0Fpx: lv.omega0Fpx, minForce: lv.minForce, exceptionForce: lv.exceptionForce,
+        designForce: lv.collectorDesign, governs: lv.governs, fcOverFpx: lv.fcOverFpx, kC: lv.kC,
       })),
-      calcVersion: 'v1',
+      // the options as used (DA: Ω₀ shown, 25 % alignment check, base-shear match check)
+      options: { omega0, omegaCollector: om, rho, lightFrame: !!inputs.lightFrame, increase25: !!inputs.increase25, woodWallException: exc },
+      calcVersion: ELF_CALC_VERSION,
     };
   },
 
   renderForm(container, existingInputs, onSave, projectItems) {
     const inputs = existingInputs && existingInputs.sds !== undefined ? existingInputs : {
       sds: '', cs: '', ie: '1.0', omega0: '2.5', rho: '1.0', k: '1',
-      lightFrame: false, increase25: false,
+      lightFrame: false, increase25: false, woodWallException: false,
       levels: [{ name: 'Roof', wx: '', hx: '', wpx: '' }, { name: '2nd Floor', wx: '', hx: '', wpx: '' }],
       refs: {}, notes: '',
     };
@@ -255,14 +287,16 @@ export const elfDiaphragmCollector = {
       paramRow.appendChild(paramBox(['k'], 'k', '1'));
       formBody.appendChild(paramRow);
 
-      const toggleRow = el('div', { style: { display: 'flex', gap: '1.5rem', marginBottom: '0.75rem', flexWrap: 'wrap' } });
-      const lfCheck = el('input', { type: 'checkbox', checked: !!inputs.lightFrame, onChange(e) { inputs.lightFrame = e.target.checked; } });
-      toggleRow.appendChild(el('label', { style: { display: 'flex', alignItems: 'center', gap: '0.4rem', fontSize: '0.85rem', cursor: 'pointer' } },
-        lfCheck, 'Light-frame diaphragm (§12.10.2.1c)'));
-      const incCheck = el('input', { type: 'checkbox', checked: !!inputs.increase25, onChange(e) { inputs.increase25 = e.target.checked; } });
-      toggleRow.appendChild(el('label', { style: { display: 'flex', alignItems: 'center', gap: '0.4rem', fontSize: '0.85rem', cursor: 'pointer' } },
-        incCheck, '25% collector increase'));
-      formBody.appendChild(toggleRow);
+      // options (v2, user 2026-11-10): one per line, each with what it does
+      const toggleBox = el('div', { style: { display: 'flex', flexDirection: 'column', gap: '0.35rem', marginBottom: '0.75rem' } });
+      const tick = (key, label, note) => toggleBox.appendChild(el('label', { style: { display: 'flex', alignItems: 'flex-start', gap: '0.4rem', fontSize: '0.85rem', cursor: 'pointer' } },
+        el('input', { type: 'checkbox', 'data-elf-option': key, checked: !!inputs[key], style: { marginTop: '3px' }, onChange(e) { inputs[key] = e.target.checked; } }),
+        el('span', null, label, el('span', { style: { display: 'block', fontSize: '0.75rem', color: 'var(--ink-tertiary)' } }, note))));
+      tick('lightFrame', 'Light-frame diaphragm — reduce Ω₀ by 0.5', 'Collector items 1 and 2 use Ω₀ − 0.5, not less than 2.0 (flexible diaphragm).');
+      tick('increase25', '25 % increase (§12.3.3.5)', 'Applied to the diaphragm design force and to collector item 3 / the exception — never to a force that includes Ω₀ (§12.3.3.5 exception).');
+      tick('woodWallException', 'Structure braced entirely by wood light-frame shear walls (§12.10.2.1 Exception)',
+        'Collectors and their connections need only resist the §12.10.1.1 forces with the 2.3.6 combinations: F_c = ρ·F_px,des (× 1.25 when ticked), no Ω₀.');
+      formBody.appendChild(toggleBox);
 
       formBody.appendChild(el('div', { className: 'form-label' }, 'Level Data'));
       renderLevelTable();
@@ -282,51 +316,34 @@ export const elfDiaphragmCollector = {
   renderOutputs(container, outputs) {
     if (!outputs || !outputs.elfTable) return;
     clearEl(container);
-
+    const o = outputs.options || {};
     const v = outputs.baseShear;
     const w = outputs.totalW;
     container.appendChild(el('div', { style: { fontWeight: '600', marginBottom: '0.75rem', fontSize: '0.95rem' } },
       'V = C', el('sub', null, 's'), ' · W = ', el('span', { className: 'mono' }, v.toFixed(1) + ' kip'),
-      el('span', { style: { color: 'var(--ink-tertiary)', marginLeft: '0.5rem', fontSize: '0.8rem' } }, '(W = ' + w.toFixed(1) + ' kip)')));
-
-    function outputTable(title, headers, rows) {
+      el('span', { style: { color: 'var(--ink-tertiary)', marginLeft: '0.5rem', fontSize: '0.8rem' } }, '(W = ' + w.toFixed(1) + ' kip) — ASCE 7-22 Eq. 12.8-1')));
+    // each column: its label and the ASCE 7-22 equation / section under it; equal column widths, headers wrap; every
+    // symbol with its subscript / superscript (user 2026-11-10)
+    const nodes = m => [].concat(rich(m) ?? []);
+    // three header rows (user 2026-11-10): symbol (one line) · unit · ASCE 7-22 reference; every column the same width
+    // (the table fills the page; below 7.5rem a column the table scrolls sideways instead of wrapping); everything centred
+    const COL_MIN = 7.5; // rem — fits the longest symbol (1.25·F_px,des / F_x)
+    function outputTable(title, cols, rows) {
       container.appendChild(el('div', { className: 'form-label', style: { marginTop: '0.75rem' } }, title));
-      const tbl = el('table', { className: 'data-table' });
-      tbl.appendChild(el('tr', null, ...headers.map(h => {
-        if (typeof h === 'string') return el('th', { className: h === 'Level' ? '' : 'num' }, h);
-        return el('th', { className: 'num' }, ...h);
-      })));
-      rows.forEach(row => {
-        tbl.appendChild(el('tr', null, ...row.map((c, i) =>
-          el('td', { className: i === 0 ? '' : 'num mono' }, typeof c === 'number' ? c.toFixed(i === 4 ? 4 : 2) : c))));
-      });
+      const tbl = el('table', { className: 'data-table elf-table', style: { tableLayout: 'fixed', width: '100%', minWidth: (cols.length * COL_MIN) + 'rem' } });
+      const cell = { width: (100 / cols.length).toFixed(3) + '%', textAlign: 'center', textTransform: 'none', letterSpacing: 'normal', whiteSpace: 'nowrap', paddingLeft: '0.3rem', paddingRight: '0.3rem' };
+      const head = (key, extra) => el('tr', { 'data-head': key }, ...cols.map(c => el('th', { style: { ...cell, ...extra(c) } }, ...nodes(c[key === 'label' ? 0 : key === 'unit' ? 1 : 2] || ''))));
+      tbl.appendChild(head('label', () => ({ paddingBottom: '0.1rem', borderBottom: 'none', fontSize: '0.8rem' })));
+      tbl.appendChild(head('unit', () => ({ padding: '0 0.6rem', borderBottom: 'none', fontWeight: 400 })));
+      tbl.appendChild(head('ref', () => ({ paddingTop: '0.1rem', fontWeight: 400, fontSize: '0.7rem', color: 'var(--ink-tertiary)' })));
+      rows.forEach(row => tbl.appendChild(el('tr', null, ...row.map((c, i) => el('td', { className: i === 0 ? '' : 'mono', style: { textAlign: 'center' } }, c)))));
       container.appendChild(el('div', { className: 'table-scroll' }, tbl));
     }
-
-    outputTable('ELF Story Shear (§12.8)',
-      ['Level', ['w', el('sub', null, 'x'), ' (kip)'], ['h', el('sub', null, 'x'), ' (ft)'],
-        ['w', el('sub', null, 'x'), '·h', el('sub', null, 'x'), el('sup', null, 'k')],
-        ['C', el('sub', null, 'vx')], ['F', el('sub', null, 'x'), ' (kip)'], ['V', el('sub', null, 'x'), ' (kip)']],
-      outputs.elfTable.map(r => [r.level, r.wx, r.hx, r.wxhk, r.cvx, r.fx, r.vx]));
-
-    outputTable('Diaphragm Forces (§12.10.1.1)',
-      ['Level', ['w', el('sub', null, 'px'), ' (kip)'], ['F', el('sub', null, 'px'), ' calc'],
-        ['F', el('sub', null, 'px,min')], ['F', el('sub', null, 'px,max')], ['F', el('sub', null, 'px'), ' design (kip)']],
-      outputs.diaphragmTable.map(r => [r.level, r.wpx, r.fpxCalc, r.fpxMin, r.fpxMax, r.fpxDesign]));
-
-    const collHeaders = ['Level', ['Ω', el('sub', null, '0'), '·F', el('sub', null, 'x')],
-      ['Ω', el('sub', null, '0'), '·F', el('sub', null, 'px')]];
-    const collHasLF = outputs.collectorTable.some(r => r.lightFrame > 0);
-    if (collHasLF) collHeaders.push('Light Frame (kip)');
-    collHeaders.push(['F', el('sub', null, 'c'), ' design (kip)']);
-
-    outputTable('Collector Forces (§12.10.2.1)', collHeaders,
-      outputs.collectorTable.map(r => {
-        const row = [r.level, r.omega0Fx, r.omega0Fpx];
-        if (collHasLF) row.push(r.lightFrame);
-        row.push(r.designForce);
-        return row;
-      }));
+    const n2 = x => (Number.isFinite(x) ? x.toFixed(2) : '—'), n3 = x => (Number.isFinite(x) ? x.toFixed(3) : '—'), n4 = x => (Number.isFinite(x) ? x.toFixed(4) : '—');
+    outputTable('ELF Story Shear (§12.8)', ELF_COLS, outputs.elfTable.map(r => [r.level, n2(r.wx), n2(r.hx), n2(r.wxhk), n4(r.cvx), n2(r.fx), n2(r.vx)]));
+    outputTable('Diaphragm Forces (§12.10.1.1)', DIAPH_COLS(o), outputs.diaphragmTable.map(r => diaphRow(r, o, n2, n3)));
+    container.appendChild(el('p', { style: { fontSize: '0.75rem', color: 'var(--ink-tertiary)', margin: '0.2rem 0 0' } }, ...nodes(OMEGA_NOTE(o))));
+    outputTable('Collector Forces (§12.10.2.1)', COLL_COLS(o), outputs.collectorTable.map(r => collRow(r, o, n2, n3)));
   },
 
   pdfSections(inputs, outputs) {
@@ -343,55 +360,33 @@ export const elfDiaphragmCollector = {
     sections.push({
       title: 'Seismic Parameters',
       rows: [
-        ['SDS', sds], ['Cs', cs], ['Ie', ie],
-        ['Ω0', omega0], ['ρ', rho], ['k', k],
-        ['Base Shear V', outputs.baseShear.toFixed(2) + ' kip'],
+        ['S_{DS}', sds], ['C_{s}', cs], ['I_{e}', ie],
+        ['Ω₀', omega0], ['ρ', rho], ['k', k],
+        ['Base shear V = C_{s}·W (Eq. 12.8-1)', outputs.baseShear.toFixed(2) + ' kip'],
         ['Total W', outputs.totalW.toFixed(1) + ' kip'],
       ],
     });
 
-    if (inputs.lightFrame || inputs.increase25) {
-      sections.push({
-        title: 'Options',
-        rows: [
-          ...(inputs.lightFrame ? [['Light-frame exception', '§12.10.2.1(c)']] : []),
-          ...(inputs.increase25 ? [['25% collector increase', 'Applied']] : []),
-        ],
-      });
-    }
-
+    const o = outputs.options || {};
     sections.push({
-      title: 'ELF Story Shear — ASCE 7-22 §12.8',
-      table: {
-        headers: ['Level', 'wx (kip)', 'hx (ft)', 'wx·hx^k', 'Cvx', 'Fx (kip)', 'Vx (kip)'],
-        rows: outputs.elfTable.map(r => [r.level, r.wx.toFixed(1), r.hx.toFixed(1), r.wxhk.toFixed(1), r.cvx.toFixed(4), r.fx.toFixed(2), r.vx.toFixed(2)]),
-      },
+      title: 'Options',
+      rows: [
+        ['Light-frame diaphragm', o.lightFrame ? 'Ω₀ − 0.5, not less than 2.0 → Ω₀ = ' + (o.omegaCollector ?? '') + ' in collector items (1) and (2)' : 'No'],
+        ['25 % increase (§12.3.3.5)', o.increase25 ? 'Applied to F_{px,des} and collector item (3) / the exception (never with Ω₀)' : 'No'],
+        ['Braced entirely by wood light-frame shear walls (§12.10.2.1 Exception)', o.woodWallException ? 'Yes — F_{c} = ρ·F_{px,des}' + (o.increase25 ? ' × 1.25' : '') + ', no Ω₀' : 'No'],
+      ],
     });
 
-    sections.push({
-      title: 'Diaphragm Design Forces — ASCE 7-22 §12.10.1.1',
-      table: {
-        headers: ['Level', 'wpx (kip)', 'Fpx calc', 'Fpx,min', 'Fpx,max', 'Fpx design (kip)'],
-        rows: outputs.diaphragmTable.map(r => [r.level, r.wpx.toFixed(1), r.fpxCalc.toFixed(2), r.fpxMin.toFixed(2), r.fpxMax.toFixed(2), r.fpxDesign.toFixed(2)]),
-      },
-    });
-
-    const collHasLF = outputs.collectorTable.some(r => r.lightFrame > 0);
-    const collHeaders = ['Level', 'Ω0·Fx', 'Ω0·Fpx'];
-    if (collHasLF) collHeaders.push('Light Frame');
-    collHeaders.push('Fc design (kip)');
-    sections.push({
-      title: 'Collector Design Forces — ASCE 7-22 §12.10.2.1',
-      table: {
-        headers: collHeaders,
-        rows: outputs.collectorTable.map(r => {
-          const row = [r.level, r.omega0Fx.toFixed(2), r.omega0Fpx.toFixed(2)];
-          if (collHasLF) row.push(r.lightFrame.toFixed(2));
-          row.push(r.designForce.toFixed(2));
-          return row;
-        }),
-      },
-    });
+    // headers: the same column definitions as the screen (label + reference), markup _{…} / ^{…}; equal widths
+    const n2 = x => (Number.isFinite(x) ? x.toFixed(2) : '—'), n3 = x => (Number.isFinite(x) ? x.toFixed(3) : '—'), n4 = x => (Number.isFinite(x) ? x.toFixed(4) : '—');
+    const pdfTable = (cols, rows) => ({ headers: cols.map(([l, u, e]) => l + (u ? ' (' + u + ')' : '') + (e ? ' [' + e + ']' : '')), rows, colWidths: cols.map(() => 1 / cols.length) });
+    sections.push({ title: 'ELF Story Shear — ASCE 7-22 §12.8',
+      table: pdfTable(ELF_COLS, outputs.elfTable.map(r => [r.level, n2(r.wx), n2(r.hx), n2(r.wxhk), n4(r.cvx), n2(r.fx), n2(r.vx)])) });
+    sections.push({ title: 'Diaphragm Design Forces — ASCE 7-22 §12.10.1.1',
+      table: pdfTable(DIAPH_COLS(o), outputs.diaphragmTable.map(r => diaphRow(r, o, n2, n3))) });
+    sections.push({ text: OMEGA_NOTE(o) });
+    sections.push({ title: 'Collector Design Forces — ASCE 7-22 §12.10.2.1',
+      table: pdfTable(COLL_COLS(o), outputs.collectorTable.map(r => collRow(r, o, n2, n3))) });
 
     if (inputs.notes) sections.push({ title: 'Notes', text: inputs.notes });
 
@@ -413,7 +408,7 @@ export const elfDiaphragmCollector = {
           ] },
         { ref: 'Eq. 12.8-11',
           parts: [{ t: 'F' }, { t: 'x', sub: true }, { t: ' = C' }, { t: 'vx', sub: true }, { t: ' · V' }] },
-        { ref: '§12.8.6',
+        { ref: 'Eq. 12.8-13',
           parts: [{ t: 'V' }, { t: 'x', sub: true }, { t: ' = ' }, { t: 'S', greek: true }, { t: 'F' }, { t: 'i', sub: true }] },
 
         { desc: 'Diaphragm Design Forces (§12.10.1.1)',
@@ -437,26 +432,34 @@ export const elfDiaphragmCollector = {
 
         { desc: 'Collector Design Forces (§12.10.2.1)',
           parts: [] },
-        { ref: '§12.10.2.1(a)',
+        { ref: '§12.10.2.1 (1)',
           parts: [
-            { t: 'F' }, { t: 'c,a', sub: true }, { t: ' = ' }, { t: 'W', greek: true }, { t: '0', sub: true },
+            { t: 'F' }, { t: 'c,1', sub: true }, { t: ' = ' }, { t: 'W', greek: true }, { t: '0', sub: true },
             { t: ' · F' }, { t: 'x', sub: true },
           ] },
-        { ref: '§12.10.2.1(b)',
+        { ref: '§12.10.2.1 (2)',
           parts: [
-            { t: 'F' }, { t: 'c,b', sub: true }, { t: ' = ' }, { t: 'W', greek: true }, { t: '0', sub: true },
-            { t: ' · F' }, { t: 'px', sub: true },
+            { t: 'F' }, { t: 'c,2', sub: true }, { t: ' = ' }, { t: 'W', greek: true }, { t: '0', sub: true },
+            { t: ' · F' }, { t: 'px,des', sub: true },
           ] },
-        { ref: '§12.10.2.1(c)',
+        { ref: '§12.10.2.1 (3)',
           parts: [
-            { t: 'F' }, { t: 'c,c', sub: true }, { t: ' = 0.4 · S' }, { t: 'DS', sub: true },
-            { t: ' · I' }, { t: 'e', sub: true }, { t: ' · w' }, { t: 'px', sub: true },
-            { t: '  (light-frame only)' },
+            { t: 'F' }, { t: 'c,3', sub: true }, { t: ' = 1.25 · ' }, { t: 'r', greek: true }, { t: ' · F' }, { t: 'px,min', sub: true },
+            { t: '  (1.25 only with the §12.3.3.5 increase)' },
           ] },
         { ref: 'Governing',
           parts: [
-            { t: 'F' }, { t: 'c', sub: true }, { t: ' = max(F' }, { t: 'c,a', sub: true },
-            { t: ', F' }, { t: 'c,b', sub: true }, { t: ', F' }, { t: 'c,c', sub: true }, { t: ')' },
+            { t: 'F' }, { t: 'c', sub: true }, { t: ' = max(F' }, { t: 'c,1', sub: true },
+            { t: ', F' }, { t: 'c,2', sub: true }, { t: ', F' }, { t: 'c,3', sub: true }, { t: ')' },
+          ] },
+        { ref: '§12.10.2.1 Exc.',
+          parts: [
+            { t: 'Wood light-frame shear walls: F' }, { t: 'c', sub: true }, { t: ' = 1.25 · ' }, { t: 'r', greek: true },
+            { t: ' · F' }, { t: 'px,des', sub: true }, { t: '  (no ' }, { t: 'W', greek: true }, { t: '0', sub: true }, { t: ')' },
+          ] },
+        { ref: 'Light-frame',
+          parts: [
+            { t: 'W', greek: true }, { t: '0', sub: true }, { t: ' reduced by 0.5, not less than 2.0 (flexible diaphragm)' },
           ] },
       ],
     });
@@ -464,3 +467,35 @@ export const elfDiaphragmCollector = {
     return sections;
   },
 };
+
+// ── column definitions shared by the screen tables and the PDF: [label, ASCE 7-22 reference], both in the rich-text
+// markup (X_{sub}, X^{sup}) so every symbol is drawn with its subscript / superscript on screen and in the PDF; the
+// references kept short so the columns stay equal and narrow (user 2026-11-10)
+const ELF_COLS = [['Level', '', ''], ['w_{x}', 'kip', ''], ['h_{x}', 'ft', ''], ['w_{x}·h_{x}^{k}', '', ''],
+  ['C_{vx}', '', 'Eq. 12.8-12'], ['F_{x}', 'kip', 'Eq. 12.8-11'], ['V_{x}', 'kip', 'Eq. 12.8-13']];
+function DIAPH_COLS(o) {
+  return [['Level', '', ''], ['w_{px}', 'kip', '§12.10.1.1'], ['F_{px}', 'kip', 'Eq. 12.10-1'], ['F_{px,min}', 'kip', 'Eq. 12.10-3'],
+    ['F_{px,max}', 'kip', 'Eq. 12.10-2'], ['F_{px,des}', 'kip', '§12.10.1.1'],
+    ...(o.increase25 ? [['1.25·F_{px,des}', 'kip', '§12.3.3.5']] : []),
+    [(o.increase25 ? '1.25·' : '') + 'F_{px,des} / F_{x}', '', '= k_{D} (DA)']];
+}
+function COLL_COLS(o) {
+  const tail = [['F_{c}', 'kip', o.woodWallException ? '§12.10.2.1 Exc.' : 'max of (1)–(3)'], ['F_{c} / F_{px,des}', '', ''], ['F_{c} / F_{x}', '', '= k_{C} (DA)']];
+  const inc = o.increase25 ? '1.25·' : '';
+  if (o.woodWallException) return [['Level', '', ''], [inc + 'ρ·F_{px,des}', 'kip', '§12.10.2.1 Exc.'], ...tail];
+  return [['Level', '', ''], ['Ω_{0}·F_{x}', 'kip', '§12.10.2.1(1)'], ['Ω_{0}·F_{px,des}', 'kip', '§12.10.2.1(2)'], [inc + 'ρ·F_{px,min}', 'kip', '§12.10.2.1(3)'], ...tail];
+}
+function diaphRow(r, o, n2, n3) {
+  return [r.level, n2(r.wpx), n2(r.fpxCalc), n2(r.fpxMin), n2(r.fpxMax), n2(r.fpxDesign), ...(o.increase25 ? [n2(r.fpxDesignInc)] : []), n3(r.kD)];
+}
+function collRow(r, o, n2, n3) {
+  const g = k => (r.governs === k ? ' ◄' : '');
+  if (o.woodWallException) return [r.level, n2(r.exceptionForce), n2(r.designForce), n3(r.fcOverFpx), n3(r.kC)];
+  return [r.level, n2(r.omega0Fx) + g('1'), n2(r.omega0Fpx) + g('2'), n2(r.minForce) + g('3'), n2(r.designForce), n3(r.fcOverFpx), n3(r.kC)];
+}
+function OMEGA_NOTE(o) {
+  return 'Ω_{0} = ' + (o.omega0 ?? '') + (o.lightFrame ? ' → ' + (o.omegaCollector ?? '') + ' for collector items (1) and (2) (light-frame diaphragm: Ω_{0} − 0.5, not less than 2.0)' : '')
+    + '; ρ = ' + (o.rho ?? 1) + '. The 25 % increase (§12.3.3.5) ' + (o.increase25 ? 'is applied to F_{px,des} and to collector item (3) / the exception, never to a force with Ω_{0}.' : 'is not applied.')
+    + (o.woodWallException ? ' Structure braced entirely by wood light-frame shear walls: collectors use the §12.10.2.1 Exception (no Ω_{0}).' : '')
+    + ' ◄ = governing item.';
+}

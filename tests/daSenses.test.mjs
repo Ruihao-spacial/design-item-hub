@@ -40,7 +40,7 @@ const roofRefs = () => ({ wallSource: swdExtract(swd) });
 const roof = calcAll(roofInputs(), roofRefs());
 
 test('calc version td-v18; flipActs / reverseLoads flip every load and keep its values', () => {
-  assert.equal(CALC_VERSION, 'td-v18');
+  assert.equal(CALC_VERSION, 'td-v19'); // td-v19 (ELF review): walls above × max(Ω₀, 1.25)
   assert.deepEqual(['-y', '+y', '+x', '-x'].map(flipActs), ['+y', '-y', '-x', '+x']);
   const i = defaultInputs(), r = reverseLoads(i);
   assert.deepEqual(r.loads.map(l => l.acts), ['+y', '-x']);

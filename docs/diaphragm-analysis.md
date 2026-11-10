@@ -257,7 +257,10 @@ member runs are still open → the other direction.
   - every run closes.
 - **Force levels (step 7)**, user decisions Q1 / Q2:
   - **1.0E** = own level + walls above, as analysed. The line forces go to SWD.
-  - **Diaphragm** = k_D·own + Ω₀·walls above (× 1.25 when ticked, §12.3.3.5), per ASCE 7-22 §12.10.1.1 (Type 4).
+  - **Diaphragm** = k_D·own + Ω₀·walls above, per ASCE 7-22 §12.10.1.1 (Type 4). **td-v19 (user 2026-11-10):** with the
+    +25 % tick, walls above × **max(Ω₀, 1.25)** — the 25 % is not combined with Ω₀ (§12.3.3.5 exception: forces with
+    overstrength need not be increased); it was Ω₀ × 1.25. The diaphragm's own 25 % comes with k_D from ELF v2
+    (F_px,des × 1.25 / F_x).
     - Linear, so it is computed as k_D × one more run with the walls-above forces × Ω₀ / k_D (`calcAll` → `levelD`).
       That run has the same members and fields, so every diagram and closure check is exact.
     - `levelD` is kept in memory only (not enumerable, not saved; results are regenerated on open).
@@ -345,6 +348,15 @@ member runs are still open → the other direction.
 - **ρ note (user 2026-11-10):** under the force levels on Setup — k_D and k_C are the full factors; the effect of ρ is
   already incorporated in the factor entered, the tool applies no separate ρ. The ELF suggestion has no ρ in it (the ELF
   item does not apply its ρ input to F_px or the collector force).
+
+## Linked ELF checks (user 2026-11-10, td-v19)
+- **Base shear:** DA linked to both Shear Wall Design and ELF → warning `elf-swd-baseshear` (Setup → Seismic loading and
+  Checks) when the two use different Seismic Base Shear items, or only one has one. The ELF item's link is read from its
+  definition (results hold no item ids).
+- **25 %:** with walls above that end at this floor, warning `elf-25` when the +25 % tick differs from the linked ELF's
+  25 % box. ELF's k_D already holds its 25 % for the diaphragm's own force; DA never adds it again.
+- The k_D "use" suggestion on Setup takes ELF's F_px,des × 1.25 when ELF has the 25 % box ticked. `elfLinkChecks`,
+  tests `tests/elf.test.mjs`.
 
 ## Both senses and load combinations (user 2026-11-10, td-v18)
 - **Both senses, option 1-B (user: a sign flip is not accurate):** every load case is analysed acting both ways
@@ -598,7 +610,7 @@ determinate examples (within ~1–2 %).
 | A TD edge line carrying on past the TD | That edge closes on its whole line (line closure check), not as a TD stop (G6) | Book Ex 8.1 line 5 closes only at A |
 | Hand-over forces not fixed by statics (offset wall-line splits, opening-collector splits between two TDs, collector loads into another diaphragm) | **Iterate to closure** — the general closure solver (built 2026-11-03, section above) (G2, G7, G8, G9) | The book iterates "until closure of all force diagrams" (Ch 8.4); in Ex 8.1 the collector-B split that closes is unique and equals the book's 550 / 1783.3 |
 
-Calculation versions: td-v7 (pieces, G5, G6), td-v8 (G3, G4 default, warning), td-v9 (closure solver, G2 / G7 / G8 / G9; no opening warning at a notch), td-v10 (user test 2026-11-03: load-line rules, superposed TDs, strut 'both', solver equilibrium + FAILED gate, new checks), td-v11 (2026-11-04: grid overhangs at either / both ends, superposed loads on supports and overhangs, open member runs fail the case), td-v12 (2026-11-05/06: walls of the story above, force levels, collectors), td-v13 (a load-line wall inside a TD counts in P), td-v14 (walls on a bridged strut act on the member), td-v15 (offset-line deflection split only with a deflection for every wall), td-v16 (each wall into the diaphragm under it, opt-in), td-v17 (offset-line rounds settle), td-v18 (2026-11-10: both senses analysed, each by its own run).
+Calculation versions: td-v7 (pieces, G5, G6), td-v8 (G3, G4 default, warning), td-v9 (closure solver, G2 / G7 / G8 / G9; no opening warning at a notch), td-v10 (user test 2026-11-03: load-line rules, superposed TDs, strut 'both', solver equilibrium + FAILED gate, new checks), td-v11 (2026-11-04: grid overhangs at either / both ends, superposed loads on supports and overhangs, open member runs fail the case), td-v12 (2026-11-05/06: walls of the story above, force levels, collectors), td-v13 (a load-line wall inside a TD counts in P), td-v14 (walls on a bridged strut act on the member), td-v15 (offset-line deflection split only with a deflection for every wall), td-v16 (each wall into the diaphragm under it, opt-in), td-v17 (offset-line rounds settle), td-v18 (2026-11-10: both senses analysed, each by its own run), td-v19 (2026-11-10: walls above × max(Ω₀, 1.25); linked ELF checks).
 
 ## TD engine (Phase 3)
 - One call per transfer diaphragm. It is not the analysis of a regular diaphragm: that is the basic shear (Phase 4);

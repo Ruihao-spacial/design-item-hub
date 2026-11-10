@@ -39,7 +39,7 @@ test('the PDF uses the result it is given (recalculated with the links), not a c
   const secs = sections('summary');
   const head = secs[0].rows.map(r => r[0] + ': ' + (r[1].t || r[1]));
   assert.ok(head.some(t => t.startsWith('Shear Wall Design: Linked')), head.join('\n'));
-  assert.ok(head.some(t => t.startsWith('Walls above (transfer): Ω₀ 2.5')));
+  assert.ok(head.some(t => t.startsWith('Walls above (transfer): × Ω₀ 2.5 at the diaphragm level')));
   assert.ok(head.some(t => t.includes('the effect of ρ is already incorporated')));
   assert.ok(head.some(t => t.startsWith('Values printed: ASD — 0.7E')));
   // without its links, the same item would not know its walls: the line force table proves the linked walls are used
