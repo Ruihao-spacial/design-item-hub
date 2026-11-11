@@ -97,7 +97,13 @@ test('force levels: Setup factors; Analysis shows 1.0E / diaphragm / collector l
   const click = t => [...box.querySelectorAll('button')].find(b => b.textContent === t).dispatchEvent(new window.Event('click'));
   click('Analysis');
   const shown = () => box.querySelector('.td-forces-shown').textContent;
-  assert.ok(shown().startsWith('Forces shown: seismic 1.0E from F_x = 100 k'));
+  // load combination (2026-11-10): default = Setup design basis (ASD) → 0.7 × 1.0E; LRFD = 1.0E as analysed
+  assert.equal(box.querySelector('select[data-combo]').value, 'ASD');
+  assert.ok(shown().startsWith('ASD 0.7E, acting') && shown().includes('Forces shown: seismic 1.0E from F_x = 100 k') && shown().includes('× 0.7 (ASD)'), shown());
+  assert.ok(box.textContent.includes('35,000'));
+  const combo = v => { const s = box.querySelector('select[data-combo]'); for (const o of s.querySelectorAll('option')) { if (o.value === v) o.setAttribute('selected', ''); else o.removeAttribute('selected'); } s.dispatchEvent(new window.Event('change')); };
+  combo('LRFD');
+  assert.ok(shown().startsWith('LRFD 1E, acting') && shown().includes('Forces shown: seismic 1.0E from F_x = 100 k'), shown());
   assert.ok(box.textContent.includes('50,000'));
   click('Diaphragm × 1.25');
   assert.ok(shown().includes('DIAPHRAGM level = 1.0E × k_D 1.25') && box.textContent.includes('62,500'));
@@ -109,7 +115,8 @@ test('force levels: Setup factors; Analysis shows 1.0E / diaphragm / collector l
   const b2 = document.createElement('div');
   diaphragmAnalysis.renderForm(b2, w, () => {}, [], () => {}, {});
   [...b2.querySelectorAll('button')].find(b => b.textContent === 'Analysis').dispatchEvent(new window.Event('click'));
-  assert.ok(b2.querySelector('.td-forces-shown').textContent.startsWith('Forces shown: wind, 1.0W'));
+  assert.ok(b2.querySelector('.td-forces-shown').textContent.includes('Forces shown: wind, 1.0W'));
+  assert.ok(b2.querySelector('.td-forces-shown').textContent.startsWith('ASD 0.6W'), 'wind: ASD 0.6W by default');
   assert.ok(![...b2.querySelectorAll('button')].some(b => b.textContent.startsWith('Diaphragm ×')), 'no level buttons for wind');
   // Setup shows the factor inputs
   click('Setup');

@@ -135,6 +135,8 @@ test('Analysis tab: Views 2–4 (TD shear, net shear, member diagrams with filte
   assert.ok(box.textContent.includes('Analysis checks') && box.textContent.includes('member runs close'));
 });
 
+// load combination (2026-11-10): book items are ASD (0.7E / 0.6W shown by default); the book values are at 1.0 → LRFD
+const lrfd = b => { const s = b.querySelector('select[data-combo]'); if (!s) return; for (const o of s.querySelectorAll('option')) { if (o.value === 'LRFD') o.setAttribute('selected', ''); else o.removeAttribute('selected'); } s.dispatchEvent(new window.Event('change')); };
 test('Analysis tab: zoom shared by the views (more values when zoomed, Fit resets), hover values, legend, outlines without fill', () => {
   const open = (id, edit) => {
     const inputs = bookToInputs(book(id));
@@ -155,6 +157,7 @@ test('Analysis tab: zoom shared by the views (more values when zoomed, Fit reset
   assert.ok(texts() > n1, `zoomed in shows more values (${n1} → ${texts()})`);
   box = open('Ex3.4');
   click('Analysis');
+  lrfd(box);
   for (let i = 0; i < 4; i++) click('+');
   click('Members N');
   assert.ok(box.textContent.includes('244 %'), 'zoom kept when switching view');
@@ -215,6 +218,7 @@ test('gate: a TD that did not run pauses its case — no TD / net / member resul
   diaphragmAnalysis.renderForm(box, inputs, () => {}, [], () => {}, {});
   const click = t => [...box.querySelectorAll('button')].find(b => b.textContent === t).dispatchEvent(new window.Event('click'));
   click('Analysis');
+  lrfd(box);
   assert.ok(box.querySelector('.td-paused').textContent.includes('basic shear and line forces below are valid'));
   assert.ok(box.querySelector('g.td-view1') && box.textContent.includes('Σ line forces 15,000 lb ✓'), 'View 1 still drawn');
   for (const v of ['TD v_TD', 'Net v_net', 'Members N']) {

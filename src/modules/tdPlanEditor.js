@@ -1011,8 +1011,9 @@ export function renderLoadList(inputs, kind, refresh) {
     for (const l of list) {
       const c = el('div', { style: { border: '1px solid var(--border-light)', borderRadius: '6px', padding: '6px', marginBottom: '6px', maxWidth: '720px' } });
       c.appendChild(el('div', { style: { display: 'flex', gap: '6px', alignItems: 'center', flexWrap: 'wrap' } },
-        el('span', { style: small }, 'Acts'),
-        choose((dir === 'y' ? ['-y', '+y'] : ['+x', '-x']).map(a => [a, a]), l.acts, v => { l.acts = v; refresh(true); }),
+        // both senses are analysed (user 2026-11-10): no sense to pick; the stored acts stays (the entered sense, sent to
+        // Shear Wall Design)
+        el('span', { style: small, 'data-acts': l.acts, title: 'Both senses are analysed (each by its own run); pick the sense to view on the Analysis tab.' }, 'Acts ±' + dir + ' (both senses)'),
         choose(LOAD_MODES[kind].some(([m]) => m === l.mode) ? LOAD_MODES[kind] : [...LOAD_MODES[kind], [l.mode, l.mode]], l.mode, v => {
           l.mode = v; l.kind = kind;
           if ((v === 'line' || v === 'wind') && !l.segments.length) l.segments.push(newSegment('', '', ''));
@@ -1039,7 +1040,7 @@ export function renderLoadList(inputs, kind, refresh) {
     }
     // one seismic F_x / ΣA load per direction (user test 2026-11-03: a second one, acting the other way, cancelled it)
     if (kind === 'E' && list.some(l => l.mode === 'seismic')) {
-      box.appendChild(el('p', { style: small }, 'One seismic F_x / ΣA load per direction (the analysis is linear: the opposite sense is the same with the signs changed).'));
+      box.appendChild(el('p', { style: small }, 'One seismic F_x / ΣA load per direction. Every load is analysed acting both ways (±' + dir + '), each by its own run — pick the sense on the Analysis tab.'));
       continue;
     }
     box.appendChild(el('button', { type: 'button', className: 'btn btn-sm', onClick() {

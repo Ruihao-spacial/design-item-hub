@@ -12,6 +12,7 @@ import { renderPlanEditor, newEditorState, drawPlan, renderLoadList } from './td
 import { swdExtract, linkedWalls, guessDir, swdWallShares, wallsAbove } from './tdWallLink.js';
 import { omega0Of } from './shearWallCalc.js';
 import { renderAnalysis } from './tdViews.js';
+import { daPdfSections } from './tdReport.js';
 import { toolValue } from './tdBookKeys.js';
 import { loadCases, basicCase, wallShares, lineGroups, aboveLoads } from './tdBasicShear.js';
 import { runTds, CLOSURE_TOL } from './tdDerive.js';
@@ -20,7 +21,7 @@ import { closeCase } from './tdClosure.js';
 import { cantileverLimits, CANTILEVER_LIMITS_VERIFY } from './tdLimits.js';
 import { sharedGrids, gridShareDiff, applyGridShare, localOnlyGrids } from './tdGridShare.js';
 
-export const CALC_VERSION = 'td-v17'; // v17 (2026-11-09, open item 5): offset lines with SWD shares settle — the force from above on a group line uses this level's line force as given (it was clamped to ≥ 0, so a negative one fed back and the rounds swung); a wall whose auto nailing alternates (A → B → A) is held at the heavier in the SWD copy (warning swd-group-nailing); up to 8 rounds. // v16 (2026-11-09, open item 6-A): opt-in per line of walls above "each wall into the diaphragm under it" (aboveCollectors[line].own) — no collector along the grid, a wall split by length over the diaphragms under it; absent = full depth as before. // v15 (2026-11-09, open item 0-A): offset line with SWD deflection distribution — equal δ only when every wall has a deflection (else that round split by capacity, warning swd-group-defl, kept across E / W); a wall without a deflection took the whole line. // v14 (2026-11-09, user test 26998): a wall line bridged across a gap inside the outline counts the walls (and walls above) standing on the bridged stretch in its member — the TD strut load counted them, the member did not (line 2 over OP1: −816 lb open). // v13 (2026-11-06, user test 26998): a TD's strut load P includes the share of a wall of its load line that runs past the TD edge into the TD (it was left out: the member did not close). // v12 (2026-11-05, user, project 26997): walls of the story above (SWD level above): those that end at this floor are concentrated loads into the diaphragms spanning across their grid (shared by depth) and a source on their grid's member (distributor); walls that continue add a drag on their own line; bounded grids, shared grids, grid link with SWD; no line-length check. // v11 (2026-11-04, user): TD overhangs picked by grid, one per support (both ends allowed); any number of TD load lines anywhere from tip to tip — between the supports, on a support (straight into it), on an overhang (superposed engine runs: span / cantilever / mirrored cantilever); Auto load lines on the overhangs; a TD past a support without an overhang there is an error; a case with open member runs FAILS and is held from SWD. // v10 (2026-11-03, user test 26999): TD load lines Auto count only walls of the load direction whose line reaches the TD edge; strut TD loaded from both edges; any number of load lines on a simple-span TD (superposed single-load engine runs); closure solver keeps equilibrium, a case out of balance FAILS and is held from SWD; checks: opposite / double seismic loads, grid off the plan, wall inside a span taking nothing, offset line without a strut, TD past its supports. // v9 (2026-11-03): general closure solver (offset lines, wall lines, collectors into a diaphragm G7 with its basic field recomputed G9, TD reaction split G2), Gauss–Newton to exact closure; a group takes only its parts of a grid (G8); no opening warning at a notch. // v8 (2026-11-02): chord cut in an opening = section M/H by default; opening-edge member zero at the band's zero-shear point when its shear changes sign; opening-collector warning (opening study). // v7 (2026-11-02): diaphragm pieces; outside TD shear averaged where a wall ends inside a segment (G5); an edge carrying on past the TD is closed on its line (G6); chord cut inside an opening: consistent Vierendeel / section setting (G4). // v6: offset wall lines, line forces iterated to closure (Phase 7). // v5: TD and net fields, net-field members (Phase 6). // v2: TD geometry in the skill frame (results.tds); v3: basic shear, line forces, wall shares (Phase 4); v4: derived TD inputs + TD engine runs (Phase 5)
+export const CALC_VERSION = 'td-v19'; // v19 (2026-11-10, user, ELF review): walls above at the diaphragm level × max(Ω₀, 1.25) — the 25 % is never combined with Ω₀ (ASCE 7-22 §12.3.3.5 exception; it was Ω₀ × 1.25); warnings when the linked ELF's 25 % box differs from the +25 % tick, and when the linked ELF and Shear Wall Design use different Seismic Base Shear items. // v18 (2026-11-10, user): every load case is analysed in both senses (+ and −) by a full second run (results.senses; checks the reversed run fails are added, caseId '<id>:rev'); the line forces sent to Shear Wall Design are those of the entered sense, unchanged. // v17 (2026-11-09, open item 5): offset lines with SWD shares settle — the force from above on a group line uses this level's line force as given (it was clamped to ≥ 0, so a negative one fed back and the rounds swung); a wall whose auto nailing alternates (A → B → A) is held at the heavier in the SWD copy (warning swd-group-nailing); up to 8 rounds. // v16 (2026-11-09, open item 6-A): opt-in per line of walls above "each wall into the diaphragm under it" (aboveCollectors[line].own) — no collector along the grid, a wall split by length over the diaphragms under it; absent = full depth as before. // v15 (2026-11-09, open item 0-A): offset line with SWD deflection distribution — equal δ only when every wall has a deflection (else that round split by capacity, warning swd-group-defl, kept across E / W); a wall without a deflection took the whole line. // v14 (2026-11-09, user test 26998): a wall line bridged across a gap inside the outline counts the walls (and walls above) standing on the bridged stretch in its member — the TD strut load counted them, the member did not (line 2 over OP1: −816 lb open). // v13 (2026-11-06, user test 26998): a TD's strut load P includes the share of a wall of its load line that runs past the TD edge into the TD (it was left out: the member did not close). // v12 (2026-11-05, user, project 26997): walls of the story above (SWD level above): those that end at this floor are concentrated loads into the diaphragms spanning across their grid (shared by depth) and a source on their grid's member (distributor); walls that continue add a drag on their own line; bounded grids, shared grids, grid link with SWD; no line-length check. // v11 (2026-11-04, user): TD overhangs picked by grid, one per support (both ends allowed); any number of TD load lines anywhere from tip to tip — between the supports, on a support (straight into it), on an overhang (superposed engine runs: span / cantilever / mirrored cantilever); Auto load lines on the overhangs; a TD past a support without an overhang there is an error; a case with open member runs FAILS and is held from SWD. // v10 (2026-11-03, user test 26999): TD load lines Auto count only walls of the load direction whose line reaches the TD edge; strut TD loaded from both edges; any number of load lines on a simple-span TD (superposed single-load engine runs); closure solver keeps equilibrium, a case out of balance FAILS and is held from SWD; checks: opposite / double seismic loads, grid off the plan, wall inside a span taking nothing, offset line without a strut, TD past its supports. // v9 (2026-11-03): general closure solver (offset lines, wall lines, collectors into a diaphragm G7 with its basic field recomputed G9, TD reaction split G2), Gauss–Newton to exact closure; a group takes only its parts of a grid (G8); no opening warning at a notch. // v8 (2026-11-02): chord cut in an opening = section M/H by default; opening-edge member zero at the band's zero-shear point when its shear changes sign; opening-collector warning (opening study). // v7 (2026-11-02): diaphragm pieces; outside TD shear averaged where a wall ends inside a segment (G5); an edge carrying on past the TD is closed on its line (G6); chord cut inside an opening: consistent Vierendeel / section setting (G4). // v6: offset wall lines, line forces iterated to closure (Phase 7). // v5: TD and net fields, net-field members (Phase 6). // v2: TD geometry in the skill frame (results.tds); v3: basic shear, line forces, wall shares (Phase 4); v4: derived TD inputs + TD engine runs (Phase 5)
 const f2 = v => (Number.isFinite(v) ? v.toFixed(2) : '—');
 const sameName = (a, b) => String(a || '').trim().toLowerCase() === String(b || '').trim().toLowerCase();
 const SHEATHING = [['wsp', 'Wood structural panels'], ['lumber_straight_single', 'Lumber, straight (single)'],
@@ -50,6 +51,7 @@ export function calcAll(inputs, refs = {}, opts = {}) {
     if (loc.length) issues.push({ code: 'grid-local', warn: true, msg: `Grid${loc.length > 1 ? 's' : ''} ${loc.join(', ')} ${loc.length > 1 ? 'are' : 'is'} not in the shared grids (owner item) — add ${loc.length > 1 ? 'them' : 'it'} there, or stop using ${loc.length > 1 ? 'them' : 'it'} here and delete ${loc.length > 1 ? 'them' : 'it'}.` });
   }
   const errors = issues.filter(e => !e.warn), warnings = issues.filter(e => e.warn);
+  warnings.push(...elfLinkChecks(inputs, refs, link));
   const sumA = sheathedArea(plan);
   const fx = Number(inputs.level && inputs.level.fx);
   const q = Number.isFinite(fx) && sumA > 0 ? fx * 1000 / sumA : null; // psf from F_x (kip)
@@ -133,7 +135,53 @@ export function calcAll(inputs, refs = {}, opts = {}) {
     const d = calcAll(inputs, refs, { ...opts, noLevelD: true, aboveScaleE: fl.transfer / fl.diaphragm });
     Object.defineProperty(res, 'levelD', { value: ((d.analysis && d.analysis.cases) || []).filter(c => c.kind === 'E'), enumerable: false });
   }
+  Object.defineProperty(res, 'plan', { value: plan, enumerable: false }); // the plan with the linked walls (PDF, not saved)
+  // Both senses (user 2026-11-10, option 1-B): every load case is also analysed acting the other way (+y ↔ −y,
+  // +x ↔ −x) by a full second run — not a sign flip: wind loads its windward strip on the other face, and every rule
+  // of the run (TDs, closure, Shear Wall Design rounds) applies to the reversed loads as it does to the entered ones.
+  // The reversed run is kept in memory (not enumerable, not saved: results are regenerated on open); only its sense
+  // per case and any check it fails are stored. The line forces sent to Shear Wall Design stay those of the entered
+  // sense.
+  if (!opts.noReverse && an.cases.length) {
+    const rv = calcAll(reverseLoads(inputs), refs, { ...opts, noReverse: true });
+    const rCases = (rv.analysis && rv.analysis.cases) || [];
+    const lcs = loadCases(plan);
+    res.senses = an.cases.map(cs => { const lc = lcs.find(x => x.id === cs.id), a = lc && lc.loads[0] ? lc.loads[0].acts : '';
+      return { caseId: cs.id, entered: a, reversed: a ? flipActs(a) : '' }; });
+    const sense = id => { const s = res.senses.find(x => x.caseId === id); return s ? s.reversed : 'reversed'; };
+    // a check the reversed run fails that the entered sense does not fail the same way (no duplicate of the same issue)
+    const failsToo = c => res.checks.some(x => x.caseId === c.caseId && x.code === c.code && !x.ok);
+    res.checks = [...res.checks, ...(rv.checks || []).filter(c => !c.ok && c.caseId && !failsToo(c)).map(c => ({ ...c, caseId: c.caseId + ':rev', reversed: true,
+      msg: `Reversed (acts ${sense(c.caseId)}): ` + c.msg }))];
+    Object.defineProperty(res, 'reverse', { value: { cases: rCases, levelD: rv.levelD || null, tdRuns: rv.tdRuns || [] }, enumerable: false });
+  }
   return res;
+}
+
+// Linked ELF checks (user 2026-11-10, ELF review): (1) the linked ELF and the linked Shear Wall Design item must use the
+// same Seismic Base Shear item (or neither one); (2) with walls above that end at this floor, the +25 % tick must match
+// the linked ELF's 25 % box (ELF's k_D holds its 25 % for the diaphragm's own force).
+export function elfLinkChecks(inputs, refs = {}, link = null) {
+  const out = [], elf = refs.elfSource;
+  if (!elf) return out;
+  const swdDef = refs.wallSource && refs.wallSource.definition;
+  if (swdDef) {
+    const a = elf.baseShearSource || null, b = (swdDef.refs && swdDef.refs.baseShearSource) || null;
+    if (a !== b) out.push({ code: 'elf-swd-baseshear', warn: true, msg: !a || !b
+      ? `Seismic Base Shear link: ${!a ? 'the linked ELF item has none' : 'the linked Shear Wall Design item has none'} while ${!a ? 'Shear Wall Design' : 'ELF'} is linked to one — link both to the same Seismic Base Shear item (S_DS, Ω₀, I_e must match).`
+      : 'Seismic Base Shear link: the linked ELF item and the linked Shear Wall Design item use different Seismic Base Shear items — link both to the same one (S_DS, Ω₀, I_e must match).' });
+  }
+  const o = elf.options;
+  const transfer = link && link.above && (link.above.walls || []).some(w => w.kind === 'transfer');
+  if (o && transfer && !!o.increase25 !== !!(inputs.level && inputs.level.transferIncrease))
+    out.push({ code: 'elf-25', warn: true, msg: `25 % increase (§12.3.3.5): the linked ELF item ${o.increase25 ? 'applies it' : 'does not apply it'}, but the +25 % tick for the walls above (Setup → Seismic loading) is ${inputs.level && inputs.level.transferIncrease ? 'on' : 'off'} — make them match.` });
+  return out;
+}
+
+// The loads acting the other way: +y ↔ −y, +x ↔ −x (every value as entered)
+export const flipActs = a => (String(a).startsWith('-') ? '+' : '-') + String(a).slice(1);
+export function reverseLoads(inputs) {
+  return { ...inputs, loads: (inputs.loads || []).map(l => ({ ...l, acts: flipActs(l.acts) })) };
 }
 
 // A case whose line forces do not balance its load fails (user test 2026-11-03: the closure solver could drift off when
@@ -372,7 +420,9 @@ function pausedChecks(plan, cs, tdRuns, frames) {
 }
 
 // Seismic display factors (Setup): F_x → diaphragm level (k_D = F_px / F_x) and collector level (k_C); blank / bad = 1
-// transfer (step 7, user 2026-11-05): the forces of the walls above at the diaphragm level = Ω₀ × (1.25 when ticked,
+// transfer (td-v19, user 2026-11-10): the forces of the walls above at the diaphragm level = max(Ω₀, 1.25 when ticked) —
+// the 25 % is not combined with Ω₀ (ASCE 7-22 §12.3.3.5 exception: forces with overstrength need not be increased);
+// before td-v19: Ω₀ × (1.25 when ticked,
 // §12.3.3.5) — ASCE 7-22 §12.10.1.1, Type 4. Ω₀: typed on Setup, else the linked Shear Wall Design item's, else 2.5.
 export function forceLevels(inputs, refs = {}) {
   const k = v => { const n = Number(v); return v !== '' && v !== null && v !== undefined && Number.isFinite(n) && n > 0 ? n : 1; };
@@ -383,7 +433,7 @@ export function forceLevels(inputs, refs = {}) {
     : swdDef ? { v: omega0Of(swdDef), from: 'Shear Wall Design' } : { v: 2.5, from: 'default' };
   const inc = !!lv.transferIncrease;
   return { fx: Number.isFinite(Number(lv.fx)) && lv.fx !== '' ? Number(lv.fx) : null, diaphragm: k(lv.diaphragmFactor), collector: k(lv.collectorFactor),
-    omega0: om.v, omega0From: om.from, increase: inc, transfer: om.v * (inc ? 1.25 : 1) };
+    omega0: om.v, omega0From: om.from, increase: inc, transfer: Math.max(om.v, inc ? 1.25 : 0) };
 }
 
 // Per linked SWD line, the force this diaphragm delivers (kip, load-direction sign, E and W; null = held). The only SWD
@@ -437,7 +487,10 @@ export const diaphragmAnalysis = {
   wideLayout: true,
   refs: [
     { key: 'elfSource', label: 'ELF Diaphragm & Collector', sourceType: 'elf_diaphragm_collector',
-      extract: (outputs) => ({ elfTable: (outputs.elfTable || []).map(r => ({ level: r.level, fx: r.fx })) }) },
+      extract: (outputs, item) => ({ elfTable: (outputs.elfTable || []).map(r => ({ level: r.level, fx: r.fx })),
+        // ELF v2 (user 2026-11-10): its options (25 % alignment check) and its Seismic Base Shear item (base-shear match,
+        // read from the ELF definition — results never hold item ids)
+        options: outputs.options || null, baseShearSource: (item && item.inputs && item.inputs.refs && item.inputs.refs.baseShearSource) || null }) },
     // walls of every level from Shear Wall Design (its definition, read-only; it never resolves back to here)
     { key: 'wallSource', label: 'Shear Wall Design', sourceType: 'shear_wall_design', from: 'inputs',
       extract: (inputs) => swdExtract(inputs) },
@@ -515,6 +568,8 @@ export const diaphragmAnalysis = {
     let overlays = { lines: true, outlines: true };
     let setupPage = 'seismic'; // Setup tab page: seismic | wind | walls | general
     let forceLevel = 'E'; // Analysis tab, seismic cases: 'E' (1.0E, F_x) | 'D' (diaphragm level) | 'C' (collector level)
+    let senseMode = 'entered'; // Analysis tab: 'entered' | 'reversed' | 'envelope' (user 2026-11-10, both senses analysed)
+    let comboBasis = null; // Analysis tab load combination 'LRFD' | 'ASD' (null = Setup → General design basis)
     const viewZoom = { zoom: 1, panX: 0, panY: 0 }; // Analysis tab zoom / pan, shared by every view and case
     let results = calcAll(inputs, refs);
 
@@ -546,7 +601,9 @@ export const diaphragmAnalysis = {
       else if (active === 'plan') body.appendChild(renderPlanTab());
       else if (active === 'analysis') body.appendChild(renderAnalysis(planWithLinks(inputs, refs).plan, results, { id: caseId, set(id) { caseId = id; renderAll(); },
         view, setView(n) { view = n; renderAll(); }, show, setShow(x) { show = x; renderAll(); },
-        zoom: viewZoom, overlays, setOverlays(x) { overlays = x; renderAll(); }, level: forceLevel, setLevel(x) { forceLevel = x; renderAll(); } }));
+        zoom: viewZoom, overlays, setOverlays(x) { overlays = x; renderAll(); }, level: forceLevel, setLevel(x) { forceLevel = x; renderAll(); },
+        sense: senseMode, setSense(x) { senseMode = x; renderAll(); },
+        basis: comboBasis || inputs.designBasis || 'ASD', setBasis(x) { comboBasis = x; renderAll(); } }));
       else if (active === 'tds') body.appendChild(renderTds(results, inputs, refresh));
       else if (active === 'checks') body.appendChild(renderChecks(results));
       else if (active === 'verification') body.appendChild(renderVerification(inputs, results, planWithLinks(inputs, refs).plan));
@@ -604,6 +661,9 @@ export const diaphragmAnalysis = {
             title: linked ? 'From the linked ELF item' : '', onChange(e) { inputs.level.fx = e.target.value; refresh(true); } })),
         el('div', { className: 'form-group' }, el('label', { className: 'form-label' }, 'ΣA (sf) / q'),
           el('div', { className: 'mono', style: { padding: '6px 0' } }, f2(results.sumA) + ' sf' + (results.q != null ? ' · q = ' + f2(results.q) + ' psf' : '')))));
+      // linked ELF checks (user 2026-11-10): base-shear match with Shear Wall Design, 25 % alignment (also on Checks)
+      for (const w of (results.warnings || []).filter(x => String(x.code).startsWith('elf-')))
+        sec.appendChild(el('p', { 'data-elf-warning': w.code, style: { fontSize: '0.8rem', color: 'var(--stale)', margin: '0.2rem 0' } }, '⚠ ' + w.msg));
 
       if (noE) return sec;
       // Seismic force levels (display factors on the Analysis tab; the analysis and the SWD line forces stay at 1.0E)
@@ -619,23 +679,29 @@ export const diaphragmAnalysis = {
         'The analysis runs at 1.0E from F', el('sub', null, 'x'), ' (the line forces sent to Shear Wall Design stay there). The Analysis tab can show the same results scaled to the diaphragm design level (F', el('sub', null, 'px'), ', ASCE 7 §12.10.1.1) or to the collector level (Ω₀ / §12.10.2.1) — linear, so every force and unit shear scales by the factor. Blank = 1.0.'));
       sec.appendChild(el('div', { style: { display: 'flex', gap: '1.5rem', flexWrap: 'wrap', alignItems: 'flex-end' } },
         el('div', { className: 'form-group' }, el('label', { className: 'form-label' }, 'Diaphragm level k', el('sub', null, 'D'), ' = F', el('sub', null, 'px'), ' / F', el('sub', null, 'x')),
-          el('div', null, factorInput('diaphragmFactor'), hint(elfRow('diaphragmTable', 'fpxDesign'), 'F_px'))),
+          el('div', null, factorInput('diaphragmFactor'), hint(Number.isFinite(elfRow('diaphragmTable', 'fpxDesignInc')) ? elfRow('diaphragmTable', 'fpxDesignInc') : elfRow('diaphragmTable', 'fpxDesign'), 'F_px,des'))),
         el('div', { className: 'form-group' }, el('label', { className: 'form-label' }, 'Collector level k', el('sub', null, 'C'), ' = F', el('sub', null, 'collector'), ' / F', el('sub', null, 'x')),
           el('div', null, factorInput('collectorFactor'), hint(elfRow('collectorTable', 'designForce'), 'F_collector')))));
+      // ρ (user 2026-11-10): the factors are complete — no separate redundancy factor is applied
+      sec.appendChild(el('p', { 'data-rho-note': '1', style: { fontSize: '0.8rem', color: 'var(--ink-secondary)', margin: '0.2rem 0 0', padding: '4px 8px', borderLeft: '3px solid var(--stale)' } },
+        el('strong', null, 'Note — redundancy factor ρ: '), 'k', el('sub', null, 'D'), ' and k', el('sub', null, 'C'),
+        ' are the full factors — the effect of ρ is already incorporated in the factor entered; the tool applies no separate ρ. '
+        + '(The ELF suggestion above, F_px / F_x and F_collector / F_x, has no ρ in it: the ELF item does not apply its ρ input to those forces.) '
+        + 'The ASD / LRFD load combination is picked on the Analysis tab (ASD 0.7E, LRFD 1.0E) and applied on top of these factors.'));
       // transfer from the walls above (step 7): only when walls of the story above end at this floor
       const tw = ((results.wallsAbove && results.wallsAbove.walls) || []).filter(w => w.kind === 'transfer');
       if (tw.length) {
         const fl = results.forceLevels || {};
         sec.appendChild(el('div', { className: 'section-header', style: { marginTop: '1rem' } }, 'Transfer from the walls above (out-of-plane offset)'));
         sec.appendChild(el('p', { style: { fontSize: '0.8rem', color: 'var(--ink-secondary)', margin: '0 0 0.4rem' } },
-          tw.map(w => w.mark).join(', ') + ' end at this floor. ASCE 7-22 §12.10.1.1 (horizontal irregularity Type 4): their forces are increased by Ω₀ before they are added to the diaphragm inertia forces → Diaphragm level = k_D × own + Ω₀ × walls above (× 1.25 when §12.3.3.5 applies). Collector level = k_C × (own + walls above). 1.0E and the line forces sent to Shear Wall Design are unchanged.'));
+          tw.map(w => w.mark).join(', ') + ' end at this floor. ASCE 7-22 §12.10.1.1 (horizontal irregularity Type 4): their forces are increased by Ω₀ before they are added to the diaphragm inertia forces → Diaphragm level = k_D × own + max(Ω₀, 1.25) × walls above — the 25 % (§12.3.3.5) is not combined with Ω₀; its own force takes the 25 % with k_D from ELF. Collector level = k_C × (own + walls above). 1.0E and the line forces sent to Shear Wall Design are unchanged.'));
         sec.appendChild(el('div', { style: { display: 'flex', gap: '12px', flexWrap: 'wrap', alignItems: 'center' } },
           el('label', { style: { fontSize: '0.82rem' } }, 'Ω₀ ', el('input', { type: 'number', step: 'any', min: 0, 'data-transferomega': '1', value: numOrBlank(inputs.level.transferOmega), placeholder: String(fl.omega0 ?? 2.5),
             style: { width: '70px' }, onChange(e) { inputs.level.transferOmega = e.target.value; refresh(true); } }),
             el('span', { style: { fontSize: '0.75rem', color: 'var(--ink-tertiary)' } }, ' blank = ' + (fl.omega0From === 'Shear Wall Design' ? 'Shear Wall Design Ω₀ ' + fl.omega0 : '2.5'))),
           el('label', { style: { fontSize: '0.82rem', display: 'flex', gap: '4px', alignItems: 'center' } },
             el('input', { type: 'checkbox', 'data-transferinc': '1', checked: !!inputs.level.transferIncrease, onChange(e) { inputs.level.transferIncrease = e.target.checked; refresh(true); } }),
-            '+25 % (§12.3.3.5, SDC D–F; not needed when Ω₀ is used — the engineer decides)'),
+            '+25 % (§12.3.3.5, SDC D–F) — walls above × max(Ω₀, 1.25); match the linked ELF\'s 25 % box'),
           el('span', { className: 'mono', style: { fontSize: '0.8rem' } }, '→ walls above × ' + (Math.round((fl.transfer ?? 2.5) * 1000) / 1000) + ' at the diaphragm level')));
       }
 
@@ -837,18 +903,11 @@ export const diaphragmAnalysis = {
       outputs.status === 'fail' ? '⚠ Plan issues: ' + (outputs.errors || []).length : '✓ Plan is valid'));
   },
 
-  pdfSections(inputs) {
-    const r = calcAll(inputs);
-    const plan = parsePlan(inputs);
-    return [
-      { title: 'Diaphragm Analysis — DRAFT (skill wood-diaph-transfer not PE-approved)', rows: [
-        ['Level', inputs.level.name || '—'], ['F_x (kip)', inputs.level.fx || '—'], ['ΣA (sf)', f2(r.sumA)],
-        ['Code edition', inputs.codeEdition], ['Design basis', inputs.designBasis],
-        ['Grids', plan.grids.map(g => g.name + (g.axis === 'x' ? ' x=' : ' y=') + g.at).join(', ')],
-        ['Openings', String(plan.openings.length)], ['Walls', plan.walls.map(w => w.mark).join(', ') || '—'],
-        ['Diaphragms', plan.diaphragms.map(d => d.mark + ' (' + d.dir + ')').join(', ') || '—'], ['TDs', plan.tds.map(t => t.mark + ' (' + t.dir + ')').join(', ') || '—']] },
-      r.errors.length ? { title: 'Plan issues', text: r.errors.map(e => '• ' + e.msg).join('\n') } : { title: 'Plan', text: 'No plan issues.' },
-    ];
+  // Phase 8 (user 2026-11-10): the PDF gets the same recalculated result as the screen (results.js currentOutputs →
+  // calc with the links resolved); its plan (with the linked walls) rides on it, not enumerable. tdReport.js.
+  pdfSections(inputs, outputs) {
+    const r = outputs && outputs.analysis ? outputs : calcAll(inputs);
+    return daPdfSections(inputs, r, r.plan || planWithLinks(inputs).plan);
   },
 };
 
