@@ -105,7 +105,7 @@ export function wallDeflectionAtShare(wr, lt, Vk, ctx, signed = false) {
   const acc = (wr.accumPerCombo && wr.accumPerCombo[key]) || own;
   const aboveT = (acc.tensionLeft || 0) - (own.tensionLeft || 0);
   const aboveC = (acc.comprRight || 0) - (own.comprRight || 0);
-  const ownT = Vk * h / L;
+  const ownT = Vk * (wr.otmH ?? h) / L; // overturning height = FTF + floor plate depth below (when entered)
   const clip = (x) => (signed ? Math.max(0, x) : x);
   return deflectionOf(wr, 1.0, ctx, Vk, clip(ownT + aboveT), clip(ownT + aboveC));
 }

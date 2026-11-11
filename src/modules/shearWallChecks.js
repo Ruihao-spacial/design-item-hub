@@ -36,7 +36,7 @@ export const CHECK_DEFS = [
     rule: 'R_L + R_R = ΣP and R_R·L = ΣP·x̄', vars: 'P = load piece on the wall (k); x̄ = its centroid from the wall left end (ft); L = wall length (ft); R_L, R_R = end reactions (k)' },
   { id: 'G6', title: 'Wall end equilibrium (load cases)', intent: 'End forces balance the loads and the overturning moment',
     rule: 'N_L + N_R = ΣP_case;  (N_R − R_R,case)·arm = OTM_case',
-    vars: 'N_L, N_R = wall end forces (k, + = compression); arm = lever arm (L; WSWH: B); OTM_case = V_w·h for 1.0E / 1.0W (WSWH: H_e; stack base: V₁H₁ + V₂(H₁ + d_fl + H₂)), 0 for D / L / Lr' },
+    vars: 'N_L, N_R = wall end forces (k, + = compression); arm = lever arm (L; WSWH: B); OTM_case = V_w·h for 1.0E / 1.0W (WSWH: H_e; stack base: V₁h₁ + V₂(h₂ + d), story heights), 0 for D / L / Lr' },
   { id: 'G7', title: 'Transfer conservation (load cases)', intent: 'Nothing is lost between elements',
     rule: 'Delivered N = received N; beam R_a + R_b = ΣP and R_b(x_b − x_a) = ΣP(x − x_a); post base = Σ sources; accumulated end = own + from above',
     vars: 'P = load on the beam at x (k); x_a, x_b = support positions (ft); R_a, R_b = support reactions (k)' },
@@ -247,13 +247,16 @@ export function lineChecks(line, res, ctx) {
   const g6 = newCheck('G6');
   const otmOf = (w, lt) => {
     const V = (lt === 'E' ? w.shareExact_1E : w.shareExact_1W) || 0;
-    if (w.method !== 'wswh') return V * (w.floorH || 0);
+    if (w.method !== 'wswh') return V * (w.otmH ?? (w.floorH || 0)); // FTF + floor plate depth below, when entered
     const x = w.wswh;
     if (x.role === 'stackedLower' && x.stacked && x.stacked[lt] && x.upperId && byId[x.upperId]) {
       const u = byId[x.upperId], V2 = (lt === 'E' ? u.shareExact_1E : u.shareExact_1W) || 0;
-      return (V * x.He + V2 * (x.He + x.stacked[lt].dfl + x.stacked[lt].H2)) / 12;
+      const st = x.stacked[lt];
+      return V * st.h1 + V2 * (st.h2 + st.d); // story heights (calc v27)
     }
-    return V * (x.He || 0) / 12;
+    // stacked 2nd story: no lateral end forces (carried into the stack base, user 2026-11-10); SSWH portal: k·V·H_e
+    if (x.role === 'stackedUpper' && x.lowerId) return 0;
+    return V * (x.k || 1) * (x.He || 0) / 12;
   };
   for (const { w, pl } of walls) {
     if (!w.combos) continue;
@@ -369,11 +372,23 @@ export function lineChecks(line, res, ctx) {
     if (!comboKeys.includes(key)) continue;
     // V carried by the walls of each story × its height (shear lost at a level is G2's failure, not repeated here)
     let expected = 0;
-    for (const pl of res.perLevel) expected += pl.walls.reduce((a, w) => a + ((lt === 'E' ? w.shareExact_1E : w.shareExact_1W) || 0), 0) * floorH(pl.levelId);
+    // overturning height = FTF + floor plate depth below the wall (otmH, when entered)
+    // a stacked 2nd-story Strong-Wall acts over h₂ + d (the floor between the panels, calc v27)
+    const hOf = (w, pl) => {
+      if (w.method === 'wswh' && w.wswh.role === 'stackedUpper' && w.wswh.lowerId && byId[w.wswh.lowerId]) return floorH(pl.levelId) + (byId[w.wswh.lowerId].wswh.floorDepth || 0) / 12;
+      return w.otmH ?? floorH(pl.levelId);
+    };
+    for (const pl of res.perLevel) expected += pl.walls.reduce((a, w) => a + ((lt === 'E' ? w.shareExact_1E : w.shareExact_1W) || 0) * hOf(w, pl), 0);
     const actual = [...atBase, ...excluded].reduce((a, f) => a + (f.map[key] || 0) * f.x, 0);
-    // WSWH: couple V·H_e over the arm B, delivered at the panel ends (width) — list the difference
-    let adj = 0;
+    // Single WSWH panels: couple V·H_e over the arm B, delivered at the panel ends (width) — list the difference.
+    // A stacked pair is checked exactly (its base moment uses the story heights, calc v27).
+    let adj = 0, armFix = 0;
     for (const { w } of walls) {
+      // stack base: its couple acts over the anchor arm B, delivered at the panel ends (width) — measure it over B
+      if (w.method === 'wswh' && w.combos && w.wswh.role === 'stackedLower' && w.wswh.upperId) {
+        armFix += nOf(w.combos[key], 'right') * ((w.length || 0) - (w.wswh.B || 0) / 12);
+        continue;
+      }
       if (w.method !== 'wswh' || !w.combos || (w.wswh.role === 'stackedUpper' && w.wswh.lowerId)) continue;
       const V = (lt === 'E' ? w.shareExact_1E : w.shareExact_1W) || 0;
       let applied2 = V * (w.floorH || 0);
@@ -381,9 +396,9 @@ export function lineChecks(line, res, ctx) {
       const couple = nOf(w.combos[key], 'right') * (w.length || 0);
       adj += applied2 - couple;
     }
-    if (Math.abs(adj) > 1e-6) g9.notes.push(key + ': WSWH panels resist V·H_e over arm B, not V·h over their width — difference ' + r4(adj) + ' k·ft (by the panel tables, not a loss).');
-    compare(g9, 'Line base moment', expected - adj, actual, { case: key, unit: 'k·ft', abs: 0.1, rel: 0.005,
-      detail: 'Σ V·h = ' + r4(expected) + (adj ? ' − WSWH ' + r4(adj) : '') });
+    if (Math.abs(adj) > 1e-6) g9.notes.push(key + ': single WSWH panels resist V·H_e over arm B, not V·h over their width — difference ' + r4(adj) + ' k·ft (by the panel tables, not a loss).');
+    compare(g9, 'Line base moment', expected - adj, actual - armFix, { case: key, unit: 'k·ft', abs: 0.1, rel: 0.005,
+      detail: 'Σ V·h = ' + r4(expected) + (adj ? ' − WSWH ' + r4(adj) : '') + (armFix ? '; stacked Strong-Wall base couple over its arm B' : '') });
   }
   out.push(g9);
 

@@ -2,11 +2,11 @@ import { el, clearEl, numOrBlank } from '../utils.js';
 import { svgEl, newWall, newGravityLoad, newBeam, newBeamSupport, newSupportPost, newOpening } from './shearWallTypes.js';
 import { gravityRows, LOAD_SHAPES, LOAD_CASES, assemblyPsf } from './shearWallGravity.js';
 import { nailingTable } from './shearWallNailing.js';
-import { hdueTable, mstcTable, POST_SIZES, woodBasis, FTAO_STRAP_TABLE, jambPostOptions, hdueMinPost, meetsMinPost } from './shearWallHardware.js';
+import { hdueOptions, mstcOptions, POST_SIZES, woodBasis, FTAO_STRAP_TABLE, jambPostOptions, hdueMinPost, meetsMinPost } from './shearWallHardware.js';
 import { openingProblems, wallPiers, expandWalls, sortedOpenings, hasOpenings, wallMethod } from './shearWallOpenings.js';
 import { findAnchorage, findPost } from './shearWallCalc.js';
 import { lcRef } from './shearWallCombos.js';
-import { WSWH_WIDTHS, WSWH_CONDITIONS, WSWH_JOISTS, anchorRows, anchorId, isWswh, wswhWidthFt, TSS_KIT_NOTE } from './shearWallWswh.js';
+import { WSWH_JOISTS, anchorRows, anchorId, isWswh, wswhWidthFt, TSS_KIT_NOTE, lateralDeferred, DEFERRED_TEXT, familyOf, widthsOf, conditionsOf, SSWH_WOOD_JOISTS, SSWH_UPPER_JOISTS, SSWH_RIMS } from './shearWallWswh.js';
 
 const GUTTER = 80;
 // Grid link with Diaphragm Analysis (user 2026-11-05, shearWallPlanLink.js): the plan view of a line is attached to the
@@ -282,7 +282,7 @@ function drawWswhPanel(svg, o) {
   svg.appendChild(brace);
   const info = wr && wr.wswh;
   const cx = x + wd / 2, cy = body.y + body.h / 2 - 4;
-  const model = info && info.ok ? info.evalModel.replace(' (interp.)', '*') : 'WSWH' + (w.wswhWidth || '18');
+  const model = info && info.ok ? info.evalModel.replace(' (interp.)', '*') : familyOf(w) + (w.wswhWidth || '18');
   const txt = (w.mark || w.id) + ' · ' + model;
   svg.appendChild(svgEl('text', { x: cx, y: cy, 'text-anchor': 'middle', 'dominant-baseline': 'middle', fill: '#fff', 'font-size': '8', 'font-weight': '600',
     transform: 'rotate(-90 ' + cx + ' ' + cy + ')', stroke: 'rgba(0,0,0,0.55)', 'stroke-width': '3', 'paint-order': 'stroke', 'stroke-linejoin': 'round', 'pointer-events': 'none' }, txt));
@@ -306,7 +306,7 @@ function drawWswhPanel(svg, o) {
   if (info.role === 'stackedUpper' && info.kit) {
     const a = { x: x + wd + 3, y: fy + 2, 'text-anchor': 'start', 'dominant-baseline': 'middle', fill: C.inkSecondary, 'font-size': '7', 'font-weight': '600' };
     const kitTxt = info.kit + ' (two-story stacked kit)';
-    if (placer.place([[{ attrs: a, text: kitTxt }]])) svg.appendChild(haloText(a, kitTxt, C.surface, tips ? kitTxt + ' — ' + TSS_KIT_NOTE + ' T L ' + (wr.governingTensionLeft || 0).toFixed(2) + 'k / R ' + (wr.governingTensionRight || 0).toFixed(2) + 'k (reported)' : null));
+    if (placer.place([[{ attrs: a, text: kitTxt }]])) svg.appendChild(haloText(a, kitTxt, C.surface, tips ? kitTxt + ' — ' + TSS_KIT_NOTE : null));
   }
   if (!showHW) return;
   // Anchor label (bottom story): Table 06 row with the minimum footing width W and embedment d_e
@@ -948,7 +948,7 @@ function loadPathRelations(results, sel) {
 // ctx: { group, thickness } — the project's framing group and the line's wall width
 function hwOptionsFor(level, ctx) {
   const span = (level && level.floorClearSpan) || '16';
-  return [...hdueTable(ctx.group, ctx.thickness), ...mstcTable(ctx.group, span)];
+  return [...hdueOptions(ctx.group, ctx.thickness), ...mstcOptions(ctx.group, span)]; // singles + doubles (user 2026-11-09)
 }
 
 // ============================================================================================================
@@ -978,7 +978,7 @@ function wallEndData(w, wr, side) {
   return {
     T, C, anc, post, ancDC, postDC, S1,
     manual: !!(w['anchorage' + S1 + 'Override'] || w['post' + S1 + 'Override']),
-    ancText: (anc ? anc.id + ' T ' + f2(T) + 'k / ' + f2(anc.cap / 1000) + 'k → ' + (ancDC != null ? f2(ancDC) : '—') : 'OVER T ' + f2(T) + 'k'),
+    ancText: lateralDeferred(wr) ? (anc ? anc.id : 'TSS kit') + ' — ' + DEFERRED_TEXT : (anc ? anc.id + ' T ' + f2(T) + 'k / ' + f2(anc.cap / 1000) + 'k → ' + (ancDC != null ? f2(ancDC) : '—') : 'OVER T ' + f2(T) + 'k'),
     postText: (post ? post.postLabel + ' C ' + f2(C) + 'k / ' + f2(post.capacityKips) + 'k → ' + (postDC != null ? f2(postDC) : '—') : 'OVER C ' + f2(C) + 'k'),
   };
 }
@@ -992,6 +992,7 @@ const ownText = (t, c) => 'P' + (t > 0 ? ' ▲' + t.toFixed(2) : '') + (c > 0 ? 
 // else 'lr' (one "L:" / "R:" row per end). rows = strip rows needed (3 fit the standard strip).
 function wallTcPlan(wr, ww, combo) {
   if (GRAVITY_VIEWS.includes(combo)) return { kind: 'gravity', rows: 3 };
+  if (lateralDeferred(wr)) return { kind: 'deferred', rows: 3 }; // stacked 2nd-story Strong-Wall (user 2026-11-10)
   const d = wallDisplayTC(wr, combo);
   const { tL, tR, cL, cR, isAccum, own } = d;
   if (!tL && !tR && !cL && !cR) return { kind: 'none', rows: 3, d };
@@ -1037,6 +1038,13 @@ function drawWallTC(S, wr, wx, ww, lv) {
     return;
   }
   if (plan.kind === 'none') return;
+  if (plan.kind === 'deferred') {
+    // lateral T / C not calculated: the TSS kit works, the overturning is in the stack base moment
+    const a = { x: wx + ww / 2, y: sY + lv.forceStripH / 2, 'text-anchor': 'middle', 'dominant-baseline': 'middle', fill: P.inkSecondary, 'font-size': String(ELEV_FS.pRow), 'font-weight': '600' };
+    const txt = ww >= textW(DEFERRED_TEXT, ELEV_FS.pRow) + 6 ? DEFERRED_TEXT : 'deferred';
+    if (placer.place([[{ attrs: a, text: txt }]])) svg.appendChild(haloText(a, txt, P.surface, live ? (wr.mark || '') + ': ' + DEFERRED_TEXT + ' — ' + TSS_KIT_NOTE : null));
+    return;
+  }
   const { tL, tR, cL, cR, isAccum, own } = plan.d;
   const mark = wr.mark || wr.wallId;
   const cn = comboName(combo);
@@ -1413,6 +1421,54 @@ export function drawElevationScene(S) {
   svg.appendChild(labelLayer);
 }
 
+// === Wall drag: move and resize (user 2026-11-09) ===
+// mode 'move' (whole wall), 'left' / 'right' (that end; the other end stays). The moving end snaps, in this order:
+// 1. a cross gridline of the adopted plan (DA link) within gridTol (≤ 1 ft, ~10 px on screen) — when moving, the end
+//    closer to a gridline; 2. an end of another wall / beam / post within 0.5 ft; 3. the nearest 0.5 ft. alt = 0.5 ft
+// steps only. Resize keeps length ≥ 0.5 ft and never cuts an opening (openings keep their place on the elevation:
+// a left-end resize shifts their offsets). Returns { position, length, openings, snap: { kind: 'grid', name, x } | null }.
+export const DRAG_MIN_LENGTH = 0.5;
+export function wallDragTarget({ mode, wall, line, deltaFt, grids = [], gridTol = 1, alt = false }) {
+  const pos0 = num(wall.position), len0 = num(wall.length), right0 = pos0 + len0;
+  const r2 = v => Math.round(v * 100) / 100;
+  const half = v => Math.round(v * 2) / 2;
+  const ends = [];
+  for (const w of (line.walls || [])) if (w.id !== wall.id) ends.push(num(w.position), num(w.position) + num(w.length));
+  for (const b of (line.beams || [])) { ends.push(num(b.position), num(b.position) + num(b.length)); (b.supports || []).forEach(s => ends.push(num(s.position))); }
+  for (const p of (line.supportPosts || [])) ends.push(num(p.position));
+  const nearest = (x, list, tol) => list.reduce((best, c) => { const d = Math.abs(c.x - x); return d < tol && (!best || d < best.d) ? { ...c, d } : best; }, null);
+  const gridList = alt ? [] : grids.filter(g => Number.isFinite(g.x));
+  const endList = alt ? [] : ends.filter(Number.isFinite).map(x => ({ x }));
+  // the snap of one end at x: gridline, else element end, else 0.5 ft
+  const snapEnd = (x) => {
+    const g = nearest(x, gridList, gridTol);
+    if (g) return { x: g.x, snap: { kind: 'grid', name: g.name, x: g.x }, d: g.d };
+    const e = nearest(x, endList, 0.5);
+    if (e) return { x: e.x, snap: { kind: 'end', x: e.x }, d: e.d };
+    return { x: half(x), snap: null, d: Infinity };
+  };
+  const ops = (wall.openings || []).map(o => ({ a: num(o.offset), b: num(o.offset) + num(o.width) }));
+  const opLeft = ops.length ? pos0 + Math.min(...ops.map(o => o.a)) : Infinity;   // the left end may not pass this
+  const opRight = ops.length ? pos0 + Math.max(...ops.map(o => o.b)) : -Infinity; // the right end may not pass this
+  const openingsAt = (pos) => (wall.openings || []).map(o => ({ ...o, offset: r2(num(o.offset) + pos0 - pos) }));
+  if (mode === 'move') {
+    const l = snapEnd(pos0 + deltaFt), r = snapEnd(right0 + deltaFt);
+    // a gridline beats an element end; then the closer one; no snap → the left end on 0.5 ft
+    const rank = s => (s.snap && s.snap.kind === 'grid' ? 0 : s.snap ? 1 : 2);
+    const useRight = rank(r) < rank(l) || (rank(r) === rank(l) && rank(r) < 2 && r.d < l.d);
+    return { position: r2(useRight ? r.x - len0 : l.x), length: len0, openings: wall.openings || [], snap: (useRight ? r : l).snap };
+  }
+  if (mode === 'left') {
+    const s = snapEnd(pos0 + deltaFt);
+    const x = Math.max(Math.min(s.x, right0 - DRAG_MIN_LENGTH, opLeft), 0);
+    const position = r2(x);
+    return { position, length: r2(right0 - position), openings: openingsAt(position), snap: Math.abs(x - s.x) < 1e-9 ? s.snap : null };
+  }
+  const s = snapEnd(right0 + deltaFt); // right end
+  const x = Math.max(s.x, pos0 + DRAG_MIN_LENGTH, opRight);
+  return { position: pos0, length: r2(x - pos0), openings: wall.openings || [], snap: Math.abs(x - s.x) < 1e-9 ? s.snap : null };
+}
+
 export function renderElevation(container, line, levels, wallDLTypes, callbacks) {
   const { onWallChange, onGravityChange, onInputChange } = callbacks || {};
   let selectedWallId = null;
@@ -1420,7 +1476,7 @@ export function renderElevation(container, line, levels, wallDLTypes, callbacks)
   let selectedPostId = null;
   let placementMode = 'none'; // 'none' | 'wall' | 'beam' | 'post'
   let destroyed = false;
-  let dragState = null; // { wallId, startFt, origPos }
+  let dragState = null; // { wallId, mode: 'move' | 'left' | 'right', startFt, origPos }
   let currentCombo = null;
   let showForcesOn = false;
   let showHardwareOn = false;
@@ -1472,8 +1528,8 @@ export function renderElevation(container, line, levels, wallDLTypes, callbacks)
   function scrollToElement(key) {
     const b = lastS && elementBox(lastS, key);
     if (!b) return;
-    svgContainer.scrollTop = Math.max(0, b.y - 60);
-    svgContainer.scrollLeft = Math.max(0, b.x - 120);
+    svgContainer.scrollTop = Math.max(0, b.y * textScale - 60);
+    svgContainer.scrollLeft = Math.max(0, b.x * textScale - 120);
   }
 
   // Chooser shown when several elements of the clicked kind overlap at the click point
@@ -1512,8 +1568,8 @@ export function renderElevation(container, line, levels, wallDLTypes, callbacks)
       return { id: it.id, text: it.id + ' — ' + (T || 0).toFixed(2) + 'k / ' + (a.cap / 1000).toFixed(2) + 'k → ' + dcTxt(dc), dc };
     };
     const { group, thickness } = designCtx();
-    const hd = { label: 'Holdowns', items: hdueTable(group, thickness).map(opt) };
-    const st = { label: 'Straps (' + span + '" span)', items: mstcTable(group, span).map(opt) };
+    const hd = { label: 'Holdowns', items: hdueOptions(group, thickness).map(opt) };
+    const st = { label: 'Straps (' + span + '" span)', items: mstcOptions(group, span).map(opt) };
     return holdownFirst ? [hd, st] : [st, hd];
   }
   // Posts below the anchorage minimum post at a holdown / strap end are not offered (P9)
@@ -1640,7 +1696,7 @@ export function renderElevation(container, line, levels, wallDLTypes, callbacks)
   function elementsAt(e) {
     if (!lastS) return [];
     const r = lastS.svg.getBoundingClientRect();
-    const mx = e.clientX - r.left, my = e.clientY - r.top;
+    const mx = (e.clientX - r.left) / textScale, my = (e.clientY - r.top) / textScale;
     const out = [];
     const test = (type, obj, pad) => {
       const b = elementBox(lastS, type + ':' + obj.id);
@@ -1728,21 +1784,45 @@ export function renderElevation(container, line, levels, wallDLTypes, callbacks)
   // width (the drawing as before). Changes only the view, never the line.
   let zoom = 1;
   const ZOOM_MIN = 0.5, ZOOM_MAX = 8;
+  // Text size of this view (see setTextScale below)
+  const TEXT_SCALE_KEY = 'swd.elevationTextScale', TEXT_SCALE_MIN = 0.7, TEXT_SCALE_MAX = 1.6;
+  let textScale = 1;
+  try { const v = parseFloat(localStorage.getItem(TEXT_SCALE_KEY)); if (v >= TEXT_SCALE_MIN && v <= TEXT_SCALE_MAX) textScale = Math.round(v * 10) / 10; } catch { /* no storage */ }
   const zoomLabel = el('span', { className: 'mono', style: { fontSize: '0.75rem', minWidth: '3.2em', textAlign: 'center' } }, '100%');
   function setZoom(z, anchorPx) {
     const nz = Math.min(ZOOM_MAX, Math.max(ZOOM_MIN, z));
     if (Math.abs(nz - zoom) < 1e-9) return;
     const oldPx = lastS ? lastS.layout.pxPerFt : null;
     const ax = anchorPx != null ? anchorPx : (svgContainer.clientWidth || 600) / 2;
-    const ftAt = oldPx ? (svgContainer.scrollLeft + ax - GUTTER) / oldPx : null;
+    const ftAt = oldPx ? ((svgContainer.scrollLeft + ax) / textScale - GUTTER) / oldPx : null;
     zoom = nz;
     zoomLabel.textContent = Math.round(zoom * 100) + '%';
     drawSVG();
-    if (ftAt != null && lastS) svgContainer.scrollLeft = Math.max(0, GUTTER + ftAt * lastS.layout.pxPerFt - ax);
+    if (ftAt != null && lastS) svgContainer.scrollLeft = Math.max(0, (GUTTER + ftAt * lastS.layout.pxPerFt) * textScale - ax);
   }
   const zbtn = (t, title, fn) => el('button', { className: 'btn btn-sm btn-ghost', type: 'button', title, onClick: fn }, t);
   const zoomBox = el('div', { 'data-elevzoom': '1', style: { marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: '2px', flexShrink: '0' } },
     zbtn('−', 'Zoom out', () => setZoom(zoom / 1.25)), zoomLabel, zbtn('+', 'Zoom in (Ctrl + wheel)', () => setZoom(zoom * 1.25)), zbtn('Fit', 'Fit the line to the width', () => setZoom(1)), expandBtn);
+  // Text size (user 2026-11-10): interactive view only, remembered per browser. The scene is laid out on a canvas narrower
+  // by the scale and shown scaled up, so text, label bands and spacing grow together (no overlaps; a crowded label
+  // becomes a hover dot as before) and the line keeps its screen width. 1 = the drawing exactly as before. PDF untouched.
+  const tsLabel = el('button', { className: 'btn btn-sm btn-ghost mono', type: 'button', title: 'Elevation text size — click for 100%',
+    style: { fontSize: '0.75rem', minWidth: '3.2em', padding: '0 0.2rem' }, onClick() { setTextScale(1); } }, Math.round(textScale * 100) + '%');
+  function setTextScale(t) {
+    const nt = Math.round(Math.min(TEXT_SCALE_MAX, Math.max(TEXT_SCALE_MIN, t)) * 10) / 10;
+    if (Math.abs(nt - textScale) < 1e-9) return;
+    const yFrac = svgContainer.scrollHeight > 0 ? svgContainer.scrollTop / svgContainer.scrollHeight : 0;
+    const xFrac = svgContainer.scrollWidth > 0 ? svgContainer.scrollLeft / svgContainer.scrollWidth : 0;
+    textScale = nt;
+    tsLabel.textContent = Math.round(textScale * 100) + '%';
+    try { localStorage.setItem(TEXT_SCALE_KEY, String(textScale)); } catch { /* storage unavailable: this session only */ }
+    drawSVG();
+    svgContainer.scrollTop = yFrac * svgContainer.scrollHeight;
+    svgContainer.scrollLeft = xFrac * svgContainer.scrollWidth;
+  }
+  const tsBox = el('div', { 'data-elevtext': '1', style: { display: 'flex', alignItems: 'center', gap: '2px', marginRight: '0.5rem' } },
+    zbtn('A−', 'Smaller text', () => setTextScale(textScale - 0.1)), tsLabel, zbtn('A+', 'Larger text', () => setTextScale(textScale + 0.1)));
+  zoomBox.insertBefore(tsBox, zoomBox.firstChild);
   viewControls = zoomBox;
   toolbarRow.appendChild(zoomBox);
   svgContainer.addEventListener('wheel', (e) => {
@@ -1803,18 +1883,20 @@ export function renderElevation(container, line, levels, wallDLTypes, callbacks)
     const containerW = Math.max(svgContainer.clientWidth || 600, 400);
     const showForces = !!(wallResults && showForcesOn && currentCombo !== null);
     const showHW = !!(wallResults && showHardwareOn);
-    const layout = computeElevationLayout(line, levels, { width: containerW, showForces, showHW, results: wallResults, combo: currentCombo, zoom });
+    const layout = computeElevationLayout(line, levels, { width: containerW / textScale, showForces, showHW, results: wallResults, combo: currentCombo, zoom });
     const { totalLen, pxPerFt, svgW, totalH, levelYs } = layout;
     if (!isExpanded) {
       const viewH = (typeof window !== 'undefined' && window.innerHeight) || 800;
-      svgContainer.style.height = Math.max(300, Math.min(totalH + 4, Math.round(viewH * 0.75))) + 'px';
+      svgContainer.style.height = Math.max(300, Math.min(totalH * textScale + 4, Math.round(viewH * 0.75))) + 'px';
     }
 
-    const svg = svgEl('svg', { width: svgW, height: totalH, style: { cursor: 'crosshair' } });
+    // text scale ≠ 1: same drawing shown textScale × larger (viewBox in drawing units); 1 = no viewBox, as before
+    const svg = textScale === 1 ? svgEl('svg', { width: svgW, height: totalH, style: { cursor: 'crosshair' } })
+      : svgEl('svg', { width: svgW * textScale, height: totalH * textScale, viewBox: '0 0 ' + svgW + ' ' + totalH, style: { cursor: 'crosshair' } });
 
     function handleLevelClick(e, lv) {
       const rect = svg.getBoundingClientRect();
-      const ft = (e.clientX - rect.left - GUTTER) / pxPerFt;
+      const ft = ((e.clientX - rect.left) / textScale - GUTTER) / pxPerFt;
       if (ft < 0 || ft > totalLen) return;
       const snapFt = snapToWallEndsOrGrid(ft);
 
@@ -1869,9 +1951,9 @@ export function renderElevation(container, line, levels, wallDLTypes, callbacks)
           if (placementMode !== 'none') return;
           e.stopPropagation();
           const svgRect = svg.getBoundingClientRect(); // measure before pickAt redraws the SVG
-          const startFt = (e.clientX - svgRect.left - GUTTER) / pxPerFt;
+          const startFt = ((e.clientX - svgRect.left) / textScale - GUTTER) / pxPerFt;
           if (pickAt(e, 'wall', pw.id)) return; // overlapping walls: choose first, no drag
-          dragState = { wallId: pw.id, startFt, origPos: num(pw.position) };
+          dragState = { wallId: pw.id, mode: 'move', startFt, origPos: num(pw.position) };
         },
         onWallClick(e, lv) {
           if (placementMode === 'none') return;
@@ -1885,35 +1967,62 @@ export function renderElevation(container, line, levels, wallDLTypes, callbacks)
     refreshFindSelect();
     if (highlightActive) drawRelationOutlines(svg, S, rel);
 
+    // Wall drag target (move / resize) with the line's cross gridlines (adopted plan only) — user 2026-11-09
+    const dragGrids = ((planOf(line) || {}).cross || []).map(g => ({ name: g.name, x: g.x }));
+    const dragGridTol = Math.min(1, 10 / pxPerFt);
+    function dragTarget(dw, ft, alt) {
+      return wallDragTarget({ mode: dragState.mode, wall: dw, line, deltaFt: ft - dragState.startFt, grids: dragGrids, gridTol: dragGridTol, alt: !!alt });
+    }
+    // Resize grips on the selected wall (Select mode; not WSWH panels, whose length is the panel width)
+    const selW = selectedWallId && placementMode === 'none' ? (line.walls || []).find(w => w.id === selectedWallId) : null;
+    const selLv = selW && levelYs.find(l => l.id === selW.levelId);
+    if (selW && selLv && !isWswh(selW)) {
+      const x0 = GUTTER + num(selW.position) * pxPerFt, x1 = x0 + num(selW.length) * pxPerFt;
+      const gh = Math.min(28, selLv.h - 2 * WALL_MARGIN), gy = selLv.y + (selLv.h - gh) / 2;
+      for (const [side, x] of [['left', x0], ['right', x1]]) {
+        const grip = svgEl('rect', { x: x - 4, y: gy, width: 8, height: gh, rx: 2, fill: 'var(--surface)', stroke: 'var(--accent)', 'stroke-width': 1.5,
+          'data-grip': side, 'data-tip': 'Drag to resize (' + side + ' end). Snaps to gridlines, wall / beam / post ends, else 0.5 ft; hold Alt for 0.5 ft steps only.',
+          style: { cursor: 'ew-resize' } });
+        grip.addEventListener('mousedown', (e) => {
+          e.stopPropagation(); e.preventDefault();
+          const svgRect = svg.getBoundingClientRect();
+          dragState = { wallId: selW.id, mode: side, startFt: ((e.clientX - svgRect.left) / textScale - GUTTER) / pxPerFt, origPos: num(selW.position) };
+        });
+        svg.appendChild(grip);
+      }
+    }
+
     // Snap preview overlay
     const previewGroup = svgEl('g', { 'pointer-events': 'none' });
     svg.appendChild(previewGroup);
 
-    function updatePreview(clientX, clientY) {
+    function updatePreview(clientX, clientY, alt) {
       while (previewGroup.firstChild) previewGroup.removeChild(previewGroup.firstChild);
       const svgRect = svg.getBoundingClientRect();
-      const mx = clientX - svgRect.left;
+      const mx = (clientX - svgRect.left) / textScale;
       const ft = (mx - GUTTER) / pxPerFt;
       if (ft < 0 || ft > totalLen) return;
 
-      // During drag, move the wall
+      // During drag, move or resize the wall (preview only; applied on mouseup)
       if (dragState) {
-        const delta = ft - dragState.startFt;
-        const newPos = snapToWallEndsOrGrid(dragState.origPos + delta);
         const dw = (line.walls || []).find(ww => ww.id === dragState.wallId);
-        if (dw) {
-          const dpx = GUTTER + newPos * pxPerFt;
-          const dww = num(dw.length) * pxPerFt;
-          const dlv = levelYs.find(l => l.id === dw.levelId);
-          if (dlv) {
-            previewGroup.appendChild(svgEl('rect', {
-              x: dpx, y: dlv.y + WALL_MARGIN, width: Math.max(dww, 2), height: dlv.h - 2 * WALL_MARGIN,
-              fill: 'var(--accent)', opacity: 0.3, stroke: 'var(--accent)', 'stroke-width': 1.5, 'stroke-dasharray': '4,3', rx: 2,
-            }));
-            previewGroup.appendChild(svgEl('text', {
-              x: dpx + dww / 2, y: dlv.y - 6, 'text-anchor': 'middle', fill: 'var(--accent)', 'font-size': '8', 'font-weight': '600',
-            }, newPos.toFixed(1) + "'"));
+        const t = dw && dragTarget(dw, ft, alt);
+        const dlv = dw && levelYs.find(l => l.id === dw.levelId);
+        if (t && dlv) {
+          const dpx = GUTTER + t.position * pxPerFt;
+          const dww = t.length * pxPerFt;
+          if (t.snap && t.snap.kind === 'grid') {
+            const gx = GUTTER + t.snap.x * pxPerFt;
+            previewGroup.appendChild(svgEl('line', { x1: gx, y1: 0, x2: gx, y2: totalH - RULER_H, stroke: '#f59e0b', 'stroke-width': 1.5, 'stroke-dasharray': '4,3' }));
+            previewGroup.appendChild(svgEl('text', { x: gx + 3, y: 10, fill: '#f59e0b', 'font-size': '9', 'font-weight': '700' }, '→ grid ' + t.snap.name));
           }
+          previewGroup.appendChild(svgEl('rect', {
+            x: dpx, y: dlv.y + WALL_MARGIN, width: Math.max(dww, 2), height: dlv.h - 2 * WALL_MARGIN,
+            fill: 'var(--accent)', opacity: 0.3, stroke: 'var(--accent)', 'stroke-width': 1.5, 'stroke-dasharray': '4,3', rx: 2,
+          }));
+          previewGroup.appendChild(svgEl('text', {
+            x: dpx + dww / 2, y: dlv.y - 6, 'text-anchor': 'middle', fill: 'var(--accent)', 'font-size': '8', 'font-weight': '600',
+          }, dragState.mode === 'move' ? t.position.toFixed(1) + "'" : 'L = ' + t.length.toFixed(1) + "' (" + t.position.toFixed(1) + "' – " + (t.position + t.length).toFixed(1) + "')"));
         }
         return;
       }
@@ -1933,7 +2042,7 @@ export function renderElevation(container, line, levels, wallDLTypes, callbacks)
       }, snapFt.toFixed(1) + "'"));
 
       // Show ghost element based on placement mode
-      const my = clientY - svgRect.top;
+      const my = (clientY - svgRect.top) / textScale;
       const hoveredLv = levelYs.find(l => my >= l.y && my < l.y + l.h);
       if (hoveredLv && placementMode !== 'none') {
         if (placementMode === 'beam') {
@@ -1955,14 +2064,14 @@ export function renderElevation(container, line, levels, wallDLTypes, callbacks)
       }
     }
 
-    svg.addEventListener('mousemove', (e) => { updatePreview(e.clientX, e.clientY); updateTooltip(e); });
+    svg.addEventListener('mousemove', (e) => { updatePreview(e.clientX, e.clientY, e.altKey); updateTooltip(e); });
     // Click-to-edit nailing / hardware (in placement modes the click still places)
     svg.addEventListener('click', (e) => {
       const key = e.target && e.target.getAttribute ? e.target.getAttribute('data-edit') : null;
       if (!key) return;
       e.stopPropagation();
       if (placementMode !== 'none') {
-        const my = e.clientY - svg.getBoundingClientRect().top;
+        const my = (e.clientY - svg.getBoundingClientRect().top) / textScale;
         const lv = levelYs.find(l => my >= l.y && my < l.y + l.h);
         if (lv) handleLevelClick(e, lv);
         return;
@@ -1977,13 +2086,14 @@ export function renderElevation(container, line, levels, wallDLTypes, callbacks)
     svg.addEventListener('mouseup', (e) => {
       if (dragState) {
         const svgRect = svg.getBoundingClientRect();
-        const ft = (e.clientX - svgRect.left - GUTTER) / pxPerFt;
-        const delta = ft - dragState.startFt;
-        const newPos = snapToWallEndsOrGrid(dragState.origPos + delta);
+        const ft = ((e.clientX - svgRect.left) / textScale - GUTTER) / pxPerFt;
         const dw = (line.walls || []).find(ww => ww.id === dragState.wallId);
-        if (dw && Math.abs(newPos - dragState.origPos) > 0.05) {
-          dw.position = newPos;
+        const t = dw && dragTarget(dw, ft, e.altKey);
+        if (t && (Math.abs(t.position - num(dw.position)) > 0.005 || Math.abs(t.length - num(dw.length)) > 0.005)) {
+          dw.position = t.position;
+          if (dragState.mode !== 'move') { dw.length = t.length; dw.openings = t.openings; }
           markChanged();
+          if (selectedWallId === dw.id) renderPropPanel(); // position / length fields show the new values
         }
         dragState = null;
         drawSVG();
@@ -2087,8 +2197,9 @@ export function renderElevation(container, line, levels, wallDLTypes, callbacks)
     // Wall type: sheathed wood shear wall or Simpson Strong-Wall WSWH panel (length locked to the panel width)
     const typeSel = el('select', { className: 'form-select', style: { width: '230px' }, onChange(e) {
       w.systemType = e.target.value;
-      if (w.systemType === 'wswh') {
-        if (!w.wswhWidth) w.wswhWidth = '18';
+      if (isWswh(w)) {
+        if (!widthsOf(familyOf(w)).includes(String(w.wswhWidth))) w.wswhWidth = '18';
+        if (!conditionsOf(familyOf(w)).some(c => c.id === w.wswhCondition) && w.wswhCondition) w.wswhCondition = 'concrete';
         if (!w.wswhCondition) w.wswhCondition = w.levelId === designCtx().bottomLevelId ? 'concrete' : 'stackedUpper';
         w.length = wswhWidthFt(w); w.openings = [];
       } else {
@@ -2096,7 +2207,7 @@ export function renderElevation(container, line, levels, wallDLTypes, callbacks)
       }
       markChanged(); renderPropPanel(); drawSVG();
     } });
-    [['sheathed', 'Sheathed wood shear wall'], ['wswh', 'Simpson Strong-Wall WSWH']].forEach(([v, label]) =>
+    [['sheathed', 'Sheathed wood shear wall'], ['wswh', 'Simpson Strong-Wall WSWH (wood)'], ['sswh', 'Simpson Strong-Wall SSWH (steel)']].forEach(([v, label]) =>
       typeSel.appendChild(el('option', { value: v, selected: (w.systemType || 'sheathed') === v }, label)));
     propPanel.appendChild(panelRow(panelField('Wall type', typeSel)));
     // transfer to the diaphragm below (step 4, items linked to Diaphragm Analysis only)
@@ -2166,17 +2277,21 @@ export function renderElevation(container, line, levels, wallDLTypes, callbacks)
       options.forEach(([v, label]) => s.appendChild(el('option', { value: v, selected: String(w[key] || '') === v }, label)));
       return s;
     };
-    propPanel.appendChild(panelSub('Strong-Wall WSWH (panel height = floor-to-floor, interpolated)'));
-    const widthSel = sel('wswhWidth', WSWH_WIDTHS.map(v => [v, v + '" (' + (Number(v) / 12).toFixed(1) + ' ft)']), '110px', () => { w.length = wswhWidthFt(w); });
-    const condSel = sel('wswhCondition', WSWH_CONDITIONS.map(c => [c.id, c.label]), '250px');
+    const fam = familyOf(w), sswh = fam === 'SSWH';
+    propPanel.appendChild(panelSub('Strong-Wall ' + fam + ' (panel height = floor-to-floor, interpolated)'));
+    const widthSel = sel('wswhWidth', widthsOf(fam).map(v => [v, v + '" (' + (Number(v) / 12).toFixed(2).replace(/0$/, '') + ' ft)']), '110px', () => { w.length = wswhWidthFt(w); });
+    const condSel = sel('wswhCondition', conditionsOf(fam).map(c => [c.id, c.label]), '250px', () => {
+      if (sswh) w.wswhJoist = w.wswhCondition === 'stackedUpper' ? '14' : '12';
+    });
     const fields = [panelField('Width', widthSel), panelField('Condition', condSel)];
-    if (w.wswhCondition === 'raised') fields.push(panelField('Floor joist', sel('wswhJoist', WSWH_JOISTS.map(j => [j.id, j.label]), '170px')));
-    if (w.wswhCondition === 'stackedUpper') {
-      fields.push(panelField('Floor depth d_fl (in, ≤ 18)', el('input', { className: 'form-input mono', type: 'number', step: 'any', value: numOrBlank(w.wswhFloorDepth), style: { width: '70px' },
-        onChange(e) { w.wswhFloorDepth = e.target.value; refresh(); } })));
-    }
+    if (w.wswhCondition === 'raised') fields.push(panelField('Floor joist', sel('wswhJoist', (sswh ? SSWH_WOOD_JOISTS : WSWH_JOISTS).map(j => [j.id, j.label]), '170px')));
+    // SSWH factors (C-L-SW26 p. 21 n.5 / n.7, p. 28 n.7 / n.8): joist depth and rim material
+    if (sswh && w.wswhCondition === 'stackedUpper') fields.push(panelField('Floor joist', sel('wswhJoist', SSWH_UPPER_JOISTS.map(j => [j.id, j.label]), '170px')));
+    if (sswh && (w.wswhCondition === 'raised' || w.wswhCondition === 'stackedUpper')) fields.push(panelField('Rim / blocking', sel('wswhRim', SSWH_RIMS.map(j => [j.id, j.label]), '190px')));
+    // Floor between stacked panels: Setup → floor plate depth of the story below (the only source, user 2026-11-10)
+    if (w.wswhCondition === 'stackedUpper') fields.push(el('span', { style: { fontSize: '0.75rem', color: 'var(--ink-secondary)', alignSelf: 'center' } }, 'Floor depth: Setup → Floor plate depth (story below)'));
     propPanel.appendChild(panelRow(...fields));
-    if (w.wswhCondition === 'concrete') {
+    if (w.wswhCondition === 'concrete' || w.wswhCondition === 'portal') {
       const c = designCtx();
       const rows = anchorRows({ fc: c.wswhFc, sdc: c.sdc, detached: c.detached });
       const ancSel = sel('wswhAnchorOverride', [['', 'Auto (smallest footing W, then d_e)'],

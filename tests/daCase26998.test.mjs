@@ -98,15 +98,22 @@ test('2nd Floor along y without the A/B offset line (TD1 = strut C only) → clo
   assert.ok(near(lf(r, 'A'), 7.07, 0.1), String(lf(r, 'A')));
 });
 
-test('open item 5: every offset line settles (no "did not settle"); the 2nd Floor needs no held nailing; the Roof 5/6 walls that alternate are held at the heavier and named', () => {
+// Until SWD v24 the Roof 5/6 walls SW-39 / 55 / 56 alternated between rounds (nailing 2" ↔ 3") and were held at the
+// heavier ("swd-group-nailing"). SWD v25 (posts without the sill bearing check) and the double holdowns / straps
+// (2026-11-09: drift sizing steps the anchorage past the largest single instead of the nailing) both remove the
+// alternation, also with the v24 posts pinned; this project no longer reaches the held-nailing path (DA code unchanged).
+// Open: a test that reaches it (backlog, round 2026-11-09).
+const V24_POSTS = { 'w-4': ['8x6', '6x6'], 'w-8': ['8x6', '8x6'], 'w-16': ['8x6', '8x6'], 'w-22': ['6x6', '6x6'], 'w-65': ['6x6', '6x6'], 'w-66': ['6x6', '8x6'], 'w-35': ['8x6', '8x6'] };
+const swdV24Posts = swdOf(s => { for (const d of s.directions) for (const l of d.lines) for (const w of l.walls) if (V24_POSTS[w.id]) [w.postLeftOverride, w.postRightOverride] = V24_POSTS[w.id]; });
+
+test('open item 5: every offset line settles (no "did not settle"); the 2nd Floor and the Roof (SWD v25 + doubles, also with the v24 posts) need no held nailing', () => {
   const r = floor(), rr = roof();
-  for (const x of [r, rr]) {
+  const rr24 = calcAll(normalizeInputs(clone(roofItem.inputs)), { wallSource: swdExtract(swdV24Posts) });
+  for (const x of [r, rr, rr24]) {
     assert.ok(!x.warnings.some(w => w.code === 'swd-group-rounds'), 'settled');
     for (const cs of x.analysis.cases) if (cs.offset && cs.offset.swdRounds) assert.ok(cs.offset.swdRounds.settled, cs.id);
+    assert.ok(!x.warnings.some(w => w.code === 'swd-group-nailing'), 'settles on the SWD own picks');
   }
-  assert.ok(!r.warnings.some(w => w.code === 'swd-group-nailing'), '2nd Floor: settles on the SWD own picks');
-  const held = rr.warnings.filter(w => w.code === 'swd-group-nailing').map(w => w.msg).join(' | ');
-  assert.ok(/SW-39/.test(held) && /SW-55/.test(held) && /SW-56/.test(held), held);
 });
 
 test('open item 5 (force from above not clamped): 2/3 takes 15.65 k from SW-35 on line 3; the floor moves 8.86 k off line 3 — the line-3 walls keep 6.79 k, the same demand / capacity as the line-2 walls', () => {

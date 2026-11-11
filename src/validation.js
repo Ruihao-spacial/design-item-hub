@@ -168,6 +168,10 @@ function validateShearWall(inputs, errors) {
           // Strong-Wall WSWH: a prefabricated panel (length = panel width); table limits are checked in the results
           if ((wall.openings || []).length) errors.push(`${wallLabel}: a Strong-Wall WSWH panel cannot have openings.`);
           if (!['12', '18', '24'].includes(String(wall.wswhWidth))) errors.push(`${wallLabel}: pick a WSWH width (12, 18 or 24 in).`);
+        } else if (wall.systemType === 'sswh') {
+          // Strong-Wall SSWH (steel): same rules, widths 12 / 15 / 18 / 21 / 24 in
+          if ((wall.openings || []).length) errors.push(`${wallLabel}: a Strong-Wall SSWH panel cannot have openings.`);
+          if (!['12', '15', '18', '21', '24'].includes(String(wall.wswhWidth))) errors.push(`${wallLabel}: pick an SSWH width (12, 15, 18, 21 or 24 in).`);
         } else {
           validateWallOpenings(errors, wall, wallLabel, levels.find(l => l.id === wall.levelId));
         }

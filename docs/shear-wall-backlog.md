@@ -19,6 +19,181 @@ the local DB (README, Tests).
   grid layer on the elevation). It is inactive unless adopted; no schema bump (new fields `inputs.planLink`,
   `line.planOrigin` are optional, absent = before). Freeze identical (36 repo / 37 DB items).
 
+## Next session — start here (set 2026-11-10)
+**State:** branch `sw-posts-double-hd` (off `origin/master`), **nothing committed** — the user commits / pushes / opens
+the PR on request. CALC_VERSION **v25**, schema **13** (unchanged). `npm test` all green, `npx vite build` OK, freeze
+baseline rewritten after the user accepted each change list (items 3 + 4, then 2). Local DB "before" fingerprints (v24):
+`supabase/backups/swd-freeze-db-2026-11-09-pre.json`. Done this round: items 2, 3, 4, 5 (details in the round entry below).
+
+**Item 1 built 2026-11-10 (calc v26, uncommitted) — floor plate depth in the overturning height; details in the
+round entry, item 1.** Repo freeze baseline rewritten after the user's OK (only the Setup form of 6 items changed — results / PDF /
+elevations identical). Still to do: the user's look in the browser (Setup table + a depth entered).
+
+**Elevation text size — DONE 2026-11-10 (view only, no calc change).** User: screen only (PDF unchanged), remembered per
+person in this browser (localStorage `swd.elevationTextScale`), "A− 100% A+" next to zoom, 70–160 % in 10 % steps, the %
+button resets to 100 %. The scene is laid out on a canvas narrower by the scale and shown scaled up (viewBox), so text,
+label bands and spacing grow together (no overlaps; a crowded label becomes a hover dot as before) and the line keeps its
+screen width; mouse positions are divided by the scale. 100 % = no viewBox = the drawing exactly as before (freeze
+identical). Test in `tests/swdElevationDrag.test.mjs` (a drag at 70 / 150 % lands where it does at 100 %).
+
+**Item 6 — stacked Strong-Wall base moment — built 2026-11-10 (calc v27, uncommitted); change list accepted by the
+user, V21 golden accepted, freeze baseline rewritten, `npm test` green.** Plan: `~/.claude/plans/for-item-1-see-harmonic-hamming.md`.
+- **Bug fixed:** M = [V₁·H₁ + V₂·(H₁ + d_fl + H₂)]/12 counted V₂·H₁ twice (V₁, the base panel's share, already includes
+  V₂). Now **M = V₁·h₁ + V₂·(h₂ + d)** at story heights (C-L-SW26 p. 29: 1,500 × 18 + 2,000 × 9 = 45,000; before 57,010).
+  Also used in `wswhDeltaAt` (deflection distribution), G6, the calc sheet S5 and the Strong-Wall tab.
+- **One floor depth:** d = Setup floor plate depth of the story below (panel field "Floor depth d_fl" removed; stored
+  `wswhFloorDepth` no longer read). d = 0 → warning; d > 18" → warning (was an error that zeroed the panel).
+- **M_allow / Δ / T from Table 07** (new `WSWH/07_wswh_stacked_first_story.md`, p. 50 text layer, 22 rows; README §5
+  rewritten; Table 03 re-checked = all 22 rows match). Interpolated on height only; no P interpolation. P₁ > 4,000 /
+  P₂ > 2,000 lb → warning (were errors). Base panel V = M·12/H_e for the line distribution.
+- **G9:** a stacked pair is checked exactly (base couple measured over the anchor arm B); the "not a loss" note stays
+  for single panels only.
+- Tests: new `tests/shearWallStacked.test.mjs` (6); Round2 / CalcSheet S5 / Report appendix updated; V21 hand calc
+  rewritten (PASS) — golden diff T 20.58 → 16.26 k, Δ₁ 0.607 → 0.480 in, Level 1 drift NG → OK.
+- **Change list (v26 → v27, saved stacked items, Setup depth blank → d = 0 + warning):** Test-123 / 29999 SW-4
+  M 42,634 → 44,318, D/C 0.66 → 0.69 (deflection distribution now gives the base panel 3.74 k instead of 2.35 k; wood
+  SW-3 3.65 → 2.26 k); 26998 line 2 SW-61 / SW-63 M 41,490 → 28,796, D/C 1.39 (OVER) → 0.96, T 27.8 → 19.3 k (drift
+  sizing then moves SW-66 (2)HDUE13 → (2)HDUE17); SW-VERIFY V21 M 30,621 → 23,400. Every other item: G6 description
+  text only (no numbers); single-panel items: info fields + note text.
+- **SSWH (item 7) step A — DONE 2026-11-10, awaiting the user's review:** `Shearwall design reference/SSWH/` 00_README +
+  11 concrete (204 rows), 12 portal (36), 13 wood floor (34), 14 stacked upper (34), 15 stacked first story -STK (34),
+  16 geometry / B / kits / factors — WSWH format, extracted from the PDF text layers, self-checked (README §6).
+  Open questions in README §7: anchor arm B for SSWH12/15/18 (tabulated T implies a larger B than p. 15 n.9),
+  p. 29 example 3,900 vs table 3,625, ESR-1679 code basis, portal header moment as information only.
+  **User answers 2026-11-10:** SSWH concrete / stack base use the p. 15 n.9 arms as printed (tables imply 8⅛ / 10⅜ / 12⅝
+  for 12 / 15 / 18 — follow up with Simpson; README §6-A); stacked 2nd story (WSWH 03 / SSWH 14): no B, no tension check,
+  TSS kit only (T not used in any design result); p. 29 3,900 lb = Simpson unpublished data at P = 3,750 (table values
+  stand); ESR-1679 covers 2021 IBC; portal header moment = information only; SWH-AB bolt spacing (p. 90) reference only.
+  **Step B — built 2026-11-10 (calc v27, uncommitted); change list accepted by the user, V21 golden accepted, freeze
+  baseline rewritten, `npm test` green. Still to do: the user's look in the browser (SSWH panel, p. 29 stack).**
+  - `scripts/buildSswhData.mjs` (`npm run sswh:build`) → GENERATED `shearWallSswhData.js` (T11–T15, ARM, KITS).
+  - New wall type `systemType: 'sswh'` ("Simpson Strong-Wall SSWH (steel)"), reusing the `wswh*` fields + `wswhRim`; no
+    schema bump. `isWswh` = either family; `familyOf` picks tables / widths (12/15/18/21/24) / arms / kits.
+    Conditions: concrete (T11, P to 7,500 interpolated, above → warning), garage portal (T12, f'c to 4,000, T = k·V·H/B,
+    k 0.90 for 12/15 ≤ 93¼"), wood floor (T13, joist × 0.91, DFL rim × 0.84, P > 2,000 → warning), stacked 2nd story
+    (T14, joist 14"/18" × 0.96, DFL × 0.95), stack base (T15 -STK, M = V₁·h₁ + V₂·(h₂ + d)). Anchors SWH-AB (Table 06).
+    SSWH results carry `wswh.family: 'SSWH'` (WSWH results unchanged).
+  - **Stacked 2nd story (both families): no B, no tension** — lateral end forces not calculated (otm1 = 0); every
+    display shows **"not calc / deferred (TSS kit)"** instead of 0 (user 2026-11-10: deferred, the kit works) — wall
+    schedule T (C "gravity only"), overturning summary / detail, calc sheet M_OT and load-case rows, elevation T/C strip
+    and end hover tips (`lateralDeferred`, `DEFERRED_TEXT` in shearWallWswh.js); G6 expects 0.
+  - Hardware tab / PDF appendix: SSWH section (T11–T15) after WSWH. Strong-Wall tab, schedules, calc sheet use the family.
+  - Tests: `tests/shearWallSswh.test.mjs` (8, p. 29 example: 45,000 ≤ 49,905, TSS kit, T = M/B 17.5); V21 SW-1 lateral
+    T = 0 (golden 4.21 → 0); CalcSheet S5. **Change list:** saved stacked WSWH upper panels (Test-123 / 29999 SW-2, 26998
+    SW-60 / SW-62, V21 SW-1): lateral T / C 0, kit and D/C unchanged; stack bases identical to the accepted item-6 list;
+    WSWH items: PDF note text (TSS kit note); no other item changes (DB freeze count unchanged).
+
+**Open — continue with these (user 2026-11-10):**
+1. ~~**Item 1 — stacked (2+ story) global overturning.**~~ DONE (see the round entry). Original notes: The user links the T/C height question to stacked global
+   overturning; the concern is not yet stated — **first ask what result / case prompted it**. Facts found 2026-11-10:
+   - Level forces F_x are accumulated top-down to story shears (`accumulateStoryShear`); own OTM = story shear ×
+     floor-to-floor; upper end T / C added to the lower wall ends (accumulated). Base T = Σ F·H / L. Checked on a
+     3-story aligned line (F 3 / 2 / 1 k, h 9 / 10 / 11 ft, L 10 ft): T 2.70 → 7.70 → 14.30 k = 143 k·ft / 10 ✓; G9
+     checks the line base moment = Σ V·h on every line.
+   - Gaps that may be what the user means:
+     a. **Upper end not aligned** (lands mid-wall below): that end's force is **not** carried down — warning "lands
+        mid-wall … add a post below (no load transferred)". In the test (8 ft walls over a 10 ft wall) the
+        compression at 8 ft is lost (no post / bearing designed for it) and **G9 still passes** (it counts the
+        excluded force) — only the warning shows it.
+     b. **Lever arm = full wall length L**, not the chord post centre-to-centre distance (≈ L − one post width).
+     c. WSWH stacked panels use M = V₁·H₁ + V₂·(H₁ + d_fl + H₂) (with the floor depth) — see item 6.
+2. **Item 6 — stacked WSWH "allowable moment" calculated like the other walls.** Waiting for the user's references
+   (to be added to the Shearwall design reference folder). Today: M_allow = V₀·H₁/12 (1st-story panel table V₀), M_d as
+   in 1c (`shearWallWswh.js` ~line 136). Resolve the on-hold **WSWH moment arm B** question in the same step (entry
+   "ON HOLD — WSWH moment arm B" below). Plan with ≥ 2 options before coding.
+3. **Item 7 — Simpson Steel Strong-Wall data** (stronger than WSWH), after item 6. The user provides the data; same
+   format and layout as WSWH (reference .md tables → generator script like `buildWswhData.mjs` → Hardware tab section
+   → wall type / panel family). Plan when the data arrives.
+
+**Also open (smaller):**
+- Look at items 2 and 5 in the browser (long labels "(2)HDUE17" on the elevation; resize grips, gridline snap).
+- DA "swd-group-nailing" (held alternating nailing) no longer reached by any test (item 2 entry below).
+- Offered, not taken up: DA user-project tests check closure / sums / statics instead of exact SWD shares.
+- + Wall placement still snaps to wall ends / 0.5 ft only (no gridlines) — not asked.
+
+## Round 2026-11-09 (branch `sw-posts-double-hd` off master, uncommitted) — user list of 7 items
+Plan agreed item by item before coding. Order: 3 + 4 → 2 → 5 → 6 → 7.
+1. **T/C height / stacked overturning — DONE 2026-11-10 (calc v26)**. First answer (no change): OTM = V × level
+   floor-to-floor (floor framing included), arm = full wall length L; upper-story end forces carried down as point
+   loads; deflection h and post column length = floor-to-floor too.
+   - **User rules (2026-11-10, Simpson SSWH two-story example C-L-SW26 p. 29 + `Shearwall Deisgn Elevation Reference.pdf`):**
+     FTF = FF to top plate = the wall height. Overturning (hardware, chord posts, forces carried down, drift Δa's T) uses
+     **FTF + the floor plate depth below the wall**; h/b, deflection h, post column length, wall weight and drift h_sx stay
+     on FTF. Simpson: M_base = 1.5 × (8 + 1 + 9) + 2.0 × 9 = 45 k·ft.
+   - **Data (no schema bump):** `level.floorPlateDepth` (in) = the floor framing at the TOP of that story (top level: none);
+     `inputs.groundDepth` (in) = "Ground" row = 1st FF to TOC (cripple wall / interior wall on a raised floor; usually 0).
+     Blank = 0 = results as before (saved items unchanged — user decision). Old `floorClearSpan` stays stored, no longer
+     shown; used as the strap table only while the depth below is blank.
+   - **Strap table** = smallest MSTC clear span (16 / 18 / 24") ≥ the depth below; > 24" → 24" table + audit warning
+     `floor_depth`. Helpers `floorDepthBelowIn`, `strapSpanInfo` / `strapSpanOf` (shearWallHardware.js).
+   - **Calc:** `computeWallTC(..., { h: FTF + d })` only when d > 0; wall result gets `floorDepthBelow` / `otmH` only then.
+     G6 / G9 use `otmH`; `wallDeflectionAtShare` own T uses `otmH`. FTAO wall-end T/C included (same call); FTAO engine
+     internals and WSWH (own `wswhFloorDepth`, item 6) untouched.
+   - **UI:** Setup "Floor Span" → "Floor plate depth (in)" (number; "—" on the top row; tooltip names the legacy strap
+     table), fixed "Ground" row, definition note. Calc sheet: "Overturning height h + d_fl" row, OTM = V × (h + d_fl).
+     Elevation and the Elev column unchanged (user: a floor band would clash with transfer beams).
+   - **Reference T1–T6 checked** (F_roof 1.5 k, F_2nd 2.0 k, 8 ft / 12" / 9 ft, b = 4 ft): aligned T1 3.000 (reference only),
+     T2 3.375 (strap), T3 = T4 11.25 k; offset (upper wall on posts, F_transfer = F_roof): post 3.375 k constant to TOC,
+     T5 = T6 7.875 k; ground 12": T4 12.125, T6 8.75 k. ΣFx, ΣFy, ΣM = 0 per free body. Before v26: 10.875 k, strap at 3.0 k.
+   - **No-regression proof:** local DB 38 items v25 (scratch copy with this step reverted) vs v26 identical (results,
+     form, PDF, elevations); no saved item has the new fields. Repo freeze: 6 items' Setup form only.
+   - Tests: `tests/shearWallFloorDepth.test.mjs` (6).
+2. **Double holdown / strap — DONE (calc v25; change list accepted by the user 2026-11-10).** User rules: two of
+   the same HDUE or MSTC per end (no mix); caps × 2; Δa = δ_LRFD × T / (2·T_LRFD) (each device T/2, max elongation
+   unchanged); minimum post = the single device's; auto-select and drift sizing may pick a double (option A); FTAO
+   opening straps and WSWH not included (FTAO wall-end holdowns may be doubles: the engine reads cap / LRFD cap / δ).
+   - **Built as catalog entries, no schema change** (planned schema 14 not needed): `doubleOf` (shearWallHardware.js)
+     makes "(2)HDUE5" = the HDUE5 row with cap / lrfdCap × 2, qty 2, singleId; an override stores that id in the
+     existing `anchorage…Override` field. Singles carry no qty field, so stored results of other items are identical.
+   - **Ladder** (`hdueLadder` / `mstcLadder`; auto-select, drift sizing, zero-share trials, calc sheet "lighter"): the
+     singles, then the doubles stronger than the largest single, by capacity — a double is auto-picked only when no
+     single carries T, or by drift sizing after the singles (only stiffer steps, e.g. HDUE17 → (2)HDUE13 → (2)HDUE17).
+     **Options** (`hdueOptions` / `mstcOptions`; every override list, `findAnchorage`): singles + every double.
+   - Zero-share holdown check lists doubles only when no single gives a share (so a reviewed warning's text is kept).
+   - Calc sheet: "cap 2 × 5375 = 10750 lb (two HDUE5, same model)", "δ_LRFD × T / (2 × T_LRFD)". Hardware tab / PDF
+     appendix list the single row.
+   - **Change list (read-only, v25 vs v25 + doubles, 70 items):** OVER → double: sample SW-3 / 4 (2)MSTC52, SW-9
+     (2)MSTC66, SW-10 (2)HDUE13; 26999 line 2 SW-7 (2)HDUE13; 29999 / Test-123 SW-15 (2)HDUE17. Drift sizing into doubles:
+     26998 B SW-3 / 7 / 9, M SW-29 (2)MSTC52, B SW-4 (2)HDUE13, SW-8 (2)HDUE17, 2 SW-66 (2)HDUE13, 3 SW-70 (2)HDUE13
+     (26998 B 2nd Floor δx 4.73 → 3.80 in, line 2 5.78 → 3.95, line 3 2nd Floor now OK, M Roof 2.45 → 2.17 — all vs 2.40 /
+     2.45); 26999 line 4 SW-9 (2)HDUE17 (2nd Floor 4.00 → 3.25 in vs 3.15, still NG). 26996: one drift-log value.
+   - Tests: new `tests/shearWallDouble.test.mjs` (6); rule R2 / V06 boundary on the ladder; drift tests (doubles in the
+     steps; the "governed by drift" display test pins SW-5 at MSTC66); Line A regression (SW-3 / 4 OVER → (2)MSTC52);
+     DA user pins (26999 TD2 P = [−137, −2214], SW-8 / 10 / 6 = 2762 / 5805 / 8173 lb).
+   - **Coverage lost (open):** DA "swd-group-nailing" (held alternating nailing) was reached only by 26998's Roof; with
+     v25 and doubles it no longer alternates, even with the v24 posts pinned. DA code unchanged; a test that reaches the
+     path is needed.
+3. **C_b — DONE (v25):** C_b = (l_b + 0.375)/l_b only for l_b < 6 in, else 1.0 (NDS 3.10.4); l_b = d2. 8x4 / 8x6
+   1.05 → 1.0. Since item 4 it only changes the information value F_c⊥′ (Hardware tab column "F_c⊥′ info", C_b column).
+4. **No sill bearing check on posts — DONE (v25):** every post (wall chords, FTAO jambs, isolated posts, beam-support
+   posts) = F_c′ × A. FTAO engine plate bearing no longer fails a wall and is not listed in the FTAO checks (engine
+   untouched, APA regression unchanged). Drift keeps Δ_c (r = C / (A_c·F_c⊥)).
+   - **Effect (read-only compare, master vs v25, 70 items: 36 repo + 34 local DB):** 15 items change; repo goldens
+     unchanged (V04 / V14 only post capacity and D/C). Bearing used to size posts up: 26998 / 26999 chords 8x6 → 6x6,
+     (3)2x6 → (2)2x6; 26996 / 26997 / 26998 isolated posts (3)2x6 / 6x6 → (2)2x6. Smaller A_c → larger Δ_c → more drift
+     (26998 line 2 δx 3.78 → 4.73 in; 26999 E-W line 2 3.10 → 4.00 in, now drift NG, drift sizing cannot fix it).
+   - **User decision 2026-11-09: accept as is** — drift sizing does not upsize posts; the engineer overrides the post.
+   - Tests: wood test (capacity = F_c′ × A, C_b), lib.mjs `postCap`, V01 / V07 texts; freeze baseline rewritten after
+     the user accepted; DA user-project pins moved with the new SWD shares (daCase26998 open item 5 keeps the held-nailing
+     case with the v24 posts pinned; daDeflectionGroup guard case at line 2 = 20 k, SW-35 16.76 k; DA user 11-04 c / d
+     TD2 P = [−2886, 191], SW-8 / 10 / 6 = 5511 / 3399 / 7830 lb). PR #9 (DA) has more DA tests on these fixtures —
+     re-run them when the branches meet.
+   - Local DB "before" fingerprints: `supabase/backups/swd-freeze-db-2026-11-09-pre.json`.
+5. **Elevation move / resize with snapping — DONE 2026-11-10 (view / editing only, no calc change).** User: "snip"
+   means **snap to gridlines**, not cutting. No gridline entry for unlinked items (user): they snap in 0.5 ft steps.
+   - Selected sheathed wall (Select mode) shows a grip at each end (↔); dragging a grip resizes, the other end stays.
+     WSWH panels get no grips (length = panel width).
+   - `wallDragTarget` (shearWallElevation.js, pure, exported) for move and resize: the moving end snaps to 1. a cross
+     gridline of the adopted plan (DA link, `planViewOf().cross`) within min(1 ft, 10 px), 2. an end of another wall /
+     beam / post within 0.5 ft, 3. the nearest 0.5 ft; when moving, the end closer to a gridline snaps; Alt = 0.5 ft
+     steps only. Length ≥ 0.5 ft; position ≥ 0; never past an opening (openings keep their place — a left-end resize
+     shifts their offsets). Preview: dashed wall, "L = … (from – to)", gridline highlighted "→ grid 3".
+   - Placing a new wall (+ Wall) keeps the old snapping (wall ends / 0.5 ft) — not asked.
+   - Tests: `tests/swdElevationDrag.test.mjs` (6: rules + a real grip drag with and without a gridline). Freeze identical
+     (grips only on a selected wall). Not yet looked at in the browser.
+6. **Stacked WSWH allowable moment like the other walls — OPEN, waiting for references** (start-here 2026-11-10).
+7. **Simpson steel Strong-Wall data, WSWH layout — OPEN, after 6** (start-here 2026-11-10).
+
 ## Next session — start here (set 2026-10-29)
 **State:**
 - `sw-design-data-appendix` committed (`5539efd`, CALC_VERSION **v24**, schema **13**) and pushed;

@@ -2,7 +2,8 @@
 // so any valid design passes and only a broken rule fails. The method (loads, T/C, combinations, stacking, deflection)
 // is verified by the pinned method cases (tests/shearWallCases.test.mjs); drift sizing (R7) by tests/shearWallDrift.test.mjs.
 //   R1 auto nailing (strength) = the lightest pattern with v ≤ v_cap·C_hb (E and W); drift basis → heavier than the strength pick
-//   R2 auto holdown / strap (strength) = the lightest in its table with cap ≥ T; OVER only if none carries T; drift basis → larger
+//   R2 auto holdown / strap (strength) = the lightest in its ladder with cap ≥ T (the table, then the doubles stronger than its
+//      largest single, user 2026-11-09); OVER only if none carries T; drift basis → larger
 //   R3 auto post = the first in catalog order with cap ≥ C and d2 ≥ the anchorage minimum post (HDUE by size, MSTC (2)2x)
 //   R4 overrides are never changed; a post override below the minimum post is replaced and flagged
 //   R5 support-post member designed for max(ASD, Ω₀ ASD) compression, then R3
@@ -17,7 +18,7 @@ import assert from 'assert/strict';
 import '../scripts/lib/shearWallLoadCheck.mjs'; // sets up the stand-in DOM
 import { calcAll } from '../src/modules/shearWallCalc.js';
 import { shearWallDesign } from '../src/modules/shearWallDesign.js';
-import { HDUE_TABLE, MSTC_TABLE, POST_SIZES, computePostCapacity, getGradeById, hdueMinPost } from '../src/modules/shearWallHardware.js';
+import { POST_SIZES, computePostCapacity, getGradeById, hdueMinPost, hdueLadder, mstcLadder, MSTC_SPANS } from '../src/modules/shearWallHardware.js';
 import { anchorRows } from '../src/modules/shearWallWswh.js';
 import { NAIL } from './cases/src/lib.mjs';
 
@@ -66,7 +67,8 @@ function eachWall(run, fn) {
     for (const pl of ln.perLevel) {
       const lvl = levels.find(l => l.id === pl.levelId) || {};
       const holdown = pl.levelId === bottom || lvl.anchorageType === 'holdown';
-      const table = holdown ? HDUE_TABLE : (MSTC_TABLE[String(lvl.floorClearSpan || '16')] || MSTC_TABLE['16']);
+      const span = String(lvl.floorClearSpan || '16');
+      const table = holdown ? hdueLadder('dfsp', '4') : mstcLadder('dfsp', MSTC_SPANS.includes(span) ? span : '16'); // singles + doubles
       for (const w of pl.walls) {
         const wIn = (line.walls || []).find(x => x.id === w.wallId) || {};
         fn({ w, wIn, ln, line, lvl, table, thickness, where: run.name + ' / ' + ln.lineName + ' / ' + w.mark });
@@ -248,14 +250,17 @@ test('Boundaries: nailing at exactly v_cap stays (≤), 1 plf over steps up, pas
   assert.equal(wallOf(r, 'Line B', 'SW-2').nailing.id, '4');
   const c = wallOf(r, 'Line C', 'SW-3'); assert.equal(c.nailing.id, '2B'); assert.ok(c.dcRatio > 1);
 });
-test('Boundaries: strap table follows the floor clear span; T past HDUE17 is OVER and fails G10 (former V06)', () => {
+test('Boundaries: strap table follows the floor clear span; T past HDUE17 takes the lightest double (2)HDUE9 (was OVER before doubles, 2026-11-09); G10 fails on the posts (former V06)', () => {
   const r = byName('V06');
   const s = r.out.perDirection[0].perLine.find(l => l.lineName === 'Line S');
   const spans = s.perLevel.map(pl => ({ lvl: pl.levelName, a: pl.walls[0].anchorageLeft.id }));
   assert.equal(spans.length, 4);
   const o = r.out.perDirection[0].perLine.find(l => l.lineName === 'Line O');
-  assert.equal(o.perLevel.flatMap(p => p.walls)[0].anchorageLeft, null);
-  assert.ok(o.checks.some(c => c.id === 'G10' && c.status === 'fail'));
+  assert.equal(o.perLevel.flatMap(p => p.walls)[0].anchorageLeft.id, '(2)HDUE9');
+  // the holdown now carries T; G10 still fails, on the end posts only (no 4" post carries C 18.62 k)
+  const g10 = o.checks.find(c => c.id === 'G10');
+  assert.equal(g10.status, 'fail');
+  assert.deepEqual(g10.rows.filter(r => r.status === 'fail').map(r => r.case), ['post L', 'post R']);
 });
 test('Boundaries: posts tried in catalog order ((3)2x4 before 4x4), 6" wall uses the 6" list (former V07)', () => {
   const r = byName('V07');

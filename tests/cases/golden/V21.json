@@ -1,5 +1,5 @@
 {
-  "calcVersion": "v24",
+  "calcVersion": "v27",
   "lines": [
     {
       "line": "N-S / Line A",
@@ -14,12 +14,12 @@
           "V_W": 0,
           "dc": 0.51,
           "T": [
-            4.21,
-            4.21
+            0,
+            0
           ],
           "C": [
-            4.21,
-            4.21
+            0,
+            0
           ],
           "anchorage": [
             "WSWH-TSS18KT",
@@ -39,14 +39,14 @@
           "basis": null,
           "V_E": 1.8,
           "V_W": 0,
-          "dc": 0.95,
+          "dc": 0.75,
           "T": [
-            20.577,
-            20.577
+            16.262,
+            16.262
           ],
           "C": [
-            20.577,
-            20.577
+            16.262,
+            16.262
           ],
           "anchorage": [
             "WSWH-AB HS (E)",
@@ -56,7 +56,7 @@
             "WSWH panel",
             "WSWH panel"
           ],
-          "deltaE": 0.607
+          "deltaE": 0.48
         }
       ],
       "posts": [],
@@ -69,8 +69,8 @@
         },
         {
           "level": "Level 1",
-          "dx": 2.429,
-          "pass": false
+          "dx": 1.92,
+          "pass": true
         }
       ],
       "checksFailed": [],

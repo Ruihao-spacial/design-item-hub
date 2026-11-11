@@ -253,29 +253,32 @@ test('11-04 b: Roof E-W as saved — TD2 runs 3 ft past support 2 without an ove
 });
 
 const roofOk = mod => run('adu-roof-1104', (i, G) => { normalizeInputs(i); mod(i, G); });
-const ROOF_SEGS = [[3, 24, -31.42], [0, 3, 219.95], [-3, 0, 0], [-5, -3, 0]];
+// The TD2 loads follow SWD's equal-δ shares on the offset line: v24 P = [−2262, −354], SW-8 / SW-10 / SW-6 = 4888 / 3945 /
+// 7908 lb; v25 (2026-11-09, posts without the sill bearing check) [−2886, 191], 5511 / 3399 / 7830; with double holdowns /
+// straps (2026-11-09, drift sizing past the largest single: 26999 SW-9 (2)HDUE17) the values below.
+const ROOF_SEGS = [[3, 24, -1.9], [0, 3, 13.27], [-3, 0, 0], [-5, -3, 0]];
 const roofChecks = (out, P, segs = ROOF_SEGS) => {
   assert.equal(out.status, 'ok', out.errors.map(e => e.msg).join(' | '));
   const cs = kase(out, 'x-E'), r = runOf(out, 'TD2');
   assert.equal(r.terminal, 'OUTPUT');
   assert.deepEqual(r.superposed.runs.map(x => [x.grid, x.kind]), [['4', 'span'], ['5', 'support'], ['5.5', 'bottom']]);
   assert.deepEqual(r.P.map(Math.round), P);
-  // statics of a beam on 5 / 2 (W = 24, L = 9): P4 = −2262 at y 3 → top 2262·3/24, bottom 2262·21/24; P5 straight into 5
+  // statics of a beam on 5 / 2 (W = 24, L = 9): P4 = −137 at y 3 → top 137·3/24, bottom 137·21/24; P5 straight into 5
   const W = 24, [P4, P5] = r.P;
   assert.ok(Math.abs(r.outputs.td_F_sup_top - P4 * 3 / W) < 1e-6 && Math.abs(r.outputs.td_F_sup_bot - (P4 * 21 / W + P5)) < 1e-6);
   assert.deepEqual(r.segsLocal.map(([a, b, v]) => [a, b, Math.round(v * 100) / 100]), segs);
   assert.ok(checksOf(out, 'x-E').every(c => c.ok), checksOf(out, 'x-E').filter(c => !c.ok).map(c => c.msg).join(' | '));
   assert.ok(cs.lines.length && checksOf(out, 'x-E').find(c => c.code === 'equilibrium').ok, 'Σ line forces = load (16,741 lb)');
-  assert.deepEqual(['SW-8', 'SW-10', 'SW-6'].map(m => Math.round(share(out, 'x-E', m))), [4888, 3945, 7908]);
+  assert.deepEqual(['SW-8', 'SW-10', 'SW-6'].map(m => Math.round(share(out, 'x-E', m))), [2762, 5805, 8173]);
   assert.ok(codes(out, 'warnings').includes('td-load-on-support'));
 };
-test('11-04 c: Roof E-W with TD2 drawn y 0–29 — loads 4 (back span), 5 (on support 5), 5.5 (overhang, short of the tip): runs, every member run closes, SW-8 / SW-10 / SW-6 = 4888 / 3945 / 7908 lb', () => {
+test('11-04 c: Roof E-W with TD2 drawn y 0–29 — loads 4 (back span), 5 (on support 5), 5.5 (overhang, short of the tip): runs, every member run closes, SW-8 / SW-10 / SW-6 = 2762 / 5805 / 8173 lb (SWD v25 + doubles)', () => {
   const { out } = roofOk(i => { i.tds.find(x => x.mark === 'TD2').y2 = '29'; });
-  roofChecks(out, [-2262, -354, 0]);
+  roofChecks(out, [-137, -2214, 0]);
 });
 test('11-04 d: … or kept y 0–32 with a second overhang from 2 to 1.7 — same results (overhangs at both ends)', () => {
   const { out } = roofOk((i, G) => { i.tds.find(x => x.mark === 'TD2').overhangs.push({ fromId: G('2'), toId: G('1.7'), at: '' }); });
-  roofChecks(out, [-2262, -354, 0], [[24, 27, 0], ...ROOF_SEGS]); // + the overhang 29–32 past support 2: no TD shear
+  roofChecks(out, [-137, -2214, 0], [[24, 27, 0], ...ROOF_SEGS]); // + the overhang 29–32 past support 2: no TD shear
   assert.deepEqual(out.tds.find(t => t.mark === 'TD2').tips, { bottom: -5, top: 27 });
 });
 test('11-04 e: Auto load lines search the overhang (Roof TD2: 4 and 5.5; not 1.7 at the far end any more)', () => {

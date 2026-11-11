@@ -9,8 +9,9 @@ import { el } from '../utils.js';
 import { rich } from '../richText.js';
 import { nailingTable, nailingCG, FOOTNOTE_10_FACTOR, sheathingLabel } from './shearWallNailing.js';
 import { NDS_GRADES, POST_SIZES, FTAO_STRAP_TABLE, SPECIES_GROUPS, SPECIES, HARDWARE_SOURCES, MSTC_SPANS,
-  computePostCapacity, woodBasis, hdueTable, mstcTable, memberProps, groupLabel, postSizeById } from './shearWallHardware.js';
-import { WSWH_T01, WSWH_T02, WSWH_T03 } from './shearWallWswhData.js';
+  computePostCapacity, woodBasis, hdueTable, mstcTable, memberProps, groupLabel, postSizeById, singleIdOf } from './shearWallHardware.js';
+import { WSWH_T01, WSWH_T02, WSWH_T03, WSWH_T07 } from './shearWallWswhData.js';
+import { SSWH_T11, SSWH_T12, SSWH_T13, SSWH_T14, SSWH_T15 } from './shearWallSswhData.js';
 import { wswhRowsUsed } from './shearWallWswh.js';
 
 const MISSING = '—';
@@ -21,6 +22,14 @@ const WSWH_TABLES = [
   ['T01', 'Table 01 — standard & balloon framing on concrete (pp. 40–41)', WSWH_T01, true],
   ['T02', 'Table 02 — first story on a raised wood floor (p. 47)', WSWH_T02, false],
   ['T03', 'Table 03 — two-story stacked, second-story panel (p. 50; no T published)', WSWH_T03, false],
+  ['T07', 'Table 07 — two-story stacked, first-story panel: allowable base moment (p. 50)', WSWH_T07, false, 'M'],
+];
+const SSWH_TABLES = [
+  ['T11', 'Table 11 — standard application on concrete (pp. 13–15)', SSWH_T11, true],
+  ['T12', 'Table 12 — garage portal with SSWH-PKT (p. 19; T = k·V·H/B)', SSWH_T12, true],
+  ['T13', 'Table 13 — first story on a wood floor (p. 21)', SSWH_T13, false],
+  ['T14', 'Table 14 — two-story stacked, second-story panel (p. 28; no T published)', SSWH_T14, false],
+  ['T15', 'Table 15 — two-story stacked, first-story -STK panel: allowable base moment (p. 27)', SSWH_T15, false, 'M'],
 ];
 const postThickness = (id) => (POST_SIZES['6'].some(p => p.id === id) && !POST_SIZES['4'].some(p => p.id === id) ? '6' : '4');
 const r2 = (v) => Math.round(v * 100) / 100;
@@ -31,8 +40,9 @@ export function hardwareUsed(inputs, outputs) {
   const used = { nailing: new Set(), hdue: {}, mstc: {}, ftao: new Set(), wswh: {}, posts: {}, pt: false };
   const anchorage = (a) => {
     if (!a || !a.id) return;
-    if (a.family === 'HDUE') (used.hdue[Object.keys(a.minPost || { 4: 1 })[0]] ||= new Set()).add(a.id);
-    if (a.family === 'MSTC') (used.mstc[a.span] ||= new Set()).add(a.id);
+    const id = singleIdOf(a); // a double "(2)HDUE5" uses the HDUE5 row
+    if (a.family === 'HDUE') (used.hdue[Object.keys(a.minPost || { 4: 1 })[0]] ||= new Set()).add(id);
+    if (a.family === 'MSTC') (used.mstc[a.span] ||= new Set()).add(id);
   };
   const post = (id, heightFt) => {
     const p = postSizeById(id);
@@ -46,7 +56,7 @@ export function hardwareUsed(inputs, outputs) {
       if (w.method === 'wswh') {
         const x = w.wswh;
         if (!x || !x.ok) continue;
-        const { table, rows } = wswhRowsUsed({ width: x.width, condition: x.role, ftfFt: w.floorH, fc });
+        const { table, rows } = wswhRowsUsed({ family: x.family || 'WSWH', width: x.width, condition: x.role, ftfFt: w.floorH, fc });
         for (const r of rows) (used.wswh[table] ||= new Set()).add(r);
         continue;
       }
@@ -148,38 +158,45 @@ export function hardwareBlocks(inputs, view, used) {
     ]);
   }
 
-  // --- 5. WSWH ---
-  const wswhTables = WSWH_TABLES.map(([id, title, rows, withP]) => [title, used ? rows.filter(r => used.wswh[id] && used.wswh[id].has(r)) : rows, withP])
+  // --- 5. Strong-Wall panels: WSWH (wood), then SSWH (steel, SWD item 7) ---
+  let toggled = false;
+  for (const [fam, TABLES, headText, src] of [['WSWH', WSWH_TABLES, 'Simpson Strong-Wall WSWH Panels', HARDWARE_SOURCES.wswh],
+    ['SSWH', SSWH_TABLES, 'Simpson Strong-Wall SSWH Panels (steel)', HARDWARE_SOURCES.sswh]]) {
+  const wswhTables = TABLES.map(([id, title, rows, withP, key = 'V']) => [title, used ? rows.filter(r => used.wswh[id] && used.wswh[id].has(r)) : rows, withP, key])
     .filter(([, rows]) => rows.length);
   if (wswhTables.length) {
-    head('Simpson Strong-Wall WSWH Panels');
-    source(HARDWARE_SOURCES.wswh, 'Simpson panel — independent of the framing group; V and T for design, Δ for 1.0E / 1.0W deflection');
-    const cols = (withP) => [
+    head(headText);
+    source(src, 'Simpson panel — independent of the framing group; V and T for design, Δ for 1.0E / 1.0W deflection');
+    // key 'M' (Table 07): allowable base moment (lb-ft) in place of the shear
+    const cols = (withP, key = 'V') => [
       { h: 'Model' }, { h: 'Nominal ht (ft)', num: true }, { h: 'H_e (in)', num: true },
       ...(withP ? [{ h: 'P (lb)', num: true }, { h: "f'c (psi)", num: true }] : []),
-      { h: 'V_ASD (lb)', num: true }, { h: 'Δ_ASD (in)', num: true }, { h: 'T_ASD (lb)', num: true },
-      { h: 'V_LRFD (lb)', num: true }, { h: 'Δ_LRFD (in)', num: true }, { h: 'T_LRFD (lb)', num: true },
+      { h: key === 'M' ? 'M_ASD (lb-ft)' : 'V_ASD (lb)', num: true }, { h: 'Δ_ASD (in)', num: true }, { h: 'T_ASD (lb)', num: true },
+      { h: key === 'M' ? 'M_LRFD (lb-ft)' : 'V_LRFD (lb)', num: true }, { h: 'Δ_LRFD (in)', num: true }, { h: 'T_LRFD (lb)', num: true },
     ];
-    const row = (r, withP, lt) => [r.model, r.nominal_ft, r.He_in, ...(withP ? [r.P_lb, r.fc_psi] : []),
-      r['V_ASDcap_' + lt], r['Delta_ASDcap_' + lt], r['T_ASDcap_' + lt], r['V_LRFDcap_' + lt], r['Delta_LRFDcap_' + lt], r['T_LRFDcap_' + lt]];
+    const row = (r, withP, lt, key = 'V') => [r.model, r.nominal_ft, r.He_in, ...(withP ? [r.P_lb, r.fc_psi] : []),
+      r[key + '_ASDcap_' + lt], r['Delta_ASDcap_' + lt], r['T_ASDcap_' + lt], r[key + '_LRFDcap_' + lt], r['Delta_LRFDcap_' + lt], r['T_LRFDcap_' + lt]];
     if (used) {
       const lts = inputs.loadType === 'both' ? ['S', 'W'] : inputs.loadType === 'wind' ? ['W'] : ['S'];
-      for (const [title, rows, withP] of wswhTables) for (const lt of lts) {
+      for (const [title, rows, withP, key] of wswhTables) for (const lt of lts) {
         sub(title + ' — ' + (lt === 'S' ? 'Seismic' : 'Wind'));
-        table(cols(withP), rows.map(r => row(r, withP, lt)));
+        table(cols(withP, key), rows.map(r => row(r, withP, lt, key)));
       }
     } else {
       const lt = view.wswhLoad || 'S';
-      B.push({ k: 'wswhToggle', value: lt });
-      for (const [title, rows, withP] of wswhTables) {
-        B.push({ k: 'details', summary: title + ' — ' + rows.length + ' rows', blocks: [{ k: 'table', cols: cols(withP), rows: rows.map(r => row(r, withP, lt)) }] });
+      if (!toggled) B.push({ k: 'wswhToggle', value: lt });
+      toggled = true;
+      for (const [title, rows, withP, key] of wswhTables) {
+        B.push({ k: 'details', summary: title + ' — ' + rows.length + ' rows', blocks: [{ k: 'table', cols: cols(withP, key), rows: rows.map(r => row(r, withP, lt, key)) }] });
       }
     }
     notes([
       used ? 'Rows: the tabulated heights around each panel\'s floor-to-floor height (interpolated between them)' + (wswhTables.some(t => t[2]) ? ', every tabulated P at the project f\'c table' : '') + '.' : null,
-      'V_ASD / T_ASD: design. Drift (1.0E / α_s·W): Δ = Δ_LRFD × V_{1.0} / V_LRFD — linear from the LRFD cap with its drift; stacked base Δ_1 = Δ_{0,LRFD} × M_d / M_{allow,LRFD}; the same line δ(V) is used in the deflection distribution; warning sign when V_{1.0} > V_LRFD (user 2026-10-13). Same rule as the holdowns / straps: linear from the LRFD pair at the 1.0 level.',
+      'V_ASD / T_ASD: design. Drift (1.0E / α_s·W): Δ = Δ_LRFD × V_{1.0} / V_LRFD — linear from the LRFD cap with its drift; stacked base Δ_1 = Δ_LRFD (Table 07) × M_d / M_{allow,LRFD}, M_d = V_1·h_1 + V_2·(h_2 + d) at story heights; the same line δ(V) is used in the deflection distribution; warning sign when V_{1.0} > V_LRFD (user 2026-10-13). Same rule as the holdowns / straps: linear from the LRFD pair at the 1.0 level.',
       'V_LRFD / Δ_LRFD / T_LRFD are derived in the reference tables (seismic ASD / 0.7, wind ASD / 0.6), not Simpson-published (no public LRFD data; the user keeps the derived values).',
+      fam === 'SSWH' ? 'SSWH anchor arm B (concrete, stack base) per p. 15 n.9 as printed; the tabulated T implies 8⅛ / 10⅜ / 12⅝ in for SSWH12 / 15 / 18 — conservative, follow up with Simpson. Portal T = k·V·H/B − P/2 (k = 0.90 for SSWH12 / 15 ≤ 93¼"). Wood floor and stacked 2nd story: × 0.91 / 0.84 and × 0.96 / 0.95 joist / DFL-rim factors.' : null,
     ]);
+  }
   }
 
   // --- 6. Wood grades of the species in the group (PDF: the project grades only) ---
@@ -207,7 +224,7 @@ export function hardwareBlocks(inputs, view, used) {
   notes([
     used ? 'The project grades (Summary tab).' : 'Highlighted: the project grades (Summary tab).',
     'Studs, sill plates and 2x / 4x posts use the dimension-lumber grade (Table 4A, or 4B for SP by member width); 6x6 and 8x6 posts use the posts & timbers grade (Table 4D).',
-    'Sill plate crushing (deflection) and post bearing use the sill plate F_c⊥ (Table 4A / 4B).',
+    'Sill plate crushing (deflection Δ_c) uses the sill plate F_c⊥ (Table 4A / 4B); post bearing on the sill is shown for information only.',
   ]);
 
   // --- 7. Post sizes (C_F per the project species) ---
@@ -246,18 +263,18 @@ export function hardwareBlocks(inputs, view, used) {
       sub('Floor Height: ' + h + ' ft');
       table([
         { h: 'Post' }, { h: 'Grade' }, { h: 'F_c (psi)', num: true }, { h: 'C_F', num: true }, { h: 'l_e/d', num: true, calc: true }, { h: 'F_cE (psi)', num: true, calc: true },
-        { h: 'F_c* (psi)', num: true, calc: true }, { h: 'C_P', num: true, calc: true }, { h: "F_c' (psi)", num: true, calc: true }, { h: "F_c⊥' (psi)", num: true, calc: true },
-        { h: 'Governs' }, { h: 'Capacity (k)', num: true, calc: true },
+        { h: 'F_c* (psi)', num: true, calc: true }, { h: 'C_P', num: true, calc: true }, { h: "F_c' (psi)", num: true, calc: true }, { h: 'C_b', num: true, calc: true },
+        { h: "F_c⊥' info (psi)", num: true, calc: true }, { h: 'Capacity (k)', num: true, calc: true },
       ], posts.map(p => {
         const r = computePostCapacity(p, wood, h);
         if (!r) return [p.label, 'not available for ' + wood.species, null, null, null, null, null, null, null, null, null, null];
-        return [p.label, r.gradeLabel + ' (' + r.table + ')', r.Fc, r.CF.toFixed(2), r.ratio1, r.FcE, r.FcStar, r.Cp, r.FcPrime, r.FcPerpPrime, r.governedBy === 'axial' ? 'Axial' : 'Bearing', r.capacityKips];
+        return [p.label, r.gradeLabel + ' (' + r.table + ')', r.Fc, r.CF.toFixed(2), r.ratio1, r.FcE, r.FcStar, r.Cp, r.FcPrime, r.CB.toFixed(3), r.FcPerpPrime, r.capacityKips];
       }));
     }
   }
   if (capParts.length) notes([
     'ƒ F_c* = F_c × C_D × C_F · ƒ F_cE = 0.822 × E_min′ / (l_e/d)², the smaller of both axes · ƒ C_P from F_cE / F_c* with c = 0.8 · ƒ F_c′ = F_c* × C_P.',
-    'ƒ F_c⊥′ = sill plate F_c⊥ (Table 4A / 4B) × C_b, C_b = (d_2 + 0.375) / d_2 · ƒ Capacity = min(F_c′, F_c⊥′) × A. ' + (used ? 'Heights: the floor heights where each post is used.' : 'Heights from the project levels.'),
+    'ƒ Capacity = F_c′ × A (column). Sill plate bearing is not a design check for posts; ƒ F_c⊥′ = sill plate F_c⊥ (Table 4A / 4B) × C_b is for information, C_b = (l_b + 0.375) / l_b for l_b = d_2 < 6 in, else 1.0 (NDS 3.10.4). Sill crushing stays in the deflection (Δ_c). ' + (used ? 'Heights: the floor heights where each post is used.' : 'Heights from the project levels.'),
   ]);
 
   // --- 9. Assumptions ---

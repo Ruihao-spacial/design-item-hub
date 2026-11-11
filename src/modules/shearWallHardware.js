@@ -22,6 +22,7 @@ export const groupLabel = (g) => (SPECIES_GROUPS.find(x => x.id === g) || SPECIE
 export const HARDWARE_SOURCES = {
   ...HW_SOURCES,
   wswh: { doc: 'Simpson Strong-Tie C-L-SW26, Strong-Wall High-Strength Wood Shearwalls (ESR-2652)', edition: '© 2026', page: 'pp. 40–41 (Table 01), 47 (02), 50 (03)', entered: '', file: 'WSWH/01–03 *.md' },
+  sswh: { doc: 'Simpson Strong-Tie C-L-SW26, Strong-Wall High-Strength Steel Shearwall (ESR-1679)', edition: '© 2026', page: 'pp. 13–15 (T11), 19 (T12), 21 (T13), 28 (T14), 27 (T15)', entered: 'Claude for Ruihao / 11/10/2026 (reviewed by the user)', file: 'SSWH/11–16 *.md' },
 };
 
 // === NDS 2018 wood grades (Tables 4A / 4B by width / 4D) ===
@@ -123,6 +124,65 @@ export function mstcTable(group = 'dfsp', span = '16') {
   return MSTC_CACHE[key];
 }
 export const MSTC_SPANS = Object.keys(MSTC_DATA.dfsp);
+
+// === Floor plate depth (user 2026-11-10, SWD item 1; Shearwall Deisgn Elevation Reference.pdf) ===
+// levels are top → bottom. level.floorPlateDepth (in) = the floor framing at the TOP of that story (its top plate to
+// the FF above); the top level has none. inputs.groundDepth (in) = 1st FF to TOC under the bottom story (usually 0).
+// The floor below a wall = the floorPlateDepth of the next level down (ground for the bottom story). Blank = 0.
+const depthIn = (v) => { const d = parseFloat(v); return d > 0 ? d : 0; };
+export function floorDepthBelowIn(levels, levelId, groundDepth) {
+  const i = (levels || []).findIndex(l => l.id === levelId);
+  if (i < 0) return 0;
+  return depthIn(i === levels.length - 1 ? groundDepth : levels[i + 1].floorPlateDepth);
+}
+// MSTC strap table (floor clear span) for the walls of a level: the smallest clear span ≥ the floor plate depth below;
+// a blank depth keeps the level's stored floorClearSpan (items saved before the depth existed, default 16").
+// over: the depth exceeds the largest table (the largest is used and the caller warns).
+export function strapSpanInfo(levels, levelId) {
+  const i = (levels || []).findIndex(l => l.id === levelId);
+  const lvl = i >= 0 ? levels[i] : {};
+  const d = i >= 0 && i < levels.length - 1 ? depthIn(levels[i + 1].floorPlateDepth) : 0;
+  if (!(d > 0)) return { span: lvl.floorClearSpan || '16', depth: 0, over: false };
+  const spans = [...MSTC_SPANS].sort((a, b) => parseFloat(a) - parseFloat(b));
+  const s = spans.find(x => parseFloat(x) >= d - 1e-9);
+  return { span: s || spans[spans.length - 1], depth: d, over: !s };
+}
+export const strapSpanOf = (levels, levelId) => strapSpanInfo(levels, levelId).span;
+
+// === Double holdowns / straps (user 2026-11-09) ===
+// Two of the same HDUE or MSTC at one end (no mixing): ASD and LRFD caps × 2; each device takes T / 2 with its own
+// δ @ LRFD cap, so δ_LRFD stays and Δa = δ_LRFD × T / (2·T_LRFD); minimum post = the single device's. Id "(2)" + id.
+// Singles carry no qty field (stored results of existing items stay identical); anchorageQty(a) reads it.
+const DOUBLE_CACHE = new Map();
+export function doubleOf(a) {
+  if (!a || a.qty === 2) return a;
+  if (!DOUBLE_CACHE.has(a)) DOUBLE_CACHE.set(a, { ...a, id: '(2)' + a.id, qty: 2, singleId: a.id, cap: 2 * a.cap,
+    lrfdCap: a.lrfdCap > 0 ? 2 * a.lrfdCap : a.lrfdCap });
+  return DOUBLE_CACHE.get(a);
+}
+export const anchorageQty = (a) => (a && a.qty === 2 ? 2 : 1);
+export const singleIdOf = (a) => (a && a.singleId) || (a && a.id);
+// Selection ladder (auto-select, drift sizing, larger-size trials): the singles, then the doubles stronger than the
+// largest single, by capacity — light to heavy, so a double is picked only when no single is enough.
+const LADDER_CACHE = new Map();
+function ladderOf(singles) {
+  if (!LADDER_CACHE.has(singles)) {
+    const top = Math.max(...singles.map(a => a.cap));
+    LADDER_CACHE.set(singles, [...singles, ...singles.map(doubleOf).filter(d => d.cap > top).sort((a, b) => a.cap - b.cap)]);
+  }
+  return LADDER_CACHE.get(singles);
+}
+// Every choice for a manual override: the singles, then every double
+const OPTIONS_CACHE = new Map();
+function optionsOf(singles) {
+  if (!OPTIONS_CACHE.has(singles)) OPTIONS_CACHE.set(singles, [...singles, ...singles.map(doubleOf)]);
+  return OPTIONS_CACHE.get(singles);
+}
+export const hdueLadder = (group, thickness) => ladderOf(hdueTable(group, thickness));
+export const mstcLadder = (group, span) => ladderOf(mstcTable(group, span));
+export const hdueOptions = (group, thickness) => optionsOf(hdueTable(group, thickness));
+export const mstcOptions = (group, span) => optionsOf(mstcTable(group, span));
+
 // DF/SP 4" HDUE and DF/SP MSTC by span (older callers, tests)
 export const HDUE_TABLE = hdueTable('dfsp', '4');
 export const MSTC_TABLE = Object.fromEntries(MSTC_SPANS.map(s => [s, mstcTable('dfsp', s)]));
@@ -151,14 +211,14 @@ export function overLrfdCap(hw, Tlb) {
 }
 
 export function autoSelectHoldown(tensionKips, group = 'dfsp', thickness = '4') {
-  const table = hdueTable(group, thickness);
+  const table = hdueLadder(group, thickness);
   const lbs = tensionKips * 1000;
   if (lbs <= 0) return table[0];
   return table.find(hd => hd.cap >= lbs) || null;
 }
 
 export function autoSelectStrap(tensionKips, floorClearSpan, group = 'dfsp') {
-  const table = mstcTable(group, floorClearSpan);
+  const table = mstcLadder(group, floorClearSpan);
   const lbs = tensionKips * 1000;
   if (lbs <= 0) return table[0];
   return table.find(s => s.cap >= lbs) || null;
@@ -202,8 +262,10 @@ const KM = 1200;
 const KT = 0.59;
 const C_SAWN = 0.8;
 
-// wood: woodBasis (or a grade). Member values per memberProps (Table 4A / 4B / 4D); bearing on the sill plate uses the
-// sill's F_c⊥ (Table 4A / 4B, wall thickness = the post's d1). null when the member is not available for the species.
+// wood: woodBasis (or a grade). Member values per memberProps (Table 4A / 4B / 4D). null when the member is not available
+// for the species. Capacity = F_c′ × A (column only): sill plate bearing is not a design check for any post (user
+// 2026-11-09, CALC v25); F_c⊥′ on the sill (Table 4A / 4B, wall thickness = the post's d1) is reported for information.
+// C_b (NDS 3.10.4) = (l_b + 0.375) / l_b for l_b < 6 in, else 1.0; l_b = d2 (the post along the sill).
 export function computePostCapacity(post, wood, floorHeightFt) {
   const m = memberProps(wood, post);
   if (!m) return null;
@@ -230,10 +292,10 @@ export function computePostCapacity(post, wood, floorHeightFt) {
   const Cp = (1 + R) / (2 * C_SAWN) - Math.sqrt(Math.pow((1 + R) / (2 * C_SAWN), 2) - R / C_SAWN);
   const FcPrime = FcStar * Cp;
 
-  const CB = (post.d2 + 0.375) / post.d2;
-  const FcPerpPrime = sill.Fcperp * CB;
+  const CB = post.d2 < 6 ? (post.d2 + 0.375) / post.d2 : 1.0;
+  const FcPerpPrime = sill.Fcperp * CB; // information only (not a design check)
 
-  const FcGovern = Math.min(FcPrime, FcPerpPrime);
+  const FcGovern = FcPrime;
   const capacityKips = r2(FcGovern * post.area / 1000);
 
   return {
@@ -245,7 +307,7 @@ export function computePostCapacity(post, wood, floorHeightFt) {
     le1, le2, ratio1: r2(ratio1), ratio2: r2(ratio2),
     FcE1: r0(FcE1), FcE2: r0(FcE2), FcE: r0(FcE),
     CT1: r4(CT1), CT2: r4(CT2),
-    governedBy: FcPrime <= FcPerpPrime ? 'axial' : 'bearing',
+    governedBy: 'axial',
   };
 }
 

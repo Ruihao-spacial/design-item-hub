@@ -120,13 +120,14 @@ export function modelSummary(inputs) {
     + (inputs.cd ? ', Cd ' + inputs.cd + ' / Ie ' + inputs.ie + ' / RC ' + (inputs.riskCategory || '—') : '')
     + (inputs.omega0 ? ', Ω₀ ' + inputs.omega0 : '')
     + ((inputs.wallDLTypes || []).length ? ', wall DL ' + inputs.wallDLTypes.map(t => t.psf + ' psf').join(' / ') : ''));
-  out.push('Levels (top down): ' + lv.map(l => l.name + ' ' + l.floorToFloor + ' ft' + (l.anchorageType && l.anchorageType !== 'auto' ? ' (' + l.anchorageType + ')' : '') + (l.floorClearSpan && l.floorClearSpan !== '16' ? ', clear span ' + l.floorClearSpan + '"' : '')).join(' · '));
+  out.push('Levels (top down): ' + lv.map(l => l.name + ' ' + l.floorToFloor + ' ft' + (l.anchorageType && l.anchorageType !== 'auto' ? ' (' + l.anchorageType + ')' : '') + (l.floorClearSpan && l.floorClearSpan !== '16' ? ', clear span ' + l.floorClearSpan + '"' : '') + (parseFloat(l.floorPlateDepth) > 0 ? ', floor plate depth ' + l.floorPlateDepth + '"' : '')).join(' · ')
+    + (parseFloat(inputs.groundDepth) > 0 ? ' · Ground (1st FF to TOC) ' + inputs.groundDepth + '"' : ''));
   for (const d of inputs.directions || []) for (const ln of d.lines || []) {
     out.push(d.name + ' / ' + ln.name + ' (' + ln.totalLength + ' ft, ρ ' + d.rho + (ln.wallThickness ? ', ' + ln.wallThickness + '" walls' : '') + (ln.distribution ? ', ' + ln.distribution : '') + (ln.driftBypass ? ', drift ' + ln.driftBypass : '') + '):');
     const loads = Object.entries(ln.levelLoads || {}).map(([id, v]) => name(id) + ' ' + ['seismic', 'wind'].filter(k => String(v[k] || '').trim()).map(k => (k === 'seismic' ? 'E ' : 'W ') + v[k] + ' k').join(', ')).filter(s => /k$/.test(s));
     if (loads.length) out.push('  lateral 1.0 at each level: ' + loads.join(' · '));
     for (const w of ln.walls || []) {
-      const type = w.systemType === 'wswh' ? 'WSWH ' + (w.wswhWidth || 18) + '" ' + (w.wswhCondition || '') : (w.openings || []).length ? 'FTAO' : 'segmented';
+      const type = (w.systemType === 'wswh' || w.systemType === 'sswh') ? (w.systemType === 'sswh' ? 'SSWH ' : 'WSWH ') + (w.wswhWidth || 18) + '" ' + (w.wswhCondition || '') : (w.openings || []).length ? 'FTAO' : 'segmented';
       out.push('  ' + w.mark + ' — ' + name(w.levelId) + ', x ' + w.position + ' ft, L ' + w.length + ' ft, ' + type
         + (w.nailingPattern ? ', nailing ' + w.nailingPattern + ' (manual)' : '') + ((w.openings || []).length ? ', openings ' + w.openings.map(o => o.width + '×' + (o.head - o.sill) + ' at ' + o.offset).join(', ') : ''));
     }
