@@ -88,15 +88,15 @@ export async function exportItemPdf(project, item, mod, { saveToStorage = true, 
     '®': 0.987, '¯': 0.603, '±': 0.549, '¢': 0.247 };
   const symWidth = (t) => [...t].reduce((a, c) => a + (SYM_W[c] != null ? SYM_W[c] : 0.6), 0) * doc.getFontSize();
   function segWidth(seg) { return seg.sym ? symWidth(seg.t) : doc.getTextWidth(seg.t); }
-  function runWidth(r, size) { doc.setFontSize(r.sub ? size * SUB_SCALE : size); return glyphSegs(r.t).reduce((a, g) => a + segWidth(g), 0); }
+  function runWidth(r, size) { doc.setFontSize(r.sub || r.sup ? size * SUB_SCALE : size); return glyphSegs(r.t).reduce((a, g) => a + segWidth(g), 0); }
   function drawRuns(runs, x, yBase, size) {
     let cx = x;
     const f = doc.getFont();
     for (const r of runs) {
-      doc.setFontSize(r.sub ? size * SUB_SCALE : size);
+      doc.setFontSize(r.sub || r.sup ? size * SUB_SCALE : size);
       for (const g of glyphSegs(r.t)) {
         if (g.sym) doc.setFont('symbol', 'normal');
-        doc.text(g.t, cx, yBase + (r.sub ? size * 0.25 : 0));
+        doc.text(g.t, cx, yBase + (r.sub ? size * 0.25 : r.sup ? -size * 0.35 : 0));
         cx += g.sym ? symWidth(g.t) : doc.getTextWidth(g.t);
         if (g.sym) doc.setFont(f.fontName, f.fontStyle);
       }
@@ -111,18 +111,18 @@ export async function exportItemPdf(project, item, mod, { saveToStorage = true, 
   function wrapRuns(runs, width, size) {
     const words = [];
     for (const r of runs) {
-      const parts = r.sub ? [r.t] : r.t.split(/(\s+)/).filter(x => x !== '');
-      for (const t of parts) words.push({ t, sub: r.sub });
+      const parts = r.sub || r.sup ? [r.t] : r.t.split(/(\s+)/).filter(x => x !== '');
+      for (const t of parts) words.push({ t, sub: r.sub, sup: r.sup });
     }
     const lines = [[]];
     let w = 0;
     for (const wd of words) {
       const ww = runWidth(wd, size);
-      const isSpace = !wd.sub && /^\s+$/.test(wd.t);
+      const isSpace = !wd.sub && !wd.sup && /^\s+$/.test(wd.t);
       if (w + ww > width && w > 0 && !isSpace) { lines.push([]); w = 0; }
       if (isSpace && w === 0) continue;
       // a single word longer than the width is split by characters
-      if (ww > width && !wd.sub) {
+      if (ww > width && !wd.sub && !wd.sup) {
         for (const ch of doc.splitTextToSize(wd.t, width)) { if (w > 0) { lines.push([]); w = 0; } lines[lines.length - 1].push({ t: ch, sub: false }); w = runWidth({ t: ch }, size); }
         continue;
       }

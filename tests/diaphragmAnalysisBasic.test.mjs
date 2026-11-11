@@ -214,6 +214,10 @@ test('Analysis tab: View 1 painted per band, case buttons, line-force table with
   const box = document.createElement('div');
   diaphragmAnalysis.renderForm(box, inputs, () => {}, [], () => {}, {});
   [...box.querySelectorAll('button')].find(b => b.textContent === 'Analysis').dispatchEvent(new window.Event('click'));
+  // load combination (2026-11-10): the item's design basis is ASD (0.6W) — the book values are at 1.0W → LRFD
+  const sel = box.querySelector('select[data-combo]');
+  for (const o of sel.querySelectorAll('option')) { if (o.value === 'LRFD') o.setAttribute('selected', ''); else o.removeAttribute('selected'); }
+  sel.dispatchEvent(new window.Event('change'));
   const g = box.querySelector('g.td-view1');
   assert.ok(g && g.querySelectorAll('rect').length >= 5, 'bands painted');
   assert.ok(box.textContent.includes('View 1'));

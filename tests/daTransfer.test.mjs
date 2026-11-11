@@ -160,15 +160,19 @@ function runLv(level = {}, def = swdDef()) {
 }
 const vA = cs => Math.abs(cs.diaphragms[0].intervals[0].Va) / 70; // plf at A (load along x)
 
-test('diaphragm level = k_D·own + Ω₀·walls above: at A 1.2 × 71.43 + 2.5 × 142.86 = 442.86 plf; +25 % → 532.14; members close', () => {
+test('diaphragm level = k_D·own + Ω₀·walls above: at A 1.2 × 71.43 + 2.5 × 142.86 = 442.86 plf; +25 % → max(Ω₀, 1.25) (td-v19); members close', () => {
   const { r } = runLv({ diaphragmFactor: '1.2', transferOmega: '2.5' });
   assert.equal(r.forceLevels.transfer, 2.5);
   const d = r.levelD.find(c => c.dir === 'x');
   assert.ok(near(vA(scaleCase(d, 1.2)), 1.2 * 5000 / 70 + 2.5 * 10000 / 70, 0.01), 'D ' + vA(scaleCase(d, 1.2)));
   for (const m of d.members) for (const run of m.runs) assert.ok(Math.abs(run.residual) < 1, m.name);
+  // td-v19 (user 2026-11-10, ASCE 7-22 §12.3.3.5 exception): the 25 % is not combined with Ω₀ — max(Ω₀ T, 1.25 T)
   const r2 = runLv({ diaphragmFactor: '1.2', transferOmega: '2.5', transferIncrease: true }).r;
-  assert.equal(r2.forceLevels.transfer, 3.125);
-  assert.ok(near(vA(scaleCase(r2.levelD.find(c => c.dir === 'x'), 1.2)), 1.2 * 5000 / 70 + 3.125 * 10000 / 70, 0.01));
+  assert.equal(r2.forceLevels.transfer, 2.5, 'max(2.5, 1.25) — was 2.5 × 1.25 = 3.125 before td-v19');
+  assert.ok(near(vA(scaleCase(r2.levelD.find(c => c.dir === 'x'), 1.2)), 1.2 * 5000 / 70 + 2.5 * 10000 / 70, 0.01));
+  const r3 = runLv({ diaphragmFactor: '1.2', transferOmega: '1.1', transferIncrease: true }).r;
+  assert.equal(r3.forceLevels.transfer, 1.25, 'a typed Ω₀ below 1.25: the 25 % governs');
+  assert.ok(near(vA(scaleCase(r3.levelD.find(c => c.dir === 'x'), 1.2)), 1.2 * 5000 / 70 + 1.25 * 10000 / 70, 0.01));
   // 1.0E and the line forces to SWD are not changed by the factors
   assert.deepEqual(r2.lineForces, run().lineForces);
 });
