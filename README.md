@@ -262,8 +262,8 @@ Diaphragm to LRS is the reference implementation (`diaphragmToLrsMigrate.js`, `n
 
 ## Known limitations / open items
 
-- **Diaphragm to LRS**: guide `docs/diaphragm-to-lrs.md`, backlog `docs/diaphragm-to-lrs-backlog.md` (start with "Next session — start here"; set 2026-11-10: open items 1, 6, 7).
-- **Shear Wall Design backlog**: see `docs/shear-wall-backlog.md` (start with "Next session — start here"; set 2026-11-10: open items 1, 6, 7).
+- **Diaphragm to LRS**: guide `docs/diaphragm-to-lrs.md`, backlog `docs/diaphragm-to-lrs-backlog.md` (start with "Next session — start here").
+- **Shear Wall Design backlog**: see `docs/shear-wall-backlog.md` (start with "Next session — start here"; set 2026-11-11: PR #10 review + browser check, Simpson follow-up on the SSWH anchor arms).
 - **PDF export** (`src/pdf.js`, all calculators): the Export PDF button sits in a toolbar at the top of every calculator (`itemForm.js`); a module that declares `pdfOptions = { key, label, options }` gets a report dropdown next to it (Shear Wall: Summary / Detailed). Sections may set `heading` (large wall-line title), `landscape`, `pageBreakBefore`; table cells may be `{ t, color }`; text supports `_{…}` subscripts and Greek / arrow / math signs (drawn with the PDF Symbol font).
 
 - **No real-time edit locking**: Postgres writes are last-writer-wins. The audit ledger preserves every committed mutation, while the calculation's convenience revision array remains capped.

@@ -19,99 +19,29 @@ the local DB (README, Tests).
   grid layer on the elevation). It is inactive unless adopted; no schema bump (new fields `inputs.planLink`,
   `line.planOrigin` are optional, absent = before). Freeze identical (36 repo / 37 DB items).
 
-## Next session — start here (set 2026-11-10)
-**State (updated 2026-11-11):** branch `sw-posts-double-hd` committed (30e5f56) and merged with master after PR #9
-(00fc03b, conflicts in package.json / README only); **PR #10 → master open**. CALC_VERSION **v27**, schema **13**. All
-45 test commands green. Done this round: items 1–7 (see the round entry below) + elevation text size.
-Still open: the user's browser check of SSWH panels; follow up with Simpson on the SSWH12 / 15 / 18 anchor arms.
+## Next session — start here (set 2026-11-11, end of session)
+**State:** branch `sw-posts-double-hd` — round committed (30e5f56), master merged in after PR #9 (00fc03b), backlog
+(f58f9c2); **PR #10 → master open, mergeable**. CALC_VERSION **v27**, schema **13** (unchanged this round). All 45
+`npm test` commands green, `npx vite build` OK, SWD freeze baseline = the accepted v27 state. Round items 1–7 + elevation
+text size are DONE — details in the round entry below.
 
-**Item 1 built 2026-11-10 (calc v26, uncommitted) — floor plate depth in the overturning height; details in the
-round entry, item 1.** Repo freeze baseline rewritten after the user's OK (only the Setup form of 6 items changed — results / PDF /
-elevations identical). Still to do: the user's look in the browser (Setup table + a depth entered).
+**Open:**
+1. **User:** review / merge PR #10; browser check — SSWH panels (p. 29 stack: SSWH24 at both levels, upper "Two-story
+   stacked — 2nd story", Setup floor plate depth 12" → base M 45,000 ≤ 49,905 ft·lb, upper "not calc / deferred (TSS
+   kit)"), garage portal, wood floor; Setup floor plate depth + Ground row; elevation grips / snapping and A− / A+ text
+   size; "(2)HDUE…" labels on the elevation.
+2. **Follow up with Simpson:** SSWH12 / 15 / 18 anchor arm — p. 15 n.9 prints 7.75 / 9.5 / 12 in (used, conservative);
+   the tabulated T implies 8⅛ / 10⅜ / 12⅝ in (SSWH15x13 ≈ 11¼). SSWH-TSS_KT per-width model numbers are not printed.
+3. **Tell the engineers:** saved projects with a stacked WSWH pair (local: Test-123, 26998, 29999, SW-VERIFY V21) show
+   "Floor plate depth between the stacked panels is 0" until the floor plate depth is entered in Setup (d = 0 used).
+4. **Known gaps, not addressed (from item 1, 2026-11-10):** (a) an upper wall end that lands mid-wall below is not
+   carried down (warning only) and G9 still passes; (b) the lever arm is the full wall length L, not the chord post
+   centre-to-centre distance.
+5. **Smaller (carried over):** DA "swd-group-nailing" (held alternating nailing) is no longer reached by any test (item 2);
+   offered, not taken up: DA user-project tests check closure / sums / statics instead of exact SWD shares; + Wall
+   placement still snaps to wall ends / 0.5 ft only (no gridlines).
 
-**Elevation text size — DONE 2026-11-10 (view only, no calc change).** User: screen only (PDF unchanged), remembered per
-person in this browser (localStorage `swd.elevationTextScale`), "A− 100% A+" next to zoom, 70–160 % in 10 % steps, the %
-button resets to 100 %. The scene is laid out on a canvas narrower by the scale and shown scaled up (viewBox), so text,
-label bands and spacing grow together (no overlaps; a crowded label becomes a hover dot as before) and the line keeps its
-screen width; mouse positions are divided by the scale. 100 % = no viewBox = the drawing exactly as before (freeze
-identical). Test in `tests/swdElevationDrag.test.mjs` (a drag at 70 / 150 % lands where it does at 100 %).
-
-**Item 6 — stacked Strong-Wall base moment — built 2026-11-10 (calc v27, uncommitted); change list accepted by the
-user, V21 golden accepted, freeze baseline rewritten, `npm test` green.** Plan: `~/.claude/plans/for-item-1-see-harmonic-hamming.md`.
-- **Bug fixed:** M = [V₁·H₁ + V₂·(H₁ + d_fl + H₂)]/12 counted V₂·H₁ twice (V₁, the base panel's share, already includes
-  V₂). Now **M = V₁·h₁ + V₂·(h₂ + d)** at story heights (C-L-SW26 p. 29: 1,500 × 18 + 2,000 × 9 = 45,000; before 57,010).
-  Also used in `wswhDeltaAt` (deflection distribution), G6, the calc sheet S5 and the Strong-Wall tab.
-- **One floor depth:** d = Setup floor plate depth of the story below (panel field "Floor depth d_fl" removed; stored
-  `wswhFloorDepth` no longer read). d = 0 → warning; d > 18" → warning (was an error that zeroed the panel).
-- **M_allow / Δ / T from Table 07** (new `WSWH/07_wswh_stacked_first_story.md`, p. 50 text layer, 22 rows; README §5
-  rewritten; Table 03 re-checked = all 22 rows match). Interpolated on height only; no P interpolation. P₁ > 4,000 /
-  P₂ > 2,000 lb → warning (were errors). Base panel V = M·12/H_e for the line distribution.
-- **G9:** a stacked pair is checked exactly (base couple measured over the anchor arm B); the "not a loss" note stays
-  for single panels only.
-- Tests: new `tests/shearWallStacked.test.mjs` (6); Round2 / CalcSheet S5 / Report appendix updated; V21 hand calc
-  rewritten (PASS) — golden diff T 20.58 → 16.26 k, Δ₁ 0.607 → 0.480 in, Level 1 drift NG → OK.
-- **Change list (v26 → v27, saved stacked items, Setup depth blank → d = 0 + warning):** Test-123 / 29999 SW-4
-  M 42,634 → 44,318, D/C 0.66 → 0.69 (deflection distribution now gives the base panel 3.74 k instead of 2.35 k; wood
-  SW-3 3.65 → 2.26 k); 26998 line 2 SW-61 / SW-63 M 41,490 → 28,796, D/C 1.39 (OVER) → 0.96, T 27.8 → 19.3 k (drift
-  sizing then moves SW-66 (2)HDUE13 → (2)HDUE17); SW-VERIFY V21 M 30,621 → 23,400. Every other item: G6 description
-  text only (no numbers); single-panel items: info fields + note text.
-- **SSWH (item 7) step A — DONE 2026-11-10, awaiting the user's review:** `Shearwall design reference/SSWH/` 00_README +
-  11 concrete (204 rows), 12 portal (36), 13 wood floor (34), 14 stacked upper (34), 15 stacked first story -STK (34),
-  16 geometry / B / kits / factors — WSWH format, extracted from the PDF text layers, self-checked (README §6).
-  Open questions in README §7: anchor arm B for SSWH12/15/18 (tabulated T implies a larger B than p. 15 n.9),
-  p. 29 example 3,900 vs table 3,625, ESR-1679 code basis, portal header moment as information only.
-  **User answers 2026-11-10:** SSWH concrete / stack base use the p. 15 n.9 arms as printed (tables imply 8⅛ / 10⅜ / 12⅝
-  for 12 / 15 / 18 — follow up with Simpson; README §6-A); stacked 2nd story (WSWH 03 / SSWH 14): no B, no tension check,
-  TSS kit only (T not used in any design result); p. 29 3,900 lb = Simpson unpublished data at P = 3,750 (table values
-  stand); ESR-1679 covers 2021 IBC; portal header moment = information only; SWH-AB bolt spacing (p. 90) reference only.
-  **Step B — built 2026-11-10 (calc v27, uncommitted); change list accepted by the user, V21 golden accepted, freeze
-  baseline rewritten, `npm test` green. Still to do: the user's look in the browser (SSWH panel, p. 29 stack).**
-  - `scripts/buildSswhData.mjs` (`npm run sswh:build`) → GENERATED `shearWallSswhData.js` (T11–T15, ARM, KITS).
-  - New wall type `systemType: 'sswh'` ("Simpson Strong-Wall SSWH (steel)"), reusing the `wswh*` fields + `wswhRim`; no
-    schema bump. `isWswh` = either family; `familyOf` picks tables / widths (12/15/18/21/24) / arms / kits.
-    Conditions: concrete (T11, P to 7,500 interpolated, above → warning), garage portal (T12, f'c to 4,000, T = k·V·H/B,
-    k 0.90 for 12/15 ≤ 93¼"), wood floor (T13, joist × 0.91, DFL rim × 0.84, P > 2,000 → warning), stacked 2nd story
-    (T14, joist 14"/18" × 0.96, DFL × 0.95), stack base (T15 -STK, M = V₁·h₁ + V₂·(h₂ + d)). Anchors SWH-AB (Table 06).
-    SSWH results carry `wswh.family: 'SSWH'` (WSWH results unchanged).
-  - **Stacked 2nd story (both families): no B, no tension** — lateral end forces not calculated (otm1 = 0); every
-    display shows **"not calc / deferred (TSS kit)"** instead of 0 (user 2026-11-10: deferred, the kit works) — wall
-    schedule T (C "gravity only"), overturning summary / detail, calc sheet M_OT and load-case rows, elevation T/C strip
-    and end hover tips (`lateralDeferred`, `DEFERRED_TEXT` in shearWallWswh.js); G6 expects 0.
-  - Hardware tab / PDF appendix: SSWH section (T11–T15) after WSWH. Strong-Wall tab, schedules, calc sheet use the family.
-  - Tests: `tests/shearWallSswh.test.mjs` (8, p. 29 example: 45,000 ≤ 49,905, TSS kit, T = M/B 17.5); V21 SW-1 lateral
-    T = 0 (golden 4.21 → 0); CalcSheet S5. **Change list:** saved stacked WSWH upper panels (Test-123 / 29999 SW-2, 26998
-    SW-60 / SW-62, V21 SW-1): lateral T / C 0, kit and D/C unchanged; stack bases identical to the accepted item-6 list;
-    WSWH items: PDF note text (TSS kit note); no other item changes (DB freeze count unchanged).
-
-**Open — continue with these (user 2026-11-10):**
-1. ~~**Item 1 — stacked (2+ story) global overturning.**~~ DONE (see the round entry). Original notes: The user links the T/C height question to stacked global
-   overturning; the concern is not yet stated — **first ask what result / case prompted it**. Facts found 2026-11-10:
-   - Level forces F_x are accumulated top-down to story shears (`accumulateStoryShear`); own OTM = story shear ×
-     floor-to-floor; upper end T / C added to the lower wall ends (accumulated). Base T = Σ F·H / L. Checked on a
-     3-story aligned line (F 3 / 2 / 1 k, h 9 / 10 / 11 ft, L 10 ft): T 2.70 → 7.70 → 14.30 k = 143 k·ft / 10 ✓; G9
-     checks the line base moment = Σ V·h on every line.
-   - Gaps that may be what the user means:
-     a. **Upper end not aligned** (lands mid-wall below): that end's force is **not** carried down — warning "lands
-        mid-wall … add a post below (no load transferred)". In the test (8 ft walls over a 10 ft wall) the
-        compression at 8 ft is lost (no post / bearing designed for it) and **G9 still passes** (it counts the
-        excluded force) — only the warning shows it.
-     b. **Lever arm = full wall length L**, not the chord post centre-to-centre distance (≈ L − one post width).
-     c. WSWH stacked panels use M = V₁·H₁ + V₂·(H₁ + d_fl + H₂) (with the floor depth) — see item 6.
-2. **Item 6 — stacked WSWH "allowable moment" calculated like the other walls.** Waiting for the user's references
-   (to be added to the Shearwall design reference folder). Today: M_allow = V₀·H₁/12 (1st-story panel table V₀), M_d as
-   in 1c (`shearWallWswh.js` ~line 136). Resolve the on-hold **WSWH moment arm B** question in the same step (entry
-   "ON HOLD — WSWH moment arm B" below). Plan with ≥ 2 options before coding.
-3. **Item 7 — Simpson Steel Strong-Wall data** (stronger than WSWH), after item 6. The user provides the data; same
-   format and layout as WSWH (reference .md tables → generator script like `buildWswhData.mjs` → Hardware tab section
-   → wall type / panel family). Plan when the data arrives.
-
-**Also open (smaller):**
-- Look at items 2 and 5 in the browser (long labels "(2)HDUE17" on the elevation; resize grips, gridline snap).
-- DA "swd-group-nailing" (held alternating nailing) no longer reached by any test (item 2 entry below).
-- Offered, not taken up: DA user-project tests check closure / sums / statics instead of exact SWD shares.
-- + Wall placement still snaps to wall ends / 0.5 ft only (no gridlines) — not asked.
-
-## Round 2026-11-09 (branch `sw-posts-double-hd` off master, uncommitted) — user list of 7 items
+## Round 2026-11-09 … 11-11 (branch `sw-posts-double-hd`, PR #10) — user list of 7 items + extras
 Plan agreed item by item before coding. Order: 3 + 4 → 2 → 5 → 6 → 7.
 1. **T/C height / stacked overturning — DONE 2026-11-10 (calc v26)**. First answer (no change): OTM = V × level
    floor-to-floor (floor framing included), arm = full wall length L; upper-story end forces carried down as point
@@ -191,8 +121,58 @@ Plan agreed item by item before coding. Order: 3 + 4 → 2 → 5 → 6 → 7.
    - Placing a new wall (+ Wall) keeps the old snapping (wall ends / 0.5 ft) — not asked.
    - Tests: `tests/swdElevationDrag.test.mjs` (6: rules + a real grip drag with and without a gridline). Freeze identical
      (grips only on a selected wall). Not yet looked at in the browser.
-6. **Stacked WSWH allowable moment like the other walls — OPEN, waiting for references** (start-here 2026-11-10).
-7. **Simpson steel Strong-Wall data, WSWH layout — OPEN, after 6** (start-here 2026-11-10).
+6. **Stacked Strong-Wall base moment — DONE 2026-11-10 (calc v27; change list accepted).**
+Built 2026-11-10; change list accepted, V21 golden accepted, freeze baseline rewritten. Plan: `~/.claude/plans/for-item-1-see-harmonic-hamming.md`.
+   - **Bug fixed:** M = [V₁·H₁ + V₂·(H₁ + d_fl + H₂)]/12 counted V₂·H₁ twice (V₁, the base panel's share, already includes
+     V₂). Now **M = V₁·h₁ + V₂·(h₂ + d)** at story heights (C-L-SW26 p. 29: 1,500 × 18 + 2,000 × 9 = 45,000; before 57,010).
+     Also used in `wswhDeltaAt` (deflection distribution), G6, the calc sheet S5 and the Strong-Wall tab.
+   - **One floor depth:** d = Setup floor plate depth of the story below (panel field "Floor depth d_fl" removed; stored
+     `wswhFloorDepth` no longer read). d = 0 → warning; d > 18" → warning (was an error that zeroed the panel).
+   - **M_allow / Δ / T from Table 07** (new `WSWH/07_wswh_stacked_first_story.md`, p. 50 text layer, 22 rows; README §5
+     rewritten; Table 03 re-checked = all 22 rows match). Interpolated on height only; no P interpolation. P₁ > 4,000 /
+     P₂ > 2,000 lb → warning (were errors). Base panel V = M·12/H_e for the line distribution.
+   - **G9:** a stacked pair is checked exactly (base couple measured over the anchor arm B); the "not a loss" note stays
+     for single panels only.
+   - Tests: new `tests/shearWallStacked.test.mjs` (6); Round2 / CalcSheet S5 / Report appendix updated; V21 hand calc
+     rewritten (PASS) — golden diff T 20.58 → 16.26 k, Δ₁ 0.607 → 0.480 in, Level 1 drift NG → OK.
+   - **Change list (v26 → v27, saved stacked items, Setup depth blank → d = 0 + warning):** Test-123 / 29999 SW-4
+     M 42,634 → 44,318, D/C 0.66 → 0.69 (deflection distribution now gives the base panel 3.74 k instead of 2.35 k; wood
+     SW-3 3.65 → 2.26 k); 26998 line 2 SW-61 / SW-63 M 41,490 → 28,796, D/C 1.39 (OVER) → 0.96, T 27.8 → 19.3 k (drift
+     sizing then moves SW-66 (2)HDUE13 → (2)HDUE17); SW-VERIFY V21 M 30,621 → 23,400. Every other item: G6 description
+     text only (no numbers); single-panel items: info fields + note text.
+7. **Simpson steel Strong-Wall SSWH — DONE 2026-11-10 (calc v27; reference files reviewed, change list accepted).**
+   - **SSWH (item 7) step A — DONE 2026-11-10, awaiting the user's review:** `Shearwall design reference/SSWH/` 00_README +
+     11 concrete (204 rows), 12 portal (36), 13 wood floor (34), 14 stacked upper (34), 15 stacked first story -STK (34),
+     16 geometry / B / kits / factors — WSWH format, extracted from the PDF text layers, self-checked (README §6).
+     Open questions in README §7: anchor arm B for SSWH12/15/18 (tabulated T implies a larger B than p. 15 n.9),
+     p. 29 example 3,900 vs table 3,625, ESR-1679 code basis, portal header moment as information only.
+     **User answers 2026-11-10:** SSWH concrete / stack base use the p. 15 n.9 arms as printed (tables imply 8⅛ / 10⅜ / 12⅝
+     for 12 / 15 / 18 — follow up with Simpson; README §6-A); stacked 2nd story (WSWH 03 / SSWH 14): no B, no tension check,
+     TSS kit only (T not used in any design result); p. 29 3,900 lb = Simpson unpublished data at P = 3,750 (table values
+     stand); ESR-1679 covers 2021 IBC; portal header moment = information only; SWH-AB bolt spacing (p. 90) reference only.
+     **Step B — built 2026-11-10; change list accepted, V21 golden accepted, freeze baseline rewritten.**
+     - `scripts/buildSswhData.mjs` (`npm run sswh:build`) → GENERATED `shearWallSswhData.js` (T11–T15, ARM, KITS).
+     - New wall type `systemType: 'sswh'` ("Simpson Strong-Wall SSWH (steel)"), reusing the `wswh*` fields + `wswhRim`; no
+       schema bump. `isWswh` = either family; `familyOf` picks tables / widths (12/15/18/21/24) / arms / kits.
+       Conditions: concrete (T11, P to 7,500 interpolated, above → warning), garage portal (T12, f'c to 4,000, T = k·V·H/B,
+       k 0.90 for 12/15 ≤ 93¼"), wood floor (T13, joist × 0.91, DFL rim × 0.84, P > 2,000 → warning), stacked 2nd story
+       (T14, joist 14"/18" × 0.96, DFL × 0.95), stack base (T15 -STK, M = V₁·h₁ + V₂·(h₂ + d)). Anchors SWH-AB (Table 06).
+       SSWH results carry `wswh.family: 'SSWH'` (WSWH results unchanged).
+     - **Stacked 2nd story (both families): no B, no tension** — lateral end forces not calculated (otm1 = 0); every
+       display shows **"not calc / deferred (TSS kit)"** instead of 0 (user 2026-11-10: deferred, the kit works) — wall
+       schedule T (C "gravity only"), overturning summary / detail, calc sheet M_OT and load-case rows, elevation T/C strip
+       and end hover tips (`lateralDeferred`, `DEFERRED_TEXT` in shearWallWswh.js); G6 expects 0.
+     - Hardware tab / PDF appendix: SSWH section (T11–T15) after WSWH. Strong-Wall tab, schedules, calc sheet use the family.
+     - Tests: `tests/shearWallSswh.test.mjs` (8, p. 29 example: 45,000 ≤ 49,905, TSS kit, T = M/B 17.5); V21 SW-1 lateral
+       T = 0 (golden 4.21 → 0); CalcSheet S5. **Change list:** saved stacked WSWH upper panels (Test-123 / 29999 SW-2, 26998
+       SW-60 / SW-62, V21 SW-1): lateral T / C 0, kit and D/C unchanged; stack bases identical to the accepted item-6 list;
+       WSWH items: PDF note text (TSS kit note); no other item changes (DB freeze count unchanged).
+8. **Elevation text size — DONE 2026-11-10 (view only, no calc change).** User: screen only (PDF unchanged), remembered per
+   person in this browser (localStorage `swd.elevationTextScale`), "A− 100% A+" next to zoom, 70–160 % in 10 % steps, the %
+   button resets to 100 %. The scene is laid out on a canvas narrower by the scale and shown scaled up (viewBox), so text,
+   label bands and spacing grow together (no overlaps; a crowded label becomes a hover dot as before) and the line keeps its
+   screen width; mouse positions are divided by the scale. 100 % = no viewBox = the drawing exactly as before (freeze
+   identical). Test in `tests/swdElevationDrag.test.mjs` (a drag at 70 / 150 % lands where it does at 100 %).
 
 ## Next session — start here (set 2026-10-29)
 **State:**

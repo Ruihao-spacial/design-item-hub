@@ -4,6 +4,7 @@ Branch `diaphragm-analysis` (off `master` 71cdfb5; module renamed from Transfer 
 Guide: `docs/diaphragm-analysis.md`. Book cases: `docs/diaphragm-analysis-book-cases.md`.
 
 ## Next session — start here (set 2026-11-10, end of session)
+**Update 2026-11-11:** PR #9 **merged to master** (c92a672), including 5bc7251 — ELF equation numbers per ASCE 7-22 (C_vx Eq. 12.8-13, F_x 12.8-12, V_x 12.8-14; user). The shear wall branch (PR #10) merged master in; all DA tests pass with the SWD v27 changes.
 **State:** committed on `da-phase3-td-engine` (36f892e, then the ELF review commit) and pushed; **PR #9 → master** open
 (the PR link is in the PR list; PR #8 merged 2026-11-09). CALC_VERSION **td-v19**, ELF **v2**; SWD untouched (CALC v24,
 freeze identical). `npm test` 724 ok, build OK, books 649 / 649.
@@ -27,7 +28,7 @@ freeze identical). `npm test` 724 ok, build OK, books 649 / 649.
   different Seismic Base Shear items; +25 % tick ≠ linked ELF 25 % box.
 
 **Open, next session:**
-1. User: merge PR #9 after review; export a DA PDF from 26998 in the app (the drawings were checked in Chrome by
+1. ~~User: merge PR #9 after review~~ (merged 2026-11-11); export a DA PDF from 26998 in the app (the drawings were checked in Chrome by
    rendering the fixtures in the page, not by a real download).
 2. ~~User to confirm: V_x = ΣF_i is ASCE 7-22 Eq. 12.8-13~~ **Resolved 2026-11-10 (user):** ASCE 7-22 numbering is C_vx Eq. 12.8-13, F_x Eq. 12.8-12, V_x = ΣF_i Eq. 12.8-14 (ELF table + equations page + tests updated).
 3. Saved ELF items with the light-frame or 25 % box ticked get lower collector forces when opened (v2 rules); the k_C
