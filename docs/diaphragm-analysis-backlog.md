@@ -29,7 +29,7 @@ freeze identical). `npm test` 724 ok, build OK, books 649 / 649.
 **Open, next session:**
 1. User: merge PR #9 after review; export a DA PDF from 26998 in the app (the drawings were checked in Chrome by
    rendering the fixtures in the page, not by a real download).
-2. User to confirm: V_x = ΣF_i is ASCE 7-22 **Eq. 12.8-13** (ELF table + equations page; the old page said §12.8.6).
+2. ~~User to confirm: V_x = ΣF_i is ASCE 7-22 Eq. 12.8-13~~ **Resolved 2026-11-10 (user):** ASCE 7-22 numbering is C_vx Eq. 12.8-13, F_x Eq. 12.8-12, V_x = ΣF_i Eq. 12.8-14 (ELF table + equations page + tests updated).
 3. Saved ELF items with the light-frame or 25 % box ticked get lower collector forces when opened (v2 rules); the k_C
    they offer DA changes with them. Production items: check after the merge.
 4. Deferred (reviewed by the user 2026-11-10):

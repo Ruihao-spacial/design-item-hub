@@ -77,7 +77,7 @@ test('screen tables: header rows symbol (one line) / unit / reference; equal wid
   const [st, dt, ct] = tables;
   assert.deepEqual(txt(row(st, 'label')), ['Level', 'wx', 'hx', 'wx·hxk', 'Cvx', 'Fx', 'Vx']);
   assert.deepEqual(txt(row(st, 'unit')), ['', 'kip', 'ft', '', '', 'kip', 'kip']);
-  assert.deepEqual(txt(row(st, 'ref')), ['', '', '', '', 'Eq. 12.8-12', 'Eq. 12.8-11', 'Eq. 12.8-13']);
+  assert.deepEqual(txt(row(st, 'ref')), ['', '', '', '', 'Eq. 12.8-13', 'Eq. 12.8-12', 'Eq. 12.8-14']);
   assert.deepEqual(txt(row(dt, 'label')).slice(-2), ['1.25·Fpx,des', '1.25·Fpx,des / Fx']);
   assert.deepEqual(txt(row(dt, 'ref')).slice(1), ['§12.10.1.1', 'Eq. 12.10-1', 'Eq. 12.10-3', 'Eq. 12.10-2', '§12.10.1.1', '§12.3.3.5', '= kD (DA)']);
   assert.deepEqual(txt(row(ct, 'label')), ['Level', 'Ω0·Fx', 'Ω0·Fpx,des', '1.25·ρ·Fpx,min', 'Fc', 'Fc / Fpx,des', 'Fc / Fx']);
@@ -117,7 +117,7 @@ test('form: three option ticks with notes; PDF: options, column references, equa
   assert.ok(ct.headers.includes('1.25·ρ·F_{px,min} (kip) [§12.10.2.1(3)]') && ct.headers.includes('F_{c} / F_{x} [= k_{C} (DA)]'), ct.headers.join(' | '));
   assert.ok(ct.colWidths.every(w => Math.abs(w - 1 / ct.headers.length) < 1e-12), 'equal PDF column widths');
   const et = secs.find(s => (s.title || '').startsWith('ELF Story Shear')).table;
-  assert.ok(et.headers.includes('w_{x}·h_{x}^{k}') && et.headers.includes('C_{vx} [Eq. 12.8-12]'), et.headers.join(' | '));
+  assert.ok(et.headers.includes('w_{x}·h_{x}^{k}') && et.headers.includes('C_{vx} [Eq. 12.8-13]'), et.headers.join(' | '));
   assert.ok(secs[0].rows.some(r => r[0] === 'S_{DS}'));
   const dt = secs.find(s => (s.title || '').startsWith('Diaphragm Design Forces')).table;
   assert.ok(dt.headers.some(h => h.includes('[§12.3.3.5]')), dt.headers.join(' | '));

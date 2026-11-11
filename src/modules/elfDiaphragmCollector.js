@@ -399,16 +399,16 @@ export const elfDiaphragmCollector = {
           parts: [] },
         { ref: 'Eq. 12.8-1',
           parts: [{ t: 'V = C' }, { t: 's', sub: true }, { t: ' · W' }] },
-        { ref: 'Eq. 12.8-12',
+        { ref: 'Eq. 12.8-13',
           parts: [
             { t: 'C' }, { t: 'vx', sub: true }, { t: ' = (w' }, { t: 'x', sub: true },
             { t: ' · h' }, { t: 'x', sub: true }, { t: 'k', sup: true },
             { t: ') / ' }, { t: 'S', greek: true }, { t: '(w' }, { t: 'i', sub: true },
             { t: ' · h' }, { t: 'i', sub: true }, { t: 'k', sup: true }, { t: ')' },
           ] },
-        { ref: 'Eq. 12.8-11',
+        { ref: 'Eq. 12.8-12',
           parts: [{ t: 'F' }, { t: 'x', sub: true }, { t: ' = C' }, { t: 'vx', sub: true }, { t: ' · V' }] },
-        { ref: 'Eq. 12.8-13',
+        { ref: 'Eq. 12.8-14',
           parts: [{ t: 'V' }, { t: 'x', sub: true }, { t: ' = ' }, { t: 'S', greek: true }, { t: 'F' }, { t: 'i', sub: true }] },
 
         { desc: 'Diaphragm Design Forces (§12.10.1.1)',
@@ -472,7 +472,7 @@ export const elfDiaphragmCollector = {
 // markup (X_{sub}, X^{sup}) so every symbol is drawn with its subscript / superscript on screen and in the PDF; the
 // references kept short so the columns stay equal and narrow (user 2026-11-10)
 const ELF_COLS = [['Level', '', ''], ['w_{x}', 'kip', ''], ['h_{x}', 'ft', ''], ['w_{x}·h_{x}^{k}', '', ''],
-  ['C_{vx}', '', 'Eq. 12.8-12'], ['F_{x}', 'kip', 'Eq. 12.8-11'], ['V_{x}', 'kip', 'Eq. 12.8-13']];
+  ['C_{vx}', '', 'Eq. 12.8-13'], ['F_{x}', 'kip', 'Eq. 12.8-12'], ['V_{x}', 'kip', 'Eq. 12.8-14']]; // ASCE 7-22 numbering (user 2026-11-10)
 function DIAPH_COLS(o) {
   return [['Level', '', ''], ['w_{px}', 'kip', '§12.10.1.1'], ['F_{px}', 'kip', 'Eq. 12.10-1'], ['F_{px,min}', 'kip', 'Eq. 12.10-3'],
     ['F_{px,max}', 'kip', 'Eq. 12.10-2'], ['F_{px,des}', 'kip', '§12.10.1.1'],
