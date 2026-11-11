@@ -103,6 +103,25 @@ test('Sill plate F_c⊥ is the dimension grade (Table 4A / 4B): crushing in Eq. 
   assert.equal(w.deflection.E.Fcperp, 425);
 });
 
+test('Post capacity = F_c′ × A, sill bearing information only; C_b = 1.0 for l_b ≥ 6 in (user 2026-11-09, v25)', () => {
+  const df = woodBasis({ species: 'DF-L', woodGrade: 'dfir_no1', postGrade: 'dfir_pt_no1' });
+  for (const id of ['2x4', '(2)2x4', '(3)2x4', '4x4', '6x4', '8x4', '(2)2x6', '4x6', '6x6', '8x6']) {
+    const p = postSizeById(id);
+    for (const h of [8, 10, 12]) {
+      const r = computePostCapacity(p, df, h);
+      if (!r) continue;
+      near(r.capacityKips, Math.round(r.FcPrime * p.area / 10) / 100, 0.5 * p.area / 1000 + 0.006, id /* F_c′ shown rounded to 1 psi */ + ' at ' + h + ' ft = column capacity');
+      assert.equal(r.governedBy, 'axial');
+      near(r.CB, p.d2 < 6 ? (p.d2 + 0.375) / p.d2 : 1.0, 1e-4, id + ' C_b');
+    }
+  }
+  assert.equal(computePostCapacity(postSizeById('8x6'), df, 10).CB, 1); // l_b = 7.5 in ≥ 6 in
+  assert.equal(computePostCapacity(postSizeById('8x4'), df, 10).CB, 1);
+  // a short heavy 2x4 post on the sill: bearing (625 × 1.25 × 5.25 = 4.1 k) is below the column value — not used
+  const r = computePostCapacity(postSizeById('2x4'), df, 4);
+  assert.ok(r.FcPerpPrime < r.FcPrime && r.capacityKips > r.FcPerpPrime * 5.25 / 1000);
+});
+
 test('Deflection: Δa = δ_LRFD × T / T_LRFD (lateral T); chord E of the end post; warning when T₁.₀ > LRFD cap', () => {
   const w = wallsOf(calcAll(oneStory([W('w-1', 0, 8)])))[0];
   const d = w.deflection.E;

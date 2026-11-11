@@ -73,10 +73,15 @@ test('Regression: aligned stacked walls match Phase 3 results (nailing, T/C, acc
     anchorageDC: [w.anchorageDCLeft, w.anchorageDCRight],
     post: [(w.postLeft || {}).postLabel || null, (w.postRight || {}).postLabel || null], postDC: [w.postDCLeft, w.postDCRight] }));
   // Phase 3 also set accum values on the top wall of a stack (= its own); now only walls that receive load have them
+  // Double holdowns / straps (user 2026-11-09): an end that was OVER (null) in the baseline — no single strap carries it —
+  // now takes the lightest double of the ladder (SW-3 / SW-4: (2)MSTC52); its D/C is new
   const base = baselineA.map(r => {
     const now = rows.find(x => x.mark === r.mark);
+    if (now) r = { ...r, anchorage: r.anchorage.map((a, j) => (a === null && /^\(2\)/.test(now.anchorage[j] || '') ? now.anchorage[j] : a)),
+      anchorageDC: r.anchorageDC.map((v, j) => (r.anchorage[j] === null && /^\(2\)/.test(now.anchorage[j] || '') ? now.anchorageDC[j] : v)) };
     return now && now.accumT === null && r.accumT === Math.max(...r.govT) ? { ...r, accumT: null, accumC: null } : r;
   });
+  assert.deepEqual(rows.filter(r => r.mark === 'SW-3' || r.mark === 'SW-4').map(r => r.anchorage), [['(2)MSTC52', '(2)MSTC52'], ['(2)MSTC52', '(2)MSTC52']]);
   // HDUE17 4" wall cap 17,685 → 16,040 lb (C-C2026, data 2026-10-13): SW-5 / SW-6 anchorage D/C 0.85 / 0.84 → 0.94 / 0.93 in the baseline
   // ids exact; forces within 0.02 k and D/C within 0.01 (unrounded end forces, calc v12: sums of stacked ends move ≤ 0.01 k)
   const ids = (r) => ({ mark: r.mark, nailing: r.nailing, anchorage: r.anchorage, post: r.post });

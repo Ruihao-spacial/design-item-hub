@@ -1,5 +1,5 @@
 import { pointInWallEnd, findAnchorage, selectEndPost } from './shearWallCalc.js';
-import { autoSelectHoldown, autoSelectStrap } from './shearWallHardware.js';
+import { autoSelectHoldown, autoSelectStrap, strapSpanOf } from './shearWallHardware.js';
 import { gravityValue } from './shearWallCombos.js';
 
 // Vertical load path: wall ends, posts at any story, transfer beams with user-defined supports.
@@ -168,7 +168,7 @@ export function resolveVerticalLoadPath(ctx) {
   function selectAnchorage(li, T, overrideId) {
     const lvl = levels[li];
     const useHoldown = li === nLv - 1 || lvl.anchorageType === 'holdown';
-    const floorSpan = lvl.floorClearSpan || '16';
+    const floorSpan = strapSpanOf(levels, lvl.id);
     const anchorage = overrideId ? findAnchorage(overrideId, floorSpan, group, lineThickness)
       : useHoldown ? autoSelectHoldown(T, group, lineThickness) : autoSelectStrap(T, floorSpan, group);
     const anchorageDC = anchorage && anchorage.cap > 0 ? r2(T * 1000 / anchorage.cap) : null;
@@ -349,7 +349,7 @@ export function resolveVerticalLoadPath(ctx) {
     wr.accumOmega = { asd: endEnvelope(accum, comboGroups, 'asd_omega'), lrfd: endEnvelope(accum, comboGroups, 'lrfd_omega') };
 
     const lvl = levels[levelIdx[w.levelId]];
-    const floorSpan = (lvl && lvl.floorClearSpan) || '16';
+    const floorSpan = lvl ? strapSpanOf(levels, lvl.id) : '16';
     const hook = ctx.wallHardware ? (T, ov) => ctx.wallHardware(w, T, ov) : () => undefined;
     const pickAnc = (ov, T) => { const h = hook(T, ov); if (h !== undefined) return h; return ov ? findAnchorage(ov, floorSpan, group, lineThickness)
       : wr.anchorageType === 'holdown' ? autoSelectHoldown(T, group, lineThickness) : autoSelectStrap(T, floorSpan, group); };

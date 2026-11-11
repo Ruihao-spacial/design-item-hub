@@ -35,10 +35,10 @@ const tried = (c) => c.tried.map(p => p.id + ' ' + f2(postCap(p, h).cap)).join('
 export default {
   id: 'V07', title: 'End post selection (NDS 2018)', slug: 'nds-post-capacity',
   intent: 'Six one-wall lines whose end compression steps through the post catalog. Proves the NDS 2018 column capacity, that posts are tried in catalog order (not sorted by capacity), that the HDUE minimum post removes smaller posts (compared by the post depth d2), and that a line with a 6" wall override uses the 6" post list.',
-  covers: ['NDS 2018 §3.7 column stability (C_P) and §3.10 bearing', 'catalog order selection', 'HDUE minimum post (P9)', 'line wall thickness override'],
+  covers: ['NDS 2018 §3.7 column stability (C_P)', 'catalog order selection', 'HDUE minimum post (P9)', 'line wall thickness override'],
   handCalc: [
     'Bottom story h = ' + h + ' ft, walls L = ' + L + ' ft, no self-weight → T = C = 0.7 × V × h / L = 0.7V. DF-L No.1 (F_c 1500, E_min 620,000, F_c⊥ 625 psi), C_D 1.6, K_e 1.0, weak axis braced at 6".',
-    'NDS example, (3)2x4 at 10 ft: F_c* = 1500 × 1.6 × 1.15 = ' + Math.round(p3.Fstar) + ' psi; F_cE = 0.822·E_min′/(l_e/d)² with l_e/d = 120/3.5 → ' + Math.round(p3.FcE) + ' psi; C_P = ' + f4(p3.Cp) + ' → F_c′ = ' + Math.round(p3.Fc1) + ' psi; bearing 625 × (4.5 + 0.375)/4.5 = ' + Math.round(p3.Fperp) + ' psi → cap = min × 15.75 in² = ' + f2(p3.cap) + ' k.',
+    'NDS example, (3)2x4 at 10 ft: F_c* = 1500 × 1.6 × 1.15 = ' + Math.round(p3.Fstar) + ' psi; F_cE = 0.822·E_min′/(l_e/d)² with l_e/d = 120/3.5 → ' + Math.round(p3.FcE) + ' psi; C_P = ' + f4(p3.Cp) + ' → F_c′ = ' + Math.round(p3.Fc1) + ' psi → cap = F_c′ × 15.75 in² = ' + f2(p3.cap) + ' k.',
     lines[0].name + ': C = ' + f2(lines[0].C) + ' k → ' + lines[0].hd.id + ', minimum post ' + lines[0].minId + '. 2x4 (2.50 k) would carry it but is below the minimum; tried: ' + tried(lines[0]) + ' → ' + lines[0].post.id + '.',
     B.name + ': C = ' + f2(B.C) + ' k → ' + B.hd.id + ' (min ' + B.minId + '); tried in order ' + tried(B) + ' → ' + B.post.id + ' (4x4 5.83 k is listed after (3)2x4, so it is never reached).',
     lines[2].name + ': C = ' + f2(lines[2].C) + ' k → ' + lines[2].hd.id + ', minimum 4x4 (d2 3.5"): (2)2x4 (d2 3.0") drops out, (3)2x4 (d2 4.5") stays; tried ' + tried(lines[2]) + ' → ' + lines[2].post.id + '.',

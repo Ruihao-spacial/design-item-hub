@@ -1,5 +1,5 @@
 import { nailingTable, autoSelectNailing, getNailingById, gaFor } from './shearWallNailing.js';
-import { autoSelectHoldown, autoSelectStrap, autoSelectPost, hdueMinPost, meetsMinPost, woodBasis, hdueTable, mstcTable, postSizeById, computePostCapacity, lrfdCap, anchorageFlex } from './shearWallHardware.js';
+import { autoSelectHoldown, autoSelectStrap, autoSelectPost, hdueMinPost, meetsMinPost, woodBasis, hdueLadder, mstcLadder, hdueOptions, mstcOptions, postSizeById, computePostCapacity, lrfdCap, anchorageFlex, floorDepthBelowIn, strapSpanInfo, strapSpanOf } from './shearWallHardware.js';
 import { resolveVerticalLoadPath } from './shearWallLoadPath.js';
 import { comboDefs } from './shearWallCombos.js';
 import { gravityRows, wallGravity, gravityToElements } from './shearWallGravity.js';
@@ -8,10 +8,10 @@ import { expandWalls, hasOpenings, wallMethod, wallPiers, sortedOpenings } from 
 import { ftaoCapacityLbf, ftaoDesign, ftaoLoadTypes } from './shearWallFtaoAdapter.js';
 import { wallDeflection, wallDeflectionAtShare, postArea, driftLimit } from './shearWallDeflection.js';
 import { lineChecks } from './shearWallChecks.js';
-import { isWswh, wswhWidthIn, wswhWidthFt, lookupWswh, stackedBaseCheck, selectWswhAnchor, RAISED_ANCHOR, tssKitAnchor, WSWH_PANEL_POST, conditionLabel } from './shearWallWswh.js';
+import { isWswh, wswhWidthIn, wswhWidthFt, lookupWswh, stackedBaseCheck, selectWswhAnchor, RAISED_ANCHOR, tssKitAnchor, panelPostOf, conditionLabel, familyOf } from './shearWallWswh.js';
 
 // Records which calc produced a stored results snapshot (results are always regenerated for display)
-export const CALC_VERSION = 'v24'; // v24 (2026-10-27): distribution warning dist_low_share (share < capacity share, shear D/C < 0.10); WSWH stacked 2nd-story rod arm B = Table 05-C B_stacked_in. v23 (2026-10-14): drift lateral only; Δa = δ_LRFD × T / T_LRFD (segmented + FTAO); δ(V) per wall type, no stored k
+export const CALC_VERSION = 'v27'; // v27 (2026-11-10): stacked WSWH base moment M = V₁·h₁ + V₂·(h₂ + d) at story heights (V₂·H₁ was counted twice), M_allow / Δ / T from Table 07 (p. 50), floor depth = Setup floor plate depth only, P over the stacked table basis = warning. v26 (2026-11-10): overturning height = FTF + floor plate depth below the wall (levels[i+1].floorPlateDepth, ground = inputs.groundDepth); strap table from that depth; blank depth = as before. v25 (2026-11-09): post capacity = F_c′ × A (no sill bearing check on any post; FTAO plate bearing no longer fails a wall; Δ_c kept in deflection); C_b = 1.0 for l_b ≥ 6 in. v24 (2026-10-27): distribution warning dist_low_share (share < capacity share, shear D/C < 0.10); WSWH stacked 2nd-story rod arm B = Table 05-C B_stacked_in. v23 (2026-10-14): drift lateral only; Δa = δ_LRFD × T / T_LRFD (segmented + FTAO); δ(V) per wall type, no stored k
 
 export function accumulateStoryShear(levelLoads, levels) {
   const result = {};
@@ -240,20 +240,28 @@ function prepareWswh(allWalls, levels, line, wallDLTypes, inputs, gOpts) {
     const floorH = parseFloat((levels[li] || {}).floorToFloor) || 0;
     const grav = resolveGravityAtWall({ ...w, _floorToFloor: floorH }, (line.gravityLoads || {})[w.levelId], wallDLTypes, gOpts(w.levelId));
     const cond = w.wswhCondition || 'concrete';
-    out[w.id] = { wall: w, li, floorH, grav, condition: cond, role: cond, width: wswhWidthIn(w), errors: [] };
+    out[w.id] = { wall: w, li, floorH, grav, condition: cond, role: cond, width: wswhWidthIn(w), family: familyOf(w), errors: [], warnings: [] };
   }
   for (const info of Object.values(out)) {
     const { wall: w, li, condition } = info;
     if (condition === 'stackedUpper') {
-      const below = panels.find(o => liOf(o.levelId) === li + 1 && wswhWidthIn(o) === info.width
+      const below = panels.find(o => liOf(o.levelId) === li + 1 && wswhWidthIn(o) === info.width && familyOf(o) === info.family
         && Math.abs((parseFloat(o.position) || 0) - (parseFloat(w.position) || 0)) <= 0.1);
       if (!below) info.errors.push('Stacked 2nd-story WSWH needs an equal-width WSWH directly below (±0.1 ft)');
       else if (liOf(below.levelId) !== bottom) info.errors.push('The WSWH below must be at the bottom story (two stories max)');
       else if ((below.wswhCondition || 'concrete') !== 'concrete') info.errors.push('The WSWH below must use the concrete foundation condition');
-      else { info.lowerId = below.id; out[below.id].role = 'stackedLower'; out[below.id].upperId = w.id; }
-      if ((parseFloat(w.wswhFloorDepth) || 0) > 18) info.errors.push('Floor depth ' + w.wswhFloorDepth + '" exceeds 18" (Table 03 n.6)');
+      else {
+        info.lowerId = below.id; out[below.id].role = 'stackedLower'; out[below.id].upperId = w.id;
+        // Floor between the panels = the Setup floor plate depth of the story below (the only source, user 2026-11-10);
+        // the panel's old wswhFloorDepth is no longer read. 0 or > 18" (Table 03 n.6) → warning, the pair still works.
+        const dIn = floorDepthBelowIn(levels, w.levelId, inputs.groundDepth);
+        out[below.id].stackD = dIn / 12;
+        const lowName = (levels[liOf(below.levelId)] || {}).name || 'the story below';
+        if (!(dIn > 0)) info.warnings.push('Floor plate depth between the stacked panels is 0 — enter it in Setup (row "' + lowName + '"); the base moment uses d = 0');
+        else if (dIn > 18 + 1e-9) info.warnings.push('Floor plate depth ' + dIn + '" between the stacked panels exceeds 18" (Table 03 n.6)');
+      }
     } else if (li !== bottom) {
-      info.errors.push(conditionLabel(condition) + ' is for the bottom story only — use "Two-story stacked" at the 2nd story');
+      info.errors.push(conditionLabel(condition, info.family) + ' is for the bottom story only — use "Two-story stacked" at the 2nd story');
     }
   }
   // Stack base carries the 2nd-story panel's gravity too (concentric, ½ each end) — F2
@@ -278,21 +286,23 @@ function prepareWswh(allWalls, levels, line, wallDLTypes, inputs, gOpts) {
     info.P = { E: Math.max((1.0 + 0.14 * sds) * D, (1.0 + 0.105 * sds) * D + 0.75 * Lv), W: Math.max(D, D + 0.75 * Lv + 0.75 * Lr) };
     info.look = {};
     for (const lt of ['E', 'W']) {
-      info.look[lt] = lookupWswh({ width: info.width, condition: info.role, ftfFt: info.floorH, P_lb: info.P[lt], fc, joist: info.wall.wswhJoist || '12' });
+      info.look[lt] = lookupWswh({ family: info.family, width: info.width, condition: info.role, ftfFt: info.floorH, P_lb: info.P[lt], fc,
+        joist: info.wall.wswhJoist || (info.family === 'SSWH' && info.role === 'stackedUpper' ? '14' : '12'), rim: info.wall.wswhRim || 'LSL' });
     }
     const err = info.look.E.error || info.look.W.error;
     if (err) info.errors.push(err);
+    for (const m of new Set([...(info.look.E.warnings || []), ...(info.look.W.warnings || [])])) info.warnings.push(m);
   }
   return out;
 }
 
 // δ (in) of a WSWH panel at a 1.0-level share Vk (k) — the same line as its reported drift: Δ_LRFD × V / V_LRFD;
-// stacked base Δ₀,LRFD × M / M_allow,LRFD with M = [V·H₁ + V₂·(H₁ + d_fl + H₂)] / 12 (upper panel's V₂ held).
+// stacked base Δ_LRFD(T07) × M / M_allow,LRFD with M = V·h₁ + V₂·(h₂ + d) (story heights; upper panel's V₂ held).
 export function wswhDeltaAt(x, lt, Vk) {
   if (!x || !x.ok || !(x.VcapL[lt] > 0) || !(x.DcapL[lt] > 0)) return null;
   const st = x.stacked && x.stacked[lt];
   if (x.role === 'stackedLower' && st && st.MallowL > 0) {
-    const M = (Vk * 1000 * x.He + (st.V2k || 0) * 1000 * (x.He + (st.dfl || 0) + (st.H2 || 0))) / 12;
+    const M = Vk * 1000 * st.h1 + (st.V2k || 0) * 1000 * (st.h2 + st.d);
     return x.DcapL[lt] * M / st.MallowL;
   }
   return x.DcapL[lt] * Vk * 1000 / x.VcapL[lt];
@@ -316,11 +326,13 @@ export function calcAll(inputs) {
   const bottomLevelId = levels.length > 0 ? levels[levels.length - 1].id : null;
   const floorHOf = (id) => parseFloat((levels.find(l => l.id === id) || {}).floorToFloor) || 0;
   const levelNameOf = (id) => (levels.find(l => l.id === id) || {}).name || '';
+  // Floor plate depth below a wall's story (ft): added to the overturning height only (user 2026-11-10)
+  const depthBelowFt = (id) => floorDepthBelowIn(levels, id, inputs.groundDepth) / 12;
   // Anchorage catalog of a level: HDUE at the bottom story (or anchorage type 'holdown'), else the MSTC table of its floor span
   const anchorageTableOfLevel = (id, thickness) => {
     const lvl = levels.find(l => l.id === id) || {};
     const useHoldown = id === bottomLevelId || lvl.anchorageType === 'holdown';
-    const floorSpan = lvl.floorClearSpan || '16';
+    const floorSpan = strapSpanOf(levels, id);
     return { useHoldown, floorSpan, table: anchorageTable(useHoldown, floorSpan, group, thickness) };
   };
 
@@ -462,7 +474,10 @@ export function calcAll(inputs) {
         const isBottom = lvl.id === bottomLevelId;
         const ancType = lvl.anchorageType || 'auto';
         const useHoldown = isBottom || ancType === 'holdown';
-        const floorSpan = lvl.floorClearSpan || '16';
+        const floorSpan = strapSpanOf(levels, lvl.id);
+        // Overturning height (ft) = FTF + floor plate depth below; FTF stays the wall height (aspect ratio, deflection, posts)
+        const dBelow = depthBelowFt(lvl.id);
+        const otmH = floorH + dBelow;
 
         const seismicCapMap = {}, windCapMap = {};
         wallsAtLevel.forEach(w => {
@@ -547,7 +562,7 @@ export function calcAll(inputs) {
 
           const wWithH = { ...w, _floorToFloor: floorH, _openingArea: isFtao(w) ? sortedOpenings(w).reduce((a, o) => a + o.width * (o.head - o.sill), 0) : 0 };
           const grav = resolveGravityAtWall(wWithH, (line.gravityLoads || {})[lvl.id], wallDLTypes, gOpts(lvl.id));
-          const tc = computeWallTC(sh.seismic, sh.wind, grav.dlTotal, wLen, floorH, rho, sds, loadType, { omega0, rL: grav.rL, rR: grav.rR, live: grav.live, lrfdHalfL });
+          const tc = computeWallTC(sh.seismic, sh.wind, grav.dlTotal, wLen, floorH, rho, sds, loadType, { omega0, rL: grav.rL, rR: grav.rR, live: grav.live, lrfdHalfL, ...(dBelow > 0 ? { h: otmH } : {}) });
 
           let anchorageLeft = null, anchorageRight = null;
           if (w.anchorageLeftOverride) {
@@ -590,6 +605,7 @@ export function calcAll(inputs) {
             dlWallSelf: grav.wallSelfDL, dlFromDiagram: grav.diagramDL, dlTotal: grav.dlTotal, dlRL: grav.rL, dlRR: grav.rR,
             live: grav.live, gravRows: grav.loadRows,
             floorH,
+            ...(dBelow > 0 ? { floorDepthBelow: dBelow, otmH } : {}),
             anchorageType: useHoldown ? 'holdown' : 'strap',
             anchorageLeft, anchorageRight,
             postLeft, postRight,
@@ -631,11 +647,19 @@ export function calcAll(inputs) {
       });
       loadPath.loadPathAudit.notes.push(...gdist.notes);
       for (const [id, i] of Object.entries(wswh)) {
+        for (const m of i.warnings || []) loadPath.loadPathAudit.warnings.push({ type: 'wswh_warning', elementId: id, elementMark: i.wall.mark || id, levelName: levelNameOf(i.wall.levelId), message: 'Strong-Wall: ' + m });
         if (!i.errors.length) continue;
         loadPath.loadPathAudit.warnings.push({ type: 'wswh', elementId: id, elementMark: i.wall.mark || id, levelName: levelNameOf(i.wall.levelId),
           message: 'Strong-Wall: ' + i.errors.join('; ') + ' — panel carries no shear' });
       }
 
+      // Floor plate depth deeper than the largest MSTC table (the largest table is used)
+      for (const lvl of levels) {
+        const si = strapSpanInfo(levels, lvl.id);
+        if (!si.over || lvl.id === bottomLevelId || lvl.anchorageType === 'holdown' || !allWalls.some(w => w.levelId === lvl.id && !isWswh(w))) continue;
+        loadPath.loadPathAudit.warnings.push({ type: 'floor_depth', elementId: lvl.id, elementMark: lvl.name || '', levelName: lvl.name || '',
+          message: 'Floor plate depth ' + si.depth + '" below this story exceeds the largest MSTC clear span table (' + si.span + '") — ' + si.span + '" table used; check the floor-to-floor strap' });
+      }
       // Opening / aspect-ratio problems go in the audit with the load path warnings
       for (const [wallId, msgs] of Object.entries(openingIssues)) {
         const w = (line.walls || []).find(x => x.id === wallId) || {};
@@ -816,9 +840,9 @@ export function calcAll(inputs) {
 function wswhAnchorFor(w, info, T, inputs) {
   if (!info) return null;
   if (info.role === 'raised') return RAISED_ANCHOR;
-  if (info.role === 'stackedUpper') return tssKitAnchor(info.width);
+  if (info.role === 'stackedUpper') return tssKitAnchor(info.width, info.family);
   return selectWswhAnchor(T * 1000, { fc: inputs.wswhFc || '2500', sdc: inputs.seismicDesignCategory, detached: !!inputs.detachedOneTwoFamily,
-    width: info.width, override: w.wswhAnchorOverride || '' });
+    width: info.width, override: w.wswhAnchorOverride || '', family: info.family });
 }
 
 // Wall result of a WSWH panel, in the shape the rest of the calc / UI uses (plf fields = lb over the panel width)
@@ -840,16 +864,17 @@ function wswhWallResult(w, info, sh, c) {
     if (ok && info.role === 'stackedLower' && c.upper && !c.upper.errors.length) {
       const up = c.upper, uSh = c.upperShare || { seismic: 0, wind: 0 };
       const V2 = lt === 'E' ? uSh.seismic : uSh.wind;
-      const H2 = up.look[lt].He, dfl = parseFloat(up.wall.wswhFloorDepth) || 0;
-      // Moment check at the ASD level; 1.0-level OTM (k·ft) for the end forces of every combo
-      stacked[lt] = stackedBaseCheck({ V0: Vcap[lt], H1: He, H2, dfl, V1: Vd[lt], V2: f[lt] * V2 * 1000 });
-      stacked[lt].H2 = H2; stacked[lt].dfl = dfl;
+      // Story heights (user 2026-11-10, C-L-SW26 p. 29): M = V₁·h₁ + V₂·(h₂ + d); V₁ already includes V₂.
+      const h1 = c.floorH, h2 = up.floorH, d = info.stackD || 0;
+      // Moment check at the ASD level against Table 07; 1.0-level OTM (k·ft) for the end forces of every combo
+      stacked[lt] = stackedBaseCheck({ Mallow: lk[lt].M[lt], V1: Vd[lt], V2: f[lt] * V2 * 1000, h1, h2, d });
+      stacked[lt].h1 = h1; stacked[lt].h2 = h2; stacked[lt].d = d; stacked[lt].model = lk[lt].Mmodel;
       stacked[lt].V1k = V1[lt]; stacked[lt].V2k = V2; // 1.0-level shears (k) of the base and upper panel, for the M_OT breakdown
-      otm1[lt] = (V1[lt] * He + V2 * (He + dfl + H2)) / 12;
+      otm1[lt] = V1[lt] * h1 + V2 * (h2 + d);
       dc[lt] = stacked[lt].dc;
-      // Δ₁ = Δ₀,LRFD·M_d/M_allow,LRFD at the 1.0 level (M_allow,LRFD = V₀,LRFD·H₁/12)
-      const M1 = (V1[lt] * 1000 * He + V2 * 1000 * (He + dfl + H2)) / 12;
-      const MallowL = VcapL[lt] * He / 12;
+      // Δ₁ = Δ_LRFD(T07)·M_d/M_allow,LRFD at the 1.0 level
+      const M1 = otm1[lt] * 1000;
+      const MallowL = lk[lt].ML[lt];
       stacked[lt].MallowL = MallowL; stacked[lt].M1 = M1;
       delta1[lt] = MallowL > 0 ? DcapL[lt] * M1 / MallowL : null;
       overLrfd[lt] = MallowL > 0 && M1 > MallowL + 0.5;
@@ -869,8 +894,13 @@ function wswhWallResult(w, info, sh, c) {
   const D = info.grav.dlTotal;
   const half = (x) => ({ total: x.total, rL: x.total / 2, rR: x.total / 2 }); // concentric on the panel (Simpson T = V·H/B − P/2)
   const live = { L: half(info.grav.live.L), Lr: half(info.grav.live.Lr) };
+  // Stacked 2nd story (user 2026-11-10): no B and no tension — its overturning is carried into the stack base moment,
+  // the hold-down is the TSS kit; only gravity end forces. Portal: T = k·V·H/B − P/2 (SSWH T12, p. 19 n.10).
+  const noLateral = info.role === 'stackedUpper' && !!info.lowerId;
+  const k = (ok && lk.E.k) || 1;
   const tc = computeWallTC(sh.seismic, sh.wind, D, widthFt, c.floorH, c.rho, c.sds, c.loadType, {
-    omega0: c.omega0, rL: D / 2, rR: D / 2, live, lrfdHalfL: c.lrfdHalfL, arm: B / 12, h: He / 12,
+    omega0: c.omega0, rL: D / 2, rR: D / 2, live, lrfdHalfL: c.lrfdHalfL, arm: B / 12, h: k * He / 12,
+    ...(noLateral ? { otm1E: 0, otm1W: 0 } : {}),
     ...(info.role === 'stackedLower' && stacked.E ? { otm1E: otm1.E } : {}),
     ...(info.role === 'stackedLower' && stacked.W ? { otm1W: otm1.W } : {}),
   });
@@ -892,7 +922,7 @@ function wswhWallResult(w, info, sh, c) {
     dlWallSelf: info.grav.wallSelfDL, dlFromDiagram: info.grav.diagramDL, dlTotal: info.grav.dlTotal, dlRL: D / 2, dlRR: D / 2,
     live, gravRows: info.grav.loadRows,
     floorH: c.floorH, anchorageType: 'wswh', anchorageLeft, anchorageRight,
-    postLeft: WSWH_PANEL_POST, postRight: WSWH_PANEL_POST, postRaised: { left: null, right: null },
+    postLeft: panelPostOf(info.family), postRight: panelPostOf(info.family), postRaised: { left: null, right: null },
     ftao: null,
     wswh: {
       ok, errors: info.errors, condition: info.condition, role: info.role, width: info.width,
@@ -901,7 +931,8 @@ function wswhWallResult(w, info, sh, c) {
       Dcap: { E: ok ? lk.E.D.E : null, W: ok ? lk.W.D.W : null }, VcapL, DcapL, overLrfd, dc: { E: r2(dc.E), W: r2(dc.W) }, stacked, delta1,
       notes: ok ? [...new Set([...lk.E.notes, ...lk.W.notes])] : [], upperId: info.upperId || null, lowerId: info.lowerId || null,
       fromAbove: info.fromAbove || null,
-      floorDepth: parseFloat(w.wswhFloorDepth) || 0,
+      ...(info.family === 'SSWH' ? { family: 'SSWH', k } : {}), // SSWH only, so WSWH results stay as they were
+      floorDepth: info.role === 'stackedLower' ? r4((info.stackD || 0) * 12) : 0, warnings: info.warnings || [],
     },
     ...tc,
   };
@@ -987,7 +1018,7 @@ export function freeDeflectionSplit(V, fns) {
 export function anchorageTrials(wr, thickness) {
   if (wr.method !== 'wall' || !wr.anchorageLeft || !wr.anchorageRight || !wr.postLeft || !wr.postRight) return [];
   const a0 = wr.anchorageLeft; // the larger sizes of its own table (family, framing group, wall width / floor span)
-  const table = a0.family === 'HDUE' ? hdueTable(a0.group, thickness) : a0.family === 'MSTC' ? mstcTable(a0.group, a0.span) : null;
+  const table = a0.family === 'HDUE' ? hdueLadder(a0.group, thickness) : a0.family === 'MSTC' ? mstcLadder(a0.group, a0.span) : null;
   if (!table) return [];
   const cur = Math.max(wr.anchorageLeft.cap || 0, wr.anchorageRight.cap || 0);
   return table.filter(a => a.cap > cur).map(a => {
@@ -1022,6 +1053,9 @@ function zeroShareFollowUp(res, levels) {
         const post = t.postLeft.postLabel === t.postRight.postLabel ? t.postLeft.postLabel : t.postLeft.postLabel + ' / ' + t.postRight.postLabel;
         return { anchorage: t.anchorage.id, post, delta0: r4(s.delta0[i]), share: r4(s.shares[i]) };
       }).filter(Boolean);
+      // doubles (user 2026-11-09) are listed only when no single gives the wall a share — the warning text (and an
+      // engineer review of it) stays as it was wherever a single already does
+      if (lw.remedy.some(r => !/^\(2\)/.test(r.anchorage) && r.share > 0.0005)) lw.remedy = lw.remedy.filter(r => !/^\(2\)/.test(r.anchorage));
       lw.remedyFirst = lw.remedy.find(r => r.share > 0.0005) || null;
     });
   }
@@ -1167,9 +1201,10 @@ export function lineDriftMode(inputs, line) {
 
 const DRIFT_SIZING_MAX_STEPS = 40;
 
-// Anchorage catalog a wall end is picked from: HDUE, or the MSTC table of the floor clear span
+// Anchorage ladder a wall end is picked from: HDUE, or the MSTC table of the floor clear span; then the doubles
+// stronger than the largest single (user 2026-11-09)
 export function anchorageTable(useHoldown, floorSpan, group = 'dfsp', thickness = '4') {
-  return useHoldown ? hdueTable(group, thickness) : mstcTable(group, floorSpan);
+  return useHoldown ? hdueLadder(group, thickness) : mstcLadder(group, floorSpan);
 }
 // Auto anchorage never below the drift-sizing floor (index in its table). OVER (null) stays OVER.
 export function anchorageWithFloor(pick, table, floorIdx) {
@@ -1336,13 +1371,14 @@ function storyDrift(perLevel, inputs, { seismic, wind, alphaS }) {
 
 // group / thickness: the project's framing group and the line's wall width (HDUE capacities depend on both)
 export function findAnchorage(id, floorSpan, group = 'dfsp', thickness = '4') {
-  const hd = hdueTable(group, thickness).find(h => h.id === id);
+  // singles and doubles "(2)…" (user 2026-11-09)
+  const hd = hdueOptions(group, thickness).find(h => h.id === id);
   if (hd) return hd;
   // Strap capacity depends on floor clear span — look in the level's span table first
-  const s1 = mstcTable(group, floorSpan).find(t => t.id === id);
+  const s1 = mstcOptions(group, floorSpan).find(t => t.id === id);
   if (s1) return s1;
   for (const span of ['16', '18', '24']) {
-    const s = mstcTable(group, span).find(t => t.id === id);
+    const s = mstcOptions(group, span).find(t => t.id === id);
     if (s) return s;
   }
   return null;

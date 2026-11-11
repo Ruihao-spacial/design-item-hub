@@ -7,7 +7,7 @@ import fs from 'fs';
 import assert from 'assert/strict';
 import '../scripts/lib/shearWallLoadCheck.mjs'; // sets up the stand-in DOM
 import { calcAll, lineDriftMode, anchorageWithFloor } from '../src/modules/shearWallCalc.js';
-import { HDUE_TABLE, MSTC_TABLE, anchorageFlex } from '../src/modules/shearWallHardware.js';
+import { HDUE_TABLE, MSTC_TABLE, anchorageFlex, hdueOptions, mstcOptions } from '../src/modules/shearWallHardware.js';
 import { shearWallDesign, renderLineResults, migrateV8toV9, sheathingGovernsText } from '../src/modules/shearWallDesign.js';
 
 let passed = 0;
@@ -19,13 +19,13 @@ const W = (id, lvl, pos, len, more = {}) => ({ id, mark: id, levelId: lvl, posit
   anchorageLeftOverride: '', anchorageRightOverride: '', postLeftOverride: '', postRightOverride: '', openings: [], method: 'segmented',
   narrowPier: false, ftaoStrapOverride: '', jambPostOverride: '', systemType: 'sheathed', ...more });
 // The user's E-W test in TC-1: SW-5 (4 ft, Roof 9 ft) over SW-6 (8 ft, Level 1 10 ft), 1.0E 2 k + 3 k, Cd 5, Ie 1, RC II
-const ew = ({ nail = '', bypass = false, lineMode = '', cd = '5' } = {}) => ({
+const ew = ({ nail = '', bypass = false, lineMode = '', cd = '5', anc5 = '' } = {}) => ({
   sds: '1.0', loadType: 'seismic', wallThickness: '4', woodGrade: 'dfir_no1', wallDLTypes: [], sheathing: 'ply', refs: {},
   cd, ie: '1', riskCategory: 'II', driftRow: 'other', alphaS: '', distribution: 'deflection', driftBypass: bypass,
   levels: [{ id: 'lvl-1', name: 'Roof', floorToFloor: 9, floorClearSpan: '16', anchorageType: 'auto' }, { id: 'lvl-2', name: 'Level 1', floorToFloor: 10, floorClearSpan: '16', anchorageType: 'auto' }],
   directions: [{ id: 'dir-2', name: 'E-W', rho: 1, lines: [{ id: 'ln-2', name: 'Line 1', totalLength: 60, wallThickness: '', distribution: '', driftBypass: lineMode,
     levelLoads: { 'lvl-1': { seismic: '2' }, 'lvl-2': { seismic: '3' } },
-    walls: [W('SW-5', 'lvl-1', 16.5, 4, { nailingPattern: nail }), W('SW-6', 'lvl-2', 16.5, 8, { nailingPattern: nail })],
+    walls: [W('SW-5', 'lvl-1', 16.5, 4, { nailingPattern: nail, anchorageLeftOverride: anc5, anchorageRightOverride: anc5 }), W('SW-6', 'lvl-2', 16.5, 8, { nailingPattern: nail })],
     beams: [], supportPosts: [], gravityLoads: {} }] }],
 });
 const lineOf = (out) => out.perDirection[0].perLine[0];
@@ -59,9 +59,9 @@ test('Anchorage raised for drift: strength pick kept for reference; floor never 
   assert.equal(sw6.anchorageBasis.left.basis, 'drift');
   const idx = (id) => HDUE_TABLE.findIndex(h => h.id === id);
   assert.ok(idx(sw6.anchorageLeft.id) > idx(sw6.anchorageBasis.left.strength), 'raised above the strength pick');
-  const hw = (id) => [...HDUE_TABLE, ...MSTC_TABLE['16']].find(h => h.id === id);
+  const hw = (id) => [...hdueOptions('dfsp', '4'), ...mstcOptions('dfsp', '16')].find(h => h.id === id); // singles + doubles
   for (const l of ln.driftSizing.log) {
-    const ids = l.detail.match(/(HDUE|MSTC)\d+/g), to = ids.at(-1);
+    const ids = l.detail.match(/(\(2\))?(HDUE|MSTC)\d+/g), to = ids.at(-1);
     assert.ok(anchorageFlex(hw(to)) < Math.max(...ids.slice(0, -1).map(id => anchorageFlex(hw(id)))), 'each step is stiffer (δ_LRFD / T_LRFD): ' + l.detail);
   }
   assert.equal(anchorageWithFloor(HDUE_TABLE[4], HDUE_TABLE, 1).id, HDUE_TABLE[4].id);
@@ -161,10 +161,12 @@ test('Manual nailing is never changed by drift sizing; the auto holdowns / strap
   const ln = lineOf(calcAll(ew({ nail: '4' })));
   assert.deepEqual(wallsOf(ln).map(w => [w.nailing.id, w.nailingBasis]), [['4', 'manual'], ['4', 'manual']]);
   assert.ok(ln.driftSizing.log.every(l => l.action === 'anchorage' && l.saveNailing == null));
-  // Δa = δ_LRFD × T / T_LRFD (2026-10-14): HDUE17 brings Level 1 within the limit; the Roof (MSTC66, the stiffest strap) stays NG
-  assert.deepEqual(driftStatus(ln), [false, true], 'with manual nailing the Roof stays NG');
+  // Δa = δ_LRFD × T / T_LRFD (2026-10-14): HDUE17 brings Level 1 within the limit. The Roof stayed NG at MSTC66 (the
+  // stiffest single strap) until doubles (user 2026-11-09): MSTC66 → (2)MSTC40 (half the flexibility of MSTC40) passes
+  assert.deepEqual(driftStatus(ln), [true, true], 'with manual nailing the Roof passes on a double strap');
   assert.equal(wallsOf(ln).find(w => w.mark === 'SW-6').anchorageLeft.id, 'HDUE17');
-  assert.ok(/Drift still NG at Roof/.test(ln.driftSizing.note));
+  assert.equal(wallsOf(ln).find(w => w.mark === 'SW-5').anchorageLeft.id, '(2)MSTC40');
+  assert.ok(/Raised for drift: holdowns \/ straps at SW-5, SW-6/.test(ln.driftSizing.note), ln.driftSizing.note);
 });
 
 test('Bypass: project default and per-line override; bypassed drift NG does not fail the line', () => {
@@ -190,7 +192,8 @@ test('No Cd / Ie: drift is not checked, nothing is raised', () => {
 });
 
 test('Walls summary shows "Sheathing governed by"; the calc sheet explains it (definition + nailing trace)', () => {
-  const inp = ew(), out = calcAll(inp), ln = lineOf(out);
+  // SW-5 strap pinned at MSTC66: since doubles (2026-11-09) the auto strap would step to (2)MSTC40 instead of the nailing
+  const inp = ew({ anc5: 'MSTC66' }), out = calcAll(inp), ln = lineOf(out);
   const text = (report) => { const c = document.createElement('div');
     renderLineResults(c, ln, out.perDirection[0], { tab: 'walls', onTab() {}, report, onReport() {}, detail: { mark: 'SW-5' }, defs: { inputs: inp, line: inp.directions[0].lines[0] } });
     return c.textContent; };

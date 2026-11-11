@@ -451,7 +451,8 @@ test('Design data appendix: rows equal the Hardware tab tables; FTAO strap row; 
   const v21 = appendixOf({ ...caseInputs('V21-wswh-stack-raised.json'), pdfReport: 'detailed' });
   const ws = v21.filter(s => s.table && s.title.startsWith('Simpson'));
   assert.deepEqual(ws.map(s => s.title.slice(s.title.lastIndexOf(' — ') + 3)), ['Seismic', 'Seismic', 'Seismic'], 'seismic-only project: seismic columns only');
-  assert.deepEqual(ws.map(s => s.title.match(/Table 0\d/)[0]), ['Table 01', 'Table 02', 'Table 03']);
+  // stack base: Table 07 (p. 50 allowable base moment, calc v27) in place of the Table 01 rows at P = 4,000 lb
+  assert.deepEqual(ws.map(s => s.title.match(/Table 0\d/)[0]), ['Table 02', 'Table 03', 'Table 07']);
   for (const s of ws) assert.ok(s.table.rows.every(r => r[0] === 'WSWH18x9' && r[1] === '9'), s.title);
   assert.ok(!v21.some(s => s.table && /Nailing|HDUE|Post Sizes/.test(s.title)), 'WSWH-only design: no sheathed hardware');
 });

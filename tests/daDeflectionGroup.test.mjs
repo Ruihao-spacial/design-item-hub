@@ -34,8 +34,10 @@ const lfs = (e2, e3) => [{ swdDirId: L2.dir.id, swdLineId: L2.line.id, E: e2, W:
 const markOf = id => [...L2.line.walls, ...L3.line.walls].find(w => 'swd:' + w.id === id).mark;
 const byMark = ws => Object.fromEntries(Object.entries(ws).map(([k, v]) => [markOf(k), v]));
 
-test('26998 Roof 2/3, round-0 forces (line 2 16.34 k, line 3 6.46 k): SW-65 has no deflection there → split by capacity (swd-group-defl), SW-35 keeps a share', () => {
-  const out = swdWallShares(ex, roofId, lfs(16.34, 6.46), spec);
+// SWD v25 (2026-11-09, no sill bearing check on posts): at the round-0 forces (line 2 16.34 k) every wall is now designed
+// (a post passes), so the case where SW-65 has no deflection is taken at line 2 = 20 k.
+test('26998 Roof 2/3, line 2 20 k, line 3 6.46 k: SW-65 has no deflection there → split by capacity (swd-group-defl), SW-35 keeps a share', () => {
+  const out = swdWallShares(ex, roofId, lfs(20, 6.46), spec);
   const g = out.groups['2/3'];
   assert.equal(g.method, 'deflection');
   assert.equal(g.deflectionFailed, true);
@@ -52,7 +54,8 @@ test('26998 Roof 2/3, moderate forces (line 2 8.51 k, line 3 15.65 k): equal δ 
   assert.ok(Math.abs(tot - 24.16) < 0.05, String(tot));
   assert.ok(Object.values(w).every(v => v > 0), JSON.stringify(w));
   assert.equal(Object.entries(w).sort((a, b) => b[1] - a[1])[0][0], 'SW-35');
-  assert.ok(Math.abs(w['SW-35'] - 17.16) < 0.3, String(w['SW-35'])); // hand check 2026-11-09: equal δ ≈ 0.59 in
+  // 17.16 k with the v24 posts (hand check 2026-11-09: equal δ ≈ 0.59 in); v25: SW-35 end posts (3)2x6 instead of 8x6
+  assert.ok(Math.abs(w['SW-35'] - 16.76) < 0.3, String(w['SW-35']));
 });
 
 test('capacity distribution: untouched by the guard (no deflection check, no warning)', () => {

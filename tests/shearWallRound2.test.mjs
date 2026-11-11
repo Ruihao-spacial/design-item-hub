@@ -278,13 +278,16 @@ test('WSWH two-story stack: base moment check, upper panel absorbed into the bas
   const up = wallsOf(out).find(w => w.wallId === 'w-1'), lo = wallsOf(out).find(w => w.wallId === 'w-2');
   assert.equal(up.wswh.table, 'T03'); assert.equal(up.anchorageLeft.id, 'WSWH-TSS18KT'); assert.ok(up.anchorageLeft.byKit && up.anchorageDCLeft == null, 'TSS kit: no tension capacity, no D/C');
   assert.equal(lo.wswh.role, 'stackedLower');
-  // V₀ = WSWH18x9 at P = 4,000 lb, f'c 2,500 = 2575; V1 = 0.7·2 k, V2 = 0.7·1 k (ASD)
+  // calc v27: M_allow = Table 07 WSWH18x9 seismic 22,585 lb-ft (p. 50); M_d = V1·h1 + V2·(h2 + d) at story heights,
+  // V1 = 0.7·2 k (the base panel's share, incl. the upper 1 k), V2 = 0.7·1 k (ASD); no Setup floor plate depth → d = 0
   const s = lo.wswh.stacked.E;
-  near(s.Mallow, 2575 * 105.25 / 12, 0.01);
-  near(s.Md, (1400 * 105.25 + 700 * (105.25 + 12 + up.wswh.He)) / 12, 0.01);
+  assert.equal(s.d, 0);
+  near(s.Mallow, 22585, 0.01);
+  near(s.Md, 1400 * s.h1 + 700 * (s.h2 + s.d), 0.01);
   near(lo.dcRatio, s.Md / s.Mallow, 0.005);
-  // T₁ = 0.7·[V1·H1 + V2(H1+d+H2)]/12 / B (no dead load)
-  near(lo.governingTensionLeft, 0.7 * (2 * 105.25 + 1 * (105.25 + 12 + up.wswh.He)) / 12 / (12.5 / 12), 0.01);
+  assert.ok(lineOf(out).loadPathAudit.warnings.some(x => x.type === 'wswh_warning' && /Floor plate depth between the stacked panels is 0/.test(x.message)));
+  // T₁ = 0.7·[V1·h1 + V2·(h2 + d)] / B (no dead load)
+  near(lo.governingTensionLeft, 0.7 * (2 * s.h1 + 1 * (s.h2 + s.d)) / (12.5 / 12), 0.01);
   const dlv = lineOf(out).wallDeliveries.filter(d => d.wallId === 'w-1');
   assert.ok(dlv.every(d => d.receiver.type === 'wswh_stack'));
   assert.ok(!lo.injections, 'upper end forces are not added again to the base panel');

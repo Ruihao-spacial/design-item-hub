@@ -2,18 +2,18 @@
  "fixtures/shearwall-sample.json": {
   "parts": {
    "definition": "58225c68ecbfbd86",
-   "results": "54c0b927db443995",
-   "form": "3def93f31d2877bb",
-   "resultsPage": "c3ee51488479dab7",
-   "pdf": "350cf849d68474e6",
+   "results": "fabb1d6350a3328b",
+   "form": "97d771d9872683bc",
+   "resultsPage": "8f83e12c20e5b3e0",
+   "pdf": "17ab5fdb96648044",
    "line Line A · elevation": "90180988057beee0",
-   "line Line A · elevation + results": "d6d4fa9d58c53904",
+   "line Line A · elevation + results": "489dc5f20b8d3a28",
    "line Line A · PDF forces": "2fcf97c99fa70e0d",
-   "line Line A · PDF hardware": "7c78519b26316372",
+   "line Line A · PDF hardware": "fca0744f1d154f82",
    "line Line B · elevation": "e71111a5949e1c20",
-   "line Line B · elevation + results": "071ffd596c2f3c10",
+   "line Line B · elevation + results": "5533dbca7dbfb89a",
    "line Line B · PDF forces": "65490ca9e85a1bbc",
-   "line Line B · PDF hardware": "ac451922c010a65f",
+   "line Line B · PDF hardware": "414389f7a9dfec19",
    "line Line C · elevation": "f415e51f6b4813b2",
    "line Line C · elevation + results": "8e850721505caa2b",
    "line Line C · PDF forces": "068411e535fefd97",
@@ -23,10 +23,10 @@
  "fixtures/tc1-two-story.json": {
   "parts": {
    "definition": "2ae3be04187b9248",
-   "results": "4badc89b83f23cbd",
-   "form": "8a181c2a8600167b",
+   "results": "17aa14e6255bdbfd",
+   "form": "0c1bfe7a6d51af21",
    "resultsPage": "a01382d9b4b16476",
-   "pdf": "730adf9375cac248",
+   "pdf": "4acebbd9a1ab11a1",
    "line Line A · elevation": "c3a923b5ad493594",
    "line Line A · elevation + results": "aca89b7b86037d2b",
    "line Line A · PDF forces": "074300389362b237",
@@ -40,10 +40,10 @@
  "legacy/schema10-zero-share.json": {
   "parts": {
    "definition": "ca9780951d3c7964",
-   "results": "39b3326cb367c833",
-   "form": "aa0587e689bdb57f",
+   "results": "e658053b33d52b36",
+   "form": "cbc4e7dd65b08d9e",
    "resultsPage": "bffd727afd646967",
-   "pdf": "80da5c8f42a08777",
+   "pdf": "09c9a575f927ea60",
    "line Line A · elevation": "c59109a099f27481",
    "line Line A · elevation + results": "77d45e770fdf4b9c",
    "line Line A · PDF forces": "a9bd96f5059e26d0",
@@ -53,10 +53,10 @@
  "legacy/schema11-wind.json": {
   "parts": {
    "definition": "2c5c633496b9197f",
-   "results": "e7c788f3c12a8b38",
-   "form": "73fd1a54fa302da1",
+   "results": "b5ce938516d75157",
+   "form": "9002a6bf5e03de78",
    "resultsPage": "b2d8283d0d9acc2f",
-   "pdf": "fa5b69a75f7bfc53",
+   "pdf": "5dc545a2af64acdc",
    "line Line A · elevation": "3b981ac9badd80fb",
    "line Line A · elevation + results": "5128cd63a4af1b38",
    "line Line A · PDF forces": "dee35312384ddac0",
@@ -70,10 +70,10 @@
  "legacy/schema12-tc1.json": {
   "parts": {
    "definition": "2ae3be04187b9248",
-   "results": "4badc89b83f23cbd",
-   "form": "8a181c2a8600167b",
+   "results": "17aa14e6255bdbfd",
+   "form": "0c1bfe7a6d51af21",
    "resultsPage": "a01382d9b4b16476",
-   "pdf": "730adf9375cac248",
+   "pdf": "4acebbd9a1ab11a1",
    "line Line A · elevation": "c3a923b5ad493594",
    "line Line A · elevation + results": "aca89b7b86037d2b",
    "line Line A · PDF forces": "074300389362b237",
@@ -87,10 +87,10 @@
  "legacy/schema2-phase1.json": {
   "parts": {
    "definition": "b2ddc1ae6e3665dc",
-   "results": "dd3fac52912c0a02",
-   "form": "55e6f488e0180256",
+   "results": "f526008f31653fa7",
+   "form": "2b5ecfc1d42001bd",
    "resultsPage": "5b971c0a1600bf56",
-   "pdf": "6775d8de96827ca0",
+   "pdf": "8b2717e4bb87e6c4",
    "line Line 1 · elevation": "484ab0a7cd5c572c",
    "line Line 1 · elevation + results": "f38ecdd64167f1fc",
    "line Line 1 · PDF forces": "e8b609a17a71f409",
@@ -104,10 +104,10 @@
  "legacy/schema3-phase2.json": {
   "parts": {
    "definition": "1a721ace31f6aad6",
-   "results": "71d5edef815a06e9",
-   "form": "e9eccc9c04bbdd03",
+   "results": "0dfc47f9e8f00cd8",
+   "form": "e0707e8ac57423b6",
    "resultsPage": "f3088c2af7826ef9",
-   "pdf": "13c62e9c08439353",
+   "pdf": "e45e1cf8347c42df",
    "line Line 1 · elevation": "e485dbee09cf0c6c",
    "line Line 1 · elevation + results": "6c6697560d20ef24",
    "line Line 1 · PDF forces": "c4b49c203559dd73",
@@ -137,10 +137,10 @@
  "legacy/schema4-bm-nan.json": {
   "parts": {
    "definition": "3c428c1c9bac91ab",
-   "results": "416d271b5926ab13",
-   "form": "e9eccc9c04bbdd03",
+   "results": "0a44451f277cbe03",
+   "form": "e0707e8ac57423b6",
    "resultsPage": "154a66f926c16c46",
-   "pdf": "7f5d004c95ca2eaa",
+   "pdf": "c9a3527b5968cac7",
    "line Line 1 · elevation": "e485dbee09cf0c6c",
    "line Line 1 · elevation + results": "6c6697560d20ef24",
    "line Line 1 · PDF forces": "c4b49c203559dd73",
@@ -170,10 +170,10 @@
  "legacy/schema5-round2.json": {
   "parts": {
    "definition": "476cdf8b1231c0b6",
-   "results": "77207116cb96462a",
-   "form": "e9eccc9c04bbdd03",
+   "results": "5ef2c2a64cd6376d",
+   "form": "e0707e8ac57423b6",
    "resultsPage": "7c2ab2c852462117",
-   "pdf": "3dae9a757fe7bdb7",
+   "pdf": "31e45906a9c967b2",
    "line Line 1 · elevation": "e485dbee09cf0c6c",
    "line Line 1 · elevation + results": "6c6697560d20ef24",
    "line Line 1 · PDF forces": "c4b49c203559dd73",
@@ -203,10 +203,10 @@
  "legacy/schema6-phase4r1.json": {
   "parts": {
    "definition": "fa649d824add3c7b",
-   "results": "b04acacdb34a772e",
-   "form": "e9eccc9c04bbdd03",
+   "results": "bf366d26dc05b934",
+   "form": "e0707e8ac57423b6",
    "resultsPage": "3a3e07e49262c43f",
-   "pdf": "46bbbecd9bf2bfc5",
+   "pdf": "c3df27e84926e945",
    "line Line 1 · elevation": "e485dbee09cf0c6c",
    "line Line 1 · elevation + results": "6c6697560d20ef24",
    "line Line 1 · PDF forces": "c4b49c203559dd73",
@@ -236,10 +236,10 @@
  "legacy/schema7-round2.json": {
   "parts": {
    "definition": "631b4bddcdd3d888",
-   "results": "2b7920b705062df4",
-   "form": "6ec5d1353ad69fa0",
+   "results": "fbffb4ba4aad3f72",
+   "form": "de42e09ccd7066ba",
    "resultsPage": "5e3db7021070e175",
-   "pdf": "fbb7ef36d309aaed",
+   "pdf": "28d17f00a2e7aeba",
    "line Line 1 · elevation": "b0f726dd3c6da6ed",
    "line Line 1 · elevation + results": "064ba77c0423f175",
    "line Line 1 · PDF forces": "190e71210e5f095e",
@@ -269,10 +269,10 @@
  "legacy/schema8-verification.json": {
   "parts": {
    "definition": "ffbaa9404e64309a",
-   "results": "c74d0d1254cdc17d",
-   "form": "9538305faf9eecb9",
+   "results": "f7bc995bbe2acab7",
+   "form": "158d15ddca6cc019",
    "resultsPage": "de3f2e8f856d83f6",
-   "pdf": "8bd8c5c585a7d282",
+   "pdf": "238ac7bc5226aee8",
    "line Line A · elevation": "11057365221a0596",
    "line Line A · elevation + results": "b7001936e37070d4",
    "line Line A · PDF forces": "84696a11abb4d400",
@@ -286,10 +286,10 @@
  "legacy/schema9-segmented-window.json": {
   "parts": {
    "definition": "e8643ccd0cccaf62",
-   "results": "baf9b6755d576bb5",
-   "form": "a7899b18baa61af9",
+   "results": "6ab20452245d24f9",
+   "form": "5a863ceb0ec73121",
    "resultsPage": "4e623b522bf46d5c",
-   "pdf": "902db866b280734c",
+   "pdf": "4823212e1be6017e",
    "line Line A · elevation": "332a149879fd7768",
    "line Line A · elevation + results": "cb1dc7dfcd328979",
    "line Line A · PDF forces": "df91ccbc821f9e59",
@@ -299,10 +299,10 @@
  "cases/V01-one-wall.json": {
   "parts": {
    "definition": "bb315fdab889c229",
-   "results": "397f1b478702b2c1",
-   "form": "5ca2852ba6c9b893",
+   "results": "efa8ac0213a72d0f",
+   "form": "530f04d5915fd6e9",
    "resultsPage": "0f12d5f3f1af0cbf",
-   "pdf": "1563b30158edef7c",
+   "pdf": "ea4487ddb7e78571",
    "line Line A · elevation": "93553c384bf08c46",
    "line Line A · elevation + results": "882b9cf96b488b4c",
    "line Line A · PDF forces": "efccd4be67c67f05",
@@ -312,10 +312,10 @@
  "cases/V02-two-unequal-walls.json": {
   "parts": {
    "definition": "636e2ddfc552a1c6",
-   "results": "6491082a9b4f4c2c",
-   "form": "053d1ad1958ff5b5",
+   "results": "8a57f6bb2c467c01",
+   "form": "d2e1a523a1e93e68",
    "resultsPage": "fa0e2aeaa63d1484",
-   "pdf": "9ea7a484589f2913",
+   "pdf": "d16a430d37c81f2f",
    "line Line A · elevation": "42b1652b46488aee",
    "line Line A · elevation + results": "727ccb40d56e6b68",
    "line Line A · PDF forces": "c4c0a0ffda96da6d",
@@ -325,10 +325,10 @@
  "cases/V03-gravity-statics.json": {
   "parts": {
    "definition": "1e9c268ca54ce0bc",
-   "results": "84a6d66319de1fb2",
-   "form": "f786e8e82be3702f",
+   "results": "16b276c29e3c902f",
+   "form": "b2803f3a2cda247e",
    "resultsPage": "282846d62ef78fdb",
-   "pdf": "e317ea24cbb24585",
+   "pdf": "101adadce9492980",
    "line Line A · elevation": "064c859c25a127c1",
    "line Line A · elevation + results": "30a2b5dcf38b10e4",
    "line Line A · PDF forces": "89ec940474be54f9",
@@ -338,23 +338,23 @@
  "cases/V04-aspect-ratio.json": {
   "parts": {
    "definition": "d38d306aa563febd",
-   "results": "2cc066e919f33bcc",
-   "form": "0e87de426091ff55",
+   "results": "82244fe7b32a2a63",
+   "form": "e7f493f265617e47",
    "resultsPage": "c64bd16277150aaa",
-   "pdf": "c56b599dfc057802",
+   "pdf": "97def8d848f6cab8",
    "line Line A · elevation": "9af43eead04b9c01",
-   "line Line A · elevation + results": "c55cc740be03da03",
+   "line Line A · elevation + results": "11a2882912847de2",
    "line Line A · PDF forces": "62f673a9c588675e",
-   "line Line A · PDF hardware": "42ac2ff828b839ef"
+   "line Line A · PDF hardware": "989f0bc9b60c1519"
   }
  },
  "cases/V08-two-story-aligned-stack.json": {
   "parts": {
    "definition": "371a99ef76fc56d5",
-   "results": "3b130bea5e520685",
-   "form": "60db9ed3d38f2771",
+   "results": "bdb76bf5ea3283d9",
+   "form": "0a6d264f8200b554",
    "resultsPage": "21237a7c12574b67",
-   "pdf": "f848ae7374f2057f",
+   "pdf": "d2e805c8a9600521",
    "line Line A · elevation": "c8e8ae4d95d94e89",
    "line Line A · elevation + results": "ae316c9b68a14856",
    "line Line A · PDF forces": "f043258c8998c1f2",
@@ -364,10 +364,10 @@
  "cases/V09-offset-stack-post.json": {
   "parts": {
    "definition": "302bac597e49c327",
-   "results": "67dbf618764b0510",
-   "form": "6e07ac9351ba4ea2",
+   "results": "efead3a0de4af251",
+   "form": "e85a60a413b396ff",
    "resultsPage": "c1b3b9b27e69ef71",
-   "pdf": "99c3d62f8bfbb8df",
+   "pdf": "f760f7e19901064b",
    "line Line A · elevation": "34c229f42b2b74f3",
    "line Line A · elevation + results": "7bf4657ab90f5e40",
    "line Line A · PDF forces": "22de0b303d8f3ee1",
@@ -381,10 +381,10 @@
  "cases/V10-transfer-beam.json": {
   "parts": {
    "definition": "6913458c60bc50d8",
-   "results": "f13a16c169265173",
-   "form": "d51c4e24496fbf2d",
+   "results": "3896c637d1b6196d",
+   "form": "889ea21bfdc760d6",
    "resultsPage": "6d4f9ac8e037d225",
-   "pdf": "e3f11060ed6eca2e",
+   "pdf": "9bbdbf0af70ed938",
    "line Line A · elevation": "a683d9b2cde8b80f",
    "line Line A · elevation + results": "5d966313b271db2f",
    "line Line A · PDF forces": "9ccd26b176885c3b",
@@ -394,10 +394,10 @@
  "cases/V11-beam-point-support.json": {
   "parts": {
    "definition": "8f0b2f32df5b9c1d",
-   "results": "62c6790ff0e21c13",
-   "form": "d51c4e24496fbf2d",
+   "results": "9dae65cb4817a1fd",
+   "form": "889ea21bfdc760d6",
    "resultsPage": "6d4f9ac8e037d225",
-   "pdf": "c3c841fd38279ea0",
+   "pdf": "8bca49f33e6db4e8",
    "line Line A · elevation": "9f41281c48b8e01d",
    "line Line A · elevation + results": "775997cfd51bb16f",
    "line Line A · PDF forces": "c8f30975b1bc8c67",
@@ -407,10 +407,10 @@
  "cases/V12-unsupported-gravity.json": {
   "parts": {
    "definition": "5c777f928bc90721",
-   "results": "aae5aa22fb23f821",
-   "form": "f786e8e82be3702f",
+   "results": "42cdcca6d49c84bb",
+   "form": "b2803f3a2cda247e",
    "resultsPage": "5a51d948f522be02",
-   "pdf": "d4f3e866050f6314",
+   "pdf": "929cc0dde04c7846",
    "line Line A · elevation": "5652cf1beaf8b767",
    "line Line A · elevation + results": "8129d936e8996d71",
    "line Line A · PDF forces": "ccbcc58a664650b9",
@@ -420,10 +420,10 @@
  "cases/V13-window-two-solid-walls.json": {
   "parts": {
    "definition": "cd287c701f9ba9e1",
-   "results": "d995b0b44eb9ed82",
-   "form": "60587c383891b3fe",
+   "results": "df34fd442f84782d",
+   "form": "5d3cf94ec18d0dbc",
    "resultsPage": "28dc19b660419fb2",
-   "pdf": "35fea78d745b36df",
+   "pdf": "ce52033f4bddec62",
    "line Line A · elevation": "1ffa7191d1117144",
    "line Line A · elevation + results": "579b45d53314e32a",
    "line Line A · PDF forces": "11af47b9f3b2605c",
@@ -433,12 +433,12 @@
  "cases/V14-ftao-apa-t555.json": {
   "parts": {
    "definition": "347e701a7e99adf1",
-   "results": "bcdd6251abc5ad6f",
-   "form": "5795686ee9d6793d",
+   "results": "cdd0964d7f8386f6",
+   "form": "27c5c0f923974354",
    "resultsPage": "5d4ffa70ed637010",
-   "pdf": "8b41df7656148828",
+   "pdf": "d0e1ac4b4811651a",
    "line Line A · elevation": "d8f688aa1b62cebd",
-   "line Line A · elevation + results": "4df80ed2038f9546",
+   "line Line A · elevation + results": "d0ea595a8374b28e",
    "line Line A · PDF forces": "bf820855102ce68f",
    "line Line A · PDF hardware": "f869f7215bdfa77c"
   }
@@ -446,10 +446,10 @@
  "cases/V15-deflection-drift.json": {
   "parts": {
    "definition": "5a5691cee8a3f0b2",
-   "results": "517c3f255498cb83",
-   "form": "49a01b35410c978d",
+   "results": "eee9fb6c3861e6f3",
+   "form": "68be77deb1737397",
    "resultsPage": "6d4f9ac8e037d225",
-   "pdf": "a3c78bb0c45e86a5",
+   "pdf": "4b092ce15d48dea2",
    "line Line A · elevation": "7ba547f4a8b07d33",
    "line Line A · elevation + results": "e75a36573b649757",
    "line Line A · PDF forces": "032802a7b62ead0a",
@@ -459,10 +459,10 @@
  "cases/V17-deflection-distribution.json": {
   "parts": {
    "definition": "05db3416d356cbc4",
-   "results": "68a2e35640ea44db",
-   "form": "05bf60527aa5804f",
+   "results": "63f00414b49a4135",
+   "form": "975c0bbea48b106e",
    "resultsPage": "02b9a36f7883ce41",
-   "pdf": "f1631867cd90b3a4",
+   "pdf": "748c03d8e20944aa",
    "line Line A · elevation": "9090a727b8bd3fba",
    "line Line A · elevation + results": "895623fc10735b6e",
    "line Line A · PDF forces": "cae827e79abb9299",
@@ -476,10 +476,10 @@
  "cases/V18-wind-and-both.json": {
   "parts": {
    "definition": "0c57ea2088444fd7",
-   "results": "1f6a6b730cd6312b",
-   "form": "0a310aad64ac3d70",
+   "results": "8e64a436121816a7",
+   "form": "832880d23864b612",
    "resultsPage": "138a70d4d3034a7f",
-   "pdf": "4fee43c8e5b9f810",
+   "pdf": "a68a8dd8b8567934",
    "line Line A · elevation": "3b981ac9badd80fb",
    "line Line A · elevation + results": "5128cd63a4af1b38",
    "line Line A · PDF forces": "dee35312384ddac0",
@@ -493,10 +493,10 @@
  "cases/V19-lrfd-omega.json": {
   "parts": {
    "definition": "7c4663f20bff3888",
-   "results": "0f31f96fe8ae4b44",
-   "form": "8cd607f96ff4319e",
+   "results": "c4f4c13bc93d1ec3",
+   "form": "32b92d63f8cb8423",
    "resultsPage": "ae745b274442d788",
-   "pdf": "b11efc5e650ec21d",
+   "pdf": "1097c62bdd465087",
    "line Line A · elevation": "1d69b6caf0e83d36",
    "line Line A · elevation + results": "46a8b592eadaa40a",
    "line Line A · PDF forces": "49aea31a2d120a78",
@@ -506,10 +506,10 @@
  "cases/V20-wswh-concrete-mixed.json": {
   "parts": {
    "definition": "d8ce4a53f12544b8",
-   "results": "419011d6ae05b7b9",
-   "form": "9d08f91de08b533c",
+   "results": "0cc7589c2e9074de",
+   "form": "3d77c6e3445efae7",
    "resultsPage": "4ee25286443cb321",
-   "pdf": "97e085a92bb1b08e",
+   "pdf": "9687df0c6f6adbfd",
    "line Line A · elevation": "a8cb6c589b1acae8",
    "line Line A · elevation + results": "0149b60b454ae8cd",
    "line Line A · PDF forces": "3fce22cedcb62e79",
@@ -518,15 +518,15 @@
  },
  "cases/V21-wswh-stack-raised.json": {
   "parts": {
-   "definition": "d7ca4523ae666992",
-   "results": "edc5e18496459c85",
-   "form": "b1fcf0748d46b1dd",
-   "resultsPage": "b7603d5ebc86c525",
-   "pdf": "11d2f3a92634c83e",
+   "definition": "caeb85cf68142e40",
+   "results": "d7be4fff22af1e1a",
+   "form": "a47eb22963ad379b",
+   "resultsPage": "1eb6c30a031c5b4e",
+   "pdf": "af3928f12beb9e28",
    "line Line A · elevation": "ba7c9cf249f35b79",
-   "line Line A · elevation + results": "f493329c315d03af",
-   "line Line A · PDF forces": "8ce2ccf1bc9e1fd9",
-   "line Line A · PDF hardware": "2b9f2176cf975208",
+   "line Line A · elevation + results": "1252f23b98be5ce1",
+   "line Line A · PDF forces": "ffaf73eca8fb7a60",
+   "line Line A · PDF hardware": "dbcde2193c5a2908",
    "line Line B · elevation": "f9538608171cd464",
    "line Line B · elevation + results": "623cbb8072fe89d2",
    "line Line B · PDF forces": "f2bc0e2dca5726a5",
@@ -536,10 +536,10 @@
  "cases/V22-robustness.json": {
   "parts": {
    "definition": "8ce45877fbf0e9a5",
-   "results": "6dacb46a62db8667",
-   "form": "93b0a1baf3c58796",
+   "results": "864603dec2bcea4d",
+   "form": "6d0c0f509e24eaed",
    "resultsPage": "a696eacfab8b8847",
-   "pdf": "d840a12b95920609",
+   "pdf": "a91d448a2f35e936",
    "line Line A · elevation": "a7db443ed165769f",
    "line Line A · elevation + results": "74ea5eac597c3117",
    "line Line A · PDF forces": "d2551f27c85fd1a3",
@@ -549,10 +549,10 @@
  "cases/V23-zero-share-wall.json": {
   "parts": {
    "definition": "4c0bf41c45f6ad1c",
-   "results": "b360777271abe9ea",
-   "form": "08bfe77a67e89c69",
+   "results": "ff2cec03448712dd",
+   "form": "2ff7c255f4d4ec83",
    "resultsPage": "8b0a15860b6086a8",
-   "pdf": "3c472e5e55b78e98",
+   "pdf": "9ef69d7de4da5011",
    "line Line A · elevation": "c59109a099f27481",
    "line Line A · elevation + results": "77d45e770fdf4b9c",
    "line Line A · PDF forces": "a9bd96f5059e26d0",
@@ -562,31 +562,31 @@
  "rules/V05.mjs": {
   "parts": {
    "definition": "438806e23650b181",
-   "results": "b5dbc04b3b058816",
-   "form": "bd6a6421d79b9f66",
+   "results": "c5bd2ef8d316bcb0",
+   "form": "8d2bcc86a7afc1b6",
    "resultsPage": "65410f247961e256",
-   "pdf": "57533e5340c84ce2",
+   "pdf": "d7dda7a3ec2c9efc",
    "line Line A · elevation": "8946ee3939963891",
-   "line Line A · elevation + results": "bf926d757200ed3f",
+   "line Line A · elevation + results": "b10dd428885fa843",
    "line Line A · PDF forces": "8873933b81adb6e6",
    "line Line A · PDF hardware": "e9315a5685db2408",
    "line Line B · elevation": "ba4efb361d7cdd94",
-   "line Line B · elevation + results": "0c98df41cd9bca63",
+   "line Line B · elevation + results": "1626f48cef4dde61",
    "line Line B · PDF forces": "d27dd8d153ddc97f",
    "line Line B · PDF hardware": "4149a71767eef260",
    "line Line C · elevation": "2183a37bab5212a0",
-   "line Line C · elevation + results": "1732757f0f7f1993",
+   "line Line C · elevation + results": "e58247cd1fb60c53",
    "line Line C · PDF forces": "d670b5740a48725b",
-   "line Line C · PDF hardware": "0197107ec4f9483d"
+   "line Line C · PDF hardware": "a415831b2869f61f"
   }
  },
  "rules/V06.mjs": {
   "parts": {
    "definition": "3aa7f771fc020528",
-   "results": "3fb81b214f2db85d",
-   "form": "44102b943914d37e",
+   "results": "a26005998abd48f2",
+   "form": "4a16ba53c7f402ad",
    "resultsPage": "cacf8dfc35317bcc",
-   "pdf": "bdf60207bb49e1ba",
+   "pdf": "f3e90b3dd25a6155",
    "line Line S · elevation": "97b52bcc1c21f9d8",
    "line Line S · elevation + results": "10fe97426ad5197d",
    "line Line S · PDF forces": "c80ca95e9f660d8a",
@@ -600,18 +600,18 @@
    "line Line H2 · PDF forces": "1779504908760303",
    "line Line H2 · PDF hardware": "a19c6c500b305b70",
    "line Line O · elevation": "018363af506d1f03",
-   "line Line O · elevation + results": "878a160adf5e6c3c",
+   "line Line O · elevation + results": "f81cb19b51904f69",
    "line Line O · PDF forces": "30eab3dfe4b3c41a",
-   "line Line O · PDF hardware": "50cd44969a0ce5ca"
+   "line Line O · PDF hardware": "98d9c0b666fd64e8"
   }
  },
  "rules/V07.mjs": {
   "parts": {
    "definition": "50d203069c5e8819",
-   "results": "85e1bc6257cc7b82",
-   "form": "cc421104e97ad752",
+   "results": "ee1ada6b0195d9e8",
+   "form": "3b238687ecacd5b2",
    "resultsPage": "20bf15ff05c1193f",
-   "pdf": "64d4aa053f320af1",
+   "pdf": "9367ea10d5bb7aab",
    "line Line A · elevation": "bd3e1da094f42384",
    "line Line A · elevation + results": "112161cb13645234",
    "line Line A · PDF forces": "6cc59db2672bccc4",
@@ -629,22 +629,22 @@
    "line Line D · PDF forces": "2489216b58996f66",
    "line Line D · PDF hardware": "c67e8587c2f50ad0",
    "line Line E · elevation": "49120d91496f208e",
-   "line Line E · elevation + results": "75cec84dec42bbc7",
+   "line Line E · elevation + results": "2152bad2b63564e1",
    "line Line E · PDF forces": "0249713a5378daab",
-   "line Line E · PDF hardware": "86084a7d89d309d5",
+   "line Line E · PDF hardware": "b08af4fa20bc61a6",
    "line Line F · elevation": "cc0a98dec0eaf405",
-   "line Line F · elevation + results": "14ea27047177faa6",
+   "line Line F · elevation + results": "c125d76ba8ec3f6c",
    "line Line F · PDF forces": "8c33cf057eba04ec",
-   "line Line F · PDF hardware": "998920204778a0db"
+   "line Line F · PDF hardware": "1100589fb2f3c546"
   }
  },
  "rules/V16.mjs": {
   "parts": {
    "definition": "d0e9aace8ed418aa",
-   "results": "d855b9279db52e80",
-   "form": "5c14b612be782715",
+   "results": "40b3360918f9750f",
+   "form": "c0e4b3dd307dfa18",
    "resultsPage": "b010c88066b9d256",
-   "pdf": "ebdb2afdf21f5f6d",
+   "pdf": "3ac77e402313fe0e",
    "line Line A · elevation": "5f8a90fd53d758a8",
    "line Line A · elevation + results": "c6be289d7df9438f",
    "line Line A · PDF forces": "f58c772ba0749378",

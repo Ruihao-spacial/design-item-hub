@@ -9,9 +9,13 @@ import { renderElevation, renderElevationForPdf, pdfElevationAspect, planPdfElev
 import { planLinkOn, sourcesWithPlan, defaultSourceId, adoptPlanLink, dropPlanLink, planLinkStale, refreshPlanLink, planViewOf, moveLineStart, originsBySource, planLineLength, syncLineLength } from './shearWallPlanLink.js';
 import { NAILING_TABLE, SHEATHING_TYPES, FOOTNOTE_10_NOTE, sheathingLabel } from './shearWallNailing.js';
 import { renderHardwareTab as renderHardwareTabView, hardwareAppendixSections } from './shearWallHardwareTab.js';
-import { lrfdCap, getGradeById, woodBasis, sillProps, SPECIES, speciesOf, dimGrades, ptGrades, groupLabel } from './shearWallHardware.js';
+import { lrfdCap, getGradeById, woodBasis, sillProps, SPECIES, speciesOf, dimGrades, ptGrades, groupLabel, strapSpanOf } from './shearWallHardware.js';
 import { DRIFT_ROWS, driftLimit } from './shearWallDeflection.js';
-import { WSWH_NOTES, WSWH_FC, conditionLabel } from './shearWallWswh.js';
+import { WSWH_NOTES, SSWH_NOTES, WSWH_FC, conditionLabel, lateralDeferred, DEFERRED_TEXT } from './shearWallWswh.js';
+// Strong-Wall family of a wall result: 'SSWH' only for steel panels (WSWH results carry no family field)
+const famOf = (w) => (w && w.wswh && w.wswh.family) || 'WSWH';
+const lineFamilies = (ln) => [...new Set(ln.perLevel.flatMap(pl => pl.walls.filter(w => w.method === 'wswh').map(famOf)))];
+const famTitle = (fams) => 'Strong-Wall ' + (fams.length ? fams.join(' / ') : 'WSWH');
 import { assemblyLoads, assemblyPsf } from './shearWallGravity.js';
 import { comboDefs, loadCaseRows, lcRef } from './shearWallCombos.js';
 import { rich } from '../richText.js';
@@ -300,7 +304,7 @@ export const shearWallDesign = {
 
       sec.appendChild(el('div', { className: 'section-header' }, 'Levels (top to bottom)'));
       const lvlTbl = el('table', { className: 'dynamic-table', style: { fontSize: '0.85rem' } });
-      lvlTbl.appendChild(el('tr', null, el('th', null, ''), el('th', null, 'Level Name'), el('th', null, 'Ftf (ft)'), el('th', null, 'Elev (ft)'), el('th', null, 'Floor Span'), el('th', null, 'Anchorage'), el('th', { className: 'row-actions' }, '')));
+      lvlTbl.appendChild(el('tr', null, el('th', null, ''), el('th', null, 'Level Name'), el('th', null, 'Ftf (ft)'), el('th', null, 'Elev (ft)'), el('th', { title: 'Floor framing at the top of the story: its top plate to the FF above (in). Added to the overturning height of the walls above.' }, 'Floor plate depth (in)'), el('th', null, 'Anchorage'), el('th', { className: 'row-actions' }, '')));
       let elevAccum = 0;
       const elevations = [];
       for (let i = inputs.levels.length - 1; i >= 0; i--) { elevAccum += parseFloat(inputs.levels[i].floorToFloor) || 0; elevations[i] = elevAccum; }
@@ -308,13 +312,13 @@ export const shearWallDesign = {
         const isBottom = i === inputs.levels.length - 1;
         if (!lvl.floorClearSpan) lvl.floorClearSpan = '16';
         if (!lvl.anchorageType) lvl.anchorageType = 'auto';
-        const spanSel = el('select', { className: 'form-select', style: { width: '70px', fontSize: '0.8rem' },
-          onChange(e) { lvl.floorClearSpan = e.target.value; notifyChange(); } });
-        ['16', '18', '24'].forEach(v => {
-          const opt = el('option', { value: v }, v + '"');
-          if (lvl.floorClearSpan === v) opt.selected = true;
-          spanSel.appendChild(opt);
-        });
+        // Floor plate depth (user 2026-11-10): the floor at the TOP of this story; the top level has none. A blank depth keeps
+        // the strap table stored with the story above (floorClearSpan, items saved before the depth existed).
+        const above = i > 0 ? inputs.levels[i - 1] : null;
+        const spanCell = !above ? el('span', { className: 'mono', title: 'Top level: no floor plate above' }, '—')
+          : el('input', { type: 'number', step: 'any', min: '0', value: numOrBlank(lvl.floorPlateDepth), placeholder: '0',
+            title: 'Blank = 0 (strap table of ' + (above.name || 'the level above') + ': ' + (above.floorClearSpan || '16') + '" clear span)',
+            style: { width: '70px' }, onChange(e) { lvl.floorPlateDepth = e.target.value; notifyChange(); } });
         const ancSel = el('select', { className: 'form-select', style: { width: '90px', fontSize: '0.8rem' },
           onChange(e) { lvl.anchorageType = e.target.value; notifyChange(); } });
         if (isBottom) {
@@ -334,12 +338,26 @@ export const shearWallDesign = {
           el('td', null, el('input', { type: 'text', value: lvl.name || '', placeholder: 'Level name', onInput(e) { lvl.name = e.target.value; notifyChange(); } })),
           el('td', null, el('input', { type: 'number', step: 'any', value: numOrBlank(lvl.floorToFloor), placeholder: '0', style: { width: '70px' }, onChange(e) { lvl.floorToFloor = e.target.value; notifyChange(); renderAll(); } })),
           el('td', { className: 'mono' }, elevations[i] != null ? elevations[i].toFixed(1) : '—'),
-          el('td', null, spanSel),
+          el('td', null, spanCell),
           el('td', null, ancSel),
           el('td', { className: 'row-actions' }, el('button', { className: 'btn btn-ghost btn-sm', type: 'button', onClick() { inputs.levels.splice(i, 1); notifyChange(); renderAll(); } }, '×')),
         ));
       });
+      // Ground (not a level): 1st FF to TOC under the bottom story, added to its overturning height (inputs.groundDepth)
+      lvlTbl.appendChild(el('tr', null,
+        el('td', null, ''),
+        el('td', null, el('span', { style: { fontWeight: '600' } }, 'Ground')),
+        el('td', { className: 'mono' }, '—'),
+        el('td', { className: 'mono' }, '0.0'),
+        el('td', null, el('input', { type: 'number', step: 'any', min: '0', value: numOrBlank(inputs.groundDepth), placeholder: '0',
+          title: '1st FF to TOC (in): cripple wall or interior wall on a raised floor; usually 0', style: { width: '70px' },
+          onChange(e) { inputs.groundDepth = e.target.value; notifyChange(); } })),
+        el('td', null, ''), el('td', { className: 'row-actions' }, '')));
       sec.appendChild(lvlTbl);
+      sec.appendChild(el('div', { style: { fontSize: '0.8rem', color: 'var(--ink-secondary)', marginTop: '0.35rem', maxWidth: '760px' } },
+        'Ftf = FF to top plate (the wall height: aspect ratio, deflection, posts). Floor plate depth = floor framing at the top of the story (its top plate to the FF above). '
+        + 'Ground = 1st FF to TOC (cripple wall, interior wall on a raised floor; usually 0). Overturning (hardware, chords, forces carried down) uses Ftf + the floor plate depth below the wall. '
+        + 'The MSTC strap table is the smallest clear span (16 / 18 / 24") at least that depth.'));
       sec.appendChild(el('button', { className: 'btn btn-sm', type: 'button', style: { marginTop: '0.25rem', marginBottom: '1rem' },
         onClick() { inputs.levels.push(newLevel('')); notifyChange(); renderAll(); } }, '+ Level'));
 
@@ -383,7 +401,8 @@ export const shearWallDesign = {
     // Strong-Wall WSWH project settings: foundation f'c (panel + anchor tables), SDC and dwelling type (anchor criteria)
     function renderWswhSettings() {
       const box = el('div', { style: { marginBottom: '1rem' } });
-      box.appendChild(el('div', { className: 'section-header' }, 'Strong-Wall WSWH (Simpson)'));
+      const anySswh = (inputs.directions || []).some(d => (d.lines || []).some(l => (l.walls || []).some(w => w.systemType === 'sswh')));
+      box.appendChild(el('div', { className: 'section-header' }, anySswh ? 'Strong-Wall WSWH / SSWH (Simpson)' : 'Strong-Wall WSWH (Simpson)'));
       const row = el('div', { style: { display: 'flex', gap: '1rem', flexWrap: 'wrap', alignItems: 'flex-end' } });
       const field = (label, input) => el('div', { className: 'form-group', style: { marginBottom: 0 } }, el('label', { className: 'form-label' }, label), input);
       const fcSel = el('select', { className: 'form-select', style: { width: '110px' }, onChange(e) { inputs.wswhFc = e.target.value; notifyChange(); } });
@@ -898,7 +917,7 @@ export const shearWallDesign = {
       ['Grade — dimension lumber', wood.dim.label + ' (NDS 2018 Table ' + wood.dim.table + '; studs, plates, 2x / 4x posts)'],
       ['Grade — posts & timbers', wood.pt.label + ' (NDS 2018 Table 4D; 6x6, 8x6 posts)'],
       ['Sheathing (G_a)', sheathingLabel(inputs.sheathing)],
-      ['Sill plate (crushing, post bearing)', 'F_{c⊥} = ' + sillProps(wood, '4').Fcperp + ' psi (2x4) / ' + sillProps(wood, '6').Fcperp + ' psi (2x6), ' + wood.dim.label + ', NDS Table ' + wood.dim.table],
+      ['Sill plate (crushing in the deflection Δ_{c})', 'F_{c⊥} = ' + sillProps(wood, '4').Fcperp + ' psi (2x4) / ' + sillProps(wood, '6').Fcperp + ' psi (2x6), ' + wood.dim.label + ', NDS Table ' + wood.dim.table],
       ['Drift limit', ((DRIFT_ROWS.find(r => r.id === inputs.driftRow) || DRIFT_ROWS[0]).label) + (driftLimit(inputs.driftRow, inputs.riskCategory) != null ? ' — ' + driftLimit(inputs.driftRow, inputs.riskCategory) + '·h_{sx}' : '')],
     ];
     if (inputs.loadType !== 'seismic') {
@@ -984,7 +1003,7 @@ export const shearWallDesign = {
       }
       const wsRows = wswhRows(ln);
       if (wsRows.length) {
-        sections.push({ title: T('Strong-Wall WSWH'), table: { headers: WSWH_HEADERS, rows: wsRows, colWidths: [0.06, 0.07, 0.13, 0.12, 0.07, 0.1, 0.12, 0.06, 0.07, 0.2] } });
+        sections.push({ title: T(famTitle(lineFamilies(ln))), table: { headers: WSWH_HEADERS, rows: wsRows, colWidths: [0.06, 0.07, 0.13, 0.12, 0.07, 0.1, 0.12, 0.06, 0.07, 0.2] } });
         const stRows = wswhStackRows(ln);
         if (stRows.length) sections.push({ title: T('WSWH two-story stack (base moment)'), table: { headers: WSWH_STACK_HEADERS, rows: stRows } });
         sections.push({ title: T('Strong-Wall notes'), text: wswhNoteLines(ln).join('\n') });
@@ -1097,7 +1116,7 @@ function wallDefinitionTableRows(inputs, line) {
   const dlOf = (id) => (inputs.wallDLTypes || []).find(t => t.id === id);
   return (line.walls || []).map(w => {
     const lv = lvlOf(w.levelId), h = parseFloat(lv.floorToFloor) || 0, L = parseFloat(w.length) || 0;
-    const type = w.systemType === 'wswh' ? 'WSWH' : (w.method === 'ftao' ? 'FTAO' : 'Segmented');
+    const type = w.systemType === 'wswh' ? 'WSWH' : w.systemType === 'sswh' ? 'SSWH' : (w.method === 'ftao' ? 'FTAO' : 'Segmented');
     const dl = dlOf(w.wallDLTypeId || w.dlTypeId);
     const notes = [];
     if ((w.openings || []).length) notes.push(w.openings.length + ' opening' + (w.openings.length !== 1 ? 's' : ''));
@@ -1224,7 +1243,7 @@ const emptyNote = (text) => el('div', { style: { fontSize: '0.85rem', color: 'va
 // What sizes a wall's sheathing nailing: strength (lightest pattern carrying the shear), drift (raised until the
 // story drift passes), manual (override), or the panel / engine for WSWH
 export function sheathingGovernsText(w) {
-  if (w.method === 'wswh') return 'WSWH panel';
+  if (w.method === 'wswh') return famOf(w) + ' panel';
   if (w.nailingBasis === 'manual') return 'Manual';
   if (w.nailingBasis === 'drift') return 'Drift (strength: ' + ((w.strengthNailing && w.strengthNailing.label) || '?') + ')';
   return 'Strength';
@@ -1243,13 +1262,15 @@ export function wallScheduleRows(pl) {
     const post = (pp, dc) => (pp ? dcCell(pp.postLabel + (dc != null ? ' (' + dc.toFixed(2) + ')' : ''), dc) : OVER());
     const [tL, tR, cL, cR] = hwT(w);
     const isPanel = w.method === 'wswh';
-    const nail = isPanel ? (w.nailing ? w.nailing.label : 'WSWH') + ' — ' + f0(w.wswh.Vcap[lt]) + ' lb'
+    const nail = isPanel ? (w.nailing ? w.nailing.label : famOf(w)) + ' — ' + f0(w.wswh.Vcap[lt]) + ' lb'
       : (w.nailing ? w.nailing.label : '?') + (w.effectiveCapacity != null ? ' — ' + w.effectiveCapacity.toFixed(0) + ' plf' : '');
     const v = isPanel ? f0(w.wswh.Vd[lt]) + ' lb' : w.unitShear_ASD.toFixed(0);
     const allPass = w.dcRatio <= 1.0 && w.anchorageLeft && w.anchorageRight && w.postLeft && w.postRight;
     const status = !allPass || wallFails(w) ? dcCell('NG', 9) : w.hOverBFlag ? dcCell('WARN', 0.9) : dcCell('OK', 0);
     return [w.mark + (w.method === 'ftao' ? ' (FTAO)' : isPanel ? ' (WSWH)' : ''), pl.levelName, nail, sheathingGovernsText(w),
-      dcCell(v + ' (' + w.dcRatio.toFixed(2) + ')', w.dcRatio), f2(tL) + ' / ' + f2(tR), f2(cL) + ' / ' + f2(cR),
+      dcCell(v + ' (' + w.dcRatio.toFixed(2) + ')', w.dcRatio),
+      lateralDeferred(w) ? DEFERRED_TEXT : f2(tL) + ' / ' + f2(tR),
+      lateralDeferred(w) ? f2(cL) + ' / ' + f2(cR) + ' gravity only' : f2(cL) + ' / ' + f2(cR),
       hw(w.anchorageLeft, w.anchorageDCLeft, 'left'), hw(w.anchorageRight, w.anchorageDCRight, 'right'),
       post(w.postLeft, w.postDCLeft), post(w.postRight, w.postDCRight), status];
   });
@@ -1283,7 +1304,7 @@ function lineTabWalls(ln, dirOut, state) {
 // Strong-Wall panels of a line: panel table, stacked base check, notes
 function wswhSection(ln) {
   const box = el('div');
-  box.appendChild(subHead('Strong-Wall WSWH panels'));
+  box.appendChild(subHead(famTitle(lineFamilies(ln)) + ' panels'));
   box.appendChild(simpleTable(WSWH_HEADERS, wswhRows(ln), [4, 5, 6, 7, 8]));
   const st = wswhStackRows(ln);
   if (st.length) {
@@ -1298,7 +1319,7 @@ function wswhSection(ln) {
 
 // === Distribution of the story shear to the walls ===
 const LT_NAME = { E: '1.0E (seismic)', W: '1.0W (wind)' };
-const wallTypeOf = (w) => (w.method === 'wswh' ? 'WSWH' : w.method === 'ftao' ? 'FTAO' : 'Segmented');
+const wallTypeOf = (w) => (w.method === 'wswh' ? famOf(w) : w.method === 'ftao' ? 'FTAO' : 'Segmented');
 const loadTypesOf = (ln) => ['E', 'W'].filter(lt => ln.perLevel.some(pl => (lt === 'E' ? pl.storyShear_1E : pl.storyShear_1W) > 0));
 const shareOf = (w, lt) => (lt === 'E' ? w.shareExact_1E : w.shareExact_1W) || 0;
 
@@ -1436,8 +1457,9 @@ function overturningSummaryRows(pl) {
     const [tL, tR, cL, cR] = hwT(w);
     const gT = tL >= tR ? governingCombo(w, 'tensionLeft') : governingCombo(w, 'tensionRight');
     const gC = cL >= cR ? governingCombo(w, 'comprLeft') : governingCombo(w, 'comprRight');
-    return [w.mark + (w.hwDemand ? ' Σ' : ''), pairTxt(w.share_1E, w.share_1W), pairTxt(st.otm1E, st.otm1W), pairTxt(w.dlRL, w.dlRR),
-      pairTxt(lv.L.rL, lv.L.rR), pairTxt(lv.Lr.rL, lv.Lr.rR), pairTxt(tL, tR), pairTxt(cL, cR), gT + ' / ' + gC];
+    const dfr = lateralDeferred(w);
+    return [w.mark + (w.hwDemand ? ' Σ' : ''), pairTxt(w.share_1E, w.share_1W), dfr ? DEFERRED_TEXT : pairTxt(st.otm1E, st.otm1W), pairTxt(w.dlRL, w.dlRR),
+      pairTxt(lv.L.rL, lv.L.rR), pairTxt(lv.Lr.rL, lv.Lr.rR), dfr ? DEFERRED_TEXT : pairTxt(tL, tR), pairTxt(cL, cR) + (dfr ? ' gravity only' : ''), dfr ? '—' : gT + ' / ' + gC];
   });
 }
 // Detailed rows: [label, value]
@@ -1446,8 +1468,13 @@ function overturningRows(w) {
   const rows = [];
   const panel = w.method === 'wswh';
   rows.push(['Lateral share (1.0)', 'V_E = ' + f2(w.share_1E) + ' k' + (w.share_1W ? ', V_W = ' + f2(w.share_1W) + ' k' : '')]);
-  rows.push(['Height / arm', panel ? 'h = H_e = ' + f2(w.wswh.He) + ' in, arm = B = ' + w.wswh.B + ' in' : 'h = ' + f2(w.floorH) + ' ft (floor-to-floor), arm = L = ' + f2(w.length) + ' ft']);
-  rows.push(['OTM at the 1.0 level', 'E: ' + f2(st.otm1E) + ' k·ft' + (st.otm1W ? ', W: ' + f2(st.otm1W) + ' k·ft' : '') + (panel && w.wswh.role === 'stackedLower' ? ' (stack base: V₁·H₁ + V₂·(H₁ + d_fl + H₂))' : ' (= V·h)')]);
+  rows.push(['Height / arm', panel ? 'h = H_e = ' + f2(w.wswh.He) + ' in, arm = B = ' + w.wswh.B + ' in' : 'h = ' + f2(w.floorH) + ' ft (floor-to-floor)' + (w.otmH != null ? ', overturning height h + d_fl = ' + f2(w.floorH) + ' + ' + f2(w.floorDepthBelow) + ' = ' + f2(w.otmH) + ' ft (floor plate depth below)' : '') + ', arm = L = ' + f2(w.length) + ' ft']);
+  if (lateralDeferred(w)) {
+    rows.push(['OTM / end forces (lateral)', DEFERRED_TEXT + ' — the panel\'s overturning is carried into the stack base moment; hold-down ' + ((w.anchorageLeft && w.anchorageLeft.id) || 'TSS kit') + ' (user 2026-11-10)']);
+    rows.push(['End forces (gravity only)', 'C ' + pairTxt(w.governingComprLeft, w.governingComprRight) + ' k']);
+    return rows;
+  }
+  rows.push(['OTM at the 1.0 level', 'E: ' + f2(st.otm1E) + ' k·ft' + (st.otm1W ? ', W: ' + f2(st.otm1W) + ' k·ft' : '') + (panel && w.wswh.role === 'stackedLower' ? ' (stack base: V₁·h₁ + V₂·(h₂ + d), story heights)' : w.otmH != null ? ' (= V·(h + d_fl))' : ' (= V·h)')]);
   rows.push(['ASD OTM (design)', (st.seismic ? '0.7ρ·OTM_E = ' + f2(st.seismic.otm) + ' k·ft' : '') + (st.wind ? (st.seismic ? '; ' : '') + '0.6·OTM_W = ' + f2(st.wind.otm) + ' k·ft' : '')]);
   const lv = w.live || { L: {}, Lr: {} };
   rows.push(['Resisting end reactions', 'R_D ' + pairTxt(w.dlRL, w.dlRR) + ', R_L ' + pairTxt(lv.L.rL, lv.L.rR) + ', R_Lr ' + pairTxt(lv.Lr.rL, lv.Lr.rR) + ' k (L / R)']);
@@ -1871,7 +1898,7 @@ function wallSheetBlocks(w, pl, dirOut, ln, defs) {
     if ((w.ftao.jambs || []).length) { note('Jamb posts — C = d·D + l·L + lr·Lr + k·v_i·h_o (governing ASD combination)'); table(FTAO_JAMB_HEADERS, ftaoJambRows(w)); }
     w.ftao.warnings.forEach(m => note('⚠ ' + m, 'warn'));
   } else if (w.method === 'wswh') {
-    sub('C1–C2. Strong-Wall WSWH panel (tabulated capacity, demand, anchors)');
+    sub('C1–C2. Strong-Wall ' + famOf(w) + ' panel (tabulated capacity, demand, anchors)');
     kv(wswhSheetRows(w));
   }
   const cases = caseKeysOf(w);
@@ -1904,7 +1931,7 @@ function wallSheetBlocks(w, pl, dirOut, ln, defs) {
       { k: 'note', text: endForceTitle(w) },
       { k: 'table', headers: END_FORCE_HEADERS, rows: endForceRowsOf(w) }] });
   }
-  const hw = hardwareTraceRows(w, { floorSpan: lvl.floorClearSpan || '16', lineThickness, wallIn, gradeLabel: grade.label });
+  const hw = hardwareTraceRows(w, { floorSpan: strapSpanOf(inputs.levels || [], lvl.id), lineThickness, wallIn, gradeLabel: grade.label });
   if (hw.length) { sub('C6. Hardware and posts (ASD demand incl. loads from above)'); kv(hw); }
   const dr = deflectionSubstitutionRows(w, { lineThickness, grade });
   if (dr.length) { sub('C7. Deflection at 1.0E / α_s·W (SDPWS 2021 Eq. 4.3-1) — used for story drift'); kv(dr); }
@@ -2015,10 +2042,10 @@ function wswhSheetRows(w) {
   const sc = x.stacked && x.stacked[lt];
   const an = (a, dc) => (!a ? 'OVER' : a.byRDP || a.byKit ? a.id : a.id + (a.cap ? ' ' + a.cap + ' lb' : '') + (a.W ? ', W ' + a.W + '" d_e ' + a.de + '" L_ftg ' + a.Lftg + '"' : '') + (dc != null ? ' (D/C ' + f2(dc) + ')' : ''));
   return [
-    ['Panel', x.evalModel + (x.orderModel !== x.evalModel ? ' (order ' + x.orderModel + ', trimmed)' : '') + ' — ' + conditionLabel(x.role === 'stackedLower' ? 'concrete' : x.condition) + (x.role === 'stackedLower' ? ', stack base' : '') + (x.kit ? ', ' + x.kit : '')],
+    ['Panel', x.evalModel + (x.orderModel !== x.evalModel ? ' (order ' + x.orderModel + ', trimmed)' : '') + ' — ' + conditionLabel(x.role === 'stackedLower' ? 'concrete' : x.condition, famOf(w)) + (x.role === 'stackedLower' ? ', stack base' : '') + (x.kit ? ', ' + x.kit : '')],
     ['Table values', 'H_e ' + f2(x.He) + ' in, B ' + x.B + ' in; V_allow E ' + f0(x.Vcap.E) + ' / W ' + f0(x.Vcap.W) + ' lb; Δ_cap E ' + f2(x.Dcap.E) + ' / W ' + f2(x.Dcap.W) + ' in; V_LRFD E ' + f0(x.VcapL.E) + ' / W ' + f0(x.VcapL.W) + ' lb with Δ_LRFD E ' + f2(x.DcapL.E) + ' / W ' + f2(x.DcapL.W) + ' in — drift Δ = Δ_LRFD × V / V_LRFD (' + x.table + ')'],
     ['Vertical load P', 'E ' + f0(x.P.E) + ' lb = max((1.0+0.14SDS)D, (1.0+0.105SDS)D + 0.75L); W ' + f0(x.P.W) + ' lb = max(D, D + 0.75L + 0.75Lr)' + (x.fromAbove ? ' — incl. the panel above' : '')],
-    ['Shear check', sc ? 'M_d ' + f0(sc.Md) + ' / M_allow ' + f0(sc.Mallow) + ' lb-ft → D/C ' + f2(w.dcRatio) : 'V_ASD ' + f0(x.Vd[lt]) + ' / V_allow ' + f0(x.Vcap[lt]) + ' lb → D/C ' + f2(w.dcRatio)],
+    ['Shear check', sc ? 'M_d = V₁·h₁ + V₂·(h₂ + d) = ' + f0(sc.Md) + ' / M_allow ' + f0(sc.Mallow) + ' lb-ft (Table 07, ' + (sc.model || '') + '; h₁ ' + f2(sc.h1) + ', h₂ ' + f2(sc.h2) + ', d ' + f2(sc.d) + ' ft) → D/C ' + f2(w.dcRatio) : 'V_ASD ' + f0(x.Vd[lt]) + ' / V_allow ' + f0(x.Vcap[lt]) + ' lb → D/C ' + f2(w.dcRatio)],
     ['Anchors L / R', an(w.anchorageLeft, w.anchorageDCLeft) + ' / ' + an(w.anchorageRight, w.anchorageDCRight)],
   ];
 }
@@ -2142,14 +2169,14 @@ function distributionText(ln) {
     : 'distribution by deflection — shares still moving ' + d.shareChange + ' k after ' + d.passes + ' passes; closest pass used (δ spread ' + pct(d.spread) + ')' + tail;
 }
 
-// A wall fails when sheathing D/C > 1, h/b > 3.5, or (FTAO) the strap or sill plate bearing fails
+// A wall fails when sheathing D/C > 1, h/b > 3.5, or (FTAO) the strap or a jamb post fails. Sill plate bearing at the
+// chords is not a design check (user 2026-11-09, CALC v25); the crushing stays in the deflection (Δ_c).
 function wallFails(w) {
   if (w.dcRatio > 1.0 || w.hbNotPermitted) return true;
   if (w.method === 'wswh' && !w.wswh.ok) return true;
   if (w.method === 'ftao' && w.ftao) {
     if (w.ftao.strapDC == null || w.ftao.strapDC > 1.0) return true;
     if ((w.ftao.jambs || []).some(j => !j.post || j.dc > 1.0)) return true;
-    if (Object.values(w.ftao.perType || {}).some(r => (r.plateBearing || []).some(b => b.status === 'NG'))) return true;
   }
   return false;
 }
@@ -2196,7 +2223,6 @@ function ftaoCheckRows(w, lt) {
   const r = w.ftao.perType[lt];
   if (!r) return [];
   const rows = r.sheathing.map(z => [z.zone, f0(z.demand) + ' plf', f0(z.capacity) + ' plf', f2(z.dcr), z.status]);
-  (r.plateBearing || []).forEach(b => rows.push(['Sill plate bearing, ' + b.end + ' end', f0(b.fc_perp) + ' psi', f0(b.Fc_perp_prime) + ' psi', f2(b.dcr), b.status]));
   return rows;
 }
 const FTAO_CHECK_HEADERS = ['Zone', 'Demand', 'Capacity', 'DCR', 'Status'];
@@ -2247,7 +2273,7 @@ function wswhRows(ln) {
       rows.push([
         w.mark, pl.levelName,
         x.ok ? x.evalModel + (x.orderModel && x.orderModel !== x.evalModel ? ' (' + x.orderModel + ')' : '') : 'not tabulated',
-        conditionLabel(x.role === 'stackedLower' ? 'concrete' : x.condition) + (x.role === 'stackedLower' ? ' — stack base' : '') + (x.kit ? ', ' + x.kit : ''),
+        conditionLabel(x.role === 'stackedLower' ? 'concrete' : x.condition, famOf(w)) + (x.role === 'stackedLower' ? ' — stack base' : '') + (x.kit ? ', ' + x.kit : ''),
         x.ok ? x.He.toFixed(2) : '—', f0(x.P.E) + ' / ' + f0(x.P.W),
         f0(x.Vd[lt]) + ' / ' + f0(x.Vcap[lt]) + (x.role === 'stackedLower' ? ' (M check)' : ''), f2(w.dcRatio),
         w.deflection && w.deflection.E ? f3(w.deflection.E.delta) : '—',
@@ -2273,13 +2299,15 @@ function wswhStackRows(ln) {
 }
 
 function wswhNoteLines(ln) {
-  const lines = ['M_allow = V₀·H₁/12 with V₀ at P = 4,000 lb, f\'c 2,500 psi; M_d = [V₁·H₁ + V₂·(H₁ + d_fl + H₂)]/12; T = V·H_e/B − P/2 with combo-factored D.'];
+  const lines = ['Stack base: M_allow from Table 07 (C-L-SW26 p. 50); M_d = V₁·h₁ + V₂·(h₂ + d) at story heights (V₁ includes the upper shear, d = Setup floor plate depth); T = M·12/B − P/2. Single panels: T = V·H_e/B − P/2 with combo-factored D.'];
   for (const pl of ln.perLevel) for (const w of pl.walls) {
     if (w.method !== 'wswh') continue;
     (w.wswh.notes || []).forEach(n => lines.push(w.mark + ': ' + n));
     (w.wswh.errors || []).forEach(n => lines.push(w.mark + ': ' + n + ' — panel carries no shear'));
+    (w.wswh.warnings || []).forEach(n => lines.push(w.mark + ': ⚠ ' + n));
   }
-  return [...lines, ...WSWH_NOTES];
+  const fams = lineFamilies(ln);
+  return [...lines, ...(fams.includes('WSWH') || !fams.length ? WSWH_NOTES : []), ...(fams.includes('SSWH') ? SSWH_NOTES : [])];
 }
 
 const OMEGA_HEADERS = ['Element', 'Level', 'Ω₀ ASD T L / R (k)', 'Ω₀ ASD C L / R (k)', 'Ω₀ LRFD T L / R (k)', 'Ω₀ LRFD C L / R (k)'];

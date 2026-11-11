@@ -37,7 +37,7 @@
     },
     {
       "step": 7,
-      "text": "End post: HDUE3 minimum post is (2)2x4. NDS column at h = 10 ft, DF-L No.1: F_c* = 1500 × 1.6 × 1.15 = 2760 psi, F_cE = 496 psi, C_P = 0.1724, F_c′ = 476 psi; bearing F_c⊥′ = 625 × (3.0 + 0.375)/3.0 = 703 psi → cap = 5.00 k ≥ 4.07 k → (2)2x4."
+      "text": "End post: HDUE3 minimum post is (2)2x4. NDS column at h = 10 ft, DF-L No.1: F_c* = 1500 × 1.6 × 1.15 = 2760 psi, F_cE = 496 psi, C_P = 0.1724, F_c′ = 476 psi → cap = F_c′ × A = 5.00 k ≥ 4.07 k → (2)2x4."
     },
     {
       "step": 8,

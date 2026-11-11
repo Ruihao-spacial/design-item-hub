@@ -299,17 +299,19 @@ test('S4 from-above references: each value names its source and equals the sourc
   assert.deepEqual(picks[0], { level: 'lvl-2', type: 'wall', mark: 'SW-1' });
 });
 
-test('S5 WSWH M_OT: V·H_e / 12 for a single panel; V₁·H₁ + V₂·(H₁ + d_fl + H₂) with numbers at a stack base', () => {
+test('S5 WSWH M_OT: V·H_e / 12 for a single panel; V₁·h₁ + V₂·(h₂ + d) with numbers at a stack base (story heights, calc v27)', () => {
   const inp = model(L2, [panelW('w-1', 'SW-1', 'lvl-2', 0, { wswhCondition: 'stackedUpper' }), panelW('w-2', 'SW-2', 'lvl-1', 0)], { 'lvl-2': { seismic: '1' }, 'lvl-1': { seismic: '1' } }, {}, '10', { seismicDesignCategory: 'D' });
   const walls = allWalls(inp);
   const lo = walls.find(w => w.wallId === 'w-2'), up = walls.find(w => w.wallId === 'w-1');
   assert.equal(lo.wswh.role, 'stackedLower');
   const st = lo.wswh.stacked.E;
-  near((st.V1k * lo.wswh.He + st.V2k * (lo.wswh.He + st.dfl + st.H2)) / 12, lo.steps.otm1E, 0.006, 'the substituted parts give the tool M_OT');
+  near(st.V1k * st.h1 + st.V2k * (st.h2 + st.d), lo.steps.otm1E, 0.006, 'the substituted parts give the tool M_OT');
   const cell = (w) => cornerOverturningRows(w, '→').rows[0][1 + caseKeysOf(w).gravity.length];
-  assert.ok(cell(lo).startsWith('(V₁·H₁ + V₂·(H₁ + d_fl + H₂)) / 12 = (' + st.V1k.toFixed(2) + ' × '), cell(lo));
+  assert.ok(cell(lo).startsWith('V₁·h₁ + V₂·(h₂ + d) = ' + st.V1k.toFixed(2) + ' × ' + st.h1.toFixed(2) + ' + '), cell(lo));
   assert.ok(cell(lo).endsWith('= ' + lo.steps.otm1E.toFixed(2)));
-  assert.ok(cell(up).startsWith('V·H_e / 12 = ' + up.shareExact_1E.toFixed(2) + ' × ' + up.wswh.He.toFixed(2) + ' / 12 = '), cell(up));
+  // 2nd story of a stack: no B, no tension (user 2026-11-10) — the kit, overturning carried into the stack base
+  assert.ok(cell(up).startsWith('not calc / deferred — WSWH-TSS18KT'), cell(up));
+  assert.equal(up.steps.otm1E, 0);
 });
 
 test('S6 B1 links to the Distribution tab', () => {

@@ -4,7 +4,7 @@
 // Load cases 1.0D, 1.0L, 1.0Lr, 1.0E, 1.0W are unfactored; the combinations are their factored sums
 // (superposition — check G12). → = shear toward the right end (left end uplift), ← = toward the left end.
 import { nailingTable, nailingCG, FOOTNOTE_10_FACTOR, sheathingLabel } from './shearWallNailing.js';
-import { hdueTable, mstcTable, hdueMinPost, groupLabel } from './shearWallHardware.js';
+import { hdueLadder, mstcLadder, hdueMinPost, groupLabel } from './shearWallHardware.js';
 import { postArea } from './shearWallDeflection.js';
 
 const f2 = (v) => (v == null || !isFinite(v) ? '—' : (+v).toFixed(2));
@@ -29,7 +29,7 @@ export function caseKeysOf(w) {
 export function wallDefinitionRows(w, ctx = {}) {
   const d = ctx.wallIn || {};
   const L = w.length || 0, h = w.floorH || 0;
-  const typeName = w.method === 'wswh' ? 'Strong-Wall WSWH (Simpson)' : w.method === 'ftao' ? 'FTAO — force transfer around openings' : 'Segmented (solid, full height)';
+  const typeName = w.method === 'wswh' ? 'Strong-Wall ' + ((w.wswh && w.wswh.family) || 'WSWH') + ' (Simpson)' : w.method === 'ftao' ? 'FTAO — force transfer around openings' : 'Segmented (solid, full height)';
   const rows = [
     ['Mark / level', (w.mark || '') + ' / ' + (ctx.levelName || '—')],
     ['Wall type', typeName],
@@ -37,6 +37,8 @@ export function wallDefinitionRows(w, ctx = {}) {
     ['Length L', f2(L) + ' ft' + (w.method === 'wswh' ? ' (panel width)' : '')],
     ['Height h', f2(h) + ' ft (floor-to-floor)'],
   ];
+  // Overturning height (user 2026-11-10): FTF + floor plate depth below; h stays for h/b and deflection
+  if (w.otmH != null) rows.push(['Overturning height', 'h + d_fl = ' + f2(h) + ' + ' + f2(w.floorDepthBelow) + ' = ' + f2(w.otmH) + ' ft (floor plate depth below the wall; hardware, posts and forces carried down)']);
   if (w.method !== 'wswh') rows.push(['Aspect ratio h/b', L > 0 ? f2(h) + ' / ' + f2(L) + ' = ' + f2(h / L) : '—']);
   if (w.method === 'ftao' && (d.openings || []).length) {
     rows.push(['Openings', d.openings.map((o, i) => '#' + (i + 1) + ': offset ' + f2(o.offset) + ' ft, width ' + f2(o.width) + ' ft, sill ' + f2(o.sill) + ' ft, head ' + f2(o.head) + ' ft').join('; ')]);
@@ -54,7 +56,7 @@ export function wallDefinitionRows(w, ctx = {}) {
     w.method === 'ftao' ? ov(d.ftaoStrapOverride, 'FTAO strap') : null, w.method === 'ftao' ? ov(d.jambPostOverride, 'jamb post') : null, w.method === 'wswh' ? ov(d.wswhAnchorOverride, 'anchor') : null].filter(Boolean);
   rows.push(['Hardware / posts', overrides.length ? overrides.join(', ') + '; others auto' : 'all auto-selected']);
   if (w.method === 'wswh' && w.wswh) {
-    rows.push(['WSWH', 'width ' + w.wswh.width + '", ' + (w.wswh.condition || '') + (w.wswh.floorDepth ? ', floor depth ' + w.wswh.floorDepth + '"' : '')]);
+    rows.push([(w.wswh.family || 'WSWH'), 'width ' + w.wswh.width + '", ' + (w.wswh.condition || '') + (w.wswh.floorDepth ? ', floor depth ' + w.wswh.floorDepth + '"' : '')]);
   }
   return rows;
 }
@@ -146,16 +148,19 @@ export function cornerOverturningRows(w, dir) {
   const ownUp = (c) => (isLat(c) ? -otm(c) / arm : MR(c) / arm);
   const otmText = (c) => {
     const V = c === 'E' ? w.shareExact_1E : w.shareExact_1W;
-    if (!panel) return f2(otm(c)) + ' = ' + f2(V) + ' × ' + f2(w.floorH);
+    if (!panel) return w.otmH != null ? f2(otm(c)) + ' = ' + f2(V) + ' × (' + f2(w.floorH) + ' + ' + f2(w.floorDepthBelow) + ')' : f2(otm(c)) + ' = ' + f2(V) + ' × ' + f2(w.floorH);
     const x = w.wswh || {}, st = x.stacked && x.stacked[c];
-    // S5: stack base — the moment used for the base anchor forces (heights in inches)
+    // stacked 2nd story (user 2026-11-10): no B, no tension — the moment is carried into the stack base moment
+    if (x.role === 'stackedUpper' && x.lowerId) return 'not calc / deferred — ' + (x.kit || 'TSS kit') + ' (overturning carried into the stack base moment)';
+    if (x.k && x.k !== 1) return 'k·V·H_e / 12 = ' + f2(x.k) + ' × ' + f2(V) + ' × ' + f2(x.He) + ' / 12 = ' + f2(otm(c)) + ' (SSWH portal, p. 19 n.10)';
+    // S5: stack base — the moment used for the base anchor forces, at story heights (ft, calc v27)
     if (x.role === 'stackedLower' && st && st.V2k != null) {
-      return '(V₁·H₁ + V₂·(H₁ + d_fl + H₂)) / 12 = (' + f2(st.V1k) + ' × ' + f2(x.He) + ' + ' + f2(st.V2k) + ' × (' + f2(x.He) + ' + ' + f2(st.dfl) + ' + ' + f2(st.H2) + ')) / 12 = ' + f2(otm(c));
+      return 'V₁·h₁ + V₂·(h₂ + d) = ' + f2(st.V1k) + ' × ' + f2(st.h1) + ' + ' + f2(st.V2k) + ' × (' + f2(st.h2) + ' + ' + f2(st.d) + ') = ' + f2(otm(c));
     }
     return 'V·H_e / 12 = ' + f2(V) + ' × ' + f2(x.He) + ' / 12 = ' + f2(otm(c));
   };
   const rows = [
-    row('M_OT = V·h (k·ft)' + (panel ? ' — WSWH: V·H_e' + (w.wswh && w.wswh.role === 'stackedLower' ? ', stack base V₁·H₁ + V₂·(H₁ + d_fl + H₂)' : '') : ''), (c) => (isLat(c) ? otmText(c) : '0')),
+    row('M_OT = V·h (k·ft)' + (panel ? ' — WSWH: V·H_e' + (w.wswh && w.wswh.role === 'stackedLower' ? ', stack base V₁·h₁ + V₂·(h₂ + d)' : '') : ''), (c) => (isLat(c) ? otmText(c) : '0')),
     row('M_R = Σ P·lever about the ' + piv + ' corner (k·ft)' + (panel ? ' — WSWH: P/2 × B' : ''), (c) => (isLat(c) ? '0' : f2(MR(c)))),
     row('arm (ft)', () => f2(arm)),
     row('Own ' + up + '-end N = (M_R − M_OT) / arm (k)', (c) => sgn(ownUp(c))),
@@ -263,7 +268,9 @@ export function deflectionSubstitutionRows(w, ctx = {}) {
       rows.push([p + 'vh/(1000·G_a)', d.v + ' × ' + f2(d.h) + ' / (1000 × ' + d.Ga + ') = ' + f4(g.t2) + ' in']);
       rows.push([p + 'T / C', 'T = ' + T + ' lb (' + (right ? 'left' : 'right') + ' end); C = ' + C + ' lb (' + (right ? 'right' : 'left') + ' end)']);
       rows.push([p + 'Δ_HD (' + (right ? 'left' : 'right') + ' end)', anc && anc.deltaLrfd > 0 && anc.lrfdCap > 0 && T > 0
-        ? 'δ_LRFD × T / T_LRFD = ' + f3(anc.deltaLrfd) + ' × ' + T + ' / ' + anc.lrfdCap + ' = ' + f4(g.dHD) + ' in (' + anc.id + ', LRFD pair'
+        ? (anc.qty === 2 // two devices, each T / 2 with its own δ @ LRFD cap (user 2026-11-09)
+          ? 'δ_LRFD × T / (2 × T_LRFD) = ' + f3(anc.deltaLrfd) + ' × ' + T + ' / (2 × ' + anc.lrfdCap / 2 + ') = ' + f4(g.dHD) + ' in (' + anc.id + ' — two ' + anc.singleId + ', each T / 2; LRFD pair'
+          : 'δ_LRFD × T / T_LRFD = ' + f3(anc.deltaLrfd) + ' × ' + T + ' / ' + anc.lrfdCap + ' = ' + f4(g.dHD) + ' in (' + anc.id + ', LRFD pair')
           + (g.overLrfd ? ' — ⚠ T > LRFD cap: extrapolated linearly beyond the LRFD cap' : '') + ')'
         : T > 0 ? '0 (no holdown / strap δ)' : '0 (no uplift)']);
       rows.push([p + 'Δ_c crushing (' + (right ? 'right' : 'left') + ' post)', Ac > 0 && Fcperp > 0
@@ -331,7 +338,12 @@ export function loadCaseEnds(w) {
     rows.push([label, sgn(o.left), sgn(a.left), sgn(t.left) + ' (' + tc(t.left) + ')', sgn(o.right), sgn(a.right), sgn(t.right) + ' (' + tc(t.right) + ')']);
   };
   for (const [, k] of gravity) push(k, k, 1);
-  for (const [, k] of lateral) { push(k + ' →', k, 1); push(k + ' ←', k, -1); }
+  // stacked 2nd-story Strong-Wall: lateral end forces not calculated (deferred, TSS kit; user 2026-11-10)
+  const dfr = w.method === 'wswh' && w.wswh && w.wswh.role === 'stackedUpper' && w.wswh.lowerId;
+  for (const [, k] of lateral) {
+    if (dfr) { N[k + ' →'] = { left: 0, right: 0 }; N[k + ' ←'] = { left: 0, right: 0 }; rows.push([k, 'not calc / deferred (TSS kit)', '', '', '', '', '']); continue; }
+    push(k + ' →', k, 1); push(k + ' ←', k, -1);
+  }
   return { headers: ['Load case (unfactored)', 'Left own', 'Left from above', 'Left total', 'Right own', 'Right from above', 'Right total'], rows, N };
 }
 
@@ -378,7 +390,7 @@ export const SUPERPOSITION_HEADERS = ['End', 'Governing ASD combination', 'N = �
 // === C6. Hardware and post selection trace ===
 function nextLighter(anc, floorSpan, thickness) {
   if (!anc) return null;
-  const tbl = anc.family === 'HDUE' ? hdueTable(anc.group, thickness) : mstcTable(anc.group, anc.span || floorSpan);
+  const tbl = anc.family === 'HDUE' ? hdueLadder(anc.group, thickness) : mstcLadder(anc.group, anc.span || floorSpan);
   const i = tbl.findIndex(s => s.id === anc.id);
   return i > 0 ? tbl[i - 1] : null;
 }
@@ -393,12 +405,12 @@ export function hardwareTraceRows(w, ctx = {}) {
     const T = side === 'left' ? dem.tL : dem.tR;
     const ov = side === 'left' ? d.anchorageLeftOverride : d.anchorageRightOverride;
     const grp = groupLabel(w.woodGroup);
-    const kind = w.anchorageType === 'strap' ? 'MSTC strap (' + grp + ', ' + (ctx.floorSpan || '16') + '" floor span table)' : 'HDUE holdown (' + grp + ', ' + (ctx.lineThickness || '4') + '" wall table)';
+    const kind = w.anchorageType === 'strap' ? 'MSTC strap (' + grp + ', ' + (ctx.floorSpan || '16') + '" floor span table' + (w.floorDepthBelow > 0 ? ', floor plate depth ' + f2(w.floorDepthBelow * 12) + '"' : '') + ')' : 'HDUE holdown (' + grp + ', ' + (ctx.lineThickness || '4') + '" wall table)';
     if (!a) { rows.push(['Anchorage ' + S, 'T = ' + f2(T) + ' k → OVER: no ' + kind + ' carries ' + f0(T * 1000) + ' lb']); continue; }
     const basis = w.anchorageBasis && w.anchorageBasis[side];
     const drift = !ov && basis && basis.basis === 'drift';
     const lighter = ov || drift ? null : nextLighter(a, ctx.floorSpan, ctx.lineThickness || '4');
-    rows.push(['Anchorage ' + S, 'T = ' + f2(T) + ' k = ' + f0(T * 1000) + ' lb → ' + a.id + (ov ? ' ✎ (override)' : '') + ' cap ' + a.cap + ' lb, D/C ' + f2(a.cap > 0 ? T * 1000 / a.cap : null)
+    rows.push(['Anchorage ' + S, 'T = ' + f2(T) + ' k = ' + f0(T * 1000) + ' lb → ' + a.id + (ov ? ' ✎ (override)' : '') + ' cap ' + (a.qty === 2 ? '2 × ' + a.cap / 2 + ' = ' : '') + a.cap + ' lb' + (a.qty === 2 ? ' (two ' + a.singleId + ', same model)' : '') + ', D/C ' + f2(a.cap > 0 ? T * 1000 / a.cap : null)
       + (drift ? '; raised for drift (strength pick ' + (basis.strength || 'OVER') + ') — see the Drift tab, drift sizing steps'
         : lighter ? '; lighter ' + lighter.id + ' ' + lighter.cap + ' lb < ' + f0(T * 1000) + ' lb' : !ov ? '; lightest in the ' + kind + ' table' : '')]);
   }

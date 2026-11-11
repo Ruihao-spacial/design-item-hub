@@ -43,8 +43,9 @@ export function postCap(p, hFt, g = GRADE_NO1) {
   const FcE = Math.min(axis(hFt * 12, p.d1), axis(6, p.d2));
   const R = FcE / Fstar;
   const Cp = (1 + R) / 1.6 - Math.sqrt(((1 + R) / 1.6) ** 2 - R / 0.8);
-  const Fc1 = Fstar * Cp, Fperp = g.Fcperp * (p.d2 + 0.375) / p.d2;
-  return { Fstar, FcE, Cp, Fc1, Fperp, cap: Math.round(Math.min(Fc1, Fperp) * p.A / 10) / 100 };
+  // capacity = F_c′ × A (column only; sill bearing is information, user 2026-11-09); C_b = 1.0 for l_b ≥ 6 in (NDS 3.10.4)
+  const Fc1 = Fstar * Cp, Fperp = g.Fcperp * (p.d2 < 6 ? (p.d2 + 0.375) / p.d2 : 1.0);
+  return { Fstar, FcE, Cp, Fc1, Fperp, cap: Math.round(Fc1 * p.A / 10) / 100 };
 }
 
 // ASCE 7-22 ASD seismic factors
