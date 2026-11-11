@@ -20,10 +20,10 @@ the local DB (README, Tests).
   `line.planOrigin` are optional, absent = before). Freeze identical (36 repo / 37 DB items).
 
 ## Next session — start here (set 2026-11-10)
-**State:** branch `sw-posts-double-hd` (off `origin/master`), **nothing committed** — the user commits / pushes / opens
-the PR on request. CALC_VERSION **v25**, schema **13** (unchanged). `npm test` all green, `npx vite build` OK, freeze
-baseline rewritten after the user accepted each change list (items 3 + 4, then 2). Local DB "before" fingerprints (v24):
-`supabase/backups/swd-freeze-db-2026-11-09-pre.json`. Done this round: items 2, 3, 4, 5 (details in the round entry below).
+**State (updated 2026-11-11):** branch `sw-posts-double-hd` committed (30e5f56) and merged with master after PR #9
+(00fc03b, conflicts in package.json / README only); **PR #10 → master open**. CALC_VERSION **v27**, schema **13**. All
+45 test commands green. Done this round: items 1–7 (see the round entry below) + elevation text size.
+Still open: the user's browser check of SSWH panels; follow up with Simpson on the SSWH12 / 15 / 18 anchor arms.
 
 **Item 1 built 2026-11-10 (calc v26, uncommitted) — floor plate depth in the overturning height; details in the
 round entry, item 1.** Repo freeze baseline rewritten after the user's OK (only the Setup form of 6 items changed — results / PDF /
